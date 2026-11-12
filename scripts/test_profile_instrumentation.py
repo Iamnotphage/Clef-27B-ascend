@@ -18,12 +18,14 @@ import profile_instrumentation as instrumentation
 
 
 class InstrumentationTests(unittest.TestCase):
-    def observer(self, directory=None):
+    def observer(self, directory=None, scope_filter=None):
         environment = dict(os.environ)
-        for key in ("CLEF_PROFILE_MARKERS", "CLEF_PROFILE_OBSERVE_DIR", "RANK", "LOCAL_RANK"):
+        for key in ("CLEF_PROFILE_MARKERS", "CLEF_PROFILE_OBSERVE_DIR", "CLEF_PROFILE_SCOPE_FILTER", "RANK", "LOCAL_RANK"):
             environment.pop(key, None)
         if directory is not None:
             environment["CLEF_PROFILE_OBSERVE_DIR"] = str(directory)
+        if scope_filter is not None:
+            environment["CLEF_PROFILE_SCOPE_FILTER"] = scope_filter
         namespace = {}
         with patch.dict(os.environ, environment, clear=True):
             exec(compile(instrumentation.OBSERVER, "clef_observe.py", "exec"), namespace)
@@ -41,6 +43,24 @@ class InstrumentationTests(unittest.TestCase):
             return value + 1
 
         self.assertIs(observer["observe"]("disabled")(original), original)
+
+    def test_scope_filter_selects_only_exact_names_and_empty_disables(self):
+        with tempfile.TemporaryDirectory() as directory:
+            namespace = self.observer(directory, " clef::joint_head, clef::worker_execute_model, ")
+
+            def original(value):
+                return value + 1
+
+            skipped = namespace["observe"]("clef::joint_head_extra")(original)
+            self.assertIs(skipped, original)
+            selected = namespace["observe"]("clef::joint_head")(original)
+            self.assertIsNot(selected, original)
+            self.assertEqual(skipped(1), 2)
+            self.assertEqual(selected(2), 3)
+            rows = self.rows(directory)
+            self.assertEqual([row["name"] for row in rows], ["clef::joint_head"])
+            disabled = self.observer(directory, "")
+            self.assertIs(disabled["observe"]("clef::joint_head")(original), original)
 
     def test_header_bound_method_async_context_and_explicit_ids(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -122,9 +142,111 @@ class InstrumentationTests(unittest.TestCase):
             self.assertIsNone(namespace["_REQUEST_ID"].get())
             self.assertEqual(self.rows(directory)[0]["request_id"], "decision-error")
 
+    def test_native_queue_metrics_use_engine_event_differences(self):
+        with tempfile.TemporaryDirectory() as directory:
+            observe = self.observer(directory)["observe"]
+
+            class Stats:
+                @observe("clef::request_finished_metrics")
+                def update_from_finished_request(self, *, request_id, req_stats, num_prompt_tokens):
+                    return "unchanged result"
+
+            state = SimpleNamespace(queued_ts=10.0, scheduled_ts=10.02,
+                                    first_token_ts=10.15, last_token_ts=10.15, num_preemptions=0)
+            self.assertEqual(Stats().update_from_finished_request(
+                request_id="decision-native", req_stats=state, num_prompt_tokens=307), "unchanged result")
+            row = self.rows(directory)[0]
+            self.assertEqual(row["request_id"], "decision-native")
+            self.assertAlmostEqual(row["engine_metrics"]["queue_seconds"], 0.02)
+            self.assertAlmostEqual(row["engine_metrics"]["scheduled_to_output_seconds"], 0.13)
+            self.assertEqual(row["engine_metrics"]["num_prompt_tokens"], 307)
+
+    def test_worker_batch_ids_single_multiple_and_async_none(self):
+        with tempfile.TemporaryDirectory() as directory:
+            namespace = self.observer(directory)
+            observe = namespace["observe"]
+
+            class Worker:
+                @observe("clef::joint_head")
+                def head(self):
+                    return "head output"
+
+                @observe("clef::worker_execute_model")
+                def execute_model(self, scheduler_output):
+                    return self.head()
+
+            worker = Worker()
+            self.assertEqual(worker.execute_model(
+                SimpleNamespace(num_scheduled_tokens={"decision-one-0": 307})), "head output")
+            worker.execute_model(SimpleNamespace(num_scheduled_tokens={"decision-a-0": 100, "decision-b-0": 200}))
+            worker.execute_model(None)
+            rows = self.rows(directory)
+            self.assertEqual(len(rows), 6)
+            self.assertEqual([row["request_id"] for row in rows[:2]], ["decision-one-0"] * 2)
+            self.assertEqual(rows[1]["request_id_source"], "scheduler_output_single_request")
+            for row in rows[2:4]:
+                self.assertIsNone(row["request_id"])
+                self.assertEqual(row["batch_request_ids"], ["decision-a-0", "decision-b-0"])
+            for row in rows[4:]:
+                self.assertIsNone(row["request_id"])
+                self.assertEqual(row["batch_request_ids"], [])
+            self.assertIsNone(namespace["_REQUEST_ID"].get())
+            self.assertEqual(namespace["_BATCH_REQUEST_IDS"].get(), ())
+
+    def test_cache_metadata_deduplicates_shared_storage(self):
+        namespace = self.observer()
+
+        class Storage:
+            def data_ptr(self):
+                return 4096
+
+            def nbytes(self):
+                return 1024
+
+        class Tensor:
+            shape = (128,)
+            dtype = "bfloat16"
+            device = "npu:0"
+
+            def untyped_storage(self):
+                return Storage()
+
+            def stride(self):
+                return (1,)
+
+            def storage_offset(self):
+                return 0
+
+            def numel(self):
+                return 128
+
+            def element_size(self):
+                return 2
+
+        FullAttentionSpec = type("FullAttentionSpec", (), {"page_size_bytes": 256})
+        MambaSpec = type("MambaSpec", (), {"page_size_bytes": 512, "state_content_size_bytes": 384,
+                                          "shapes": ((128,), (64,)), "dtypes": ("bfloat16", "bfloat16")})
+        config = SimpleNamespace(num_blocks=2, kv_cache_layout="hybrid", kv_cache_tensors=[],
+            kv_cache_groups=[SimpleNamespace(layer_names=["attention"], kv_cache_spec=FullAttentionSpec()),
+                             SimpleNamespace(layer_names=["mamba"], kv_cache_spec=MambaSpec())])
+        runner = SimpleNamespace(kv_cache_config=config, kv_caches=[Tensor(), Tensor()],
+            compilation_config=SimpleNamespace(static_forward_context={
+                "attention": SimpleNamespace(kv_cache=Tensor()),
+                "mamba": SimpleNamespace(kv_cache=(Tensor(), Tensor()))}))
+        result = namespace["cache_metadata"](SimpleNamespace(model_runner=runner), config)
+        self.assertEqual(result["unique_storage_bytes"], 1024)
+        self.assertEqual(len(result["unique_storages"]), 1)
+        self.assertEqual(result["unique_storage_bytes_by_kind"],
+                         {"shared:FullAttentionSpec+MambaSpec": 1024})
+        self.assertEqual(set(result["unique_storages"][0]["layers"]), {"attention", "mamba"})
+        self.assertEqual(result["spec_by_layer"]["mamba"]["state_content_size_bytes"], 384)
+        json.dumps(result, allow_nan=False)
+
     @staticmethod
     def fixture_sources(vllm_root, ascend_root):
-        for relative, targets in instrumentation.TARGETS.items():
+        for source_root, relative, targets in (
+                [(vllm_root, path, targets) for path, targets in instrumentation.TARGETS.items()] +
+                [(ascend_root, path, targets) for path, targets in instrumentation.ASCEND_TARGETS.items()]):
             groups = defaultdict(list)
             for cls, function in targets:
                 groups[cls].append(function)
@@ -136,7 +258,7 @@ class InstrumentationTests(unittest.TestCase):
                 for function in functions:
                     lines.extend([f"{indent}def {function}(*args, **kwargs):\n",
                                   f"{indent}    return ('original', args, kwargs)\n"])
-            path = vllm_root / relative
+            path = source_root / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("".join(lines))
         (vllm_root / "vllm/profiler").mkdir(parents=True, exist_ok=True)

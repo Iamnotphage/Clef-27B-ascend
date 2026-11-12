@@ -344,7 +344,7 @@ def main():
     args.output_dir.mkdir(parents=True, exist_ok=True)
     json_path, csv_path = args.output_dir / "summary.json", args.output_dir / "performance-matrix.csv"
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+        writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS, lineterminator="\n")
         writer.writeheader()
         writer.writerows(csv_round(row) for row in rounds)
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, allow_nan=False) + "\n")

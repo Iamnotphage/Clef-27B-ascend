@@ -6,6 +6,9 @@ scopes. Set CLEF_PROFILE_OBSERVE_DIR to write per-process timing JSONL. Keeping
 both unset returns original callables at import time. No device synchronization
 is inserted. Async scopes report wall time, including await, without a CPU
 record_function spanning concurrent coroutines.
+Set CLEF_PROFILE_SCOPE_FILTER to comma-separated exact marker names to observe
+only those scopes. An unset filter includes all scopes; an empty filter includes
+none. Filtering happens when the service imports the patched modules.
 Nested scopes include inner observation overhead; the outermost JSONL write is
 outside its own recorded interval. Use observation-disabled runs for throughput.
 """
@@ -35,12 +38,94 @@ import time
 
 _MARKERS = os.environ.get("CLEF_PROFILE_MARKERS") == "1"
 _DIRECTORY = os.environ.get("CLEF_PROFILE_OBSERVE_DIR")
+_FILTER_RAW = os.environ.get("CLEF_PROFILE_SCOPE_FILTER")
+_SCOPE_FILTER = (None if _FILTER_RAW is None else
+                 {name.strip() for name in _FILTER_RAW.split(",") if name.strip()})
 _REQUEST_ID = ContextVar("clef_profile_request_id", default=None)
+_BATCH_REQUEST_IDS = ContextVar("clef_profile_batch_request_ids", default=())
+
+
+def cache_metadata(worker, supplied_config):
+    """Read bounded cache metadata without tensor transfer or device work."""
+    runner = getattr(worker, "model_runner", None)
+    config = getattr(runner, "kv_cache_config", supplied_config)
+    groups = getattr(config, "kv_cache_groups", ())
+    spec_by_layer = {}
+    group_rows = []
+    for index, group in enumerate(groups):
+        spec = group.kv_cache_spec
+        per_layer = getattr(spec, "kv_cache_specs", {})
+        names = list(group.layer_names)
+        group_rows.append({"index": index, "spec_kind": type(spec).__name__, "layers": names})
+        for name in names:
+            item = per_layer.get(name, spec)
+            spec_by_layer[name] = {
+                "kind": type(item).__name__,
+                "page_size_bytes": getattr(item, "page_size_bytes", None),
+                "state_content_size_bytes": getattr(item, "state_content_size_bytes", None),
+                "shapes": getattr(item, "shapes", None),
+                "dtypes": [str(dtype) for dtype in getattr(item, "dtypes", ())],
+            }
+    tensors, storages = [], {}
+
+    def visit(value, path, layer=None, depth=0):
+        if len(tensors) >= 512 or depth > 4:
+            return
+        if callable(getattr(value, "untyped_storage", None)):
+            storage = value.untyped_storage()
+            pointer, size = storage.data_ptr(), storage.nbytes()
+            device = str(value.device)
+            key = f"{device}:{pointer}:{size}"
+            kind = spec_by_layer.get(layer, {}).get("kind")
+            tensors.append({"path": path, "layer": layer, "spec_kind": kind,
+                "shape": list(value.shape), "stride": list(value.stride()),
+                "dtype": str(value.dtype), "device": device,
+                "storage_offset_elements": value.storage_offset(),
+                "logical_view_bytes": value.numel() * value.element_size(),
+                "storage_key": key})
+            entry = storages.setdefault(key, {"device": device, "data_ptr": pointer,
+                "nbytes": size, "layers": [], "spec_kinds": []})
+            if layer is not None and layer not in entry["layers"]:
+                entry["layers"].append(layer)
+            if kind is not None and kind not in entry["spec_kinds"]:
+                entry["spec_kinds"].append(kind)
+        elif isinstance(value, dict):
+            for key, child in list(value.items())[:256]:
+                visit(child, f"{path}.{key}", layer, depth + 1)
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value[:256]):
+                visit(child, f"{path}[{index}]", layer, depth + 1)
+
+    # runner.kv_caches supplies actual backing allocations. Per-layer bindings
+    # supply the spec association; both are deduplicated by storage pointer.
+    visit(getattr(runner, "kv_caches", ()), "runner.kv_caches")
+    compilation = getattr(runner, "compilation_config", None)
+    context = getattr(compilation, "static_forward_context", {})
+    for layer in list(spec_by_layer)[:256]:
+        module = context.get(layer) if isinstance(context, dict) else None
+        visit(getattr(module, "kv_cache", ()), f"layers.{layer}.kv_cache", layer)
+    by_kind = {}
+    for storage in storages.values():
+        kinds = sorted(storage["spec_kinds"])
+        category = kinds[0] if len(kinds) == 1 else (
+            "shared:" + "+".join(kinds) if kinds else "unclassified")
+        by_kind[category] = by_kind.get(category, 0) + storage["nbytes"]
+    descriptors = [{key: getattr(item, key, None) for key in
+                    ("size", "layers", "layer_stride", "block_stride", "offset", "host_resident")}
+                   for item in list(getattr(config, "kv_cache_tensors", ()))[:256]]
+    return {"num_blocks": getattr(config, "num_blocks", None),
+        "layout": getattr(config, "kv_cache_layout", None), "groups": group_rows,
+        "spec_by_layer": spec_by_layer, "configured_descriptors": descriptors,
+        "actual_tensor_views": tensors, "unique_storages": list(storages.values()),
+        "unique_storage_bytes": sum(item["nbytes"] for item in storages.values()),
+        "unique_storage_bytes_by_kind": by_kind,
+        "coverage": "runner cache list plus configured layer bindings; bounded metadata read only",
+        "deduplication": "device, untyped_storage.data_ptr and storage.nbytes; mixed-spec shared allocations remain shared"}
 
 
 def observe(name):
     def decorate(function):
-        if not (_MARKERS or _DIRECTORY):
+        if not (_MARKERS or _DIRECTORY) or (_SCOPE_FILTER is not None and name not in _SCOPE_FILTER):
             return function
         signature = inspect.signature(function)
 
@@ -66,13 +151,23 @@ def observe(name):
             if request_id is None:
                 request_id = _REQUEST_ID.get()
                 request_id_source = "context" if request_id is not None else None
+            batch_ids = _BATCH_REQUEST_IDS.get()
+            if "scheduler_output" in bound:
+                output = bound.get("scheduler_output")
+                scheduled = getattr(output, "num_scheduled_tokens", None)
+                batch_ids = tuple(scheduled) if isinstance(scheduled, dict) else ()
+                if request_id is None and len(batch_ids) == 1:
+                    request_id = batch_ids[0]
+                    request_id_source = "scheduler_output_single_request"
             token = _REQUEST_ID.set(request_id)
-            return token, request_id, time.time_ns(), time.perf_counter_ns(), request_id_source
+            batch_token = _BATCH_REQUEST_IDS.set(batch_ids)
+            return token, batch_token, request_id, time.time_ns(), time.perf_counter_ns(), request_id_source, bound, batch_ids
 
         def finish(state):
-            token, request_id, wall_ns, perf_ns, request_id_source = state
+            token, batch_token, request_id, wall_ns, perf_ns, request_id_source, bound, batch_ids = state
             end_perf_ns = time.perf_counter_ns()
             _REQUEST_ID.reset(token)
+            _BATCH_REQUEST_IDS.reset(batch_token)
             if _DIRECTORY:
                 rank = os.environ.get("RANK")
                 rank_source = "environment" if rank is not None else None
@@ -86,6 +181,7 @@ def observe(name):
                     rank_source = "initialized_torch_distributed"
                 row = {
                     "name": name, "request_id": request_id,
+                    "batch_request_ids": list(batch_ids),
                     "request_id_source": request_id_source,
                     "pid": os.getpid(), "thread_id": threading.get_ident(),
                     "rank": rank, "rank_source": rank_source,
@@ -95,6 +191,26 @@ def observe(name):
                     "duration_ns": end_perf_ns - perf_ns,
                     "timing_scope": "host_wall_inclusive",
                 }
+                if name == "clef::request_finished_metrics":
+                    stats = bound.get("req_stats")
+                    fields = ("queued_ts", "scheduled_ts", "first_token_ts", "last_token_ts")
+                    native = {key: getattr(stats, key, None) for key in fields}
+                    queued, scheduled, first, last = (native[key] for key in fields)
+                    native["queue_seconds"] = (
+                        scheduled - queued if queued and scheduled else None)
+                    native["scheduled_to_output_seconds"] = (
+                        last - scheduled if last and scheduled else None)
+                    native["scheduled_to_first_output_seconds"] = (
+                        first - scheduled if first and scheduled else None)
+                    native["num_preemptions"] = getattr(stats, "num_preemptions", None)
+                    native["num_prompt_tokens"] = bound.get("num_prompt_tokens")
+                    native["timestamp_scope"] = "engine_process_monotonic_seconds; compare differences within that process only"
+                    row["engine_metrics"] = native
+                if name == "clef::cache_initialize":
+                    try:
+                        row["cache_memory"] = cache_metadata(bound.get("self"), bound.get("kv_cache_config"))
+                    except (AttributeError, TypeError, RuntimeError, ValueError) as error:
+                        row["cache_metadata_error"] = f"{type(error).__name__}: {error}"
                 directory = Path(_DIRECTORY)
                 directory.mkdir(parents=True, exist_ok=True)
                 # Each process has its own append-only file. One write preserves
@@ -169,6 +285,16 @@ TARGETS = {
         ("Scheduler", "schedule"): "clef::scheduler",
         ("Scheduler", "add_request"): "clef::scheduler_add_request",
     },
+    "vllm/v1/metrics/stats.py": {
+        ("IterationStats", "update_from_finished_request"): "clef::request_finished_metrics",
+    },
+}
+
+ASCEND_TARGETS = {
+    "vllm_ascend/worker/worker.py": {
+        ("NPUWorker", "execute_model"): "clef::worker_execute_model",
+        ("NPUWorker", "initialize_from_config"): "clef::cache_initialize",
+    },
 }
 
 
@@ -229,6 +355,12 @@ def prepare(vllm_root, ascend_root):
             raise ValueError(f"Already instrumented: {relative}")
         after = annotate(before.decode(), targets).encode()
         changes.append(("vllm", relative, before, after))
+    for relative, targets in ASCEND_TARGETS.items():
+        before = (ascend_root / relative).read_bytes()
+        if b"_clef_observe" in before:
+            raise ValueError(f"Already instrumented: {relative}")
+        after = annotate(before.decode(), targets).encode()
+        changes.append(("ascend", relative, before, after))
     relative = "vllm_ascend/profiler/torch_npu_profiler.py"
     before = (ascend_root / relative).read_bytes()
     anchor = "            profile_memory=profiler_config.torch_profiler_with_memory,\n"
@@ -289,14 +421,18 @@ def main():
         "scope": "CPU inclusive wall/enqueue scopes; device time requires trace linkage",
         "synchronization_inserted": False,
         "observation_overhead": "Inclusive parent scopes contain child logger overhead. Each own logger write is outside that scope's interval. Formal throughput must disable both observation environment variables.",
+        "scope_filter": "CLEF_PROFILE_SCOPE_FILTER is an optional comma-separated exact marker allowlist, read at module import; unset includes all scopes, empty includes none.",
         "profiler_forwarded": ["record_shapes", "with_flops"],
         "schedule_forwarded": False,
         "encoding_audit_boundary": "Source SHA audit requires restoring observation patches; saved encoding evidence can be used during numerical comparison.",
         "marker_coverage": {
             "status": "static_targets_prepared_pending_runtime_trace_acceptance",
             "acceptance": "Check each expected marker in actual worker trace; Ascend runtime class overrides can replace source methods.",
-            "targets": [{"file": path, "class": cls, "function": function, "marker": marker}
-                        for path, targets in TARGETS.items() for (cls, function), marker in targets.items()],
+            "targets": [{"source_tree": root, "file": path, "class": cls,
+                         "function": function, "marker": marker}
+                        for root, source_targets in (("vllm", TARGETS), ("ascend", ASCEND_TARGETS))
+                        for path, targets in source_targets.items()
+                        for (cls, function), marker in targets.items()],
             "rank_mapping": "Prefer RANK env, then an already initialized torch.distributed rank; null requires PID-to-worker metadata mapping.",
         },
         "files": [],
