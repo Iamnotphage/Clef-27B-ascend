@@ -1,0 +1,62 @@
+{
+  "captured_date": "2026-11-12",
+  "timezone": "Asia/Shanghai",
+  "sources": {
+    "public_page": "https://competition.gitcode.com/competition/2119684851993116674/intro",
+    "public_content_api": "https://web-api.gitcode.com/aihub/api/v1/activity/2119684851993116674/content",
+    "public_detail_api": "https://web-api.gitcode.com/aihub/api/v1/activity/2119684851993116674"
+  },
+  "activity": {
+    "activity_id": "2119684851993116674",
+    "activity_name": "昇腾Jev开源决策模型适配与调优大赛",
+    "sponsor": "Ascend,AtomGit AI",
+    "activity_time_line": "{\"activityTimeLine\": [{\"timeName\": \"报名开始时间\", \"activityDate\": \"2026/11/10\"}, {\"timeName\": \"报名截止时间\", \"activityDate\": \"2026/11/22\"}, {\"timeName\": \"适配赛道截止\", \"activityDate\": \"2026/11/22\"}, {\"timeName\": \"调优赛道截止\", \"activityDate\": \"2026/11/26\"}, {\"timeName\": \"榜单公布\", \"activityDate\": \"2026/12/05\"}, {\"timeName\": \"比赛结束时间\", \"activityDate\": \"2026/12/15\"}, {\"timeName\": \"奖励发布\", \"activityDate\": \"2026/12/15\"}]}",
+    "activity_start_time": "2026-11-10T00:00:00",
+    "activity_end_time": "2026-12-15T23:59:59",
+    "description": "本期大赛开放 100+ 个已开源 Jev 决策模型作为统一适配与调优池。参赛者可以自由认领模型，完成从「能在昇腾 NPU 上无错运行」到「比基线跑得更快」的完整路径。"
+  },
+  "content_updated_at": "2026-11-12T04:03:33.000+00:00",
+  "content_sha256": "0cb3e3669605e4f38598724fd7d7861b320d208eb32439a116502f3b16af8ffc",
+  "content_excerpts": [
+    "### 3.2 🚨 关键截止节点\n\n\n> ⚠️ 请务必关注以下截止时间，逾期将无法处理：\n>\n> - 📌 **报名截止时间：`11.21 24:00`**（逾期将关闭报名入口）\n\n> - 📌 **适配作品提交截止：`11.22 24:00`**（关闭赛道提交入口）\n\n> - 📌 **调优作品提交截止：`11.26 24:00`**（关闭赛道提交入口）\n\n---",
+    "### 4.1 🏁 双赛道总览\n\n两条赛道相互独立，**参赛者可同时参加两条赛道，也可选择单赛道深入**。\n\n#### 🔹 赛道一：模型部署适配\n\n1. **核心任务**：让指定模型在昇腾 NPU 上实现无报错、稳定运行。\n\n2. **评分侧重**：必要的目录提交文件完整性 + 模型是否成功跑通 + 精度达标。\n\n#### 🔹 赛道二：性能调优\n\n1. **核心任务**：对指定模型进行性能调优，对比官方 Baseline。实现吞吐量（Throughput）提升、延迟（Latency）降低，提升性能。\n\n2. **硬性指标要求**：\n\n🎯 **精度门槛**：与 Baseline 精度波动范围不超过 2PP。\n\n> **评分侧重：精度达标基础上的性能提升幅度。**",
+    "### 📂 4.3 适配赛道提交目录结构（严格遵守）\n\n```bash\n{model_name}/\n├── inference.py          # 必选：推理脚本\n├── readme.md             # 必选：部署说明文档\n└── assets/               # 必选：截图素材文件夹\n    ├── agent_workflow.png    # 截图 1：Agent 工作流截图\n    ├── npu_device_call.png   # 截图 2：NPU 设备调用截图\n    └── model_result.png      # 截图 3：模型运行结果截图\n```\n\n> ⚠️ **适配赛道要求：上述文件及文件夹均为必选件，缺失任意一项将导致作品无效。**\n\n### 📂 4.4 调优赛道提交目录结构（严格遵守）\n\n```bash\n{model_name}/\n├── README.md                 # 必选：环境准备、启动命令、Demo 使用、复现步骤\n├── start.sh                  # 必选：推理调优统一启动入口，须暴露 POST /v1/systemone，供 EvalScope 正式评测调用\n├── inference.py              # 必选：推理优化脚本，调用 vLLM-Ascend 完成完整决策路径\n├── results.csv               # 必选：性能数据；精度指标\n├── metrics.csv               # 必选：精度指标\n├── logs/                     # 必选：决策模型评测与调优的原始运行日志\n├── optimization.md           # 必选：瓶颈分析、优化方法与复现说明\n├── result.png                # 必选：真实运行的调优结果演示截图，须能看清设备与结果\n└── npu_device_call.png       # NPU 设备调用截图\n```\n\n> 🚨 **调优赛道要求：除基础运行文件外，性能数据与原始日志为评测核验必选项，请务必放于标准路径下提交。**\n\n---",
+    "### 🔄 6.1 自动化评测流程\n\n```scss\n选手提交 Git 模型仓 (标准目录)\n       │\n       ▼\nAtomGit 大赛平台 (拉取 模型仓 并触发评测任务)\n       │\n       ▼\n自动评测平台 (自动拉取代码，运行校验)\n       ├── 1. 结构校验 ──► 缺失必要文件直接标 0 分\n       └── 2. 跑测试用例 ──► 采集精度相似度与性能数据\n       │\n       ▼\n排行榜实时更新 (初审实时刷新 / 复审 T-7 更新)\n```\n\n---"
+  ],
+  "publish_page_ui_observations": {
+    "url": "https://competition.gitcode.com/competition/2119684851993116674/publish",
+    "read_method": "Chrome native accessibility tree via CUA; existing page",
+    "clef_track": "Clef-27B, 多模态类（约 27–28B）",
+    "model_list_url": "https://vj22qe6kl3.feishu.cn/wiki/HKn8wk4QGiuNiAkOe9Lcfroyni0?from=from_copylink&sheet=b6dc86",
+    "submission_repository": "https://gitcode.com/Ascend/model-agent",
+    "submission_method": "调优赛道页面要求将代码推送 PR 至指定仓库",
+    "clef_expanded_description": "多模态类（约 27–28B）",
+    "visible_tuning_dates": "2026/11/12-2026/11/26",
+    "dataset_links_visible": false
+  },
+  "anonymous_api_access": {
+    "ascend_problem_publish": "HTTP 401",
+    "subject-traces": "HTTP 401",
+    "problem_intro_files": "HTTP 401"
+  },
+  "datasets": [
+    {
+      "id": "LocalLLaMA/typed-decisions",
+      "sha": "cc1a2e795f5160d417d4d7131a71d1ab60ea33ca",
+      "private": false,
+      "gated": false
+    },
+    {
+      "id": "harness-hub/safeagents-judge-bench",
+      "sha": "037bfaaee6039d339a24f664957999bc9ac8461a",
+      "private": false,
+      "gated": false
+    }
+  ],
+  "submission_repository_inspection": {
+    "url": "https://gitcode.com/Ascend/model-agent",
+    "head": "c75448c13fb4a35e7ec0883ce48d05c23eb5b7fa",
+    "scope": "Default branch path inventory and root README",
+    "clef_systemone_evalscope_path_matches": []
+  }
+}

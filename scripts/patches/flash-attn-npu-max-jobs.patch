@@ -1,0 +1,14 @@
+--- a/setup.py
++++ b/setup.py
+@@ -537,7 +537,10 @@
+         # concurrently regardless of which extension owns them. TUs per extension
+         # once autogen dispatch TUs are added: ascend910_v2=12, ascend910_v3=9,
+         # ascend950_v3=6, ascend910_v4=5, ascend950_v4=6.
+-        max_workers = min(len(tasks), os.cpu_count() or 1)
++        max_jobs = int(os.getenv("MAX_JOBS", "8"))
++        if max_jobs < 1:
++            raise ValueError("MAX_JOBS must be a positive integer")
++        max_workers = min(len(tasks), max_jobs)
+         objs_by_ext = {ext.name: [] for ext in self.extensions}
+         with ThreadPoolExecutor(max_workers=max_workers) as ex:
+             futures = {ex.submit(compile_one, t): t for t in tasks}

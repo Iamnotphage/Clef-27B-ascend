@@ -1,0 +1,27 @@
+# Target: vllm-ascend 89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d
+# Paired vLLM: 24420b7a341af37a9bc3186e6fc6062512e0aa58
+# Scope: Clef's explicit base-class LM-head embedding lookup with standard TP.
+# Root cause: Ascend's constructor bypasses the upstream embedding constructor;
+# TP1 returns early, while TP2 reads three upstream attributes that are absent.
+# use_fused_embedding=False selects the portable mask/gather path on NPU.
+# reduce_results=True reconstructs complete lexical vectors from vocab shards.
+# parallel_group=output_reduce_group reduces over the resolved standard TP group.
+# Normal Ascend forward, token exchange and weight layout paths stay intact.
+# Lifecycle: this is an explicit source compatibility hunk, without runtime patch
+# registration. No upstream PR is opened in this baseline task. Contribute the
+# constructor-contract alignment to vllm-ascend; remove this hunk when the pinned
+# plugin includes that alignment and passes the same Clef TP precision checks.
+--- a/vllm_ascend/ops/vocab_parallel_embedding.py
++++ b/vllm_ascend/ops/vocab_parallel_embedding.py
+@@ -190,6 +190,11 @@
+         self.parallel_mode = plan.mode
+         self.token_exchange_group = plan.token_exchange_group
+         self.output_reduce_group = plan.output_reduce_group
++        # Clef looks up LM-head rows through VocabParallelEmbedding.forward.
++        # Preserve its TP contract alongside the Ascend-specific forward paths.
++        self.use_fused_embedding = False
++        self.reduce_results = True
++        self.parallel_group = self.output_reduce_group
+         # tp_rank/tp_size describe the logical weight layout. For PCP_X_TP that
+         # layout spans two real communication groups rather than one TP group.
+         self.tp_rank = plan.shard_rank

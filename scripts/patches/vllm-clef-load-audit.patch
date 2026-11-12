@@ -1,0 +1,72 @@
+--- a/vllm/model_executor/model_loader/default_loader.py
++++ b/vllm/model_executor/model_loader/default_loader.py
+@@ -4,6 +4,7 @@
+ 
+ import dataclasses
+ import glob
++import json
+ import os
+ import time
+ from collections.abc import Callable, Generator, Iterable
+@@ -521,6 +522,61 @@
+             self.track_weights_loading(
+                 model, loaded_weights, quantized=model_config.quantization is not None
+             )
++
++        if type(model).__name__ in {
++            "AscendClefFlashForJointSchema", "ClefFlashForJointSchema"
++        }:
++            try:
++                parameters = dict(model.named_parameters())
++                visual = getattr(model, "visual", None)
++                language_model = getattr(model, "language_model", None)
++                layers = getattr(getattr(language_model, "model", None), "layers", None)
++                lm_weight = getattr(getattr(language_model, "lm_head", None), "weight", None)
++                head_names = {
++                    name for name in parameters if name.startswith("pooler.head.")
++                }
++                loaded_head_names = (
++                    {name for name in loaded_weights if name.startswith("pooler.head.")}
++                    if loaded_weights is not None else None
++                )
++                by_device_dtype = {}
++                for parameter in parameters.values():
++                    key = f"{parameter.device}/{parameter.dtype}"
++                    group = by_device_dtype.setdefault(key, {"tensors": 0, "numel": 0})
++                    group["tensors"] += 1
++                    group["numel"] += parameter.numel()
++                audit = {
++                    "model_class": type(model).__name__,
++                    "phase": "after_load_weights_and_tracking",
++                    "strict_tracking_enabled": bool(enable_weights_track),
++                    "visual": {
++                        "class": type(visual).__name__ if visual is not None else None,
++                        "numel": sum(p.numel() for p in visual.parameters()) if visual is not None else 0,
++                    },
++                    "language_model_layer_count": len(layers) if layers is not None else None,
++                    "lm_head": {
++                        "shape": list(lm_weight.shape),
++                        "device": str(lm_weight.device),
++                        "dtype": str(lm_weight.dtype),
++                    } if lm_weight is not None else None,
++                    "pooler_head": {
++                        "parameter_tensors": len(head_names),
++                        "numel": sum(parameters[name].numel() for name in head_names),
++                        "loaded_name_count": len(loaded_head_names) if loaded_head_names is not None else None,
++                        "missing_names": sorted(head_names - loaded_head_names) if loaded_head_names is not None else None,
++                    },
++                    "parameters": {
++                        "tensors": len(parameters),
++                        "numel": sum(p.numel() for p in parameters.values()),
++                        "by_device_dtype": by_device_dtype,
++                    },
++                }
++                logger.info("CLEF_LOAD_AUDIT %s", json.dumps(audit, sort_keys=True))
++            except Exception as exc:
++                logger.warning("CLEF_LOAD_AUDIT %s", json.dumps({
++                    "model_class": type(model).__name__,
++                    "audit_error": f"{type(exc).__name__}: {exc}",
++                }, sort_keys=True))
+ 
+     def track_weights_loading(
+         self,

@@ -1,0 +1,47 @@
+{
+  "syntax": "passed",
+  "whole_module_ast_only_three_assignments_changed": true,
+  "unchanged_ascend_methods": [
+    "set_embedding_num_tokens_padded",
+    "_mask_input_for_vocab_range",
+    "forward",
+    "_forward_with_token_exchange",
+    "_forward_standard"
+  ],
+  "unpatched_tp2_missing_attributes_reproduced": [
+    "use_fused_embedding",
+    "reduce_results",
+    "parallel_group"
+  ],
+  "unpatched_tp1_early_return": "passed",
+  "cases": [
+    {
+      "name": "tp1_contract",
+      "ranks": 1,
+      "outputs_match_full_vocab": true,
+      "collective_calls": 0
+    },
+    {
+      "name": "tp2_boundary_repeated",
+      "ranks": 2,
+      "outputs_match_full_vocab": true,
+      "collective_calls": 2
+    },
+    {
+      "name": "tp2_nested_candidates",
+      "ranks": 2,
+      "outputs_match_full_vocab": true,
+      "collective_calls": 2
+    },
+    {
+      "name": "tp2_original_padding_and_added_vocab",
+      "ranks": 2,
+      "outputs_match_full_vocab": true,
+      "collective_calls": 2
+    }
+  ],
+  "real_upstream_ast": "/tmp/clef-setup-20261112/vllm/vllm/model_executor/layers/vocab_parallel_embedding.py",
+  "upstream_source_sha256": "0a25685b16b295d0c9f7127ae48fc7cc86d2a961e4e7e7bd8879354540225f44",
+  "patch_sha256": "862f4f0dc8ebf25b31ab534bd45fa098ec751b8bf31ff37a2f23310414c75e07",
+  "hardware_precision": "pending_root_deployment"
+}

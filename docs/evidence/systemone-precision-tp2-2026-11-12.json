@@ -1,0 +1,281 @@
+{
+  "created_at": "2026-11-12T09:52:21.282355+00:00",
+  "scope": "Five fixed SystemOne requests, seven decisions; saved complete CPU BF16 reference, API protocol and exact token/span/mapping evidence",
+  "passed": true,
+  "status": "complete",
+  "model_executed": false,
+  "inputs": {
+    "reference_report": {
+      "path": "/workspace/yangchen/logs/systemone-reference-cpu-20261112.json",
+      "sha256": "56290ec3cb11b907b0f9ba57ab4d6f2c9b6573b841b0ecb2633572782363cd5d"
+    },
+    "api_report": {
+      "path": "/workspace/yangchen/logs/systemone-smoke-tp2-20261112.json",
+      "sha256": "3bd97d7fa67010f5cacd2ee51d75dfedde69cd315e3563afa483f8ae989639df"
+    },
+    "encoding_report": {
+      "path": "/workspace/yangchen/logs/systemone-encoding-20261112.json",
+      "sha256": "c23aad78e597c71a5a2c2d23d3cedd567df61b776379300c761d1fe9eb31d90e"
+    },
+    "criteria": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/docs/evidence/precision-criteria-2026-11-12.json",
+      "sha256": "8d40115f4595aa2a95841104d05515cfd4e699435efabdf1a307595fcb2be592"
+    }
+  },
+  "cases": [
+    {
+      "name": "choice",
+      "passed": true,
+      "fields": {
+        "department": {
+          "probability_absolute_differences": {
+            "billing": 2.110004425048828e-05,
+            "shipping": 2.10711732506752e-05
+          },
+          "max_probability_absolute_difference": 2.110004425048828e-05,
+          "same_decision": true,
+          "type": "choice",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 2.110004425048828e-05,
+          "passed": true
+        }
+      },
+      "request_sha256": "7d9e56c5578a2979ceb4f5e09fa6a86a1f8501a51a35da89c1f4afa239a2d1d4",
+      "request_order": {
+        "question_ids": [
+          "department"
+        ],
+        "choice_candidate_ids": {
+          "department": [
+            "billing",
+            "shipping"
+          ]
+        }
+      },
+      "api_protocol_errors": [],
+      "token_counts": {
+        "reference": 143,
+        "api": 143,
+        "encoding_reference": 143,
+        "encoding_vllm": 143
+      },
+      "same_input_token_count": true
+    },
+    {
+      "name": "noul",
+      "passed": true,
+      "fields": {
+        "refund_requested": {
+          "probability_absolute_differences": {
+            "yes": 2.1696090698242188e-05,
+            "no": 2.170354127883911e-05
+          },
+          "max_probability_absolute_difference": 2.170354127883911e-05,
+          "same_decision": true,
+          "noul_absolute_difference": 2.1696090698242188e-05,
+          "type": "noul",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 2.1696090698242188e-05,
+          "passed": true
+        }
+      },
+      "request_sha256": "80a85c517e19a6fd9d3b89c3845a071d7ba7d66d6a6a929d4d4e227b8e1f730b",
+      "request_order": {
+        "question_ids": [
+          "refund_requested"
+        ],
+        "choice_candidate_ids": {}
+      },
+      "api_protocol_errors": [],
+      "token_counts": {
+        "reference": 157,
+        "api": 157,
+        "encoding_reference": 157,
+        "encoding_vllm": 157
+      },
+      "same_input_token_count": true
+    },
+    {
+      "name": "score",
+      "passed": true,
+      "fields": {
+        "severity": {
+          "probability_absolute_differences": {
+            "0": 0.00016286876052618027,
+            "1": 5.554407835006714e-06,
+            "2": 0.00015735626220703125
+          },
+          "max_probability_absolute_difference": 0.00016286876052618027,
+          "same_argmax_level": true,
+          "score_absolute_difference": 0.0003202669322490692,
+          "type": "score",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 0.00015735626220703125,
+          "passed": true
+        }
+      },
+      "request_sha256": "32b09af66fc3489aeaddfc5b86e413bb4ba1ca8ed532e7e47a5d6c12a1704af0",
+      "request_order": {
+        "question_ids": [
+          "severity"
+        ],
+        "choice_candidate_ids": {}
+      },
+      "api_protocol_errors": [],
+      "token_counts": {
+        "reference": 155,
+        "api": 155,
+        "encoding_reference": 155,
+        "encoding_vllm": 155
+      },
+      "same_input_token_count": true
+    },
+    {
+      "name": "mixed",
+      "passed": true,
+      "fields": {
+        "department": {
+          "probability_absolute_differences": {
+            "billing": 0.00011211633682250977,
+            "shipping": 0.0001121186651289463
+          },
+          "max_probability_absolute_difference": 0.0001121186651289463,
+          "same_decision": true,
+          "type": "choice",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 0.00011211633682250977,
+          "passed": true
+        },
+        "refund_requested": {
+          "probability_absolute_differences": {
+            "yes": 2.485513687133789e-05,
+            "no": 2.4746637791395187e-05
+          },
+          "max_probability_absolute_difference": 2.485513687133789e-05,
+          "same_decision": true,
+          "noul_absolute_difference": 2.485513687133789e-05,
+          "type": "noul",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 2.485513687133789e-05,
+          "passed": true
+        },
+        "severity": {
+          "probability_absolute_differences": {
+            "0": 6.882008165121078e-05,
+            "1": 0.00018707290291786194,
+            "2": 0.00025600194931030273
+          },
+          "max_probability_absolute_difference": 0.00025600194931030273,
+          "same_argmax_level": true,
+          "score_absolute_difference": 0.00032493099570274353,
+          "type": "score",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 0.00025600194931030273,
+          "passed": true
+        }
+      },
+      "request_sha256": "abe322a42b065517b15897bcbb1c6a7035096c6eb7937994723318298474c150",
+      "request_order": {
+        "question_ids": [
+          "department",
+          "refund_requested",
+          "severity"
+        ],
+        "choice_candidate_ids": {
+          "department": [
+            "billing",
+            "shipping"
+          ]
+        }
+      },
+      "api_protocol_errors": [],
+      "token_counts": {
+        "reference": 307,
+        "api": 307,
+        "encoding_reference": 307,
+        "encoding_vllm": 307
+      },
+      "same_input_token_count": true
+    },
+    {
+      "name": "choice_reordered",
+      "passed": true,
+      "fields": {
+        "department": {
+          "probability_absolute_differences": {
+            "shipping": 2.10711732506752e-05,
+            "billing": 2.110004425048828e-05
+          },
+          "max_probability_absolute_difference": 2.110004425048828e-05,
+          "same_decision": true,
+          "type": "choice",
+          "same_discrete_decision": true,
+          "probability_within_tolerance": true,
+          "score_within_tolerance": true,
+          "confidence_absolute_difference": 2.110004425048828e-05,
+          "passed": true
+        }
+      },
+      "request_sha256": "7d9e56c5578a2979ceb4f5e09fa6a86a1f8501a51a35da89c1f4afa239a2d1d4",
+      "request_order": {
+        "question_ids": [
+          "department"
+        ],
+        "choice_candidate_ids": {
+          "department": [
+            "shipping",
+            "billing"
+          ]
+        }
+      },
+      "api_protocol_errors": [],
+      "token_counts": {
+        "reference": 143,
+        "api": 143,
+        "encoding_reference": 143,
+        "encoding_vllm": 143
+      },
+      "same_input_token_count": true
+    }
+  ],
+  "criteria": {
+    "date": "2026-11-12",
+    "established_before_npu_service": true,
+    "scope": "five fixed SystemOne smoke requests, seven decisions; project BF16 guard",
+    "reference": "verified release implementation, complete CPU BF16 model, eager, use_kernels=false",
+    "candidate_probability_max_absolute_difference": 0.03,
+    "score_max_absolute_difference": 0.05,
+    "require_same_choice": true,
+    "require_same_noul_threshold_decision": true,
+    "noul_threshold": 0.5,
+    "require_same_score_argmax_level": true,
+    "require_identical_token_ids": true,
+    "require_identical_question_option_spans": true,
+    "require_identical_candidate_mapping": true
+  },
+  "api_protocol_passed": true,
+  "encoding_passed": true,
+  "summary": {
+    "case_count": 5,
+    "passed_cases": 5,
+    "decision_count": 7,
+    "matching_discrete_decisions": 7,
+    "max_probability_absolute_difference": 0.00025600194931030273,
+    "max_score_absolute_difference": 0.00032493099570274353,
+    "probability_limit": 0.03,
+    "score_limit": 0.05
+  },
+  "finished_at": "2026-11-12T09:52:21.283907+00:00"
+}

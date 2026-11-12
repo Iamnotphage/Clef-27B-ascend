@@ -1,0 +1,25 @@
+# Selected A3 / CPython 3.12 runtime. Use with pip --constraint.
+# CPU wheels come from https://download.pytorch.org/whl/cpu.
+torch==2.10.0+cpu
+torch-npu==2.10.0.post7
+torchvision==0.25.0+cpu
+torchaudio==2.10.0+cpu
+transformers==5.19.0
+triton-ascend==3.6.0.post2
+flash-linear-attention-npu-a3==26.9.1
+flash-attn-npu==0.5.0
+# Exact transitive requirements in Triton-Ascend 3.6.0.post2's wheel metadata.
+numpy==1.26.4
+scipy==1.13.1
+attrs==24.2.0
+decorator==5.1.1
+psutil==6.0.0
+pytest-xdist==3.6.1
+triton==3.6.0
+# Compatible with NumPy 1.26; requires the documented vLLM metadata patch.
+opencv-python-headless==4.11.0.86
+pandas==2.3.3
+matplotlib==3.10.7
+contourpy==1.3.3
+# The fixed A3 recipe uses setuptools<81.
+setuptools>=78.1.1,<81

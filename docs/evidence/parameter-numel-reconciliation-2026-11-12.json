@@ -1,0 +1,268 @@
+{
+  "status": "static_source_and_arithmetic_confirmed",
+  "scope": "existing source files, model config, CPU reference report and NPU startup audit only; no model reload or remote mutation",
+  "canonical_cpu_numel": 27484784884,
+  "npu_registered_numel": 27486750964,
+  "difference": 1966080,
+  "linear_attention_layers": 48,
+  "key_dim": 2048,
+  "value_dim": 6144,
+  "conv_dim": 10240,
+  "conv_width": 4,
+  "packed_weight_shape_tp1": [
+    4,
+    10240
+  ],
+  "packed_numel_per_layer": 40960,
+  "packed_numel_total": 1966080,
+  "packed_dtype": "bfloat16",
+  "packed_total_bytes": 3932160,
+  "packed_total_MiB": 3.75,
+  "parameter_name": "<layer>.linear_attn.conv1d.ascend_conv1d_weight",
+  "parameter_requires_grad": false,
+  "arithmetic": "27486750964 - 27484784884 = 48 * 4 * 10240 = 1966080",
+  "source_refs": [
+    {
+      "repository": "vllm-ascend",
+      "commit": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+      "path": "vllm_ascend/ops/gdn.py",
+      "sha256": "b235e34d8a2427b167d4ce0e9068312904ecd1473fe288cefe1e9b6f95de030d",
+      "url": "https://github.com/vllm-project/vllm-ascend/blob/89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d/vllm_ascend/ops/gdn.py",
+      "excerpts": [
+        {
+          "start_line": 55,
+          "end_line": 55,
+          "source": "_PACKED_CONV_WEIGHT_NAME = \"ascend_conv1d_weight\""
+        },
+        {
+          "start_line": 78,
+          "end_line": 116,
+          "source": "@torch.no_grad()\ndef _pack_conv_weights(conv1d: nn.Module) -> None:\n    \"\"\"Pack ``[D, 1, W]`` weights into the kernel's ``[W, D]`` layout.\"\"\"\n    source_weight = conv1d.weight\n    if source_weight.is_meta:\n        return\n\n    packed_param = conv1d.get_parameter(_PACKED_CONV_WEIGHT_NAME)\n    packed_weight = (\n        source_weight.view(source_weight.size(0), source_weight.size(2))\n        .transpose(0, 1)\n        .to(device=packed_param.device, dtype=packed_param.dtype)\n        .contiguous()\n    )\n    # replace_parameter preserves the parameter object on both supported versions.\n    replace_parameter(\n        conv1d,\n        _PACKED_CONV_WEIGHT_NAME,\n        packed_weight,\n    )\n\n\ndef initialize_packed_conv_weight(layer: nn.Module) -> None:\n    \"\"\"Register the packed weight and repack it after every source load.\"\"\"\n    conv1d = _get_base_conv1d(layer)\n    source_weight = conv1d.weight\n    if _PACKED_CONV_WEIGHT_NAME not in conv1d._parameters:\n        conv1d.register_parameter(\n            _PACKED_CONV_WEIGHT_NAME,\n            nn.Parameter(\n                torch.empty(\n                    source_weight.size(2),\n                    source_weight.size(0),\n                    dtype=layer.model_config.dtype,\n                    device=source_weight.device,\n                ),\n                requires_grad=False,\n            ),\n        )"
+        },
+        {
+          "start_line": 125,
+          "end_line": 131,
+          "source": "    @wraps(process_weights_after_loading)\n    def process_weights_and_pack(*args, **kwargs):\n        result = process_weights_after_loading(*args, **kwargs)\n        _pack_conv_weights(conv1d)\n        return result\n\n    quant_method.process_weights_after_loading = process_weights_and_pack"
+        },
+        {
+          "start_line": 134,
+          "end_line": 136,
+          "source": "def _get_packed_conv_weights(layer: nn.Module) -> torch.Tensor:\n    \"\"\"Return the registered, kernel-layout convolution parameter.\"\"\"\n    return _get_base_conv1d(layer).get_parameter(_PACKED_CONV_WEIGHT_NAME)"
+        },
+        {
+          "start_line": 500,
+          "end_line": 501,
+          "source": "        # 1. Convolution sequence transformation\n        conv_weights_T = _get_packed_conv_weights(self)"
+        }
+      ]
+    },
+    {
+      "repository": "vllm-ascend",
+      "commit": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+      "path": "vllm_ascend/patch/worker/patch_qwen3_5.py",
+      "sha256": "a9a71634ed138f590fbc3ad0de277a5f56a06451522fd091b2657d6daf6084b0",
+      "url": "https://github.com/vllm-project/vllm-ascend/blob/89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d/vllm_ascend/patch/worker/patch_qwen3_5.py",
+      "excerpts": [
+        {
+          "start_line": 25,
+          "end_line": 40,
+          "source": "from vllm.model_executor.layers.mamba.gdn.qwen_gdn_linear_attn import QwenGatedDeltaNetAttention as _GDNBaseCls\nfrom vllm.model_executor.models.qwen3_5 import Qwen3_5DecoderLayer\n\ntry:\n    from vllm.model_executor.models.qwen3_5_mtp import Qwen3_5MultiTokenPredictor\n    from vllm.sequence import IntermediateTensors\nexcept ImportError:\n    Qwen3_5MultiTokenPredictor = None\n    IntermediateTensors = None\nfrom vllm.model_executor.models.qwen3_next import Qwen3NextAttention\n\nfrom vllm_ascend.device.hardware_profile import HardwareCapability, get_current_hardware_profile\nfrom vllm_ascend.ops.gdn import AscendGatedDeltaNetAttention, initialize_packed_conv_weight\n\n_GDN_PATCH_TARGET = _GDNBaseCls\n_GDN_ORIGINAL_INIT = _GDN_PATCH_TARGET.__init__"
+        },
+        {
+          "start_line": 210,
+          "end_line": 226,
+          "source": "if get_current_hardware_profile().supports(HardwareCapability.GDN_COMPATIBILITY):\n    from vllm_ascend._310p.ops.fla.gdn_310 import AscendGatedDeltaNetAttention310\n\n    _GDN_PATCH_TARGET._forward_core = AscendGatedDeltaNetAttention310._forward_core\n    _GDN_PATCH_TARGET.get_state_dtype = AscendGatedDeltaNetAttention310.get_state_dtype\nelse:\n    _GDN_PATCH_TARGET._pack_conv_weights = AscendGatedDeltaNetAttention._pack_conv_weights\n\n    @wraps(_GDN_ORIGINAL_INIT)\n    def _gdn_init_with_packed_weight(self, *args, **kwargs):\n        _GDN_ORIGINAL_INIT(self, *args, **kwargs)\n        initialize_packed_conv_weight(self)\n\n    _GDN_PATCH_TARGET.__init__ = _gdn_init_with_packed_weight\n    _GDN_PATCH_TARGET.forward = AscendGatedDeltaNetAttention.forward\n    _GDN_PATCH_TARGET._forward_core = AscendGatedDeltaNetAttention._forward_core\n    _GDN_PATCH_TARGET._warmup_prefill_kernels = AscendGatedDeltaNetAttention._warmup_prefill_kernels"
+        }
+      ]
+    },
+    {
+      "repository": "vllm",
+      "commit": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+      "path": "vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "sha256": "04ecc9fc29a62b863e28016bd09c3185b2f2d6b301c16deed9b7f345ac63648b",
+      "url": "https://github.com/vllm-project/vllm/blob/24420b7a341af37a9bc3186e6fc6062512e0aa58/vllm/model_executor/layers/mamba/gdn/qwen_gdn_linear_attn.py",
+      "excerpts": [
+        {
+          "start_line": 583,
+          "end_line": 589,
+          "source": "        self.num_k_heads = config.linear_num_key_heads\n        self.num_v_heads = config.linear_num_value_heads\n        self.head_k_dim = config.linear_key_head_dim\n        self.head_v_dim = config.linear_value_head_dim\n        self.conv_kernel_size = config.linear_conv_kernel_dim\n        self.key_dim = self.head_k_dim * self.num_k_heads\n        self.value_dim = self.head_v_dim * self.num_v_heads"
+        },
+        {
+          "start_line": 611,
+          "end_line": 618,
+          "source": "        self.conv_dim = self.key_dim * 2 + self.value_dim\n        self.conv1d = ColumnParallelLinear(\n            input_size=self.conv_kernel_size,\n            output_size=self.conv_dim,\n            bias=False,\n            prefix=f\"{prefix}.conv1d\",\n        )\n        self.conv1d.weight.data = self.conv1d.weight.data.unsqueeze(1)"
+        }
+      ]
+    },
+    {
+      "repository": "vllm",
+      "commit": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+      "path": "vllm/model_executor/models/qwen3_5.py",
+      "sha256": "f9f370f7b4988bd917c1dad4a4d6939e74c5fe4f5b7cea9cedfcf4c2a5637afe",
+      "url": "https://github.com/vllm-project/vllm/blob/24420b7a341af37a9bc3186e6fc6062512e0aa58/vllm/model_executor/models/qwen3_5.py",
+      "excerpts": [
+        {
+          "start_line": 147,
+          "end_line": 154,
+          "source": "        if self.layer_type == \"linear_attention\":\n            self.linear_attn = QwenGatedDeltaNetAttention(\n                config=config,\n                vllm_config=vllm_config,\n                prefix=f\"{prefix}.linear_attn\",\n                gqa_interleaved_layout=False,\n                reduce_results=not self.use_attn_reduce_scatter_for_moe,\n            )"
+        }
+      ]
+    }
+  ],
+  "existing_snapshot": {
+    "config": {
+      "attention_bias": false,
+      "attention_dropout": 0.0,
+      "attn_output_gate": true,
+      "bos_token_id": 248044,
+      "dtype": "bfloat16",
+      "eos_token_id": 248044,
+      "full_attention_interval": 4,
+      "head_dim": 256,
+      "hidden_act": "silu",
+      "hidden_size": 5120,
+      "initializer_range": 0.02,
+      "intermediate_size": 17408,
+      "layer_types": [
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention",
+        "linear_attention",
+        "linear_attention",
+        "linear_attention",
+        "full_attention"
+      ],
+      "linear_conv_kernel_dim": 4,
+      "linear_key_head_dim": 128,
+      "linear_num_key_heads": 16,
+      "linear_num_value_heads": 48,
+      "linear_value_head_dim": 128,
+      "mamba_ssm_dtype": "float32",
+      "max_position_embeddings": 262144,
+      "model_type": "qwen3_5_text",
+      "mtp_num_hidden_layers": 0,
+      "mtp_use_dedicated_embeddings": false,
+      "num_attention_heads": 24,
+      "num_hidden_layers": 64,
+      "num_key_value_heads": 4,
+      "output_gate_type": "swish",
+      "pad_token_id": null,
+      "partial_rotary_factor": 0.25,
+      "rms_norm_eps": 1e-06,
+      "rope_parameters": {
+        "mrope_interleaved": true,
+        "mrope_section": [
+          11,
+          11,
+          10
+        ],
+        "partial_rotary_factor": 0.25,
+        "rope_theta": 10000000,
+        "rope_type": "default"
+      },
+      "tie_word_embeddings": false,
+      "use_cache": true,
+      "vocab_size": 248320
+    },
+    "config_sha256": "c42e88892bd3fd84e8276b2ad90df58c1c3b797676ea161035006a72ad468c58",
+    "cpu_parameter_counts": {
+      "cpu/torch.bfloat16": 27484784884
+    },
+    "cpu_report_sha256": "56290ec3cb11b907b0f9ba57ab4d6f2c9b6573b841b0ecb2633572782363cd5d",
+    "npu_audit": {
+      "language_model_layer_count": 64,
+      "lm_head": {
+        "device": "npu:0",
+        "dtype": "torch.bfloat16",
+        "shape": [
+          248320,
+          5120
+        ]
+      },
+      "model_class": "AscendClefFlashForJointSchema",
+      "parameters": {
+        "by_device_dtype": {
+          "npu:0/torch.bfloat16": {
+            "numel": 27486748660,
+            "tensors": 1114
+          },
+          "npu:0/torch.float32": {
+            "numel": 2304,
+            "tensors": 48
+          }
+        },
+        "numel": 27486750964,
+        "tensors": 1162
+      },
+      "phase": "after_load_weights_and_tracking",
+      "pooler_head": {
+        "loaded_name_count": 122,
+        "missing_names": [],
+        "numel": 128056324,
+        "parameter_tensors": 122
+      },
+      "strict_tracking_enabled": true,
+      "visual": {
+        "class": "Qwen3_VisionTransformer",
+        "numel": 460730096
+      }
+    }
+  }
+}

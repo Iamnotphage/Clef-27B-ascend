@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-11-12T09:36:02.781455+00:00",
+  "passed": true,
+  "status": "complete",
+  "phase": "destroy_process_group",
+  "rank": 0,
+  "torchrun_environment": {
+    "RANK": "0",
+    "LOCAL_RANK": "0",
+    "WORLD_SIZE": "2",
+    "LOCAL_WORLD_SIZE": "2",
+    "MASTER_ADDR": "25e6d0590726",
+    "MASTER_PORT": "34255"
+  },
+  "backend": "hccl",
+  "timeout_seconds": 120,
+  "script": {
+    "path": "/workspace/yangchen/Clef-27B-ascend/scripts/verify_hccl.py",
+    "sha256": "9f2b5f6ef3b599e72a391f3d5b40791cfc35b32c0a73d0e26d22ff2d98ea7848"
+  },
+  "collectives": [
+    {
+      "operation": "all_reduce_SUM",
+      "dtype": "torch.float32",
+      "input_values": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0
+      ],
+      "expected_values": [
+        1.0,
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        11.0,
+        13.0,
+        15.0
+      ],
+      "comparison": "Exact CPU FP32 equality; all integer values are exactly representable",
+      "passed": true,
+      "synchronization_completed": true,
+      "synchronized_elapsed_seconds": 1.1804126100614667,
+      "output_device": "npu:0",
+      "output_dtype": "torch.float32",
+      "actual_values": [
+        1.0,
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        11.0,
+        13.0,
+        15.0
+      ],
+      "output_finite": true,
+      "output_nan_count": 0,
+      "output_inf_count": 0,
+      "max_abs_error": 0.0
+    },
+    {
+      "operation": "all_reduce_SUM",
+      "dtype": "torch.bfloat16",
+      "input_values": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0
+      ],
+      "expected_values": [
+        1.0,
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        11.0,
+        13.0,
+        15.0
+      ],
+      "comparison": "Exact CPU FP32 equality; all integer values are exactly representable",
+      "passed": true,
+      "synchronization_completed": true,
+      "synchronized_elapsed_seconds": 0.0012226100079715252,
+      "output_device": "npu:0",
+      "output_dtype": "torch.bfloat16",
+      "actual_values": [
+        1.0,
+        3.0,
+        5.0,
+        7.0,
+        9.0,
+        11.0,
+        13.0,
+        15.0
+      ],
+      "output_finite": true,
+      "output_nan_count": 0,
+      "output_inf_count": 0,
+      "max_abs_error": 0.0
+    }
+  ],
+  "barrier": {
+    "passed": true,
+    "device_synchronization_completed": true
+  },
+  "destroy_process_group": {
+    "attempted": true,
+    "passed": true
+  },
+  "local_rank": 0,
+  "world_size": 2,
+  "device": "npu:0",
+  "packages": {
+    "torch": {
+      "version": "2.10.0+cpu",
+      "path": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py"
+    },
+    "torch_npu": {
+      "version": "2.10.0.post7",
+      "path": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/__init__.py"
+    }
+  },
+  "npu": {
+    "available": true,
+    "device_count": 2,
+    "device_name": "Ascend910_9382"
+  },
+  "initialized_backend": "hccl",
+  "finished_at": "2026-11-12T09:36:07.992203+00:00"
+}

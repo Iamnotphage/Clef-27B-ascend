@@ -1,0 +1,3529 @@
+{
+  "schema_version": 1,
+  "started_at": "2026-11-12T09:18:19.194660+00:00",
+  "passed": true,
+  "base_url": "http://127.0.0.1:8000",
+  "model": "clef",
+  "configuration": {
+    "warmup": 3,
+    "requests": 30,
+    "concurrency": 1,
+    "timeout_seconds": 300,
+    "validation_atol": 1e-05,
+    "warmup_policy": "Sequential; all requested warmups must pass before measurement",
+    "latency_scope": "HTTP transfer, decoding and protocol validation; excludes client queue time",
+    "throughput_window": "First submission through completion of all measured requests; excludes warmup"
+  },
+  "request_template": {
+    "model": "clef",
+    "state": "The customer was charged twice for one order and requests a refund.",
+    "questions": {
+      "department": {
+        "type": "choice",
+        "instructions": "Which team should handle this ticket?",
+        "criteria": {
+          "billing": "Payments and refunds",
+          "shipping": "Deliveries"
+        }
+      },
+      "refund_requested": {
+        "type": "noul",
+        "instructions": "Does the customer request a refund?"
+      },
+      "severity": {
+        "type": "score",
+        "instructions": "How severe is the payment problem?",
+        "criteria": [
+          "none",
+          "minor",
+          "major"
+        ]
+      }
+    }
+  },
+  "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+  "template_hash_scope": "Exact compact UTF-8 JSON POST body; preserves question and candidate order",
+  "fields_per_request": 3,
+  "candidate_counts": {
+    "department": 2,
+    "refund_requested": 2,
+    "severity": 3
+  },
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "warmup": [
+    {
+      "index": 0,
+      "phase": "warmup",
+      "started_at": "2026-11-12T09:18:19.198476+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-89bfcc61ef0fc62a\",\"object\":\"structured_decision\",\"created\":1794475099,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-89bfcc61ef0fc62a",
+        "object": "structured_decision",
+        "created": 1794475099,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 141.51811972260475,
+      "finished_at": "2026-11-12T09:18:19.340002+00:00"
+    },
+    {
+      "index": 1,
+      "phase": "warmup",
+      "started_at": "2026-11-12T09:18:19.340013+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9fed4cae56bff3f6\",\"object\":\"structured_decision\",\"created\":1794475099,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9fed4cae56bff3f6",
+        "object": "structured_decision",
+        "created": 1794475099,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.69397002458572,
+      "finished_at": "2026-11-12T09:18:19.480711+00:00"
+    },
+    {
+      "index": 2,
+      "phase": "warmup",
+      "started_at": "2026-11-12T09:18:19.480720+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a70e0d299b53a8f7\",\"object\":\"structured_decision\",\"created\":1794475099,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a70e0d299b53a8f7",
+        "object": "structured_decision",
+        "created": 1794475099,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.33262012526393,
+      "finished_at": "2026-11-12T09:18:19.621056+00:00"
+    }
+  ],
+  "requests": [
+    {
+      "index": 0,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:19.621322+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-bd735f5cd0a3b987\",\"object\":\"structured_decision\",\"created\":1794475099,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-bd735f5cd0a3b987",
+        "object": "structured_decision",
+        "created": 1794475099,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.00396011397243,
+      "finished_at": "2026-11-12T09:18:19.761334+00:00"
+    },
+    {
+      "index": 1,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:19.761368+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a4030b6965a68518\",\"object\":\"structured_decision\",\"created\":1794475099,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a4030b6965a68518",
+        "object": "structured_decision",
+        "created": 1794475099,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.133670065552,
+      "finished_at": "2026-11-12T09:18:19.901507+00:00"
+    },
+    {
+      "index": 2,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:19.901530+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a2e8eb2759d7d92e\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a2e8eb2759d7d92e",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.23195998743176,
+      "finished_at": "2026-11-12T09:18:20.041767+00:00"
+    },
+    {
+      "index": 3,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.041787+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-99408cf1ee3b3af2\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-99408cf1ee3b3af2",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.16783982515335,
+      "finished_at": "2026-11-12T09:18:20.181959+00:00"
+    },
+    {
+      "index": 4,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.181979+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-868cded77809a3df\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-868cded77809a3df",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.12264972552657,
+      "finished_at": "2026-11-12T09:18:20.322107+00:00"
+    },
+    {
+      "index": 5,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.322132+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-95ce9b696ef03c45\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-95ce9b696ef03c45",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.16980957239866,
+      "finished_at": "2026-11-12T09:18:20.462306+00:00"
+    },
+    {
+      "index": 6,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.462330+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a865e1b7e442da33\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a865e1b7e442da33",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.56942984461784,
+      "finished_at": "2026-11-12T09:18:20.602904+00:00"
+    },
+    {
+      "index": 7,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.602926+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b70994c8c8323d5d\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b70994c8c8323d5d",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.97037026658654,
+      "finished_at": "2026-11-12T09:18:20.743901+00:00"
+    },
+    {
+      "index": 8,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.743921+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-8cc2ad1dd2ccfb08\",\"object\":\"structured_decision\",\"created\":1794475100,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-8cc2ad1dd2ccfb08",
+        "object": "structured_decision",
+        "created": 1794475100,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 141.09794981777668,
+      "finished_at": "2026-11-12T09:18:20.885024+00:00"
+    },
+    {
+      "index": 9,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:20.885045+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b674f8fa290f6359\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b674f8fa290f6359",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.19950991496444,
+      "finished_at": "2026-11-12T09:18:21.025248+00:00"
+    },
+    {
+      "index": 10,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.025269+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-afde37c2aec24c37\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-afde37c2aec24c37",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.00126998871565,
+      "finished_at": "2026-11-12T09:18:21.165274+00:00"
+    },
+    {
+      "index": 11,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.165294+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b1978620a7dda710\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b1978620a7dda710",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.3655898757279,
+      "finished_at": "2026-11-12T09:18:21.305664+00:00"
+    },
+    {
+      "index": 12,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.305692+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-bbf99ba1240e5d22\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-bbf99ba1240e5d22",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 142.59312022477388,
+      "finished_at": "2026-11-12T09:18:21.448290+00:00"
+    },
+    {
+      "index": 13,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.448313+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-94a8fd1c10bd04ad\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-94a8fd1c10bd04ad",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.94797987490892,
+      "finished_at": "2026-11-12T09:18:21.589265+00:00"
+    },
+    {
+      "index": 14,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.589286+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a972950c0abc4d5d\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a972950c0abc4d5d",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 141.3520099595189,
+      "finished_at": "2026-11-12T09:18:21.730642+00:00"
+    },
+    {
+      "index": 15,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.730664+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9a3c07363d8151ee\",\"object\":\"structured_decision\",\"created\":1794475101,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9a3c07363d8151ee",
+        "object": "structured_decision",
+        "created": 1794475101,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.1921403594315,
+      "finished_at": "2026-11-12T09:18:21.870861+00:00"
+    },
+    {
+      "index": 16,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:21.870883+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a71fd59d20e8e8ce\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a71fd59d20e8e8ce",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 139.94491985067725,
+      "finished_at": "2026-11-12T09:18:22.010833+00:00"
+    },
+    {
+      "index": 17,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.010853+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a9441527cb4634c4\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a9441527cb4634c4",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.13721980154514,
+      "finished_at": "2026-11-12T09:18:22.150995+00:00"
+    },
+    {
+      "index": 18,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.151015+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b9ffa348e110a893\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b9ffa348e110a893",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.7228596508503,
+      "finished_at": "2026-11-12T09:18:22.291742+00:00"
+    },
+    {
+      "index": 19,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.291768+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b169f85aad14527a\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b169f85aad14527a",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 148.01258966326714,
+      "finished_at": "2026-11-12T09:18:22.439786+00:00"
+    },
+    {
+      "index": 20,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.439810+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9d63fb076823c7eb\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9d63fb076823c7eb",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 142.5139899365604,
+      "finished_at": "2026-11-12T09:18:22.582328+00:00"
+    },
+    {
+      "index": 21,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.582350+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b6fe81fd00798366\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b6fe81fd00798366",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 144.26244981586933,
+      "finished_at": "2026-11-12T09:18:22.726617+00:00"
+    },
+    {
+      "index": 22,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.726638+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a7717c1e81f67f06\",\"object\":\"structured_decision\",\"created\":1794475102,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a7717c1e81f67f06",
+        "object": "structured_decision",
+        "created": 1794475102,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.45547973364592,
+      "finished_at": "2026-11-12T09:18:22.867099+00:00"
+    },
+    {
+      "index": 23,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:22.867121+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b4eaadbff52fc7e2\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b4eaadbff52fc7e2",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.25144977495074,
+      "finished_at": "2026-11-12T09:18:23.007377+00:00"
+    },
+    {
+      "index": 24,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.007398+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-be38daf7535f10fc\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-be38daf7535f10fc",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.07748011499643,
+      "finished_at": "2026-11-12T09:18:23.147480+00:00"
+    },
+    {
+      "index": 25,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.147499+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-972a0cc794b53181\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-972a0cc794b53181",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.30598988756537,
+      "finished_at": "2026-11-12T09:18:23.287810+00:00"
+    },
+    {
+      "index": 26,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.287838+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-946220cfaff4e6be\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-946220cfaff4e6be",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.38860984146595,
+      "finished_at": "2026-11-12T09:18:23.428231+00:00"
+    },
+    {
+      "index": 27,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.428255+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a5d88b03c09cf4ed\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a5d88b03c09cf4ed",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 139.95480025187135,
+      "finished_at": "2026-11-12T09:18:23.568215+00:00"
+    },
+    {
+      "index": 28,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.568236+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-93e96fd8b01b2de1\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-93e96fd8b01b2de1",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.29665011912584,
+      "finished_at": "2026-11-12T09:18:23.708537+00:00"
+    },
+    {
+      "index": 29,
+      "phase": "measured",
+      "started_at": "2026-11-12T09:18:23.708559+00:00",
+      "request": {
+        "model": "clef",
+        "state": "The customer was charged twice for one order and requests a refund.",
+        "questions": {
+          "department": {
+            "type": "choice",
+            "instructions": "Which team should handle this ticket?",
+            "criteria": {
+              "billing": "Payments and refunds",
+              "shipping": "Deliveries"
+            }
+          },
+          "refund_requested": {
+            "type": "noul",
+            "instructions": "Does the customer request a refund?"
+          },
+          "severity": {
+            "type": "score",
+            "instructions": "How severe is the payment problem?",
+            "criteria": [
+              "none",
+              "minor",
+              "major"
+            ]
+          }
+        }
+      },
+      "passed": true,
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9028b5ef927ad243\",\"object\":\"structured_decision\",\"created\":1794475103,\"model\":\"clef\",\"answers\":{\"department\":{\"type\":\"choice\",\"choice\":\"billing\",\"probabilities\":{\"billing\":0.9970878958702087,\"shipping\":0.0029121784027665854},\"confidence\":0.9970878958702087},\"refund_requested\":{\"type\":\"noul\",\"noul\":0.9936610460281372,\"probabilities\":{\"yes\":0.9936610460281372,\"no\":0.006338921375572681},\"confidence\":0.9936610460281372},\"severity\":{\"type\":\"score\",\"score\":1.9402048215270042,\"legend\":{\"0\":\"none\",\"1\":\"minor\",\"2\":\"major\"},\"probabilities\":{\"0\":0.012445476837456226,\"1\":0.034904204308986664,\"2\":0.9526503086090088},\"confidence\":0.9526503086090088}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"department\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"refund_requested\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9028b5ef927ad243",
+        "object": "structured_decision",
+        "created": 1794475103,
+        "model": "clef",
+        "answers": {
+          "department": {
+            "type": "choice",
+            "choice": "billing",
+            "probabilities": {
+              "billing": 0.9970878958702087,
+              "shipping": 0.0029121784027665854
+            },
+            "confidence": 0.9970878958702087
+          },
+          "refund_requested": {
+            "type": "noul",
+            "noul": 0.9936610460281372,
+            "probabilities": {
+              "yes": 0.9936610460281372,
+              "no": 0.006338921375572681
+            },
+            "confidence": 0.9936610460281372
+          },
+          "severity": {
+            "type": "score",
+            "score": 1.9402048215270042,
+            "legend": {
+              "0": "none",
+              "1": "minor",
+              "2": "major"
+            },
+            "probabilities": {
+              "0": 0.012445476837456226,
+              "1": 0.034904204308986664,
+              "2": 0.9526503086090088
+            },
+            "confidence": 0.9526503086090088
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "department": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "refund_requested": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "errors": [],
+      "actual_input_tokens": 307,
+      "elapsed_ms": 140.3463496826589,
+      "finished_at": "2026-11-12T09:18:23.848910+00:00"
+    }
+  ],
+  "hbm": {
+    "enabled": true,
+    "requested_interval_seconds": 1.0,
+    "scope": "Device HBM usage during warmup and measured requests, with a final adjacent sample; includes other processes.",
+    "method": "npu-smi info polling; peaks refer to observed samples",
+    "sampled_peak_hbm": {
+      "per_device": [
+        {
+          "card": 7,
+          "chip": 0,
+          "physical_device": 14,
+          "used_mib": 59964,
+          "total_mib": 65536,
+          "observed_at": "2026-11-12T09:18:19.198430+00:00"
+        },
+        {
+          "card": 7,
+          "chip": 1,
+          "physical_device": 15,
+          "used_mib": 2885,
+          "total_mib": 65536,
+          "observed_at": "2026-11-12T09:18:19.198430+00:00"
+        }
+      ],
+      "max_total_used_mib": 62849
+    },
+    "valid_sample_count": 6,
+    "samples": [
+      {
+        "started_at": "2026-11-12T09:18:19.198430+00:00",
+        "monotonic_seconds": 3392079.18508866,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 274.5                42                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59964/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56752                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59964,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:19.557618+00:00"
+      },
+      {
+        "started_at": "2026-11-12T09:18:20.198493+00:00",
+        "monotonic_seconds": 3392080.18514877,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 328.1                47                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 93                   0    / 0                59964/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56794                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59964,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:20.565058+00:00"
+      },
+      {
+        "started_at": "2026-11-12T09:18:21.198493+00:00",
+        "monotonic_seconds": 3392081.18514779,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 354.1                46                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 93                   0    / 0                59964/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56794                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59964,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:21.556289+00:00"
+      },
+      {
+        "started_at": "2026-11-12T09:18:22.198495+00:00",
+        "monotonic_seconds": 3392082.18515,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 353.4                47                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 93                   0    / 0                59964/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56794                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59964,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:22.557862+00:00"
+      },
+      {
+        "started_at": "2026-11-12T09:18:23.198495+00:00",
+        "monotonic_seconds": 3392083.18515002,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 349.4                46                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 93                   0    / 0                59964/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56794                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59964,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:23.552666+00:00"
+      },
+      {
+        "started_at": "2026-11-12T09:18:23.849055+00:00",
+        "monotonic_seconds": 3392083.8357127,
+        "returncode": 0,
+        "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 234.2                44                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 93                   0    / 0                59963/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                2885 / 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 66428         | VLLMEngineCor      | 56794                 | 66428                   |\n| 7       0                 | 66350         | python             | 106                   | 66350                   |\n+===========================+===============+======================================================================+\n",
+        "stderr": "",
+        "devices": [
+          {
+            "card": 7,
+            "chip": 0,
+            "physical_device": 14,
+            "used_mib": 59963,
+            "total_mib": 65536
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "physical_device": 15,
+            "used_mib": 2885,
+            "total_mib": 65536
+          }
+        ],
+        "finished_at": "2026-11-12T09:18:24.209032+00:00"
+      }
+    ]
+  },
+  "summary": {
+    "requested_requests": 30,
+    "completed_requests": 30,
+    "successful_requests": 30,
+    "failed_requests": 0,
+    "success_rate": 1.0,
+    "measurement_wall_seconds": 4.227942310273647,
+    "successful_requests_per_second": 7.0956502710791,
+    "successful_decisions": 90,
+    "decisions_per_second": 21.286950813237297,
+    "successful_request_latency_ms": {
+      "p50": 140.3013200033456,
+      "p95": 143.51125149987638,
+      "min": 139.94491985067725,
+      "max": 148.01258966326714,
+      "mean": 140.89300325140357,
+      "percentile_method": "linear interpolation at (n-1)*quantile"
+    },
+    "actual_input_tokens": {
+      "successful_total": 9210,
+      "per_request_histogram": {
+        "307": 30
+      },
+      "min": 307,
+      "max": 307
+    }
+  },
+  "finished_at": "2026-11-12T09:18:24.209135+00:00"
+}

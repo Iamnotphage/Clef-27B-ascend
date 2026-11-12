@@ -1,0 +1,3671 @@
+{
+  "created_at": "2026-11-12T09:18:24.272492+00:00",
+  "scope": "固定小样本项目自检；准确率为所选决策的 micro average，失败计入分母。",
+  "cases_file": "/workspace/yangchen/datasets/clef-smoke-20261112/smoke-data/api-smoke28-cases.json",
+  "cases_sha256": "b265219a5fdd12dba838c6ed436777e30dcdaa071ae00b05b6f1be478398509e",
+  "base_url": "http://127.0.0.1:8000",
+  "model": "clef",
+  "probability_atol": 1e-05,
+  "grading": {
+    "jevbench": "Argmax over sorted source labels; Noul ties select no; Score MAE compares expected level with discrete gold.",
+    "open_decisions": "Noul P(yes)>=0.5; other types use argmax over sorted source labels; Score MAE compares expected level with discrete gold.",
+    "typed_decisions": "Preserve each gold distribution's option order; normalize predictions; map yes/no to true/false; accuracy compares distribution argmax; Score MAE compares with gold expected score."
+  },
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "cases": [
+    {
+      "name": "jevbench:original-policy-01-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 0,
+        "id": "original-policy-01-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "6ae6a264c5a7844ab84ae38e3f532bf24560d2d1566dcf843eace8a6cfe50d06"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Policy: refunds require a receipt and purchase within 30 days. A customer bought 12 days ago but has no receipt. Issue a refund.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "A condition is missing or a prohibition applies.",
+              "true": "Every required condition is established and no prohibition applies."
+            },
+            "instructions": "Under the stated policy, is the requested action permitted? Treat unproved required conditions as not satisfied.",
+            "type": "noul"
+          }
+        }
+      },
+      "gold": {
+        "expected": "no",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "no",
+          "gold_label": "no",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.973036527633667,
+            "yes": 0.026963498443365097
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b6854baa607f3683\",\"object\":\"structured_decision\",\"created\":1794475104,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.026963498443365097,\"probabilities\":{\"yes\":0.026963498443365097,\"no\":0.973036527633667},\"confidence\":0.973036527633667}},\"usage\":{\"input_tokens\":186,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b6854baa607f3683",
+        "object": "structured_decision",
+        "created": 1794475104,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.026963498443365097,
+            "probabilities": {
+              "yes": 0.026963498443365097,
+              "no": 0.973036527633667
+            },
+            "confidence": 0.973036527633667
+          }
+        },
+        "usage": {
+          "input_tokens": 186,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1317012901417911
+    },
+    {
+      "name": "jevbench:original-policy-01-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 1,
+        "id": "original-policy-01-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "fcad9ed7d4c9cc2daae3c80a7a5614327e75cbf655db9e0ce191a784e67931dc"
+      },
+      "request": {
+        "model": "clef",
+        "state": "A receipt AND an age of at most 30 days are required. The purchase was 12 days ago; proof of purchase is absent. May we refund?",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "A condition is missing or a prohibition applies.",
+              "true": "Every required condition is established and no prohibition applies."
+            },
+            "instructions": "Under the stated policy, is the requested action permitted? Treat unproved required conditions as not satisfied.",
+            "type": "noul"
+          }
+        }
+      },
+      "gold": {
+        "expected": "no",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "no",
+          "gold_label": "no",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.987375020980835,
+            "yes": 0.012624948285520077
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-aee165a8f32f1ea7\",\"object\":\"structured_decision\",\"created\":1794475104,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.012624948285520077,\"probabilities\":{\"yes\":0.012624948285520077,\"no\":0.987375020980835},\"confidence\":0.987375020980835}},\"usage\":{\"input_tokens\":189,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-aee165a8f32f1ea7",
+        "object": "structured_decision",
+        "created": 1794475104,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.012624948285520077,
+            "probabilities": {
+              "yes": 0.012624948285520077,
+              "no": 0.987375020980835
+            },
+            "confidence": 0.987375020980835
+          }
+        },
+        "usage": {
+          "input_tokens": 189,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1266427100636065
+    },
+    {
+      "name": "jevbench:original-policy-02-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 2,
+        "id": "original-policy-02-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "04ca8d8f3e438490fdea5bef758386d0613db4054fdbd403c8b642377d0d3c94"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Policy: trial users may export CSV; PDF needs a paid plan. Trial user asks for CSV.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "A condition is missing or a prohibition applies.",
+              "true": "Every required condition is established and no prohibition applies."
+            },
+            "instructions": "Under the stated policy, is the requested action permitted? Treat unproved required conditions as not satisfied.",
+            "type": "noul"
+          }
+        }
+      },
+      "gold": {
+        "expected": "yes",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "yes",
+          "gold_label": "yes",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.019946934655308723,
+            "yes": 0.9800530076026917
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b9181994ca8cb734\",\"object\":\"structured_decision\",\"created\":1794475104,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.9800530076026917,\"probabilities\":{\"yes\":0.9800530076026917,\"no\":0.019946934655308723},\"confidence\":0.9800530076026917}},\"usage\":{\"input_tokens\":175,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b9181994ca8cb734",
+        "object": "structured_decision",
+        "created": 1794475104,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.9800530076026917,
+            "probabilities": {
+              "yes": 0.9800530076026917,
+              "no": 0.019946934655308723
+            },
+            "confidence": 0.9800530076026917
+          }
+        },
+        "usage": {
+          "input_tokens": 175,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1240970203652978
+    },
+    {
+      "name": "jevbench:original-policy-02-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 3,
+        "id": "original-policy-02-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "83fad27e6d5dfda4dbe210cd88eb3cc87020719583f91c5fadb11bee9440f69f"
+      },
+      "request": {
+        "model": "clef",
+        "state": "A trial account requests CSV export. Rules allow trial CSV, but reserve PDF for paid accounts.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "false": "A condition is missing or a prohibition applies.",
+              "true": "Every required condition is established and no prohibition applies."
+            },
+            "instructions": "Under the stated policy, is the requested action permitted? Treat unproved required conditions as not satisfied.",
+            "type": "noul"
+          }
+        }
+      },
+      "gold": {
+        "expected": "yes",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "yes",
+          "gold_label": "yes",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.024656854569911957,
+            "yes": 0.9753431081771851
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-bb8467e115ec16ce\",\"object\":\"structured_decision\",\"created\":1794475104,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.9753431081771851,\"probabilities\":{\"yes\":0.9753431081771851,\"no\":0.024656854569911957},\"confidence\":0.9753431081771851}},\"usage\":{\"input_tokens\":174,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-bb8467e115ec16ce",
+        "object": "structured_decision",
+        "created": 1794475104,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.9753431081771851,
+            "probabilities": {
+              "yes": 0.9753431081771851,
+              "no": 0.024656854569911957
+            },
+            "confidence": 0.9753431081771851
+          }
+        },
+        "usage": {
+          "input_tokens": 174,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12358066998422146
+    },
+    {
+      "name": "jevbench:original-intent-01-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 12,
+        "id": "original-intent-01-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "a31e423d7916e404d144b77392b606ebd9034d7a6401a74c010ccf4c2f584284"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Do not cancel my membership. Please return the duplicate charge.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "cancel": "End an existing subscription",
+              "change_address": "Modify a delivery address",
+              "other": "None of these actions is requested",
+              "refund": "Return money already charged",
+              "status": "Learn delivery progress"
+            },
+            "instructions": "Select the primary requested action. A mention without a request does not establish intent.",
+            "type": "choice"
+          }
+        }
+      },
+      "gold": {
+        "expected": "refund",
+        "labels": [
+          "cancel",
+          "refund",
+          "status",
+          "change_address",
+          "other"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "refund",
+          "gold_label": "refund",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "cancel": 0.003918697591871023,
+            "refund": 0.9816127419471741,
+            "status": 0.0017389114946126938,
+            "change_address": 0.001909820712171495,
+            "other": 0.010819870978593826
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b1f1e15f4e0cf0f7\",\"object\":\"structured_decision\",\"created\":1794475104,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"refund\",\"probabilities\":{\"cancel\":0.003918697591871023,\"change_address\":0.001909820712171495,\"other\":0.010819870978593826,\"refund\":0.9816127419471741,\"status\":0.0017389114946126938},\"confidence\":0.9816127419471741}},\"usage\":{\"input_tokens\":212,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b1f1e15f4e0cf0f7",
+        "object": "structured_decision",
+        "created": 1794475104,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "refund",
+            "probabilities": {
+              "cancel": 0.003918697591871023,
+              "change_address": 0.001909820712171495,
+              "other": 0.010819870978593826,
+              "refund": 0.9816127419471741,
+              "status": 0.0017389114946126938
+            },
+            "confidence": 0.9816127419471741
+          }
+        },
+        "usage": {
+          "input_tokens": 212,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.13231339026242495
+    },
+    {
+      "name": "jevbench:original-intent-01-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 13,
+        "id": "original-intent-01-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "20b8d54d251f093c2a6c7a2e22a7e132aa8cb0f8de2ad65ffa0d010dbfa19339"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Keep my subscription active; I only want the second charge refunded.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "cancel": "End an existing subscription",
+              "change_address": "Modify a delivery address",
+              "other": "None of these actions is requested",
+              "refund": "Return money already charged",
+              "status": "Learn delivery progress"
+            },
+            "instructions": "Select the primary requested action. A mention without a request does not establish intent.",
+            "type": "choice"
+          }
+        }
+      },
+      "gold": {
+        "expected": "refund",
+        "labels": [
+          "cancel",
+          "refund",
+          "status",
+          "change_address",
+          "other"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "refund",
+          "gold_label": "refund",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "cancel": 0.014817981980741024,
+            "refund": 0.9495590329170227,
+            "status": 0.003988205920904875,
+            "change_address": 0.004380187019705772,
+            "other": 0.027254439890384674
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9c5f8e35ce044f65\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"refund\",\"probabilities\":{\"cancel\":0.014817981980741024,\"change_address\":0.004380187019705772,\"other\":0.027254439890384674,\"refund\":0.9495590329170227,\"status\":0.003988205920904875},\"confidence\":0.9495590329170227}},\"usage\":{\"input_tokens\":213,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9c5f8e35ce044f65",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "refund",
+            "probabilities": {
+              "cancel": 0.014817981980741024,
+              "change_address": 0.004380187019705772,
+              "other": 0.027254439890384674,
+              "refund": 0.9495590329170227,
+              "status": 0.003988205920904875
+            },
+            "confidence": 0.9495590329170227
+          }
+        },
+        "usage": {
+          "input_tokens": 213,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.13005159003660083
+    },
+    {
+      "name": "jevbench:original-intent-02-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 14,
+        "id": "original-intent-02-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "6c12c54b562696bfe4e2ad4bc98e6c4faaaf5558c1474179f51cae6677048140"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Where is the parcel? Keep the delivery address as it is.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "cancel": "End an existing subscription",
+              "change_address": "Modify a delivery address",
+              "other": "None of these actions is requested",
+              "refund": "Return money already charged",
+              "status": "Learn delivery progress"
+            },
+            "instructions": "Select the primary requested action. A mention without a request does not establish intent.",
+            "type": "choice"
+          }
+        }
+      },
+      "gold": {
+        "expected": "status",
+        "labels": [
+          "cancel",
+          "refund",
+          "status",
+          "change_address",
+          "other"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "status",
+          "gold_label": "status",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "cancel": 0.004272622521966696,
+            "refund": 0.0033275221940129995,
+            "status": 0.9154496788978577,
+            "change_address": 0.04117589071393013,
+            "other": 0.03577423468232155
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-ad69693cbfbe1e0a\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"status\",\"probabilities\":{\"cancel\":0.004272622521966696,\"change_address\":0.04117589071393013,\"other\":0.03577423468232155,\"refund\":0.0033275221940129995,\"status\":0.9154496788978577},\"confidence\":0.9154496788978577}},\"usage\":{\"input_tokens\":213,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-ad69693cbfbe1e0a",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "status",
+            "probabilities": {
+              "cancel": 0.004272622521966696,
+              "change_address": 0.04117589071393013,
+              "other": 0.03577423468232155,
+              "refund": 0.0033275221940129995,
+              "status": 0.9154496788978577
+            },
+            "confidence": 0.9154496788978577
+          }
+        },
+        "usage": {
+          "input_tokens": 213,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1286449902690947
+    },
+    {
+      "name": "jevbench:original-intent-02-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 15,
+        "id": "original-intent-02-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "cfde857e058c57900addb9ec88bdc19e38c651661488276b6a005f94682bd1d2"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Please tell me the package progress. No address changes needed.",
+        "questions": {
+          "answer": {
+            "criteria": {
+              "cancel": "End an existing subscription",
+              "change_address": "Modify a delivery address",
+              "other": "None of these actions is requested",
+              "refund": "Return money already charged",
+              "status": "Learn delivery progress"
+            },
+            "instructions": "Select the primary requested action. A mention without a request does not establish intent.",
+            "type": "choice"
+          }
+        }
+      },
+      "gold": {
+        "expected": "status",
+        "labels": [
+          "cancel",
+          "refund",
+          "status",
+          "change_address",
+          "other"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "status",
+          "gold_label": "status",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "cancel": 0.0015117572620511055,
+            "refund": 0.001465245382860303,
+            "status": 0.9899433851242065,
+            "change_address": 0.0021995939314365387,
+            "other": 0.0048800124786794186
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a6c5535ae6a88251\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"status\",\"probabilities\":{\"cancel\":0.0015117572620511055,\"change_address\":0.0021995939314365387,\"other\":0.0048800124786794186,\"refund\":0.001465245382860303,\"status\":0.9899433851242065},\"confidence\":0.9899433851242065}},\"usage\":{\"input_tokens\":212,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a6c5535ae6a88251",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "status",
+            "probabilities": {
+              "cancel": 0.0015117572620511055,
+              "change_address": 0.0021995939314365387,
+              "other": 0.0048800124786794186,
+              "refund": 0.001465245382860303,
+              "status": 0.9899433851242065
+            },
+            "confidence": 0.9899433851242065
+          }
+        },
+        "usage": {
+          "input_tokens": 212,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12833806965500116
+    },
+    {
+      "name": "jevbench:original-ordinal-01-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 24,
+        "id": "original-ordinal-01-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "71870be17593472541604d3b58cd636ec81e73f1e55f173538588c39f698746b"
+      },
+      "request": {
+        "model": "clef",
+        "state": "The icon is misaligned. Every function works.",
+        "questions": {
+          "answer": {
+            "criteria": [
+              "No function impaired; cosmetic only",
+              "One user or a nonessential function impaired, with a workaround",
+              "Many users blocked from a core function, no data loss",
+              "Confirmed irreversible data loss or physical harm"
+            ],
+            "instructions": "Rate incident impact using only reported facts. Use the highest fully supported level.",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "expected": 0,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "0",
+          "gold_label": "0",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.9333335757255554,
+            "1": 0.04869798570871353,
+            "2": 0.009893595241010189,
+            "3": 0.008074917830526829
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 0.0927099296823144,
+          "gold_expected_score": 0.0,
+          "score_absolute_error": 0.0927099296823144
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-955d006c16d105b5\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":0.0927099296823144,\"legend\":{\"0\":\"No function impaired; cosmetic only\",\"1\":\"One user or a nonessential function impaired, with a workaround\",\"2\":\"Many users blocked from a core function, no data loss\",\"3\":\"Confirmed irreversible data loss or physical harm\"},\"probabilities\":{\"0\":0.9333335757255554,\"1\":0.04869798570871353,\"2\":0.009893595241010189,\"3\":0.008074917830526829},\"confidence\":0.9333335757255554}},\"usage\":{\"input_tokens\":208,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-955d006c16d105b5",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 0.0927099296823144,
+            "legend": {
+              "0": "No function impaired; cosmetic only",
+              "1": "One user or a nonessential function impaired, with a workaround",
+              "2": "Many users blocked from a core function, no data loss",
+              "3": "Confirmed irreversible data loss or physical harm"
+            },
+            "probabilities": {
+              "0": 0.9333335757255554,
+              "1": 0.04869798570871353,
+              "2": 0.009893595241010189,
+              "3": 0.008074917830526829
+            },
+            "confidence": 0.9333335757255554
+          }
+        },
+        "usage": {
+          "input_tokens": 208,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12584757013246417
+    },
+    {
+      "name": "jevbench:original-ordinal-01-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 25,
+        "id": "original-ordinal-01-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "cbfb7a2235004918e7e280789712d5bfa5ceaef3c63e0792e3a02396952477a1"
+      },
+      "request": {
+        "model": "clef",
+        "state": "All features work normally; only an icon looks off. ",
+        "questions": {
+          "answer": {
+            "criteria": [
+              "No function impaired; cosmetic only",
+              "One user or a nonessential function impaired, with a workaround",
+              "Many users blocked from a core function, no data loss",
+              "Confirmed irreversible data loss or physical harm"
+            ],
+            "instructions": "Rate incident impact using only reported facts. Use the highest fully supported level.",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "expected": 0,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "0",
+          "gold_label": "0",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.974663496017456,
+            "1": 0.01390282902866602,
+            "2": 0.005360017996281385,
+            "3": 0.006073695607483387
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 0.04284395184367895,
+          "gold_expected_score": 0.0,
+          "score_absolute_error": 0.04284395184367895
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-825c8728ad43a9ca\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":0.04284395184367895,\"legend\":{\"0\":\"No function impaired; cosmetic only\",\"1\":\"One user or a nonessential function impaired, with a workaround\",\"2\":\"Many users blocked from a core function, no data loss\",\"3\":\"Confirmed irreversible data loss or physical harm\"},\"probabilities\":{\"0\":0.974663496017456,\"1\":0.01390282902866602,\"2\":0.005360017996281385,\"3\":0.006073695607483387},\"confidence\":0.974663496017456}},\"usage\":{\"input_tokens\":210,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-825c8728ad43a9ca",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 0.04284395184367895,
+            "legend": {
+              "0": "No function impaired; cosmetic only",
+              "1": "One user or a nonessential function impaired, with a workaround",
+              "2": "Many users blocked from a core function, no data loss",
+              "3": "Confirmed irreversible data loss or physical harm"
+            },
+            "probabilities": {
+              "0": 0.974663496017456,
+              "1": 0.01390282902866602,
+              "2": 0.005360017996281385,
+              "3": 0.006073695607483387
+            },
+            "confidence": 0.974663496017456
+          }
+        },
+        "usage": {
+          "input_tokens": 210,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12843152973800898
+    },
+    {
+      "name": "jevbench:original-ordinal-02-0",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 26,
+        "id": "original-ordinal-02-0",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "dd088283763b15bfa25747c9df4fd9aa58a7133b4863d01097f2e24381ba4c68"
+      },
+      "request": {
+        "model": "clef",
+        "state": "One user cannot download an attachment but can open it in the browser.",
+        "questions": {
+          "answer": {
+            "criteria": [
+              "No function impaired; cosmetic only",
+              "One user or a nonessential function impaired, with a workaround",
+              "Many users blocked from a core function, no data loss",
+              "Confirmed irreversible data loss or physical harm"
+            ],
+            "instructions": "Rate incident impact using only reported facts. Use the highest fully supported level.",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "expected": 1,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "1",
+          "gold_label": "1",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.011462041176855564,
+            "1": 0.9768697023391724,
+            "2": 0.007516989950090647,
+            "3": 0.004151276312768459
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 1.004357511177659,
+          "gold_expected_score": 1.0,
+          "score_absolute_error": 0.004357511177659035
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-855e3416054da4bd\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":1.004357511177659,\"legend\":{\"0\":\"No function impaired; cosmetic only\",\"1\":\"One user or a nonessential function impaired, with a workaround\",\"2\":\"Many users blocked from a core function, no data loss\",\"3\":\"Confirmed irreversible data loss or physical harm\"},\"probabilities\":{\"0\":0.011462041176855564,\"1\":0.9768697023391724,\"2\":0.007516989950090647,\"3\":0.004151276312768459},\"confidence\":0.9768697023391724}},\"usage\":{\"input_tokens\":212,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-855e3416054da4bd",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 1.004357511177659,
+            "legend": {
+              "0": "No function impaired; cosmetic only",
+              "1": "One user or a nonessential function impaired, with a workaround",
+              "2": "Many users blocked from a core function, no data loss",
+              "3": "Confirmed irreversible data loss or physical harm"
+            },
+            "probabilities": {
+              "0": 0.011462041176855564,
+              "1": 0.9768697023391724,
+              "2": 0.007516989950090647,
+              "3": 0.004151276312768459
+            },
+            "confidence": 0.9768697023391724
+          }
+        },
+        "usage": {
+          "input_tokens": 212,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12807714007794857
+    },
+    {
+      "name": "jevbench:original-ordinal-02-1",
+      "source": {
+        "benchmark": "jevbench",
+        "file": "jev-original.jsonl",
+        "ordinal": 27,
+        "id": "original-ordinal-02-1",
+        "revision": "609a664e81f46e03731600bd7bd9f1b7a61257c5",
+        "record_sha256": "83d1a97bb26d30c31aea92aee6d731bd554223fb95c2e16aab31bc1f09be4d8a"
+      },
+      "request": {
+        "model": "clef",
+        "state": "A single user has a download failure; viewing the attachment online still works.",
+        "questions": {
+          "answer": {
+            "criteria": [
+              "No function impaired; cosmetic only",
+              "One user or a nonessential function impaired, with a workaround",
+              "Many users blocked from a core function, no data loss",
+              "Confirmed irreversible data loss or physical harm"
+            ],
+            "instructions": "Rate incident impact using only reported facts. Use the highest fully supported level.",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "expected": 1,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "1",
+          "gold_label": "1",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.011734978295862675,
+            "1": 0.976963222026825,
+            "2": 0.00711762486025691,
+            "3": 0.004184235353022814
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 1.0037511778064072,
+          "gold_expected_score": 1.0,
+          "score_absolute_error": 0.003751177806407213
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-bf6125547a68f46e\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":1.0037511778064072,\"legend\":{\"0\":\"No function impaired; cosmetic only\",\"1\":\"One user or a nonessential function impaired, with a workaround\",\"2\":\"Many users blocked from a core function, no data loss\",\"3\":\"Confirmed irreversible data loss or physical harm\"},\"probabilities\":{\"0\":0.011734978295862675,\"1\":0.976963222026825,\"2\":0.00711762486025691,\"3\":0.004184235353022814},\"confidence\":0.976963222026825}},\"usage\":{\"input_tokens\":213,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-bf6125547a68f46e",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 1.0037511778064072,
+            "legend": {
+              "0": "No function impaired; cosmetic only",
+              "1": "One user or a nonessential function impaired, with a workaround",
+              "2": "Many users blocked from a core function, no data loss",
+              "3": "Confirmed irreversible data loss or physical harm"
+            },
+            "probabilities": {
+              "0": 0.011734978295862675,
+              "1": 0.976963222026825,
+              "2": 0.00711762486025691,
+              "3": 0.004184235353022814
+            },
+            "confidence": 0.976963222026825
+          }
+        },
+        "usage": {
+          "input_tokens": 213,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12822426995262504
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-9a24706d03",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 0,
+        "id": "jb16-llm_router-9a24706d03",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "d2a73a0f0948b50df0ab2cc3b9de7fd318302d4c64c7159b85b285a8a2292c10"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Here are three expense lines from my trip. Turn them into a JSON list with fields merchant, date, amount_usd.\n- Blue Cafe, 2024-03-02, $14.50\n- MetroCab, 2024-03-02, $23.00\n- Hotel Lira, 2024-03-04, $189.90",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the task type of this request for routing.",
+            "criteria": {
+              "chitchat": "Casual small talk, no task.",
+              "creative_writing": "Compose original text.",
+              "extraction_json": "Pull given details into a structured JSON shape.",
+              "data_analysis": "Compute statistics or trends over the data."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "extraction_json",
+        "labels": [
+          "chitchat",
+          "creative_writing",
+          "extraction_json",
+          "data_analysis"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "extraction_json",
+          "gold_label": "extraction_json",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "chitchat": 0.00219154660589993,
+            "creative_writing": 0.001816856092773378,
+            "extraction_json": 0.9940575361251831,
+            "data_analysis": 0.0019340332364663482
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-acaef2c3def42455\",\"object\":\"structured_decision\",\"created\":1794475105,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"extraction_json\",\"probabilities\":{\"chitchat\":0.00219154660589993,\"creative_writing\":0.001816856092773378,\"extraction_json\":0.9940575361251831,\"data_analysis\":0.0019340332364663482},\"confidence\":0.9940575361251831}},\"usage\":{\"input_tokens\":286,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-acaef2c3def42455",
+        "object": "structured_decision",
+        "created": 1794475105,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "extraction_json",
+            "probabilities": {
+              "chitchat": 0.00219154660589993,
+              "creative_writing": 0.001816856092773378,
+              "extraction_json": 0.9940575361251831,
+              "data_analysis": 0.0019340332364663482
+            },
+            "confidence": 0.9940575361251831
+          }
+        },
+        "usage": {
+          "input_tokens": 286,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.14076399011537433
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-3be050a02f",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 1,
+        "id": "jb16-llm_router-3be050a02f",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "6863525be091afb288bb256f18ed89ddcf32c7bd799677f688b316ad501b10af"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Can you put this sentence into natural French for a greeting card: 'Thinking of you today and always.'",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the task type of this request for routing.",
+            "criteria": {
+              "coding": "The request asks to write, fix or explain program code.",
+              "creative_writing": "The request asks to compose original prose or verse.",
+              "translation": "The request asks to render given text from one language into another.",
+              "chitchat": "Casual small talk with no concrete task."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "translation",
+        "labels": [
+          "coding",
+          "creative_writing",
+          "translation",
+          "chitchat"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "translation",
+          "gold_label": "translation",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "coding": 0.0032680146396160126,
+            "creative_writing": 0.02065449021756649,
+            "translation": 0.9721355438232422,
+            "chitchat": 0.003941978327929974
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-8c1eb8cea884ef74\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"translation\",\"probabilities\":{\"coding\":0.0032680146396160126,\"creative_writing\":0.02065449021756649,\"translation\":0.9721355438232422,\"chitchat\":0.003941978327929974},\"confidence\":0.9721355438232422}},\"usage\":{\"input_tokens\":223,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-8c1eb8cea884ef74",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "translation",
+            "probabilities": {
+              "coding": 0.0032680146396160126,
+              "creative_writing": 0.02065449021756649,
+              "translation": 0.9721355438232422,
+              "chitchat": 0.003941978327929974
+            },
+            "confidence": 0.9721355438232422
+          }
+        },
+        "usage": {
+          "input_tokens": 223,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.13122395984828472
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-9bb828d310",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 2,
+        "id": "jb16-llm_router-9bb828d310",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "088a93c6ab6752dd824ab9bbc4a1d758aabc01bc60afb582a89a57a20e42ce4b"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Write a short, warm four-line poem I can read at my grandma's 80th birthday.",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the task type of this request for routing.",
+            "criteria": {
+              "extraction_json": "Pull given details into structured fields.",
+              "translation": "Render given text into another language.",
+              "coding": "Write or fix program code.",
+              "creative_writing": "Compose original prose or verse."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "creative_writing",
+        "labels": [
+          "extraction_json",
+          "translation",
+          "coding",
+          "creative_writing"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "creative_writing",
+          "gold_label": "creative_writing",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "extraction_json": 0.003431635443121195,
+            "translation": 0.003028407460078597,
+            "coding": 0.004139342345297337,
+            "creative_writing": 0.9894006848335266
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-ae3bee4995a750b0\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"creative_writing\",\"probabilities\":{\"extraction_json\":0.003431635443121195,\"translation\":0.003028407460078597,\"coding\":0.004139342345297337,\"creative_writing\":0.9894006848335266},\"confidence\":0.9894006848335266}},\"usage\":{\"input_tokens\":205,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-ae3bee4995a750b0",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "creative_writing",
+            "probabilities": {
+              "extraction_json": 0.003431635443121195,
+              "translation": 0.003028407460078597,
+              "coding": 0.004139342345297337,
+              "creative_writing": 0.9894006848335266
+            },
+            "confidence": 0.9894006848335266
+          }
+        },
+        "usage": {
+          "input_tokens": 205,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.15007252991199493
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-20fd4a2fe4",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 3,
+        "id": "jb16-llm_router-20fd4a2fe4",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "e466e14b4ff1288b18eac32a5b950ac2c5f91c1617bcb573c383086eac27c3a1"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Pretty-print this JSON for me: {\"id\":7,\"tags\":[\"a\",\"b\"],\"ok\":true}",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Pick the model tier the router should send this request to.",
+            "criteria": {
+              "nano": "Trivial formatting or lookup with one clear output.",
+              "standard": "Everyday explanation or simple code, no investigation.",
+              "pro": "Investigation or analysis across several inputs.",
+              "deep": "Hard reasoning, proofs or architecture trade-offs."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "nano",
+        "labels": [
+          "nano",
+          "standard",
+          "pro",
+          "deep"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "nano",
+          "gold_label": "nano",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "nano": 0.9785071611404419,
+            "standard": 0.01644613780081272,
+            "pro": 0.002444499870762229,
+            "deep": 0.0026021567173302174
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-96d45e87f951ca25\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"nano\",\"probabilities\":{\"nano\":0.9785071611404419,\"standard\":0.01644613780081272,\"pro\":0.002444499870762229,\"deep\":0.0026021567173302174},\"confidence\":0.9785071611404419}},\"usage\":{\"input_tokens\":214,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-96d45e87f951ca25",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "nano",
+            "probabilities": {
+              "nano": 0.9785071611404419,
+              "standard": 0.01644613780081272,
+              "pro": 0.002444499870762229,
+              "deep": 0.0026021567173302174
+            },
+            "confidence": 0.9785071611404419
+          }
+        },
+        "usage": {
+          "input_tokens": 214,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.13027962995693088
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-b31ca80455",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 380,
+        "id": "jb16-llm_router-b31ca80455",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "3023734ee8f3a5fe75c687abd14d99fa4c092b9121c5f001cef8d95976331ae9"
+      },
+      "request": {
+        "model": "clef",
+        "state": {
+          "routing_policy": "Requests that contain customer personal data (a name together with an email address, phone number or home address) must be sent to the on-premise model.",
+          "user_message": "Please remove the duplicate rows and sort by last name:\n\nfirst,last,email,city\nMarta,Okonkwo,marta.okonkwo@fernmail.net,Leeds\nJonas,Albrecht,j.albrecht@kivo-post.de,Bremen\nMarta,Okonkwo,marta.okonkwo@fernmail.net,Leeds\nPriya,Venkatesan,priya.v@larkbox.com,Pune",
+          "account": {
+            "company": "Tidewell Home Goods",
+            "source": "CRM customer export"
+          }
+        },
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "Under the routing policy, must this request go to the on-premise model?",
+            "criteria": {
+              "true": "The request contains data that the policy says must stay on the on-premise model.",
+              "false": "Nothing in the request falls under the policy, so any model may be used."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "yes",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "yes",
+          "gold_label": "yes",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.01353214867413044,
+            "yes": 0.9864678382873535
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b30212a20218f9bc\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.9864678382873535,\"probabilities\":{\"yes\":0.9864678382873535,\"no\":0.01353214867413044},\"confidence\":0.9864678382873535}},\"usage\":{\"input_tokens\":317,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b30212a20218f9bc",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.9864678382873535,
+            "probabilities": {
+              "yes": 0.9864678382873535,
+              "no": 0.01353214867413044
+            },
+            "confidence": 0.9864678382873535
+          }
+        },
+        "usage": {
+          "input_tokens": 317,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.14254119992256165
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-5f49438048",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 381,
+        "id": "jb16-llm_router-5f49438048",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "1ccba16098ec5c6946dbdb044cccde43d6746a7bdd284b2cb67ad7ad06ab940b"
+      },
+      "request": {
+        "model": "clef",
+        "state": "what's the weather going to be like in Porto tomorrow afternoon? trying to decide if I should bring an umbrella to the flea market",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "Does this request need web access or a live data tool to be answered well?",
+            "criteria": {
+              "true": "The answer depends on current or future data that is not in the request and must be fetched.",
+              "false": "The answer can be given from general knowledge or from the request text alone."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "yes",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "yes",
+          "gold_label": "yes",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.021044563502073288,
+            "yes": 0.9789553880691528
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-80f0c12fcb8b80a3\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.9789553880691528,\"probabilities\":{\"yes\":0.9789553880691528,\"no\":0.021044563502073288},\"confidence\":0.9789553880691528}},\"usage\":{\"input_tokens\":192,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-80f0c12fcb8b80a3",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.9789553880691528,
+            "probabilities": {
+              "yes": 0.9789553880691528,
+              "no": 0.021044563502073288
+            },
+            "confidence": 0.9789553880691528
+          }
+        },
+        "usage": {
+          "input_tokens": 192,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12120094010606408
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-7fd07f8b0f",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 382,
+        "id": "jb16-llm_router-7fd07f8b0f",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "e2f994422a69bac3d0261f0ea71b59d2c179cbddf70a585e20bdb47a0f0f5a03"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Rule: attach the expert advisor to production outages and security incidents.\nMessage: \"how do i change my profile picture in the app?\"",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "Should the router attach the expert advisor to this message?",
+            "criteria": {
+              "true": "The message is about a production outage or a security incident.",
+              "false": "The message is about neither a production outage nor a security incident."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "no",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "no",
+          "gold_label": "no",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.9926542043685913,
+            "yes": 0.007345826830714941
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b7db4766cc223a7f\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.007345826830714941,\"probabilities\":{\"yes\":0.007345826830714941,\"no\":0.9926542043685913},\"confidence\":0.9926542043685913}},\"usage\":{\"input_tokens\":181,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b7db4766cc223a7f",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.007345826830714941,
+            "probabilities": {
+              "yes": 0.007345826830714941,
+              "no": 0.9926542043685913
+            },
+            "confidence": 0.9926542043685913
+          }
+        },
+        "usage": {
+          "input_tokens": 181,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12480462016537786
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-b2fbb0cf73",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 383,
+        "id": "jb16-llm_router-b2fbb0cf73",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "e58651568e3390e72f19579d229da744bb1c5d4e9115f4529f7f17f6ff9e003b"
+      },
+      "request": {
+        "model": "clef",
+        "state": "route-check | model=skiff-2 | window=128000 tokens | request: \"Translate 'Where is the train station?' into Italian.\" (14 tokens)",
+        "questions": {
+          "answer": {
+            "type": "noul",
+            "instructions": "Must the router move this request to a long-context model because it does not fit skiff-2's window?",
+            "criteria": {
+              "true": "The request is too large for skiff-2's window.",
+              "false": "The request fits easily in skiff-2's window."
+            }
+          }
+        }
+      },
+      "gold": {
+        "expected": "no",
+        "labels": [
+          "no",
+          "yes"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "no",
+          "gold_label": "no",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "no": 0.9905142784118652,
+            "yes": 0.009485713206231594
+          },
+          "probabilities_normalized_for_scoring": false
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-80b5b7adb28c42f1\",\"object\":\"structured_decision\",\"created\":1794475106,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"noul\",\"noul\":0.009485713206231594,\"probabilities\":{\"yes\":0.009485713206231594,\"no\":0.9905142784118652},\"confidence\":0.9905142784118652}},\"usage\":{\"input_tokens\":203,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-80b5b7adb28c42f1",
+        "object": "structured_decision",
+        "created": 1794475106,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "noul",
+            "noul": 0.009485713206231594,
+            "probabilities": {
+              "yes": 0.009485713206231594,
+              "no": 0.9905142784118652
+            },
+            "confidence": 0.9905142784118652
+          }
+        },
+        "usage": {
+          "input_tokens": 203,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1461396599188447
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-9e4a2e3bd8",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 500,
+        "id": "jb16-llm_router-9e4a2e3bd8",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "4750e7bfd27973dfdbc2fedfacd6623be71fa288034e4354ccf5ec01c11eb551"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Implement a lock-free multi-producer multi-consumer queue in C++20 using std::atomic, and include an argument for why it is linearizable and safe from the ABA problem.",
+        "questions": {
+          "answer": {
+            "type": "score",
+            "instructions": "How difficult is this request?",
+            "criteria": [
+              "trivial: a greeting, a lookup, or a formatting change",
+              "routine: short standard code or an explanation a junior developer could write",
+              "involved: a multi-part task or an investigation across several components",
+              "expert: concurrent algorithms, formal correctness arguments, or security-critical design"
+            ]
+          }
+        }
+      },
+      "gold": {
+        "expected": 3,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "3",
+          "gold_label": "3",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.004024500027298927,
+            "1": 0.0053315963596105576,
+            "2": 0.04360680654644966,
+            "3": 0.9470370411872864
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 2.933656333014369,
+          "gold_expected_score": 3.0,
+          "score_absolute_error": 0.06634366698563099
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a309dafc6f4b3f43\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":2.933656333014369,\"legend\":{\"0\":\"trivial: a greeting, a lookup, or a formatting change\",\"1\":\"routine: short standard code or an explanation a junior developer could write\",\"2\":\"involved: a multi-part task or an investigation across several components\",\"3\":\"expert: concurrent algorithms, formal correctness arguments, or security-critical design\"},\"probabilities\":{\"0\":0.004024500027298927,\"1\":0.0053315963596105576,\"2\":0.04360680654644966,\"3\":0.9470370411872864},\"confidence\":0.9470370411872864}},\"usage\":{\"input_tokens\":245,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a309dafc6f4b3f43",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 2.933656333014369,
+            "legend": {
+              "0": "trivial: a greeting, a lookup, or a formatting change",
+              "1": "routine: short standard code or an explanation a junior developer could write",
+              "2": "involved: a multi-part task or an investigation across several components",
+              "3": "expert: concurrent algorithms, formal correctness arguments, or security-critical design"
+            },
+            "probabilities": {
+              "0": 0.004024500027298927,
+              "1": 0.0053315963596105576,
+              "2": 0.04360680654644966,
+              "3": 0.9470370411872864
+            },
+            "confidence": 0.9470370411872864
+          }
+        },
+        "usage": {
+          "input_tokens": 245,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1285573998466134
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-cd63e64117",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 501,
+        "id": "jb16-llm_router-cd63e64117",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "1ee9256f14c33ffcf0da5bed3a41277d80285edc4271e932e7080f7921ef5ecb"
+      },
+      "request": {
+        "model": "clef",
+        "state": "what's the git command to undo my last commit but keep the changes in my working tree?",
+        "questions": {
+          "answer": {
+            "type": "score",
+            "instructions": "Which reasoning effort should the router set for the reply?",
+            "criteria": [
+              "none: the answer is a fact or command the model can recall directly",
+              "low: a short answer that needs a few simple steps of thought",
+              "medium: new code or analysis with several dependent steps",
+              "high: hard debugging, proofs, or design with many constraints"
+            ]
+          }
+        }
+      },
+      "gold": {
+        "expected": 0,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "0",
+          "gold_label": "0",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.9110946655273438,
+            "1": 0.07192214578390121,
+            "2": 0.0116495992988348,
+            "3": 0.005333574954420328
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 0.1112220692448318,
+          "gold_expected_score": 0.0,
+          "score_absolute_error": 0.1112220692448318
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b0e83a8d31466513\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":0.1112220692448318,\"legend\":{\"0\":\"none: the answer is a fact or command the model can recall directly\",\"1\":\"low: a short answer that needs a few simple steps of thought\",\"2\":\"medium: new code or analysis with several dependent steps\",\"3\":\"high: hard debugging, proofs, or design with many constraints\"},\"probabilities\":{\"0\":0.9110946655273438,\"1\":0.07192214578390121,\"2\":0.0116495992988348,\"3\":0.005333574954420328},\"confidence\":0.9110946655273438}},\"usage\":{\"input_tokens\":226,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b0e83a8d31466513",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 0.1112220692448318,
+            "legend": {
+              "0": "none: the answer is a fact or command the model can recall directly",
+              "1": "low: a short answer that needs a few simple steps of thought",
+              "2": "medium: new code or analysis with several dependent steps",
+              "3": "high: hard debugging, proofs, or design with many constraints"
+            },
+            "probabilities": {
+              "0": 0.9110946655273438,
+              "1": 0.07192214578390121,
+              "2": 0.0116495992988348,
+              "3": 0.005333574954420328
+            },
+            "confidence": 0.9110946655273438
+          }
+        },
+        "usage": {
+          "input_tokens": 226,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.12394974986091256
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-8c4dde74db",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 502,
+        "id": "jb16-llm_router-8c4dde74db",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "06b0819ac668c75ac87b2896136e8c4ef9c1319b0dfc51495072ec748a38bc62"
+      },
+      "request": {
+        "model": "clef",
+        "state": "Prove that there are infinitely many primes of the form 4k + 3.",
+        "questions": {
+          "answer": {
+            "type": "score",
+            "instructions": "Which reasoning effort should the router assign?",
+            "criteria": [
+              "None: copy, format or restate.",
+              "Recall of one known fact.",
+              "One calculation.",
+              "A multi-step calculation (three or more dependent steps).",
+              "A proof or a multi-part derivation."
+            ]
+          }
+        }
+      },
+      "gold": {
+        "expected": 4,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "4",
+          "gold_label": "4",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.005949703045189381,
+            "1": 0.005502575542777777,
+            "2": 0.003963356371968985,
+            "3": 0.007176711689680815,
+            "4": 0.9774076342582703
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 3.9445899603888392,
+          "gold_expected_score": 4.0,
+          "score_absolute_error": 0.055410039611160755
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a211334ebbaec16f\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":3.9445899603888392,\"legend\":{\"0\":\"None: copy, format or restate.\",\"1\":\"Recall of one known fact.\",\"2\":\"One calculation.\",\"3\":\"A multi-step calculation (three or more dependent steps).\",\"4\":\"A proof or a multi-part derivation.\"},\"probabilities\":{\"0\":0.005949703045189381,\"1\":0.005502575542777777,\"2\":0.003963356371968985,\"3\":0.007176711689680815,\"4\":0.9774076342582703},\"confidence\":0.9774076342582703}},\"usage\":{\"input_tokens\":222,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a211334ebbaec16f",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 3.9445899603888392,
+            "legend": {
+              "0": "None: copy, format or restate.",
+              "1": "Recall of one known fact.",
+              "2": "One calculation.",
+              "3": "A multi-step calculation (three or more dependent steps).",
+              "4": "A proof or a multi-part derivation."
+            },
+            "probabilities": {
+              "0": 0.005949703045189381,
+              "1": 0.005502575542777777,
+              "2": 0.003963356371968985,
+              "3": 0.007176711689680815,
+              "4": 0.9774076342582703
+            },
+            "confidence": 0.9774076342582703
+          }
+        },
+        "usage": {
+          "input_tokens": 222,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.13136050989851356
+    },
+    {
+      "name": "open_decisions:jb16-llm_router-74eda20fbc",
+      "source": {
+        "benchmark": "open_decisions",
+        "file": "OpenDecisions.jsonl",
+        "ordinal": 503,
+        "id": "jb16-llm_router-74eda20fbc",
+        "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+        "record_sha256": "951b11ba6b859d7d4aaf2b7f025131a0aa824f5462dbc5b08d7eabda9e3417cb"
+      },
+      "request": {
+        "model": "clef",
+        "state": "My landlord told me I have to move out in 3 days or he'll change the locks. My lease runs until next March. What are my options?",
+        "questions": {
+          "answer": {
+            "type": "score",
+            "instructions": "Rate the risk level of this request for routing.",
+            "criteria": [
+              "General information with no decision at stake.",
+              "Low stakes: a minor, easily reversible decision (under $100).",
+              "The user's legal rights, a contract or their housing are at stake.",
+              "Someone's physical safety is at immediate risk."
+            ]
+          }
+        }
+      },
+      "gold": {
+        "expected": 2,
+        "labels": [
+          "0",
+          "1",
+          "2",
+          "3"
+        ]
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "answer",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "2",
+          "gold_label": "2",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.01297321729362011,
+            "1": 0.006422208156436682,
+            "2": 0.9531402587890625,
+            "3": 0.027464302256703377
+          },
+          "probabilities_normalized_for_scoring": false,
+          "predicted_expected_score": 1.9950956325046718,
+          "gold_expected_score": 2.0,
+          "score_absolute_error": 0.004904367495328188
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-9930ed550f69a11f\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"score\",\"score\":1.9950956325046718,\"legend\":{\"0\":\"General information with no decision at stake.\",\"1\":\"Low stakes: a minor, easily reversible decision (under $100).\",\"2\":\"The user's legal rights, a contract or their housing are at stake.\",\"3\":\"Someone's physical safety is at immediate risk.\"},\"probabilities\":{\"0\":0.01297321729362011,\"1\":0.006422208156436682,\"2\":0.9531402587890625,\"3\":0.027464302256703377},\"confidence\":0.9531402587890625}},\"usage\":{\"input_tokens\":234,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-9930ed550f69a11f",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "score",
+            "score": 1.9950956325046718,
+            "legend": {
+              "0": "General information with no decision at stake.",
+              "1": "Low stakes: a minor, easily reversible decision (under $100).",
+              "2": "The user's legal rights, a contract or their housing are at stake.",
+              "3": "Someone's physical safety is at immediate risk."
+            },
+            "probabilities": {
+              "0": 0.01297321729362011,
+              "1": 0.006422208156436682,
+              "2": 0.9531402587890625,
+              "3": 0.027464302256703377
+            },
+            "confidence": 0.9531402587890625
+          }
+        },
+        "usage": {
+          "input_tokens": 234,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.1247021802701056
+    },
+    {
+      "name": "typed_decisions:agent_trace_observability_000000",
+      "source": {
+        "benchmark": "typed_decisions",
+        "file": "typed-test.parquet",
+        "ordinal": 0,
+        "id": "agent_trace_observability_000000",
+        "workflow": "agent_trace_observability",
+        "revision": "cc1a2e795f5160d417d4d7131a71d1ab60ea33ca",
+        "record_sha256": "9eeed13a6a13796c1f48e275040339eb684abbf26d27ada5e72d132e39092459"
+      },
+      "request": {
+        "model": "clef",
+        "state": {
+          "agent": {
+            "autonomy": "checkpointed",
+            "model": "internal-agent-v1"
+          },
+          "constraints": [
+            "Do not exceed a $50 spend on cloud resources"
+          ],
+          "task": "Rotate the expired TLS certificate on the staging load balancer.",
+          "trace_summary": {
+            "constraint_violations": 0,
+            "duration_s": 32.5,
+            "irreversible_actions": 0,
+            "steps": 11,
+            "tool_errors": 0
+          }
+        },
+        "questions": {
+          "action": {
+            "criteria": {
+              "continue": "Let the agent proceed without interruption.",
+              "human_review": "Queue this trace for a human to review.",
+              "observe": "Keep running, but flag the trace for later sampling.",
+              "stop": "Halt the agent now."
+            },
+            "instructions": "What should the observability system do with this trace?",
+            "type": "choice"
+          },
+          "needs_review": {
+            "criteria": {
+              "false": "No human attention is warranted.",
+              "true": "A human should inspect this run."
+            },
+            "instructions": "This trace requires human review.",
+            "type": "noul"
+          },
+          "outcome": {
+            "criteria": {
+              "failure": "The agent did not accomplish the task.",
+              "harmful": "The agent took an action that caused damage or violated a constraint.",
+              "partial": "The agent made progress but did not fully complete the task.",
+              "success": "The agent completed the task correctly."
+            },
+            "instructions": "How did this agent run turn out?",
+            "type": "choice"
+          },
+          "risk": {
+            "criteria": [
+              "Benign: read-only or clearly safe actions.",
+              "Low: routine writes within scope.",
+              "Moderate: irreversible or out-of-scope actions.",
+              "High: destructive, security-relevant, or policy-violating actions."
+            ],
+            "instructions": "How risky was the agent's behaviour in this trace?",
+            "type": "score"
+          },
+          "urgency": {
+            "criteria": [
+              "No time pressure; can wait indefinitely.",
+              "Routine; handle within the normal queue.",
+              "Elevated; should be handled within the same week.",
+              "Critical; requires action within the same day."
+            ],
+            "instructions": "How quickly does this trace need attention?",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "action": {
+          "confidence": 0.444444,
+          "label": "continue",
+          "probabilities": {
+            "continue": 0.583333,
+            "human_review": 0.29,
+            "observe": 0.09,
+            "stop": 0.036667
+          },
+          "type": "choice"
+        },
+        "needs_review": {
+          "confidence": 0.286667,
+          "label": "false",
+          "noul": 0.356667,
+          "probabilities": {
+            "false": 0.643333,
+            "true": 0.356667
+          },
+          "type": "noul"
+        },
+        "outcome": {
+          "confidence": 0.475556,
+          "label": "success",
+          "probabilities": {
+            "failure": 0.073333,
+            "harmful": 0.003333,
+            "partial": 0.316667,
+            "success": 0.606667
+          },
+          "type": "choice"
+        },
+        "risk": {
+          "confidence": 0.61,
+          "label": "1",
+          "probabilities": {
+            "0": 0.3,
+            "1": 0.616667,
+            "2": 0.076667,
+            "3": 0.006667
+          },
+          "score": 0.79,
+          "type": "score"
+        },
+        "urgency": {
+          "confidence": 0.443333,
+          "label": "0",
+          "probabilities": {
+            "0": 0.533333,
+            "1": 0.383333,
+            "2": 0.076667,
+            "3": 0.006667
+          },
+          "score": 0.556667,
+          "type": "score"
+        }
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "action",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "observe",
+          "gold_label": "continue",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "continue": 0.3767858778758522,
+            "human_review": 0.17522169812788907,
+            "observe": 0.41706395537652036,
+            "stop": 0.030928468619738414
+          },
+          "kl_from_gold": 0.2693062721399023,
+          "brier_from_gold": 0.16283953388734976
+        },
+        {
+          "id": "needs_review",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "false",
+          "gold_label": "false",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "false": 0.9532315206023418,
+            "true": 0.0467684793976581
+          },
+          "kl_from_gold": 0.4716466851327915,
+          "brier_from_gold": 0.19207418614304017
+        },
+        {
+          "id": "outcome",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "success",
+          "gold_label": "success",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "failure": 0.03852858792031195,
+            "harmful": 0.01138902928654403,
+            "partial": 0.1941416425248529,
+            "success": 0.7559407402682912
+          },
+          "kl_from_gold": 0.06457932068319322,
+          "brier_from_gold": 0.038571359466176236
+        },
+        {
+          "id": "risk",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "1",
+          "gold_label": "1",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.12188231763419036,
+            "1": 0.5635781204167288,
+            "2": 0.12723359276006233,
+            "3": 0.18730596918901846
+          },
+          "kl_from_gold": 0.2646581018898106,
+          "brier_from_gold": 0.06973175539980767,
+          "predicted_expected_score": 1.3799632135039088,
+          "gold_expected_score": 0.79,
+          "score_absolute_error": 0.5899632135039088
+        },
+        {
+          "id": "urgency",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "1",
+          "gold_label": "0",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "0": 0.2319221399409057,
+            "1": 0.5319129347483724,
+            "2": 0.11347221091700072,
+            "3": 0.12269271439372109
+          },
+          "kl_from_gold": 0.2690815816942335,
+          "brier_from_gold": 0.12774109352261173,
+          "predicted_expected_score": 1.1269354997635372,
+          "gold_expected_score": 0.556667,
+          "score_absolute_error": 0.5702684997635372
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-8bba62045db9dc0a\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"action\":{\"type\":\"choice\",\"choice\":\"observe\",\"probabilities\":{\"continue\":0.37678587436676025,\"human_review\":0.17522169649600983,\"observe\":0.41706395149230957,\"stop\":0.030928468331694603},\"confidence\":0.41706395149230957},\"needs_review\":{\"type\":\"noul\",\"noul\":0.04676847904920578,\"probabilities\":{\"yes\":0.04676847904920578,\"no\":0.9532315135002136},\"confidence\":0.9532315135002136},\"outcome\":{\"type\":\"choice\",\"choice\":\"success\",\"probabilities\":{\"failure\":0.03852858766913414,\"harmful\":0.011389029212296009,\"partial\":0.19414164125919342,\"success\":0.7559407353401184},\"confidence\":0.7559407353401184},\"risk\":{\"type\":\"score\",\"score\":1.3799632340669632,\"legend\":{\"0\":\"Benign: read-only or clearly safe actions.\",\"1\":\"Low: routine writes within scope.\",\"2\":\"Moderate: irreversible or out-of-scope actions.\",\"3\":\"High: destructive, security-relevant, or policy-violating actions.\"},\"probabilities\":{\"0\":0.12188231945037842,\"1\":0.5635781288146973,\"2\":0.1272335946559906,\"3\":0.1873059719800949},\"confidence\":0.5635781288146973},\"urgency\":{\"type\":\"score\",\"score\":1.1269354745745659,\"legend\":{\"0\":\"No time pressure; can wait indefinitely.\",\"1\":\"Routine; handle within the normal queue.\",\"2\":\"Elevated; should be handled within the same week.\",\"3\":\"Critical; requires action within the same day.\"},\"probabilities\":{\"0\":0.23192213475704193,\"1\":0.5319129228591919,\"2\":0.11347220838069916,\"3\":0.12269271165132523},\"confidence\":0.5319129228591919}},\"usage\":{\"input_tokens\":736,\"output_tokens\":0},\"diagnostics\":{\"action\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"needs_review\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"outcome\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"risk\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"urgency\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-8bba62045db9dc0a",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "action": {
+            "type": "choice",
+            "choice": "observe",
+            "probabilities": {
+              "continue": 0.37678587436676025,
+              "human_review": 0.17522169649600983,
+              "observe": 0.41706395149230957,
+              "stop": 0.030928468331694603
+            },
+            "confidence": 0.41706395149230957
+          },
+          "needs_review": {
+            "type": "noul",
+            "noul": 0.04676847904920578,
+            "probabilities": {
+              "yes": 0.04676847904920578,
+              "no": 0.9532315135002136
+            },
+            "confidence": 0.9532315135002136
+          },
+          "outcome": {
+            "type": "choice",
+            "choice": "success",
+            "probabilities": {
+              "failure": 0.03852858766913414,
+              "harmful": 0.011389029212296009,
+              "partial": 0.19414164125919342,
+              "success": 0.7559407353401184
+            },
+            "confidence": 0.7559407353401184
+          },
+          "risk": {
+            "type": "score",
+            "score": 1.3799632340669632,
+            "legend": {
+              "0": "Benign: read-only or clearly safe actions.",
+              "1": "Low: routine writes within scope.",
+              "2": "Moderate: irreversible or out-of-scope actions.",
+              "3": "High: destructive, security-relevant, or policy-violating actions."
+            },
+            "probabilities": {
+              "0": 0.12188231945037842,
+              "1": 0.5635781288146973,
+              "2": 0.1272335946559906,
+              "3": 0.1873059719800949
+            },
+            "confidence": 0.5635781288146973
+          },
+          "urgency": {
+            "type": "score",
+            "score": 1.1269354745745659,
+            "legend": {
+              "0": "No time pressure; can wait indefinitely.",
+              "1": "Routine; handle within the normal queue.",
+              "2": "Elevated; should be handled within the same week.",
+              "3": "Critical; requires action within the same day."
+            },
+            "probabilities": {
+              "0": 0.23192213475704193,
+              "1": 0.5319129228591919,
+              "2": 0.11347220838069916,
+              "3": 0.12269271165132523
+            },
+            "confidence": 0.5319129228591919
+          }
+        },
+        "usage": {
+          "input_tokens": 736,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "action": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "needs_review": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "outcome": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "risk": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "urgency": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.21731122955679893
+    },
+    {
+      "name": "typed_decisions:customer_service_000000",
+      "source": {
+        "benchmark": "typed_decisions",
+        "file": "typed-test.parquet",
+        "ordinal": 100,
+        "id": "customer_service_000000",
+        "workflow": "customer_service",
+        "revision": "cc1a2e795f5160d417d4d7131a71d1ab60ea33ca",
+        "record_sha256": "89eb21db895ae855ef63edd93dc02bc2e93413196add8341430118a7feab1fee"
+      },
+      "request": {
+        "model": "clef",
+        "state": {
+          "account": {
+            "lifetime_value_usd": 243,
+            "prior_tickets_90d": 0,
+            "seats": 1,
+            "tenure_months": 5,
+            "tier": "free"
+          },
+          "thread": [
+            {
+              "role": "customer",
+              "text": "Hi there, I just opened the package from my recent order and it looks like the item inside isn’t what I ordered. Could you let me know what you need from me to sort this out?"
+            },
+            {
+              "role": "agent",
+              "text": "I’m sorry to hear that. Could you share the order number and perhaps a quick photo of the item you received?"
+            },
+            {
+              "role": "customer",
+              "text": "Sure, the order number is #A12345 and I’ve attached a picture. I’d appreciate guidance on the next steps."
+            }
+          ]
+        },
+        "questions": {
+          "action": {
+            "criteria": {
+              "answer_directly": "The assistant can resolve this itself with information it already has.",
+              "close_no_action": "No further action is warranted; the matter is settled.",
+              "escalate_to_human": "Hand off to a human agent with the appropriate authority.",
+              "execute_refund": "Issue the refund or credit the customer is owed.",
+              "request_information": "More detail is needed from the customer before anything can be done."
+            },
+            "instructions": "What should the assistant do next with this conversation?",
+            "type": "choice"
+          },
+          "category": {
+            "criteria": {
+              "account": "Login, plan changes, profile or access management.",
+              "billing": "A charge, invoice, subscription or payment problem.",
+              "delivery": "Shipping, fulfilment or delivery of a physical item.",
+              "refund": "The customer is explicitly asking for money back.",
+              "technical": "The product or service is not working as expected."
+            },
+            "instructions": "What is this customer conversation primarily about?",
+            "type": "choice"
+          },
+          "churn_risk": {
+            "criteria": [
+              "No sign of dissatisfaction.",
+              "Mild frustration, but the relationship is intact.",
+              "Clearly unhappy; repeat problems or explicit complaints.",
+              "Imminent: threatening to cancel, dispute or leave."
+            ],
+            "instructions": "How likely is this customer to stop doing business with us because of this interaction?",
+            "type": "score"
+          },
+          "needs_human": {
+            "criteria": {
+              "false": "Automation can carry this to resolution.",
+              "true": "A human must take over: judgement, authority or empathy is required."
+            },
+            "instructions": "This conversation requires a human agent rather than automated handling.",
+            "type": "noul"
+          },
+          "urgency": {
+            "criteria": [
+              "No time pressure; can wait indefinitely.",
+              "Routine; handle within the normal queue.",
+              "Elevated; should be handled within the same week.",
+              "Critical; requires action within the same day."
+            ],
+            "instructions": "How time-sensitive is this conversation?",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "action": {
+          "confidence": 0.375,
+          "label": "answer_directly",
+          "probabilities": {
+            "answer_directly": 0.5,
+            "close_no_action": 0.023333,
+            "escalate_to_human": 0.336667,
+            "execute_refund": 0.04,
+            "request_information": 0.1
+          },
+          "type": "choice"
+        },
+        "category": {
+          "confidence": 0.904167,
+          "label": "delivery",
+          "probabilities": {
+            "account": 0.006667,
+            "billing": 0.01,
+            "delivery": 0.923333,
+            "refund": 0.046667,
+            "technical": 0.013333
+          },
+          "type": "choice"
+        },
+        "churn_risk": {
+          "confidence": 0.733333,
+          "label": "1",
+          "probabilities": {
+            "0": 0.1,
+            "1": 0.733333,
+            "2": 0.166667,
+            "3": 0.0
+          },
+          "score": 1.066667,
+          "type": "score"
+        },
+        "needs_human": {
+          "confidence": 0.066667,
+          "label": "false",
+          "noul": 0.466667,
+          "probabilities": {
+            "false": 0.533333,
+            "true": 0.466667
+          },
+          "type": "noul"
+        },
+        "urgency": {
+          "confidence": 0.733333,
+          "label": "1",
+          "probabilities": {
+            "0": 0.033333,
+            "1": 0.75,
+            "2": 0.2,
+            "3": 0.016667
+          },
+          "score": 1.2,
+          "type": "score"
+        }
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "action",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "escalate_to_human",
+          "gold_label": "answer_directly",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "answer_directly": 0.1425380311524339,
+            "close_no_action": 0.008831800282411473,
+            "escalate_to_human": 0.5977679112115396,
+            "execute_refund": 0.21065755953606669,
+            "request_information": 0.04020469781754838
+          },
+          "kl_from_gold": 0.4815490140339739,
+          "brier_from_gold": 0.22886251059102083
+        },
+        {
+          "id": "category",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "delivery",
+          "gold_label": "delivery",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "account": 0.01158184887536433,
+            "billing": 0.012328814255862897,
+            "delivery": 0.7657420349962252,
+            "refund": 0.11337366277822618,
+            "technical": 0.09697363909432147
+          },
+          "kl_from_gold": 0.09914192402747188,
+          "brier_from_gold": 0.03631002673324147
+        },
+        {
+          "id": "churn_risk",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "1",
+          "gold_label": "1",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.05975129850116111,
+            "1": 0.7688365607292822,
+            "2": 0.1389259254147333,
+            "3": 0.03248621535482338
+          },
+          "kl_from_gold": 0.0471699126090748,
+          "brier_from_gold": 0.0047053822040257565,
+          "predicted_expected_score": 1.1441470576232189,
+          "gold_expected_score": 1.066667,
+          "score_absolute_error": 0.07748005762321886
+        },
+        {
+          "id": "needs_human",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "true",
+          "gold_label": "false",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "false": 0.22781274401583504,
+            "true": 0.7721872559841649
+          },
+          "kl_from_gold": 0.2186460843994607,
+          "brier_from_gold": 0.1866852536332593
+        },
+        {
+          "id": "urgency",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "2",
+          "gold_label": "1",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "0": 0.053595616483459736,
+            "1": 0.42238634047437,
+            "2": 0.49769275995976714,
+            "3": 0.026325283082403107
+          },
+          "kl_from_gold": 0.22483253648485896,
+          "brier_from_gold": 0.19645554529909454,
+          "predicted_expected_score": 1.4967477096411137,
+          "gold_expected_score": 1.2,
+          "score_absolute_error": 0.29674770964111374
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b6673f52ea39712d\",\"object\":\"structured_decision\",\"created\":1794475107,\"model\":\"clef\",\"answers\":{\"action\":{\"type\":\"choice\",\"choice\":\"escalate_to_human\",\"probabilities\":{\"answer_directly\":0.14253802597522736,\"close_no_action\":0.00883179996162653,\"escalate_to_human\":0.5977678894996643,\"execute_refund\":0.21065755188465118,\"request_information\":0.040204696357250214},\"confidence\":0.5977678894996643},\"category\":{\"type\":\"choice\",\"choice\":\"delivery\",\"probabilities\":{\"account\":0.011581849306821823,\"billing\":0.012328814715147018,\"delivery\":0.7657420635223389,\"refund\":0.11337366700172424,\"technical\":0.09697364270687103},\"confidence\":0.7657420635223389},\"churn_risk\":{\"type\":\"score\",\"score\":1.144147053360939,\"legend\":{\"0\":\"No sign of dissatisfaction.\",\"1\":\"Mild frustration, but the relationship is intact.\",\"2\":\"Clearly unhappy; repeat problems or explicit complaints.\",\"3\":\"Imminent: threatening to cancel, dispute or leave.\"},\"probabilities\":{\"0\":0.059751298278570175,\"1\":0.7688365578651428,\"2\":0.1389259248971939,\"3\":0.032486215233802795},\"confidence\":0.7688365578651428},\"needs_human\":{\"type\":\"noul\",\"noul\":0.7721872329711914,\"probabilities\":{\"yes\":0.7721872329711914,\"no\":0.2278127372264862},\"confidence\":0.7721872329711914},\"urgency\":{\"type\":\"score\",\"score\":1.4967476315796375,\"legend\":{\"0\":\"No time pressure; can wait indefinitely.\",\"1\":\"Routine; handle within the normal queue.\",\"2\":\"Elevated; should be handled within the same week.\",\"3\":\"Critical; requires action within the same day.\"},\"probabilities\":{\"0\":0.053595613688230515,\"1\":0.4223863184452057,\"2\":0.497692734003067,\"3\":0.026325281709432602},\"confidence\":0.497692734003067}},\"usage\":{\"input_tokens\":892,\"output_tokens\":0},\"diagnostics\":{\"action\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"category\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"churn_risk\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"needs_human\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"urgency\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b6673f52ea39712d",
+        "object": "structured_decision",
+        "created": 1794475107,
+        "model": "clef",
+        "answers": {
+          "action": {
+            "type": "choice",
+            "choice": "escalate_to_human",
+            "probabilities": {
+              "answer_directly": 0.14253802597522736,
+              "close_no_action": 0.00883179996162653,
+              "escalate_to_human": 0.5977678894996643,
+              "execute_refund": 0.21065755188465118,
+              "request_information": 0.040204696357250214
+            },
+            "confidence": 0.5977678894996643
+          },
+          "category": {
+            "type": "choice",
+            "choice": "delivery",
+            "probabilities": {
+              "account": 0.011581849306821823,
+              "billing": 0.012328814715147018,
+              "delivery": 0.7657420635223389,
+              "refund": 0.11337366700172424,
+              "technical": 0.09697364270687103
+            },
+            "confidence": 0.7657420635223389
+          },
+          "churn_risk": {
+            "type": "score",
+            "score": 1.144147053360939,
+            "legend": {
+              "0": "No sign of dissatisfaction.",
+              "1": "Mild frustration, but the relationship is intact.",
+              "2": "Clearly unhappy; repeat problems or explicit complaints.",
+              "3": "Imminent: threatening to cancel, dispute or leave."
+            },
+            "probabilities": {
+              "0": 0.059751298278570175,
+              "1": 0.7688365578651428,
+              "2": 0.1389259248971939,
+              "3": 0.032486215233802795
+            },
+            "confidence": 0.7688365578651428
+          },
+          "needs_human": {
+            "type": "noul",
+            "noul": 0.7721872329711914,
+            "probabilities": {
+              "yes": 0.7721872329711914,
+              "no": 0.2278127372264862
+            },
+            "confidence": 0.7721872329711914
+          },
+          "urgency": {
+            "type": "score",
+            "score": 1.4967476315796375,
+            "legend": {
+              "0": "No time pressure; can wait indefinitely.",
+              "1": "Routine; handle within the normal queue.",
+              "2": "Elevated; should be handled within the same week.",
+              "3": "Critical; requires action within the same day."
+            },
+            "probabilities": {
+              "0": 0.053595613688230515,
+              "1": 0.4223863184452057,
+              "2": 0.497692734003067,
+              "3": 0.026325281709432602
+            },
+            "confidence": 0.497692734003067
+          }
+        },
+        "usage": {
+          "input_tokens": 892,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "action": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "category": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "churn_risk": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "needs_human": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "urgency": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.2660071197897196
+    },
+    {
+      "name": "typed_decisions:invoice_processing_000000",
+      "source": {
+        "benchmark": "typed_decisions",
+        "file": "typed-test.parquet",
+        "ordinal": 200,
+        "id": "invoice_processing_000000",
+        "workflow": "invoice_processing",
+        "revision": "cc1a2e795f5160d417d4d7131a71d1ab60ea33ca",
+        "record_sha256": "03f5856607df4241735b513b33da7f90838e508baa4bd891bd4ef7634de5eb56"
+      },
+      "request": {
+        "model": "clef",
+        "state": {
+          "delivery": {
+            "condition": "accepted",
+            "date": "2026-03-01",
+            "received_qty": 5
+          },
+          "invoice": {
+            "currency": "USD",
+            "id": "INV-2026-2424",
+            "lines": [
+              {
+                "qty": 5,
+                "sku": "SKU-532",
+                "total_usd": 1670.45,
+                "unit_usd": 334.09
+              }
+            ],
+            "total_usd": 1670.45,
+            "vendor": "Vantage Materials"
+          },
+          "payment": {
+            "days_until_due": -9,
+            "discount_expires_in_days": null,
+            "early_payment_discount_pct": null,
+            "status": "overdue",
+            "terms": "net 30"
+          },
+          "purchase_order": {
+            "freight_terms": "freight prepaid by vendor, not separately billable",
+            "id": "PO-1520",
+            "lines": [
+              {
+                "qty": 10,
+                "unit_usd": 334.09
+              }
+            ],
+            "total_usd": 3340.9
+          },
+          "vendor_history": {
+            "disputes_12m": 2,
+            "invoices_12m": 14,
+            "prior_invoice_ids": [
+              "INV-2026-9279",
+              "INV-2026-1434"
+            ]
+          }
+        },
+        "questions": {
+          "discrepancy_severity": {
+            "criteria": [
+              "None: everything reconciles.",
+              "Trivial: rounding or a cosmetic difference.",
+              "Moderate: a real difference worth confirming.",
+              "Material: a large or unexplained difference."
+            ],
+            "instructions": "How material is any discrepancy between the invoice, the order and the delivery?",
+            "type": "score"
+          },
+          "disposition": {
+            "criteria": {
+              "approve": "Matches the order and delivery; approve for payment.",
+              "hold": "Something needs confirming before payment; hold pending clarification.",
+              "manual_review": "A human in finance must review the discrepancy.",
+              "reject": "Should not be paid: duplicate, unauthorised or materially wrong."
+            },
+            "instructions": "How should this vendor invoice be dispositioned?",
+            "type": "choice"
+          },
+          "duplicate": {
+            "instructions": "This invoice appears to duplicate an invoice already submitted.",
+            "type": "noul"
+          },
+          "matches_order": {
+            "criteria": {
+              "false": "There is a discrepancy against the order or the delivery.",
+              "true": "Line items, quantities and amounts reconcile."
+            },
+            "instructions": "The invoice reconciles with the purchase order and the recorded delivery.",
+            "type": "noul"
+          },
+          "urgency": {
+            "criteria": [
+              "No time pressure; can wait indefinitely.",
+              "Routine; handle within the normal queue.",
+              "Elevated; should be handled within the same week.",
+              "Critical; requires action within the same day."
+            ],
+            "instructions": "How time-sensitive is processing this invoice?",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "discrepancy_severity": {
+          "confidence": 0.07,
+          "label": "2",
+          "probabilities": {
+            "0": 0.38,
+            "1": 0.053333,
+            "2": 0.45,
+            "3": 0.116667
+          },
+          "score": 1.303333,
+          "type": "score"
+        },
+        "disposition": {
+          "confidence": 0.253333,
+          "label": "approve",
+          "probabilities": {
+            "approve": 0.44,
+            "hold": 0.186667,
+            "manual_review": 0.353333,
+            "reject": 0.02
+          },
+          "type": "choice"
+        },
+        "duplicate": {
+          "confidence": 0.926667,
+          "label": "false",
+          "noul": 0.036667,
+          "probabilities": {
+            "false": 0.963333,
+            "true": 0.036667
+          },
+          "type": "noul"
+        },
+        "matches_order": {
+          "confidence": 0.04,
+          "label": "false",
+          "noul": 0.48,
+          "probabilities": {
+            "false": 0.52,
+            "true": 0.48
+          },
+          "type": "noul"
+        },
+        "urgency": {
+          "confidence": 0.55,
+          "label": "2",
+          "probabilities": {
+            "0": 0.016667,
+            "1": 0.2,
+            "2": 0.566667,
+            "3": 0.216667
+          },
+          "score": 1.983333,
+          "type": "score"
+        }
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "discrepancy_severity",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "2",
+          "gold_label": "2",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.014522319578440936,
+            "1": 0.029797866773989795,
+            "2": 0.7536330180970969,
+            "3": 0.2020467955504723
+          },
+          "kl_from_gold": 0.9754334867107582,
+          "brier_from_gold": 0.23361055654928176,
+          "predicted_expected_score": 2.1432042896196006,
+          "gold_expected_score": 1.303333,
+          "score_absolute_error": 0.8398712896196006
+        },
+        {
+          "id": "disposition",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "hold",
+          "gold_label": "approve",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "approve": 0.028323568736420026,
+            "hold": 0.7038637615515867,
+            "manual_review": 0.2325634234690307,
+            "reject": 0.035249246242962516
+          },
+          "kl_from_gold": 1.0956466048172648,
+          "brier_from_gold": 0.45178780434381405
+        },
+        {
+          "id": "duplicate",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "false",
+          "gold_label": "false",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "false": 0.9884918513874213,
+            "true": 0.01150814861257869
+          },
+          "kl_from_gold": 0.017654587700771416,
+          "brier_from_gold": 0.0012659356062687044
+        },
+        {
+          "id": "matches_order",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "false",
+          "gold_label": "false",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "false": 0.9039745128756498,
+            "true": 0.0960254871243502
+          },
+          "kl_from_gold": 0.48485715481735536,
+          "brier_from_gold": 0.29487285307618505
+        },
+        {
+          "id": "urgency",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "2",
+          "gold_label": "2",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.0287563530400128,
+            "1": 0.06087720190027797,
+            "2": 0.4844806329893854,
+            "3": 0.4258858120703239
+          },
+          "kl_from_gold": 0.17116895471345295,
+          "brier_from_gold": 0.07002841565454304,
+          "predicted_expected_score": 2.3074959040900205,
+          "gold_expected_score": 1.983333,
+          "score_absolute_error": 0.32416290409002047
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-b576c16939893540\",\"object\":\"structured_decision\",\"created\":1794475108,\"model\":\"clef\",\"answers\":{\"discrepancy_severity\":{\"type\":\"score\",\"score\":2.143204301595688,\"legend\":{\"0\":\"None: everything reconciles.\",\"1\":\"Trivial: rounding or a cosmetic difference.\",\"2\":\"Moderate: a real difference worth confirming.\",\"3\":\"Material: a large or unexplained difference.\"},\"probabilities\":{\"0\":0.014522319659590721,\"1\":0.029797866940498352,\"2\":0.7536330223083496,\"3\":0.20204679667949677},\"confidence\":0.7536330223083496},\"disposition\":{\"type\":\"choice\",\"choice\":\"hold\",\"probabilities\":{\"approve\":0.028323570266366005,\"hold\":0.703863799571991,\"manual_review\":0.23256343603134155,\"reject\":0.0352492481470108},\"confidence\":0.703863799571991},\"duplicate\":{\"type\":\"noul\",\"noul\":0.011508149094879627,\"probabilities\":{\"yes\":0.011508149094879627,\"no\":0.9884918928146362},\"confidence\":0.9884918928146362},\"matches_order\":{\"type\":\"noul\",\"noul\":0.0960254892706871,\"probabilities\":{\"yes\":0.0960254892706871,\"no\":0.9039745330810547},\"confidence\":0.9039745330810547},\"urgency\":{\"type\":\"score\",\"score\":2.3074959814548492,\"legend\":{\"0\":\"No time pressure; can wait indefinitely.\",\"1\":\"Routine; handle within the normal queue.\",\"2\":\"Elevated; should be handled within the same week.\",\"3\":\"Critical; requires action within the same day.\"},\"probabilities\":{\"0\":0.02875635400414467,\"1\":0.060877203941345215,\"2\":0.4844806492328644,\"3\":0.4258858263492584},\"confidence\":0.4844806492328644}},\"usage\":{\"input_tokens\":872,\"output_tokens\":0},\"diagnostics\":{\"discrepancy_severity\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"disposition\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"duplicate\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"matches_order\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"urgency\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-b576c16939893540",
+        "object": "structured_decision",
+        "created": 1794475108,
+        "model": "clef",
+        "answers": {
+          "discrepancy_severity": {
+            "type": "score",
+            "score": 2.143204301595688,
+            "legend": {
+              "0": "None: everything reconciles.",
+              "1": "Trivial: rounding or a cosmetic difference.",
+              "2": "Moderate: a real difference worth confirming.",
+              "3": "Material: a large or unexplained difference."
+            },
+            "probabilities": {
+              "0": 0.014522319659590721,
+              "1": 0.029797866940498352,
+              "2": 0.7536330223083496,
+              "3": 0.20204679667949677
+            },
+            "confidence": 0.7536330223083496
+          },
+          "disposition": {
+            "type": "choice",
+            "choice": "hold",
+            "probabilities": {
+              "approve": 0.028323570266366005,
+              "hold": 0.703863799571991,
+              "manual_review": 0.23256343603134155,
+              "reject": 0.0352492481470108
+            },
+            "confidence": 0.703863799571991
+          },
+          "duplicate": {
+            "type": "noul",
+            "noul": 0.011508149094879627,
+            "probabilities": {
+              "yes": 0.011508149094879627,
+              "no": 0.9884918928146362
+            },
+            "confidence": 0.9884918928146362
+          },
+          "matches_order": {
+            "type": "noul",
+            "noul": 0.0960254892706871,
+            "probabilities": {
+              "yes": 0.0960254892706871,
+              "no": 0.9039745330810547
+            },
+            "confidence": 0.9039745330810547
+          },
+          "urgency": {
+            "type": "score",
+            "score": 2.3074959814548492,
+            "legend": {
+              "0": "No time pressure; can wait indefinitely.",
+              "1": "Routine; handle within the normal queue.",
+              "2": "Elevated; should be handled within the same week.",
+              "3": "Critical; requires action within the same day."
+            },
+            "probabilities": {
+              "0": 0.02875635400414467,
+              "1": 0.060877203941345215,
+              "2": 0.4844806492328644,
+              "3": 0.4258858263492584
+            },
+            "confidence": 0.4844806492328644
+          }
+        },
+        "usage": {
+          "input_tokens": 872,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "discrepancy_severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "disposition": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "duplicate": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "matches_order": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "urgency": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.2598505700007081
+    },
+    {
+      "name": "typed_decisions:security_incidents_000000",
+      "source": {
+        "benchmark": "typed_decisions",
+        "file": "typed-test.parquet",
+        "ordinal": 300,
+        "id": "security_incidents_000000",
+        "workflow": "security_incidents",
+        "revision": "cc1a2e795f5160d417d4d7131a71d1ab60ea33ca",
+        "record_sha256": "f8ed5ec46aeb553ec30b8735e9af2bd2cc0d1a203c8b4c0c47ea0bf4a48180a7"
+      },
+      "request": {
+        "model": "clef",
+        "state": {
+          "alert": {
+            "description": "an endpoint agent matched a known signature",
+            "evidence": "At 2026-09-15 02:17:44 UTC the endpoint agent on host WIN-01 flagged the file C:\\Program Files\\Backup\\backup.exe (SHA256: 3a5b9c7d…) as matching the known malware signature 'Trojan:Win32/Emotet'. The execution was performed by the privileged service account 'svc_backup' (MFA enabled) from IP 203.0.113.45, which is not listed in the known source inventory; the account's credentials were last rotated on 2026-09-01.",
+            "rule": "malware_signature"
+          },
+          "context": {
+            "asset_criticality": "low",
+            "change_window_active": false,
+            "source_on_allowlist": false
+          },
+          "history": {
+            "credential_rotation_days_ago": 14,
+            "distinct_countries_30d": 2,
+            "logins_30d": 194,
+            "prior_alerts_90d": 1
+          },
+          "principal": {
+            "mfa_enrolled": true,
+            "name": "adm-deploy-130",
+            "privileges": [
+              "deploy:production",
+              "secrets:read"
+            ],
+            "type": "service_account"
+          }
+        },
+        "questions": {
+          "credential_compromise": {
+            "instructions": "The evidence indicates a credential or account has been compromised.",
+            "type": "noul"
+          },
+          "disposition": {
+            "criteria": {
+              "close_benign": "Expected, explainable activity; close without analyst time.",
+              "contain": "Contain the host or account immediately; do not wait for triage.",
+              "investigate": "Warrants an analyst opening an investigation.",
+              "monitor": "Not clearly malicious, but worth watching for recurrence."
+            },
+            "instructions": "How should this security alert be dispositioned?",
+            "type": "choice"
+          },
+          "severity": {
+            "criteria": [
+              "Negligible: no access to anything sensitive.",
+              "Low: limited access, easily reversed.",
+              "Moderate: access to internal systems or non-public data.",
+              "High: access to production, secrets or customer data.",
+              "Critical: active compromise of crown-jewel systems."
+            ],
+            "instructions": "How severe is the potential impact if this alert is real?",
+            "type": "score"
+          },
+          "true_positive": {
+            "criteria": {
+              "false": "Benign activity, a misconfiguration, or a known false positive.",
+              "true": "The underlying behaviour is malicious or unauthorised."
+            },
+            "instructions": "This alert reflects genuinely malicious or unauthorised activity.",
+            "type": "noul"
+          },
+          "urgency": {
+            "criteria": [
+              "No time pressure; can wait indefinitely.",
+              "Routine; handle within the normal queue.",
+              "Elevated; should be handled within the same week.",
+              "Critical; requires action within the same day."
+            ],
+            "instructions": "How quickly must a responder act on this alert?",
+            "type": "score"
+          }
+        }
+      },
+      "gold": {
+        "credential_compromise": {
+          "confidence": 0.4,
+          "label": "true",
+          "noul": 0.7,
+          "probabilities": {
+            "false": 0.3,
+            "true": 0.7
+          },
+          "type": "noul"
+        },
+        "disposition": {
+          "confidence": 0.355556,
+          "label": "contain",
+          "probabilities": {
+            "close_benign": 0.016667,
+            "contain": 0.516667,
+            "investigate": 0.366667,
+            "monitor": 0.1
+          },
+          "type": "choice"
+        },
+        "severity": {
+          "confidence": 0.444444,
+          "label": "3",
+          "probabilities": {
+            "0": 0.016667,
+            "1": 0.083333,
+            "2": 0.366667,
+            "3": 0.45,
+            "4": 0.083333
+          },
+          "score": 2.5,
+          "type": "score"
+        },
+        "true_positive": {
+          "confidence": 0.7,
+          "label": "true",
+          "noul": 0.85,
+          "probabilities": {
+            "false": 0.15,
+            "true": 0.85
+          },
+          "type": "noul"
+        },
+        "urgency": {
+          "confidence": 0.416667,
+          "label": "3",
+          "probabilities": {
+            "0": 0.033333,
+            "1": 0.1,
+            "2": 0.283333,
+            "3": 0.583333
+          },
+          "score": 2.416667,
+          "type": "score"
+        }
+      },
+      "passed": true,
+      "question_results": [
+        {
+          "id": "credential_compromise",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "false",
+          "gold_label": "true",
+          "correct": false,
+          "probabilities_for_scoring": {
+            "false": 0.5506073668418119,
+            "true": 0.44939263315818806
+          },
+          "kl_from_gold": 0.12805650834266494,
+          "brier_from_gold": 0.12560810463077296
+        },
+        {
+          "id": "disposition",
+          "status": "valid",
+          "type": "choice",
+          "predicted_label": "contain",
+          "gold_label": "contain",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "close_benign": 0.024907252237508577,
+            "contain": 0.6201756700530295,
+            "investigate": 0.3192390853039022,
+            "monitor": 0.03567799240555974
+          },
+          "kl_from_gold": 0.052810869335776556,
+          "brier_from_gold": 0.017168674286484262
+        },
+        {
+          "id": "severity",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "3",
+          "gold_label": "3",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.053291218828266367,
+            "1": 0.0825390570693709,
+            "2": 0.138226907821043,
+            "3": 0.5340337614035743,
+            "4": 0.19190905487774543
+          },
+          "kl_from_gold": 0.1925701170646354,
+          "brier_from_gold": 0.07237727221333626,
+          "predicted_expected_score": 2.728730376433161,
+          "gold_expected_score": 2.5,
+          "score_absolute_error": 0.2287303764331612
+        },
+        {
+          "id": "true_positive",
+          "status": "valid",
+          "type": "noul",
+          "predicted_label": "true",
+          "gold_label": "true",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "false": 0.09999630898253728,
+            "true": 0.9000036910174627
+          },
+          "kl_from_gold": 0.012237165126853182,
+          "brier_from_gold": 0.005000738230739763
+        },
+        {
+          "id": "urgency",
+          "status": "valid",
+          "type": "score",
+          "predicted_label": "3",
+          "gold_label": "3",
+          "correct": true,
+          "probabilities_for_scoring": {
+            "0": 0.020643459056221163,
+            "1": 0.060674498025109116,
+            "2": 0.24566306977542854,
+            "3": 0.6730189731432412
+          },
+          "kl_from_gold": 0.022931435145286803,
+          "brier_from_gold": 0.011170116976715255,
+          "predicted_expected_score": 2.5710575570056897,
+          "gold_expected_score": 2.416667,
+          "score_absolute_error": 0.15439055700568982
+        }
+      ],
+      "http_status": 200,
+      "response_text": "{\"id\":\"decision-a1a30b35d444e62c\",\"object\":\"structured_decision\",\"created\":1794475108,\"model\":\"clef\",\"answers\":{\"credential_compromise\":{\"type\":\"noul\",\"noul\":0.4493926465511322,\"probabilities\":{\"yes\":0.4493926465511322,\"no\":0.5506073832511902},\"confidence\":0.5506073832511902},\"disposition\":{\"type\":\"choice\",\"choice\":\"contain\",\"probabilities\":{\"close_benign\":0.024907251819968224,\"contain\":0.6201756596565247,\"investigate\":0.31923907995224,\"monitor\":0.035677991807460785},\"confidence\":0.6201756596565247},\"severity\":{\"type\":\"score\",\"score\":2.728730447590351,\"legend\":{\"0\":\"Negligible: no access to anything sensitive.\",\"1\":\"Low: limited access, easily reversed.\",\"2\":\"Moderate: access to internal systems or non-public data.\",\"3\":\"High: access to production, secrets or customer data.\",\"4\":\"Critical: active compromise of crown-jewel systems.\"},\"probabilities\":{\"0\":0.05329122021794319,\"1\":0.08253905922174454,\"2\":0.13822691142559052,\"3\":0.5340337753295898,\"4\":0.191909059882164},\"confidence\":0.5340337753295898},\"true_positive\":{\"type\":\"noul\",\"noul\":0.9000037312507629,\"probabilities\":{\"yes\":0.9000037312507629,\"no\":0.09999631345272064},\"confidence\":0.9000037312507629},\"urgency\":{\"type\":\"score\",\"score\":2.571057628840208,\"legend\":{\"0\":\"No time pressure; can wait indefinitely.\",\"1\":\"Routine; handle within the normal queue.\",\"2\":\"Elevated; should be handled within the same week.\",\"3\":\"Critical; requires action within the same day.\"},\"probabilities\":{\"0\":0.020643459632992744,\"1\":0.06067449972033501,\"2\":0.24566307663917542,\"3\":0.6730189919471741},\"confidence\":0.6730189919471741}},\"usage\":{\"input_tokens\":927,\"output_tokens\":0},\"diagnostics\":{\"credential_compromise\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"disposition\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"severity\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"true_positive\":{\"label_mass\":1.0,\"argmax_is_label\":true},\"urgency\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-a1a30b35d444e62c",
+        "object": "structured_decision",
+        "created": 1794475108,
+        "model": "clef",
+        "answers": {
+          "credential_compromise": {
+            "type": "noul",
+            "noul": 0.4493926465511322,
+            "probabilities": {
+              "yes": 0.4493926465511322,
+              "no": 0.5506073832511902
+            },
+            "confidence": 0.5506073832511902
+          },
+          "disposition": {
+            "type": "choice",
+            "choice": "contain",
+            "probabilities": {
+              "close_benign": 0.024907251819968224,
+              "contain": 0.6201756596565247,
+              "investigate": 0.31923907995224,
+              "monitor": 0.035677991807460785
+            },
+            "confidence": 0.6201756596565247
+          },
+          "severity": {
+            "type": "score",
+            "score": 2.728730447590351,
+            "legend": {
+              "0": "Negligible: no access to anything sensitive.",
+              "1": "Low: limited access, easily reversed.",
+              "2": "Moderate: access to internal systems or non-public data.",
+              "3": "High: access to production, secrets or customer data.",
+              "4": "Critical: active compromise of crown-jewel systems."
+            },
+            "probabilities": {
+              "0": 0.05329122021794319,
+              "1": 0.08253905922174454,
+              "2": 0.13822691142559052,
+              "3": 0.5340337753295898,
+              "4": 0.191909059882164
+            },
+            "confidence": 0.5340337753295898
+          },
+          "true_positive": {
+            "type": "noul",
+            "noul": 0.9000037312507629,
+            "probabilities": {
+              "yes": 0.9000037312507629,
+              "no": 0.09999631345272064
+            },
+            "confidence": 0.9000037312507629
+          },
+          "urgency": {
+            "type": "score",
+            "score": 2.571057628840208,
+            "legend": {
+              "0": "No time pressure; can wait indefinitely.",
+              "1": "Routine; handle within the normal queue.",
+              "2": "Elevated; should be handled within the same week.",
+              "3": "Critical; requires action within the same day."
+            },
+            "probabilities": {
+              "0": 0.020643459632992744,
+              "1": 0.06067449972033501,
+              "2": 0.24566307663917542,
+              "3": 0.6730189919471741
+            },
+            "confidence": 0.6730189919471741
+          }
+        },
+        "usage": {
+          "input_tokens": 927,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "credential_compromise": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "disposition": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "severity": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "true_positive": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          },
+          "urgency": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "validation_errors": [],
+      "elapsed_seconds": 0.2601969800889492
+    }
+  ],
+  "status": "complete",
+  "summary": {
+    "all": {
+      "requested_decisions": 44,
+      "valid_decisions": 44,
+      "correct_decisions": 37,
+      "accuracy": 0.8409090909090909,
+      "valid_prediction_accuracy": 0.8409090909090909,
+      "score_mae": 0.21644733259545387,
+      "score_error_count": 16,
+      "kl_from_gold": 0.27819891584347956,
+      "kl_from_gold_count": 20,
+      "brier_from_gold": 0.12634335592238843,
+      "brier_from_gold_count": 20
+    },
+    "jevbench": {
+      "requested_decisions": 12,
+      "valid_decisions": 12,
+      "correct_decisions": 12,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": 0.0359156426275149,
+      "score_error_count": 4
+    },
+    "jevbench/noul": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": null,
+      "score_error_count": 0
+    },
+    "jevbench/choice": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": null,
+      "score_error_count": 0
+    },
+    "jevbench/score": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": 0.0359156426275149,
+      "score_error_count": 4
+    },
+    "open_decisions": {
+      "requested_decisions": 12,
+      "valid_decisions": 12,
+      "correct_decisions": 12,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": 0.05947003583423793,
+      "score_error_count": 4
+    },
+    "open_decisions/choice": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": null,
+      "score_error_count": 0
+    },
+    "open_decisions/noul": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": null,
+      "score_error_count": 0
+    },
+    "open_decisions/score": {
+      "requested_decisions": 4,
+      "valid_decisions": 4,
+      "correct_decisions": 4,
+      "accuracy": 1.0,
+      "valid_prediction_accuracy": 1.0,
+      "score_mae": 0.05947003583423793,
+      "score_error_count": 4
+    },
+    "typed_decisions": {
+      "requested_decisions": 20,
+      "valid_decisions": 20,
+      "correct_decisions": 13,
+      "accuracy": 0.65,
+      "valid_prediction_accuracy": 0.65,
+      "score_mae": 0.38520182596003133,
+      "score_error_count": 8,
+      "kl_from_gold": 0.27819891584347956,
+      "kl_from_gold_count": 20,
+      "brier_from_gold": 0.12634335592238843,
+      "brier_from_gold_count": 20
+    },
+    "typed_decisions/choice": {
+      "requested_decisions": 6,
+      "valid_decisions": 6,
+      "correct_decisions": 3,
+      "accuracy": 0.5,
+      "valid_prediction_accuracy": 0.5,
+      "score_mae": null,
+      "score_error_count": 0,
+      "kl_from_gold": 0.3438390008395971,
+      "kl_from_gold_count": 6,
+      "brier_from_gold": 0.15592331821801445,
+      "brier_from_gold_count": 6
+    },
+    "typed_decisions/noul": {
+      "requested_decisions": 6,
+      "valid_decisions": 6,
+      "correct_decisions": 4,
+      "accuracy": 0.6666666666666666,
+      "valid_prediction_accuracy": 0.6666666666666666,
+      "score_mae": null,
+      "score_error_count": 0,
+      "kl_from_gold": 0.22218303091998284,
+      "kl_from_gold_count": 6,
+      "brier_from_gold": 0.13425117855337768,
+      "brier_from_gold_count": 6
+    },
+    "typed_decisions/score": {
+      "requested_decisions": 8,
+      "valid_decisions": 8,
+      "correct_decisions": 6,
+      "accuracy": 0.75,
+      "valid_prediction_accuracy": 0.75,
+      "score_mae": 0.38520182596003133,
+      "score_error_count": 8,
+      "kl_from_gold": 0.2709807657890139,
+      "kl_from_gold_count": 8,
+      "brier_from_gold": 0.098227517227427,
+      "brier_from_gold_count": 8
+    }
+  },
+  "requested_cases": 28,
+  "successful_cases": 28
+}
