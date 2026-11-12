@@ -31,6 +31,8 @@ PERF_ENV = {
     "ASCEND_CUSTOM_OPP_PATH", "ATB_HOME_PATH", "PYTORCH_NPU_ALLOC_CONF",
     "PYTORCH_ALLOC_CONF", "TORCH_DEVICE_BACKEND_AUTOLOAD", "VIRTUAL_ENV",
     "MODEL_DIR", "XDG_CACHE_HOME", "HF_HOME", "TORCH_HOME", "TRITON_CACHE_DIR",
+    "TOKENIZERS_PARALLELISM", "PYTHONUNBUFFERED", "CLEF_PROFILE_MARKERS",
+    "CLEF_PROFILE_OBSERVE_DIR", "CLEF_PROFILE_SCOPE_FILTER",
 }
 
 
@@ -104,6 +106,8 @@ def main():
     parser.add_argument("--vllm-source", type=Path, default=Path("/workspace/yangchen/work/src/vllm"))
     parser.add_argument("--ascend-source", type=Path, default=Path("/workspace/yangchen/work/src/vllm-ascend"))
     parser.add_argument("--sample-file", type=Path, action="append", default=[])
+    parser.add_argument("--save-service-restore", type=Path, help="保存唯一 Clef API 的 argv/cwd/性能环境，供服务切换工具恢复")
+    parser.add_argument("--service-pid", type=int, help="多服务时明确选择 Clef API PID")
     args = parser.parse_args()
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -172,6 +176,21 @@ print(json.dumps({'torch':torch.__version__,'torch_npu':m.version('torch-npu'),
 """
     manifest["commands"]["torch-profiler"] = command(output, "torch-profiler", [sys.executable, "-c", probe])
     manifest["service_processes"] = processes()
+    if args.save_service_restore:
+        model = os.environ.get("MODEL_DIR", "/workspace/yangchen/models/Clef-27B")
+        candidates = [row for row in manifest["service_processes"]
+                      if "vllm.entrypoints.cli.main" in row["argv"] and "serve" in row["argv"]
+                      and model in row["argv"] and (args.service_pid is None or row["pid"] == args.service_pid)]
+        if len(candidates) != 1 or any("<redacted>" in arg for row in candidates for arg in row["argv"]):
+            raise RuntimeError("Expected one unambiguously identified Clef API with a reproducible credential-free command")
+        selected = candidates[0]
+        restore = {key: selected[key] for key in ("pid", "argv", "cwd")}
+        restore["environment"] = selected["performance_environment"]
+        restore_path = args.save_service_restore.resolve()
+        with os.fdopen(os.open(restore_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as stream:
+            json.dump(restore, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+        manifest["service_restore"] = {"path": str(restore_path), "sha256": sha256(restore_path), "pid": selected["pid"]}
     manifest["finished_at"] = datetime.now(timezone.utc).isoformat()
     write_json(output / "manifest.json", manifest)
     print(json.dumps({"snapshot": str(output / "manifest.json"), "process_count": len(manifest["service_processes"]),

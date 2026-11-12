@@ -59,6 +59,7 @@ def main():
     parser.add_argument("--trace-root", type=Path, required=True)
     parser.add_argument("--expected-ranks", type=int, required=True)
     parser.add_argument("--sample-file", type=Path)
+    parser.add_argument("--warmup-sample-file", type=Path, help="采集外使用独立同 shape 样本；用于保留真实媒体 encoder cache miss")
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--requests", type=int, default=5)
     parser.add_argument("--concurrency", type=int, default=1)
@@ -80,16 +81,19 @@ def main():
                 "throughput_scope": "Profiled requests measure instrumentation overhead; use separate unprofiled rounds for performance."}
     if args.sample_file:
         manifest["sample"] = {"path": str(args.sample_file.resolve()), "sha256": hashlib.sha256(args.sample_file.read_bytes()).hexdigest()}
+    if args.warmup_sample_file:
+        manifest["warmup_sample"] = {"path": str(args.warmup_sample_file.resolve()), "sha256": hashlib.sha256(args.warmup_sample_file.read_bytes()).hexdigest()}
     save(output / "manifest.json", manifest)
     benchmark = Path(__file__).with_name("benchmark_systemone.py")
     common = [sys.executable, str(benchmark), "--base-url", args.base_url, "--warmup", "0", "--concurrency", str(args.concurrency), "--timeout", str(args.timeout)]
-    if args.sample_file:
-        common += ["--sample-file", str(args.sample_file)]
+    requests_command = common + (["--sample-file", str(args.sample_file)] if args.sample_file else [])
+    warmup_sample = args.warmup_sample_file or args.sample_file
+    warmup_command = common + (["--sample-file", str(warmup_sample)] if warmup_sample else [])
     try:
         manifest["health"] = get_health(args.base_url.rstrip("/"), 0, args.timeout)
         if not manifest["health"]["passed"]:
             raise RuntimeError("健康检查失败")
-        manifest["warmup"] = execute([*common, "--requests", str(args.warmup), "--report", str(output / "warmup.json")], output / "warmup.log")
+        manifest["warmup"] = execute([*warmup_command, "--requests", str(args.warmup), "--report", str(output / "warmup.json")], output / "warmup.log")
         if manifest["warmup"]["returncode"]:
             raise RuntimeError("采集外预热失败")
         # A timed-out start may have reached workers; always send stop after the
@@ -100,7 +104,7 @@ def main():
             if not manifest["start"]["passed"]:
                 raise RuntimeError("start_profile 未返回 HTTP 200")
             manifest["request_window_started_at"] = now()
-            manifest["requests"] = execute([*common, "--requests", str(args.requests), "--report", str(output / "profile-requests.json")], output / "profile-requests.log")
+            manifest["requests"] = execute([*requests_command, "--requests", str(args.requests), "--report", str(output / "profile-requests.json")], output / "profile-requests.log")
             manifest["request_window_finished_at"] = now()
         finally:
             manifest["stop"] = control(args.base_url, "/stop_profile", args.stop_timeout)
