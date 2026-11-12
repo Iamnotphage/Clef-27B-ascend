@@ -267,6 +267,9 @@ TARGETS = {
         ("Qwen3NextDecoderLayer", "forward"): "clef::backbone_decoder_layer",
         ("Qwen3NextModel", "forward"): "clef::language_backbone",
     },
+    "vllm/model_executor/models/qwen3_vl.py": {
+        ("Qwen3_VisionTransformer", "forward"): "clef::vision_encoder",
+    },
     "vllm/entrypoints/generate/structured_decisions/serving.py": {
         (None, "parse_questions"): "clef::request_schema_parse",
         ("ServingStructuredDecisions", "create_decision"): "clef::frontend_request",
@@ -294,6 +297,11 @@ ASCEND_TARGETS = {
     "vllm_ascend/worker/worker.py": {
         ("NPUWorker", "execute_model"): "clef::worker_execute_model",
         ("NPUWorker", "initialize_from_config"): "clef::cache_initialize",
+    },
+    "vllm_ascend/models/qwen3_5_vl.py": {
+        ("_AscendVLPreprocessMixin", "_process_image_input"): "clef::image_device_process",
+        ("_AscendVLPreprocessMixin", "_process_video_input"): "clef::video_device_process",
+        ("_AscendVLPreprocessMixin", "_resize_and_patchify"): "clef::image_resize_patchify",
     },
 }
 

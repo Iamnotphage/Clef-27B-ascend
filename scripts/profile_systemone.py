@@ -61,11 +61,12 @@ def main():
     parser.add_argument("--sample-file", type=Path)
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--requests", type=int, default=5)
+    parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=300)
     parser.add_argument("--stop-timeout", type=float, default=600)
     parser.add_argument("--skip-analysis", action="store_true", help="保留原始数据，稍后逐 rank 独立解析")
     args = parser.parse_args()
-    if args.warmup < 10 or args.requests < 1 or args.expected_ranks < 1 or args.timeout <= 0 or not 300 <= args.stop_timeout <= 600:
+    if args.warmup < 10 or args.requests < 1 or args.concurrency < 1 or args.expected_ranks < 1 or args.timeout <= 0 or not 300 <= args.stop_timeout <= 600:
         parser.error("预热至少 10 次，请求与 rank 数为正数，stop 超时为 300–600 秒")
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -73,7 +74,7 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     before = {str(p.resolve()) for p in root.rglob("*_ascend_pt") if p.is_dir()}
     manifest = {"created_at": now(), "base_url": args.base_url, "trace_root": str(root),
-                "expected_ranks": args.expected_ranks, "passed": False,
+                "expected_ranks": args.expected_ranks, "concurrency": args.concurrency, "passed": False,
                 "collection_control_passed": False, "trace_completeness_passed": False,
                 "acceptance_scope": "HTTP control and exported rank structure; request-window alignment, rank clocks and service logs also require review",
                 "throughput_scope": "Profiled requests measure instrumentation overhead; use separate unprofiled rounds for performance."}
@@ -81,7 +82,7 @@ def main():
         manifest["sample"] = {"path": str(args.sample_file.resolve()), "sha256": hashlib.sha256(args.sample_file.read_bytes()).hexdigest()}
     save(output / "manifest.json", manifest)
     benchmark = Path(__file__).with_name("benchmark_systemone.py")
-    common = [sys.executable, str(benchmark), "--base-url", args.base_url, "--warmup", "0", "--concurrency", "1", "--timeout", str(args.timeout)]
+    common = [sys.executable, str(benchmark), "--base-url", args.base_url, "--warmup", "0", "--concurrency", str(args.concurrency), "--timeout", str(args.timeout)]
     if args.sample_file:
         common += ["--sample-file", str(args.sample_file)]
     try:

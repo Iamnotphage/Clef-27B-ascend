@@ -142,6 +142,15 @@ def main():
             manifest["files"][str(path)] = {"missing": True}
     files = [project / "Clef-27B/logs/model_manifest.json", *sorted((project / "scripts/patches").glob("*.patch")), *args.sample_file]
     files += [Path(p) for p in ("/sys/fs/cgroup/cpu.max", "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/cpuset.cpus.effective", "/proc/meminfo", "/etc/os-release", "/usr/local/Ascend/driver/version.info")]
+    files += [Path(p) for p in ("/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us",
+                               "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us",
+                               "/sys/fs/cgroup/cpu,cpuacct/cpu.stat",
+                               "/sys/fs/cgroup/memory/memory.limit_in_bytes",
+                               "/sys/fs/cgroup/memory/memory.max_usage_in_bytes",
+                               "/sys/fs/cgroup/cpuset/cpuset.cpus")]
+    msprof = shutil.which("msprof")
+    if msprof:
+        files.append(Path(msprof).resolve())
     for root in (Path("/usr/local/Ascend/cann"), Path("/usr/local/Ascend/nnal/atb")):
         files.extend(root.glob("**/version.cfg"))
     for path in files:

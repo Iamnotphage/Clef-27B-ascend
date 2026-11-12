@@ -146,7 +146,8 @@ def main():
         names = ['api_handler_including_json', 'frontend_request', 'request_schema_parse',
                  'schema_tokenize_encode', 'media_decode_process', 'worker_execute_model',
                  'backbone', 'language_backbone', 'joint_pooler', 'joint_head',
-                 'candidate_embedding_tp', 'request_finished_metrics', 'cache_initialize']
+                 'candidate_embedding_tp', 'request_finished_metrics', 'cache_initialize',
+                 'vision_encoder', 'image_device_process', 'video_device_process', 'image_resize_patchify']
         environment.update(CLEF_PROFILE_MARKERS='0', CLEF_PROFILE_OBSERVE_DIR=str(output / 'cpu-timings'),
                            CLEF_PROFILE_SCOPE_FILTER=','.join('clef::' + name for name in names))
     cwd = original['cwd'] if args.action == 'restore' else str(Path(__file__).resolve().parents[1])
