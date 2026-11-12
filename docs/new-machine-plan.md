@@ -1,6 +1,6 @@
 # 新机器环境与执行计划
 
-更新日期为 2026-11-12，北京时间。用户已选择在新机器上沿用 CANN 9.2.1，配套 PyTorch 2.10，先准备模型和工程，再实施推理环境与 baseline。
+更新日期为 2026-11-13，北京时间。CANN 9.2.1 / PyTorch 2.10 环境与完整 baseline 已完成；本轮端到端 profiling、TP1/TP2 稳定测量、长输入/多模态/batching 对照及服务恢复已验收。[profiling 实测记录](profiling-2026-11-12.md)
 
 ## 1. 连接与目录
 
@@ -13,6 +13,7 @@
 | 运行日志 | `/workspace/yangchen/logs` |
 | 下载和构建临时目录 | `/workspace/yangchen/work` |
 | 目标 Python 环境 | `/workspace/yangchen/venvs/clef-py312` |
+| profiling 复现工具 | `/workspace/yangchen/work/profiling-tools-20261113`，原工程工作区保留 |
 
 跳板账号和令牌使用平台当前生成的值，目标机密码按终端提示输入。
 
@@ -190,5 +191,5 @@ python -m pip check
 - 固定 vLLM、Ascend 及递归 submodules 已构建，FLA / flash-attn / A3 通信内核安装完成；最终 `pip check`、自动架构识别和 78 个自定义算子加载通过。
 - TP1、TP2 完整主干、视觉塔和联合头实际加载。两种 TP 的固定七个决策均与 CPU BF16 参考一致，token/span/候选映射差异为 0，性能和 1 秒采样 HBM 已保存。
 - 双 rank HCCL、两张纯色图片和双向视频请求通过。完整公开评测 2,983 请求、4,583 决策已完成，执行错误为 0。
-- 当前运行服务为目标机 `127.0.0.1:8000` 上的 `clef`，TP2、4096、BF16、eager、单序列，图片/视频各限 1；PID 文件为 `/workspace/yangchen/logs/clef-tp2-4096-mm-20261112.pid`。
+- 当前运行服务为目标机 `127.0.0.1:8000` 上的 `clef`，TP2、4096、BF16、eager、单序列，图片/视频各限 1。2026-11-13 profiling 结束后已按原 argv/cwd 恢复，API PID 为 `115206`；PID 文件 `/workspace/yangchen/logs/clef-tp2-4096-mm-20261112.pid` 已更新。当前日志为 `/workspace/yangchen/logs/profiling/20261112-223732-systemone/restored-tp2-4096/service.log`，服务指针为同一 run 的 `service-current.json`。原工程、vLLM 与 Ascend 的 diff 与实验前完全对应，协议/参考精度/重新编码/多模态均通过。[恢复证据](evidence/profiling-20261112/restoration.json)
 - 两份 CSV、运行报告图、兼容记录和完整评测报告已整理。正式赛题输入、官方 baseline 数值和截图规范继续按主办方协议对齐。[实际安装记录](installation-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md)

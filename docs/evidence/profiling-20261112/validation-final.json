@@ -1,0 +1,654 @@
+{
+  "created_at": "2026-11-12T17:05:48.584994+00:00",
+  "scope": "Final local standard-library contract, synthetic trace and negative-path checks; hardware results are separately indexed",
+  "hardware_executed_by_these_checks": false,
+  "python": "3.12.7 (main, Oct  1 2024, 02:05:46) [Clang 15.0.0 (clang-1500.3.9.4)]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "source_head_before_closing_commits": "192f9df666068955015f78c39dfc3af035b6cd57",
+  "test_command": [
+    "/opt/homebrew/opt/python@3.12/bin/python3.12",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_*.py",
+    "-v"
+  ],
+  "returncode": 0,
+  "stdout": "{\"name\": \"first\", \"status\": \"starting\", \"expected_input_tokens\": 50}\n{\"name\": \"first\", \"passed\": true, \"actual_samples\": 2, \"api_input_token_counts\": [50], \"requests_per_second\": 10.0, \"failures\": [], \"error\": null}\n{\"name\": \"bad\", \"status\": \"starting\", \"expected_input_tokens\": 50}\n{\"name\": \"bad\", \"passed\": false, \"actual_samples\": 2, \"api_input_token_counts\": [49], \"requests_per_second\": 10.0, \"failures\": [{\"phase\": \"warmup\", \"index\": 0, \"issues\": [\"API usage.input_tokens=49, expected encoded plan=50\"], \"error\": null, \"validation_errors\": null}, {\"phase\": \"measured\", \"index\": 0, \"issues\": [\"API usage.input_tokens=49, expected encoded plan=50\"], \"error\": null, \"validation_errors\": null}, {\"phase\": \"measured\", \"index\": 1, \"issues\": [\"API usage.input_tokens=49, expected encoded plan=50\"], \"error\": null, \"validation_errors\": null}], \"error\": null}\n{\"name\": \"last\", \"status\": \"starting\", \"expected_input_tokens\": 50}\n{\"name\": \"last\", \"passed\": true, \"actual_samples\": 2, \"api_input_token_counts\": [50], \"requests_per_second\": 10.0, \"failures\": [], \"error\": null}\n{\"passed\": false, \"samples\": 3, \"summary\": \"/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/tmphvun5eop/output/matrix-summary.json\"}\n",
+  "stderr": "test_batch_membership_and_startup_cache_metadata (test_analyze_systemone_profile.SyntheticProfileTests.test_batch_membership_and_startup_cache_metadata) ... ok\ntest_benchmark_selects_measured_ids_and_keeps_unassigned_window_events (test_analyze_systemone_profile.SyntheticProfileTests.test_benchmark_selects_measured_ids_and_keeps_unassigned_window_events) ... ok\ntest_communication_totals_are_excluded_from_operation_count (test_analyze_systemone_profile.SyntheticProfileTests.test_communication_totals_are_excluded_from_operation_count) ... ok\ntest_duplicate_rank_metadata_fails_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_duplicate_rank_metadata_fails_strict) ... ok\ntest_empty_raw_directories_fail_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_empty_raw_directories_fail_strict) ... ok\ntest_epoch_timestamp_precision_and_hardware_metrics (test_analyze_systemone_profile.SyntheticProfileTests.test_epoch_timestamp_precision_and_hardware_metrics) ... ok\ntest_explicit_flow_correlates_modules_without_summing_nested_scopes (test_analyze_systemone_profile.SyntheticProfileTests.test_explicit_flow_correlates_modules_without_summing_nested_scopes) ... ok\ntest_hccl_invocation_names_group_without_losing_evidence (test_analyze_systemone_profile.SyntheticProfileTests.test_hccl_invocation_names_group_without_losing_evidence) ... ok\ntest_inclusive_cpu_observation_overlap_and_request_index (test_analyze_systemone_profile.SyntheticProfileTests.test_inclusive_cpu_observation_overlap_and_request_index) ... ok\ntest_internal_worker_suffix_resolves_and_empty_steps_are_excluded (test_analyze_systemone_profile.SyntheticProfileTests.test_internal_worker_suffix_resolves_and_empty_steps_are_excluded) ... ok\ntest_interval_union_and_overlap (test_analyze_systemone_profile.SyntheticProfileTests.test_interval_union_and_overlap) ... ok\ntest_memory_components_keep_workspace_separate (test_analyze_systemone_profile.SyntheticProfileTests.test_memory_components_keep_workspace_separate) ... ok\ntest_missing_one_rank_timeline_fails_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_missing_one_rank_timeline_fails_strict) ... ok\ntest_native_engine_queue_durations_use_same_process_differences (test_analyze_systemone_profile.SyntheticProfileTests.test_native_engine_queue_durations_use_same_process_differences) ... ok\ntest_rank_identity_requires_metadata (test_analyze_systemone_profile.SyntheticProfileTests.test_rank_identity_requires_metadata) ... ok\ntest_request_worker_window_and_observer_id_association (test_analyze_systemone_profile.SyntheticProfileTests.test_request_worker_window_and_observer_id_association) ... ok\ntest_task_stream_rounding_match_and_sync_wait_are_separate (test_analyze_systemone_profile.SyntheticProfileTests.test_task_stream_rounding_match_and_sync_wait_are_separate) ... ok\ntest_trace_dir_selects_one_window (test_analyze_systemone_profile.SyntheticProfileTests.test_trace_dir_selects_one_window) ... ok\ntest_two_rank_evidence_and_no_double_counting (test_analyze_systemone_profile.SyntheticProfileTests.test_two_rank_evidence_and_no_double_counting) ... ok\ntest_cli_round_robin_minimum_window_and_stage_timing (test_benchmark_systemone.BenchmarkTests.test_cli_round_robin_minimum_window_and_stage_timing) ... ok\ntest_default_request_bytes_and_percentiles (test_benchmark_systemone.BenchmarkTests.test_default_request_bytes_and_percentiles) ... ok\ntest_http_failure_has_timing_and_is_excluded_from_throughput (test_benchmark_systemone.BenchmarkTests.test_http_failure_has_timing_and_is_excluded_from_throughput) ... ok\ntest_sample_file_rejects_empty_and_preserves_order (test_benchmark_systemone.BenchmarkTests.test_sample_file_rejects_empty_and_preserves_order) ... ok\ntest_clean_environment_runs_before_model_import (test_benchmark_systemone_encoding.EncodingBenchmarkTests.test_clean_environment_runs_before_model_import) ... ok\ntest_each_encoding_component_must_match_exactly (test_benchmark_systemone_encoding.EncodingBenchmarkTests.test_each_encoding_component_must_match_exactly) ... ok\ntest_iteration_times_parse_render_encode_and_checks_output (test_benchmark_systemone_encoding.EncodingBenchmarkTests.test_iteration_times_parse_render_encode_and_checks_output) ... ok\ntest_saved_evidence_and_samples_are_hash_checked (test_benchmark_systemone_encoding.EncodingBenchmarkTests.test_saved_evidence_and_samples_are_hash_checked) ... ok\ntest_schema_cache_never_caches_state_and_returns_fresh_lists (test_benchmark_systemone_encoding.EncodingBenchmarkTests.test_schema_cache_never_caches_state_and_returns_fresh_lists) ... ok\ntest_dataset_file_hash_and_source_requests_are_preserved (test_prepare_systemone_profile_workloads.WorkloadTests.test_dataset_file_hash_and_source_requests_are_preserved) ... ok\ntest_existing_mm_hash_validation_and_no_estimated_token_count (test_prepare_systemone_profile_workloads.WorkloadTests.test_existing_mm_hash_validation_and_no_estimated_token_count) ... ok\ntest_field_candidate_scans_keep_state_and_candidate_prefix (test_prepare_systemone_profile_workloads.WorkloadTests.test_field_candidate_scans_keep_state_and_candidate_prefix) ... ok\ntest_natural_selection_uses_encoded_lengths_and_names_confounders (test_prepare_systemone_profile_workloads.WorkloadTests.test_natural_selection_uses_encoded_lengths_and_names_confounders) ... ok\ntest_prefix_search_returns_actual_encoding_and_retains_schema (test_prepare_systemone_profile_workloads.WorkloadTests.test_prefix_search_returns_actual_encoding_and_retains_schema) ... ok\ntest_avi_changes_one_payload_byte_and_preserves_header_index (test_prepare_systemone_uncached_media.UncachedMediaTests.test_avi_changes_one_payload_byte_and_preserves_header_index) ... ok\ntest_existing_changed_fixture_is_preserved_and_rejected (test_prepare_systemone_uncached_media.UncachedMediaTests.test_existing_changed_fixture_is_preserved_and_rejected) ... ok\ntest_png_has_one_real_pixel_tag_and_deterministic_bytes (test_prepare_systemone_uncached_media.UncachedMediaTests.test_png_has_one_real_pixel_tag_and_deterministic_bytes) ... ok\ntest_warmup_and_profile_contents_are_unique_and_shape_fixed (test_prepare_systemone_uncached_media.UncachedMediaTests.test_warmup_and_profile_contents_are_unique_and_shape_fixed) ... ok\ntest_apply_restore_and_concurrent_edit_guard (test_profile_instrumentation.InstrumentationTests.test_apply_restore_and_concurrent_edit_guard) ... ok\ntest_cache_metadata_deduplicates_shared_storage (test_profile_instrumentation.InstrumentationTests.test_cache_metadata_deduplicates_shared_storage) ... ok\ntest_different_source_head_rejected (test_profile_instrumentation.InstrumentationTests.test_different_source_head_rejected) ... ok\ntest_disabled_returns_original (test_profile_instrumentation.InstrumentationTests.test_disabled_returns_original) ... ok\ntest_exception_preserved_and_context_reset (test_profile_instrumentation.InstrumentationTests.test_exception_preserved_and_context_reset) ... ok\ntest_header_bound_method_async_context_and_explicit_ids (test_profile_instrumentation.InstrumentationTests.test_header_bound_method_async_context_and_explicit_ids) ... ok\ntest_native_queue_metrics_use_engine_event_differences (test_profile_instrumentation.InstrumentationTests.test_native_queue_metrics_use_engine_event_differences) ... ok\ntest_rank_uses_initialized_group_without_initialization (test_profile_instrumentation.InstrumentationTests.test_rank_uses_initialized_group_without_initialization) ... ok\ntest_scope_filter_selects_only_exact_names_and_empty_disables (test_profile_instrumentation.InstrumentationTests.test_scope_filter_selects_only_exact_names_and_empty_disables) ... ok\ntest_worker_batch_ids_single_multiple_and_async_none (test_profile_instrumentation.InstrumentationTests.test_worker_batch_ids_single_multiple_and_async_none) ... ok\ntest_failed_health_skips_profiler (test_profile_systemone.ProfileControlTests.test_failed_health_skips_profiler) ... ok\ntest_http_success_requires_raw_rank_traces (test_profile_systemone.ProfileControlTests.test_http_success_requires_raw_rank_traces) ... ok\ntest_snapshot_filters_credentials (test_profile_systemone.ProfileControlTests.test_snapshot_filters_credentials) ... ok\ntest_stop_after_failed_start (test_profile_systemone.ProfileControlTests.test_stop_after_failed_start) ... ok\ntest_stop_after_request_interruption (test_profile_systemone.ProfileControlTests.test_stop_after_request_interruption) ... ok\ntest_api_usage_is_authoritative_and_bool_is_rejected (test_run_systemone_profile_matrix.MatrixTests.test_api_usage_is_authoritative_and_bool_is_rejected) ... ok\ntest_failed_warmup_is_preserved (test_run_systemone_profile_matrix.MatrixTests.test_failed_warmup_is_preserved) ... ok\ntest_plan_selection_prechecks_tokens_and_body_sha (test_run_systemone_profile_matrix.MatrixTests.test_plan_selection_prechecks_tokens_and_body_sha) ... ok\ntest_runner_continues_after_mismatch_and_keeps_all_evidence (test_run_systemone_profile_matrix.MatrixTests.test_runner_continues_after_mismatch_and_keeps_all_evidence) ... ok\ntest_cli_outputs_csv_and_cannot_self_verify_hardware (test_summarize_systemone_benchmarks.SummaryTests.test_cli_outputs_csv_and_cannot_self_verify_hardware) ... ok\ntest_duplicate_files_and_run_ids_are_rejected (test_summarize_systemone_benchmarks.SummaryTests.test_duplicate_files_and_run_ids_are_rejected) ... ok\ntest_legacy_intervals_and_changed_inputs_are_rejected (test_summarize_systemone_benchmarks.SummaryTests.test_legacy_intervals_and_changed_inputs_are_rejected) ... ok\ntest_recomputes_rates_hashes_and_pooled_percentiles (test_summarize_systemone_benchmarks.SummaryTests.test_recomputes_rates_hashes_and_pooled_percentiles) ... ok\ntest_synthetic_and_historical_short_windows_are_ineligible (test_summarize_systemone_benchmarks.SummaryTests.test_synthetic_and_historical_short_windows_are_ineligible) ... ok\ntest_active_intervals_and_failed_stop (test_summarize_systemone_profile_run.RunSummaryTests.test_active_intervals_and_failed_stop) ... ok\ntest_formal_rounds_exclude_observed_and_profiled_windows (test_summarize_systemone_profile_run.RunSummaryTests.test_formal_rounds_exclude_observed_and_profiled_windows) ... ok\ntest_launch_parser_keeps_profiler_configuration_separate (test_summarize_systemone_profile_run.RunSummaryTests.test_launch_parser_keeps_profiler_configuration_separate) ... ok\ntest_short_stable_rounds_and_duplicate_run_ids_cannot_pass_protocol (test_summarize_systemone_profile_run.RunSummaryTests.test_short_stable_rounds_and_duplicate_run_ids_cannot_pass_protocol) ... ok\ntest_snapshots_warmups_trace_dirs_and_duplicate_reports_are_excluded (test_summarize_systemone_profile_run.RunSummaryTests.test_snapshots_warmups_trace_dirs_and_duplicate_reports_are_excluded) ... ok\n\n----------------------------------------------------------------------\nRan 66 tests in 2.081s\n\nOK\n",
+  "python_syntax_passed": true,
+  "local_document_links_checked": [
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/run-manifest.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/raw-file-index.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/run-summary.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/all-performance-matrix.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "assets/profiling-20261112.png"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/performance-matrix.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/stable-summary.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "../scripts/benchmark_systemone.py"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "installation-2026-11-12.md"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/inventory-before.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/inventory-after.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/memory-startup.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/controllers.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/restoration.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/service-current.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/server-phases.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/cpu-decomposition-tp1.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/cpu-decomposition-tp2.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/cpu-encoding-ablation.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/joint-head-operations.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/joint-head-operations.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/transfer-sync.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp1-fixed307.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp1-long3868.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp1-fields8.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp2-fixed307.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp2-controlled-length-4032.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp2-fields-8.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/top20.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/micro-mlp.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/matrix-tp1-4096.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/matrix-tp2-4096.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp2-cold-image.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/observed-tp2-cold-video.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/uncached-media.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/cold-media-semantics.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/batching.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/batching.csv"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/memory-startup.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/analyzer-provenance.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/restored-encoding.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/restored-precision.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-20261112/restored-multimodal.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-preflight-2026-11-12.json"
+    },
+    {
+      "document": "docs/profiling-2026-11-12.md",
+      "target": "evidence/profiling-local-validation-2026-11-12.json"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "profiling-2026-11-12.md"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "evidence/new-machine-2026-11-12.json"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "evidence/new-machine-model-verification-2026-11-12.json"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "installation-2026-11-12.md"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "upstream-npu-baseline.md"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "competition-and-datasets.md"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "evidence/profiling-20261112/restoration.json"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "installation-2026-11-12.md"
+    },
+    {
+      "document": "docs/new-machine-plan.md",
+      "target": "baseline-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "baseline-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "installation-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "new-machine-plan.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "new-machine-plan.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "installation-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "baseline-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "profiling-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "environment.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "upstream-npu-baseline.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "competition-and-datasets.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "evidence/"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "baseline-2026-11-12.md"
+    },
+    {
+      "document": "docs/README.md",
+      "target": "competition-and-datasets.md"
+    }
+  ],
+  "script_sha256": {
+    "scripts/analyze_systemone_batching.py": "099a8215e97ca06846f5223796db09d61c6bc3c73d7c44a0c67cb40692617f33",
+    "scripts/analyze_systemone_joint_head.py": "ebf1981b8f491de5c2ce5d39912f2b0cf00fa4c35d1364f7d7c89c766028d301",
+    "scripts/analyze_systemone_mlp_micro.py": "182e4d4a8f38ce810c4ced638d43830c03e33f108c7b73d0624458afd6baec57",
+    "scripts/analyze_systemone_profile.py": "5d4d2ef7e69622e8106b22e8ccfd68047d9859f7854f35eb197bce6c5f4e2334",
+    "scripts/audit_systemone_transfer_sync.py": "5e5fb1fc4e56420b1fb4b1fb47027f34e2c8e1fc639b564bbf7f30289be960f4",
+    "scripts/benchmark_systemone.py": "572a805fbb41949bd71ad3e13a81b620238a1fbb0a81171c0ed3c71828945433",
+    "scripts/benchmark_systemone_encoding.py": "f4fc05b1fb0e1b3712aa17dd9897d4591f099e073a263974ecf4d73988ca27b1",
+    "scripts/compact_systemone_profile.py": "a44cd0af44b4743310249ea51720572a8e45ae4f2d5600b77fb4170eab729198",
+    "scripts/download_model_manifest.py": "1f700afb43d401c1d4528f8d2ff10345e10d97f896280318f9ff27e191329553",
+    "scripts/evaluate_systemone.py": "36c88d4f8021671e1d257d1e71332ff120bfc5c443d1f77224c1381144423dcd",
+    "scripts/generate_multimodal_fixtures.py": "194b2fdff79f1a73418e1865ef231ed6e72539f25e53070ea09ae401ebb9be3d",
+    "scripts/index_systemone_profile_run.py": "260f6b7679e3673d1c964cd4979ef0fc4beda933f89a0eafa06cd07d82befaa1",
+    "scripts/manage_systemone_profile_service.py": "a2858ca143c7e2c6bc3d0700b81ed5a0380bd5c6da2ff9d3dc93b90abf4dce3a",
+    "scripts/prepare_systemone_profile_workloads.py": "a9fb69b0a2a907d18842cffed80cbf8c208c83d801320b70f7417df44e78e02c",
+    "scripts/prepare_systemone_uncached_media.py": "3e2c6a4cb89c1309d310a02cc6bcc847697a3fe833eb0f6b378027f3a45d451f",
+    "scripts/profile_instrumentation.py": "9419973f2f53459aa94ab8551a08ebe55c458b73399c7a9275531a7bae145840",
+    "scripts/profile_systemone.py": "e650ac2550096e7d10be5871e53c6136e2244526b3ced0eeba7b5365daa5f4ac",
+    "scripts/reference_systemone.py": "6190b9e1f60475f95f372d70be3207906a03ae04abd8f77b4437084723e7da05",
+    "scripts/render_systemone_profile_report.py": "664197e793622ffc3da88c3df8f6d0a0ee69d98fede8ad93d98612ee8af89457",
+    "scripts/repro_systemone_mlp.py": "67a24c56eb588493d3104f7f9b2991e522b6272e01328777b72dd57f33e14c41",
+    "scripts/run_evalscope_offline.py": "20cca85e10ff2f38f6a36b719368cc289e323e476d4aadcded160d6d6cb902a2",
+    "scripts/run_systemone_profile_matrix.py": "30ac27de7ca59ac3172109cb034f8c0915af75a7ac42bc271b742139b7fc18af",
+    "scripts/snapshot_systemone_profile.py": "d167fa1ef34509133930e3a2266ade55411e8f0d199faafd161eec1d75dd2b9c",
+    "scripts/summarize_profile_memory.py": "067959da31a1793e4c177b6d56f31b8139426f5da61f6f170dadd8221c6893de",
+    "scripts/summarize_systemone_benchmarks.py": "b76a6475f12bb5439b7c01e089de57ebb8a226146de484098194572fa6976a24",
+    "scripts/summarize_systemone_profile_run.py": "bb8f46c3f19369e60adfdc2703f91269232e1a1ef9b125cdae89b8036965761f",
+    "scripts/summarize_systemone_server_metrics.py": "e566891ee5eda1a8d274239fbd20af9d960ae4fa7384f67cb8016203cedbfec3",
+    "scripts/test_analyze_systemone_profile.py": "550ca83cfebd9dd147b81d70bc98733fc49a849a11b657d0028c6669d370a926",
+    "scripts/test_benchmark_systemone.py": "bbb31277cec6270f21aed067f6bd704f76336eca7a9c618691ccd2801bcc7e7a",
+    "scripts/test_benchmark_systemone_encoding.py": "e1d50f5de07ea41e1644a711e434914dd6ecc08e7db348477505b6cc48b22e5c",
+    "scripts/test_prepare_systemone_profile_workloads.py": "28cdb97223fa49ac0e95df469d1aaa649976b290ece776ce9c861c1cd2a7565c",
+    "scripts/test_prepare_systemone_uncached_media.py": "f4a76d560e578e9e481acdb2b251d09cff5fb62cc1af4572b74b234c52b0b7ba",
+    "scripts/test_profile_instrumentation.py": "75eb67adb511ac69fdf286a4afce272c3278e1ed2bd96fcf1fc34f5921f11100",
+    "scripts/test_profile_systemone.py": "9ffc762c70ce9bea2979ce81be3c818709fc214b37763d9c4f2f940cad376112",
+    "scripts/test_run_systemone_profile_matrix.py": "cca329cc018a3185ad402f8be77bcf3e245c4b01d19baa0a8f026d0796c23f49",
+    "scripts/test_summarize_systemone_benchmarks.py": "88e48aa2fffdb2f8e9fe57ff420bb6a03e06d5dcdcbea4ed9880c1867dd73d0d",
+    "scripts/test_summarize_systemone_profile_run.py": "97faa48db18502541425a610f7287eea1f2f3f02571076d1c5761038583b1412",
+    "scripts/verify_hccl.py": "9f2b5f6ef3b599e72a391f3d5b40791cfc35b32c0a73d0e26d22ff2d98ea7848",
+    "scripts/verify_npu_environment.py": "b2c71c7b20ec29d68ba7c6e996940dae76c7a34b3faad268c84cd1d050dd69f6",
+    "scripts/verify_systemone.py": "1a56c233894cbcbb5347a19dd75204d2416efd0b52a6780ebf5e8ceba7ba0a6d",
+    "scripts/verify_systemone_batched_precision.py": "0f5aa5a27afa9d4501b51d9a6094b63cc1de9d75a52a1f266a31e12942b9618d",
+    "scripts/verify_systemone_encoding.py": "f1f216ff05512ab13b5cf1b7991c36506638cc560ad6a9673c70e8c71f1d4ece",
+    "scripts/verify_systemone_multimodal.py": "59b67194d42212bae20a1e0537c492f4f5d9cf9e9529c1bb2c9a69604622a2b3",
+    "scripts/verify_systemone_precision.py": "fd894b4f87e1ae98112f63454312b17fba6a05fbc8a6fbd4f8cef41a23bb7458"
+  },
+  "passed": true,
+  "post_document_update": {
+    "created_at": "2026-11-12T17:12:58.363041+00:00",
+    "links_checked": [
+      {
+        "document": "README.md",
+        "target": "docs/profiling-2026-11-12.md"
+      },
+      {
+        "document": "README.md",
+        "target": "docs/evidence/profiling-20261112/all-performance-matrix.csv"
+      },
+      {
+        "document": "README.md",
+        "target": "docs/installation-2026-11-12.md"
+      },
+      {
+        "document": "README.md",
+        "target": "docs/baseline-2026-11-12.md"
+      },
+      {
+        "document": "README.md",
+        "target": "docs/evidence/new-machine-model-verification-2026-11-12.json"
+      },
+      {
+        "document": "README.md",
+        "target": "Clef-27B/README.md"
+      },
+      {
+        "document": "README.md",
+        "target": "Clef-27B/optimization.md"
+      },
+      {
+        "document": "README.md",
+        "target": "Clef-27B/logs/"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "profiling-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "baseline-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "installation-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "new-machine-plan.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "new-machine-plan.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "installation-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "baseline-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "profiling-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "environment.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "upstream-npu-baseline.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "competition-and-datasets.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "evidence/"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "baseline-2026-11-12.md"
+      },
+      {
+        "document": "docs/README.md",
+        "target": "competition-and-datasets.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "profiling-2026-11-12.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "evidence/new-machine-2026-11-12.json"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "evidence/new-machine-model-verification-2026-11-12.json"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "installation-2026-11-12.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "upstream-npu-baseline.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "competition-and-datasets.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "evidence/profiling-20261112/restoration.json"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "installation-2026-11-12.md"
+      },
+      {
+        "document": "docs/new-machine-plan.md",
+        "target": "baseline-2026-11-12.md"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/run-manifest.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/raw-file-index.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/run-summary.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/all-performance-matrix.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "assets/profiling-20261112.png"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/performance-matrix.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/stable-summary.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "../scripts/benchmark_systemone.py"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "installation-2026-11-12.md"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/inventory-before.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/inventory-after.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/memory-startup.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/controllers.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/restoration.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/service-current.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/server-phases.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/cpu-decomposition-tp1.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/cpu-decomposition-tp2.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/cpu-encoding-ablation.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/joint-head-operations.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/joint-head-operations.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/transfer-sync.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp1-fixed307.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp1-long3868.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp1-fields8.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp2-fixed307.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp2-controlled-length-4032.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp2-fields-8.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/top20.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/micro-mlp.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/matrix-tp1-4096.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/matrix-tp2-4096.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp2-cold-image.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/observed-tp2-cold-video.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/uncached-media.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/cold-media-semantics.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/batching.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/batching.csv"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/memory-startup.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/analyzer-provenance.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/restored-encoding.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/restored-precision.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/restored-multimodal.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-20261112/validation-final.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-preflight-2026-11-12.json"
+      },
+      {
+        "document": "docs/profiling-2026-11-12.md",
+        "target": "evidence/profiling-local-validation-2026-11-12.json"
+      }
+    ],
+    "passed": true
+  }
+}

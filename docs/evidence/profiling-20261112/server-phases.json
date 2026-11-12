@@ -1,0 +1,1276 @@
+{
+  "created_at": "2026-11-12T16:55:38.375656+00:00",
+  "run_dir": "/workspace/yangchen/logs/profiling/20261112-223732-systemone",
+  "scope": "Archived profiler-disabled stable service histograms; each delta includes 10 warmup + 300 formal requests. Three rounds provide n=930 server samples and n=900 formal client samples.",
+  "definitions": {
+    "queue": "Native engine QUEUED to first SCHEDULED event interval",
+    "running_inference": "Native first SCHEDULED to last engine output event; includes model/decision-head execution and required waits, rather than a sum of kernels",
+    "prefill": "Native first SCHEDULED to first output event; pooling performs a single output step",
+    "e2e": "Native request arrival to finished request statistics; API work before EngineClient.encode is outside this scope",
+    "native_remainder": "Same-population native e2e minus queue minus running contains frontend/IPC/postprocessing timing gaps",
+    "client_http": "Benchmark urlopen through complete response-body read; JSON decode and protocol validation are separate",
+    "comparison": "Client 900 and server 930 populations differ. Their mean difference mixes timing scope and warmup effects; matched-request telemetry is required for a frontend-only latency estimate."
+  },
+  "configurations": [
+    {
+      "configuration": "tp1-1024-stable",
+      "passed": true,
+      "same_series_created_across_all_rounds": true,
+      "rounds": [
+        {
+          "round": 1,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/round-1.json",
+            "sha256": "c2d0476c37c2a3739bd1c68e82c8e0e4b7ad2027604981d1396600c8c7c621f5",
+            "bytes": 1690296
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 139.9065421288833,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.52233076095581,
+              "sum_delta_seconds_exact_decimal_from_export": "42.5223307609558122",
+              "mean_ms_including_warmup": 137.16880890630907,
+              "created_before": "1794494963.6434786",
+              "created_after": "1794494963.6434786",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.327670325059444,
+              "sum_delta_seconds_exact_decimal_from_export": "42.3276703250594461",
+              "mean_ms_including_warmup": 136.5408720163208,
+              "created_before": "1794494963.6435742",
+              "created_after": "1794494963.6435742",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.327670325059444,
+              "sum_delta_seconds_exact_decimal_from_export": "42.3276703250594461",
+              "mean_ms_including_warmup": 136.5408720163208,
+              "created_before": "1794494963.6436217",
+              "created_after": "1794494963.6436217",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.0020211804658174515,
+              "sum_delta_seconds_exact_decimal_from_export": "0.00202118046581745143",
+              "mean_ms_including_warmup": 0.006519936986507908,
+              "created_before": "1794494963.6435244",
+              "created_after": "1794494963.6435244",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "round": 2,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/round-2.json",
+            "sha256": "9dcba8b5d80c10891efb95128e6488baad33f62dc90c20b4446712045b0ae580",
+            "bytes": 1690284
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 139.9369120815148,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.53285980224609,
+              "sum_delta_seconds_exact_decimal_from_export": "42.53285980224609",
+              "mean_ms_including_warmup": 137.20277355563255,
+              "created_before": "1794494963.6434786",
+              "created_after": "1794494963.6434786",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.33462851075455,
+              "sum_delta_seconds_exact_decimal_from_export": "42.33462851075455",
+              "mean_ms_including_warmup": 136.56331777662757,
+              "created_before": "1794494963.6435742",
+              "created_after": "1794494963.6435742",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.33462851075455,
+              "sum_delta_seconds_exact_decimal_from_export": "42.33462851075455",
+              "mean_ms_including_warmup": 136.56331777662757,
+              "created_before": "1794494963.6436217",
+              "created_after": "1794494963.6436217",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.0022023348137736316,
+              "sum_delta_seconds_exact_decimal_from_export": "0.0022023348137736318",
+              "mean_ms_including_warmup": 0.007104305850882683,
+              "created_before": "1794494963.6435244",
+              "created_after": "1794494963.6435244",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "round": 3,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/round-3.json",
+            "sha256": "a218b37e701461022d8698fb3a3da0b53a28f1b444681a84842300d651f44e24",
+            "bytes": 1690275
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 139.7510005378475,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.47391867637634,
+              "sum_delta_seconds_exact_decimal_from_export": "42.47391867637634",
+              "mean_ms_including_warmup": 137.0126408915366,
+              "created_before": "1794494963.6434786",
+              "created_after": "1794494963.6434786",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.28568508150056,
+              "sum_delta_seconds_exact_decimal_from_export": "42.28568508150056",
+              "mean_ms_including_warmup": 136.405435746776,
+              "created_before": "1794494963.6435742",
+              "created_after": "1794494963.6435742",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 42.28568508150056,
+              "sum_delta_seconds_exact_decimal_from_export": "42.28568508150056",
+              "mean_ms_including_warmup": 136.405435746776,
+              "created_before": "1794494963.6436217",
+              "created_after": "1794494963.6436217",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.001903436612337828,
+              "sum_delta_seconds_exact_decimal_from_export": "0.001903436612337828",
+              "mean_ms_including_warmup": 0.006140118104315574,
+              "created_before": "1794494963.6435244",
+              "created_after": "1794494963.6435244",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "native_metrics_aggregate": [
+        {
+          "metric": "e2e_request_latency_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 127.52910923957825,
+          "mean_ms_including_warmup": 137.1280744511594
+        },
+        {
+          "metric": "request_inference_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 126.94798391731456,
+          "mean_ms_including_warmup": 136.50320851324145
+        },
+        {
+          "metric": "request_prefill_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 126.94798391731456,
+          "mean_ms_including_warmup": 136.50320851324145
+        },
+        {
+          "metric": "request_queue_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 0.006126951891928911,
+          "mean_ms_including_warmup": 0.006588120313902055
+        }
+      ],
+      "client_benchmark_aggregate": {
+        "formal_request_count": 900,
+        "http_mean_ms": 139.86481824941518,
+        "http_decode_validation_elapsed_mean_ms": 139.9420941564151,
+        "json_decode_mean_ms": 0.027830905487967864,
+        "protocol_validation_mean_ms": 0.028663728282683425
+      },
+      "native_e2e_minus_queue_minus_running_mean_ms_same_930_requests": 0.6182778176040529,
+      "client_http_900_minus_native_e2e_930_ms_descriptive_only": 2.7367437982557874,
+      "source_files": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-before-1.txt",
+          "sha256": "c9dc8dea1c3639e0aafcc9afe63adacaaae12968f107e12d09c8a2ed8d0de2f8",
+          "bytes": 50051,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.8673818111419678"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 5.038967356085777e-05"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.8632826404646039"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.8632826404646039"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-after-1.txt",
+          "sha256": "46214c317859fc63c376a54d4dcbf55de46546497aafec5fd99bbf3e756b9b23",
+          "bytes": 50542,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.38971257209778"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.0020715701393783092"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.19095296552405"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.19095296552405"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-before-2.txt",
+          "sha256": "bedbf27bf5b627e9a0751562e004ce58b612a813e82bb6e51609231b2dad308e",
+          "bytes": 50542,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.38971257209778"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.0020715701393783092"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.19095296552405"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 43.19095296552405"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-after-2.txt",
+          "sha256": "c46be65000ca40b58cddf03a640872f86a48055d5fa1abff952df9d4eb3e244d",
+          "bytes": 50531,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.92257237434387"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.004273904953151941"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.5255814762786"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.5255814762786"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-before-3.txt",
+          "sha256": "af2459a71af623e864f1af99386c81e0573f177236a5d273d4598ad0d8502b2b",
+          "bytes": 50531,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.92257237434387"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.004273904953151941"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.5255814762786"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 85.5255814762786"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp1-1024-stable/metrics-after-3.txt",
+          "sha256": "068c4fa479cac344f13f268e423f730bb54a396d08e967e35834cb3f98d53168",
+          "bytes": 50536,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 128.39649105072021"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636434786e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.006177341565489769"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435244e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 127.81126655777916"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636435742e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 127.81126655777916"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944949636436217e+09"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "configuration": "tp2-1024-stable",
+      "passed": true,
+      "same_series_created_across_all_rounds": true,
+      "rounds": [
+        {
+          "round": 1,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/round-1.json",
+            "sha256": "c46d7180782ebb739b462855cb63c379b58ed1d3c011376fd2633ef5503ef7bf",
+            "bytes": 1686299
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 129.9922023372104,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 39.297364234924316,
+              "sum_delta_seconds_exact_decimal_from_export": "39.2973642349243154",
+              "mean_ms_including_warmup": 126.76569108040101,
+              "created_before": "1794494492.5182638",
+              "created_after": "1794494492.5182638",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 39.09019551426172,
+              "sum_delta_seconds_exact_decimal_from_export": "39.0901955142617226",
+              "mean_ms_including_warmup": 126.09740488471523,
+              "created_before": "1794494492.5183601",
+              "created_after": "1794494492.5183601",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 39.09019551426172,
+              "sum_delta_seconds_exact_decimal_from_export": "39.0901955142617226",
+              "mean_ms_including_warmup": 126.09740488471523,
+              "created_before": "1794494492.518406",
+              "created_after": "1794494492.518406",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.0017944229766726494,
+              "sum_delta_seconds_exact_decimal_from_export": "0.00179442297667264937",
+              "mean_ms_including_warmup": 0.005788461215073063,
+              "created_before": "1794494492.51831",
+              "created_after": "1794494492.51831",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "round": 2,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/round-2.json",
+            "sha256": "343b2be92d739e6af7c74304e16fff6429ac509700e01e22cbdb4ce4aa35bd4d",
+            "bytes": 1680606
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 123.62290734269966,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.39322280883789,
+              "sum_delta_seconds_exact_decimal_from_export": "37.39322280883789",
+              "mean_ms_including_warmup": 120.62329938334803,
+              "created_before": "1794494492.5182638",
+              "created_after": "1794494492.5182638",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.193962370511144,
+              "sum_delta_seconds_exact_decimal_from_export": "37.193962370511146",
+              "mean_ms_including_warmup": 119.9805237758424,
+              "created_before": "1794494492.5183601",
+              "created_after": "1794494492.5183601",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.193962370511144,
+              "sum_delta_seconds_exact_decimal_from_export": "37.193962370511146",
+              "mean_ms_including_warmup": 119.9805237758424,
+              "created_before": "1794494492.518406",
+              "created_after": "1794494492.518406",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.0020086378790438175,
+              "sum_delta_seconds_exact_decimal_from_export": "0.0020086378790438176",
+              "mean_ms_including_warmup": 0.006479477029173605,
+              "created_before": "1794494492.51831",
+              "created_after": "1794494492.51831",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "round": 3,
+          "expected_count_delta": 310,
+          "benchmark": {
+            "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/round-3.json",
+            "sha256": "d8da23c18d5d82295bdd1f1ef1227fd1063a51bba19087b07a5b9151a8bb41c1",
+            "bytes": 1680591
+          },
+          "client_formal_requests": 300,
+          "client_benchmark_passed": true,
+          "client_http_formal_mean_ms": 124.8117864349236,
+          "same_label_series_before_after": true,
+          "metrics": [
+            {
+              "metric": "e2e_request_latency_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.76249718666077,
+              "sum_delta_seconds_exact_decimal_from_export": "37.76249718666077",
+              "mean_ms_including_warmup": 121.81450705374442,
+              "created_before": "1794494492.5182638",
+              "created_after": "1794494492.5182638",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_inference_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.56454556528479,
+              "sum_delta_seconds_exact_decimal_from_export": "37.56454556528479",
+              "mean_ms_including_warmup": 121.17595343640255,
+              "created_before": "1794494492.5183601",
+              "created_after": "1794494492.5183601",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_prefill_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 37.56454556528479,
+              "sum_delta_seconds_exact_decimal_from_export": "37.56454556528479",
+              "mean_ms_including_warmup": 121.17595343640255,
+              "created_before": "1794494492.518406",
+              "created_after": "1794494492.518406",
+              "same_created": true,
+              "passed": true
+            },
+            {
+              "metric": "request_queue_time_seconds",
+              "labels": {
+                "engine": "0",
+                "model_name": "clef"
+              },
+              "count_delta": 310,
+              "sum_delta_seconds": 0.001807758584618568,
+              "sum_delta_seconds_exact_decimal_from_export": "0.001807758584618568",
+              "mean_ms_including_warmup": 0.005831479305221187,
+              "created_before": "1794494492.51831",
+              "created_after": "1794494492.51831",
+              "same_created": true,
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "native_metrics_aggregate": [
+        {
+          "metric": "e2e_request_latency_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 114.45308423042297,
+          "mean_ms_including_warmup": 123.06783250583116
+        },
+        {
+          "metric": "request_inference_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 113.84870345005766,
+          "mean_ms_including_warmup": 122.41796069898673
+        },
+        {
+          "metric": "request_prefill_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 113.84870345005766,
+          "mean_ms_including_warmup": 122.41796069898673
+        },
+        {
+          "metric": "request_queue_time_seconds",
+          "labels": {
+            "engine": "0",
+            "model_name": "clef"
+          },
+          "count": 930,
+          "sum_seconds": 0.005610819440335035,
+          "mean_ms_including_warmup": 0.006033139183155951
+        }
+      ],
+      "client_benchmark_aggregate": {
+        "formal_request_count": 900,
+        "http_mean_ms": 126.14229870494455,
+        "http_decode_validation_elapsed_mean_ms": 126.24793370719999,
+        "json_decode_mean_ms": 0.03832012518412537,
+        "protocol_validation_mean_ms": 0.03576452171223031
+      },
+      "native_e2e_minus_queue_minus_running_mean_ms_same_930_requests": 0.6438386676612708,
+      "client_http_900_minus_native_e2e_930_ms_descriptive_only": 3.074466199113388,
+      "source_files": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-before-1.txt",
+          "sha256": "8a8a9d8a6504a29dfa58b9daf7b9bcc5cc191f1d7be988b84ca1a43222a6116b",
+          "bytes": 50048,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 1.1528944969177246"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 6.289035081863403e-05"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 1.1481774002313614"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 5.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 1.1481774002313614"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-after-1.txt",
+          "sha256": "ff6a33b45d840b2453b93895a23bec38dfa4bc3e198466b32e628cc2671e2265",
+          "bytes": 50528,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.45025873184204"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.0018573133274912834"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.238372914493084"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.238372914493084"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-before-2.txt",
+          "sha256": "52539dcc8c7da611f7901b559f1ceba0d1952725eb53da372f66b924f45237a2",
+          "bytes": 50528,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.45025873184204"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.0018573133274912834"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.238372914493084"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 315.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 40.238372914493084"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-after-2.txt",
+          "sha256": "6d5f68670c4f4cceed926fe7bb59acdaefac94b77e84721ed98a3c2beb9644e8",
+          "bytes": 50543,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.84348154067993"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.003865951206535101"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.43233528500423"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.43233528500423"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-before-3.txt",
+          "sha256": "6d5f68670c4f4cceed926fe7bb59acdaefac94b77e84721ed98a3c2beb9644e8",
+          "bytes": 50543,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.84348154067993"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.003865951206535101"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.43233528500423"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 625.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 77.43233528500423"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-stable/metrics-after-3.txt",
+          "sha256": "ef85b35859f764fc6d9179a74736f0a4f641f3f879888878890ccb3f7b2a7e07",
+          "bytes": 50533,
+          "selected_original_lines": [
+            {
+              "line": 393,
+              "text": "vllm:e2e_request_latency_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 394,
+              "text": "vllm:e2e_request_latency_seconds_sum{engine=\"0\",model_name=\"clef\"} 115.6059787273407"
+            },
+            {
+              "line": 397,
+              "text": "vllm:e2e_request_latency_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925182638e+09"
+            },
+            {
+              "line": 422,
+              "text": "vllm:request_queue_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 423,
+              "text": "vllm:request_queue_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 0.005673709791153669"
+            },
+            {
+              "line": 426,
+              "text": "vllm:request_queue_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.79449449251831e+09"
+            },
+            {
+              "line": 451,
+              "text": "vllm:request_inference_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 452,
+              "text": "vllm:request_inference_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 114.99688085028902"
+            },
+            {
+              "line": 455,
+              "text": "vllm:request_inference_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.7944944925183601e+09"
+            },
+            {
+              "line": 480,
+              "text": "vllm:request_prefill_time_seconds_count{engine=\"0\",model_name=\"clef\"} 935.0"
+            },
+            {
+              "line": 481,
+              "text": "vllm:request_prefill_time_seconds_sum{engine=\"0\",model_name=\"clef\"} 114.99688085028902"
+            },
+            {
+              "line": 484,
+              "text": "vllm:request_prefill_time_seconds_created{engine=\"0\",model_name=\"clef\"} 1.794494492518406e+09"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "native_definition_source": {
+    "path": "/workspace/yangchen/work/src/vllm/vllm/v1/metrics/stats.py",
+    "sha256": "5c925d3c9ba8b81c52eac9cff74a2fe468d14cf710b581ab7eb5ca848450e4a6",
+    "bytes": 25244,
+    "lines": [
+      {
+        "line": 594,
+        "text": "        e2e_latency = self._time_since(req_stats.arrival_time)"
+      },
+      {
+        "line": 597,
+        "text": "        queued_time = req_stats.scheduled_ts - req_stats.queued_ts"
+      },
+      {
+        "line": 601,
+        "text": "        prefill_time = req_stats.first_token_ts - req_stats.scheduled_ts"
+      },
+      {
+        "line": 609,
+        "text": "        inference_time = req_stats.last_token_ts - req_stats.scheduled_ts"
+      }
+    ]
+  }
+}

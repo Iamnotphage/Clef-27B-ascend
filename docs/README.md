@@ -1,6 +1,6 @@
 # Clef-27B baseline 调查与执行计划
 
-更新：2026-11-12（北京时间）。完整环境、TP1/TP2 服务、CPU BF16 对齐、固定请求性能和图片/视频自检均通过；完整公开评测 2,983 请求、4,583 决策已完成，执行错误为 0。[实测 baseline](baseline-2026-11-12.md) · [安装记录](installation-2026-11-12.md)
+更新：2026-11-13（北京时间）。完整环境与 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching，原TP2/4096服务已恢复并验收。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [安装记录](installation-2026-11-12.md)
 
 当前机器已切换为 `root@199.88.54.221`，用户选择沿用新机的 CANN 9.2.1 并配套 PyTorch 2.10。当前状态、SSH 模板、环境查看命令及分阶段实施顺序见新机器执行计划。[新机器执行计划](new-machine-plan.md)
 
@@ -21,7 +21,7 @@
 | [新机器执行计划](new-machine-plan.md) | 当前目标机器、实测环境、环境检查命令与后续安装顺序 |
 | [实际安装与验收](installation-2026-11-12.md) | Python 与 wheel 哈希、真实版本、双卡误差、依赖补丁、复现命令与构建日志 |
 | [实测 baseline](baseline-2026-11-12.md) | 完整加载、TP1/TP2 精度性能、完整公开评测、HCCL 和多模态证据 |
-| [端到端 profiling](profiling-2026-11-12.md) | 采集与解析工具、统计范围、复现入口和本轮连接/实测状态 |
+| [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
 | [上游与 NPU 适配](upstream-npu-baseline.md) | 固定提交、版本组合、模型语义、启动候选命令、三类请求与 A3/TP2 风险 |
 | [比赛与数据集](competition-and-datasets.md) | 比赛交付要求、评分已知项、服务器现有数据、决策数据源与评测接入 |

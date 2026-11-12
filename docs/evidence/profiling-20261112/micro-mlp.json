@@ -1,0 +1,1428 @@
+{
+  "created_at": "2026-11-12T15:45:05.660221+00:00",
+  "root": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware",
+  "manifest": {
+    "created_at": "2026-11-12T15:33:17.951765+00:00",
+    "scope": "Exclusive single-rank synthetic BF16 ND MLP replay; physical baseline stride unavailable",
+    "runs": [
+      {
+        "metric": "Memory",
+        "argv": [
+          "msprof",
+          "--output=/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory",
+          "--ai-core=on",
+          "--aic-mode=task-based",
+          "--aic-metrics=Memory",
+          "--task-time=on",
+          "--ascendcl=on",
+          "--application=/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/logs/profiling/20261112-223732-systemone/tools/repro_systemone_mlp.py --device 0 --warmup 10 --iterations 16 --rotating-weights 3 --report /workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/replay-Memory.json"
+        ],
+        "returncode": 255,
+        "wall_seconds": 1.0651673004031181,
+        "log": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory.log"
+      },
+      {
+        "metric": "Memory",
+        "attempt": 2,
+        "argv": [
+          "msprof",
+          "--output=/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry",
+          "--ai-core=on",
+          "--aic-mode=task-based",
+          "--aic-metrics=Memory",
+          "--task-time=on",
+          "--ascendcl=on",
+          "--application=/bin/bash /workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-Memory.sh"
+        ],
+        "returncode": 0,
+        "wall_seconds": 17.033764449879527,
+        "log": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry.log"
+      },
+      {
+        "metric": "MemoryL0",
+        "attempt": 2,
+        "argv": [
+          "msprof",
+          "--output=/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry",
+          "--ai-core=on",
+          "--aic-mode=task-based",
+          "--aic-metrics=MemoryL0",
+          "--task-time=on",
+          "--ascendcl=on",
+          "--application=/bin/bash /workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-MemoryL0.sh"
+        ],
+        "returncode": 0,
+        "wall_seconds": 16.081829040311277,
+        "log": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry.log"
+      },
+      {
+        "metric": "L2Cache",
+        "attempt": 2,
+        "argv": [
+          "msprof",
+          "--output=/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry",
+          "--ai-core=on",
+          "--aic-mode=task-based",
+          "--aic-metrics=L2Cache",
+          "--task-time=on",
+          "--ascendcl=on",
+          "--application=/bin/bash /workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-L2Cache.sh"
+        ],
+        "returncode": 0,
+        "wall_seconds": 16.081990180071443,
+        "log": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry.log"
+      }
+    ],
+    "launcher_boundary": "msprof resolves executable paths; bash launcher re-enters venv before exec",
+    "finished_at": "2026-11-12T15:36:11.898838+00:00"
+  },
+  "passed": true,
+  "runs": [
+    {
+      "metric": "Memory",
+      "replay": {
+        "created_at": "2026-11-12T15:35:32.067877+00:00",
+        "specification": {
+          "input_shape": [
+            307,
+            5120
+          ],
+          "weight_shape": [
+            34816,
+            5120
+          ],
+          "output_shape": [
+            307,
+            34816
+          ],
+          "dtype": "bfloat16",
+          "format": "ND",
+          "operation": "torch.nn.functional.linear(x, weight)",
+          "input_stride_assumption": [
+            5120,
+            1
+          ],
+          "weight_stride_assumption": [
+            5120,
+            1
+          ],
+          "stride_evidence_boundary": "Baseline trace lacks physical strides; replay assumes contiguous tensors",
+          "weights_bytes_each": 356515840,
+          "rotating_weights": 3,
+          "cache_boundary": "Weight rotation reduces same-matrix reuse; baseline full-model cache state is independent"
+        },
+        "passed": true,
+        "device": "npu:0",
+        "warmup": 10,
+        "iterations": 16,
+        "input_stride": [
+          5120,
+          1
+        ],
+        "weight_stride": [
+          5120,
+          1
+        ],
+        "input_npu_format": 2,
+        "weight_npu_format": 2,
+        "phases": [
+          {
+            "name": "steady_single_weight",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              10,
+              25
+            ],
+            "device_event_total_ms": 9.616840362548828,
+            "device_event_mean_ms": 0.6010525226593018
+          },
+          {
+            "name": "rotating_weights",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              36,
+              51
+            ],
+            "device_event_total_ms": 9.68533992767334,
+            "device_event_mean_ms": 0.6053337454795837
+          }
+        ],
+        "torch_allocated_bytes": 1094070784,
+        "torch_reserved_bytes": 1811939328,
+        "probe_cpu_fp32_max_absolute_difference": 0.0037224292755126953,
+        "wall_seconds": 1.3052335903048515,
+        "scope": "Synthetic one-op replay; use matching_matmul_formal_index_range for each phase in chronological msprof CSV matching kernels; exclude warmup and probe matmul"
+      },
+      "matching_matmul_count": 52,
+      "signature_matches_native_exported_fields": true,
+      "phases": [
+        {
+          "name": "steady_single_weight",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 600.86475,
+            "p50": 600.9860000000001,
+            "min": 597.415,
+            "max": 604.196
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 591.192,
+              "max": 598.096,
+              "mean": 593.925625
+            },
+            "aic_total_cycles": {
+              "min": 25539480.0,
+              "max": 25837747.0,
+              "mean": 25657587.8125
+            },
+            "aic_l1_read_bw(GB/s)": {
+              "min": 196.615,
+              "max": 198.911,
+              "mean": 197.9968125
+            },
+            "aic_l1_write_bw(GB/s)": {
+              "min": 48.792,
+              "max": 49.362,
+              "mean": 49.1351875
+            },
+            "aic_main_mem_read_bw(GB/s)": {
+              "min": 1.518,
+              "max": 1.535,
+              "mean": 1.5284375
+            },
+            "aic_main_mem_write_bw(GB/s)": {
+              "min": 0.022,
+              "max": 0.022,
+              "mean": 0.022
+            },
+            "aic_l2_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aic_l2_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_ub_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_ub_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_main_mem_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_main_mem_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l2_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l2_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 24,
+              "task_start_time_us": "1794497731972184.341"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 25,
+              "task_start_time_us": "1794497731972783.497"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 26,
+              "task_start_time_us": "1794497731973381.032"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 27,
+              "task_start_time_us": "1794497731973981.888"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 28,
+              "task_start_time_us": "1794497731974583.665"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 29,
+              "task_start_time_us": "1794497731975184.761"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 30,
+              "task_start_time_us": "1794497731975785.697"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 31,
+              "task_start_time_us": "1794497731976383.132"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 32,
+              "task_start_time_us": "1794497731976982.308"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 33,
+              "task_start_time_us": "1794497731977581.884"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 34,
+              "task_start_time_us": "1794497731978183.040"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 35,
+              "task_start_time_us": "1794497731978785.317"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 36,
+              "task_start_time_us": "1794497731979388.293"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 37,
+              "task_start_time_us": "1794497731979990.349"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 38,
+              "task_start_time_us": "1794497731980593.945"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 39,
+              "task_start_time_us": "1794497731981198.161"
+            }
+          ]
+        },
+        {
+          "name": "rotating_weights",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 603.9649375,
+            "p50": 604.076,
+            "min": 601.296,
+            "max": 607.376
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 594.284,
+              "max": 598.801,
+              "mean": 596.425625
+            },
+            "aic_total_cycles": {
+              "min": 25673077.0,
+              "max": 25868208.0,
+              "mean": 25765585.9375
+            },
+            "aic_l1_read_bw(GB/s)": {
+              "min": 196.383,
+              "max": 197.876,
+              "mean": 197.1660625
+            },
+            "aic_l1_write_bw(GB/s)": {
+              "min": 48.735,
+              "max": 49.105,
+              "mean": 48.9290625
+            },
+            "aic_main_mem_read_bw(GB/s)": {
+              "min": 1.516,
+              "max": 1.527,
+              "mean": 1.5219375
+            },
+            "aic_main_mem_write_bw(GB/s)": {
+              "min": 0.022,
+              "max": 0.022,
+              "mean": 0.022
+            },
+            "aic_l2_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aic_l2_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_ub_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_ub_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_main_mem_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_main_mem_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l2_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l2_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 50,
+              "task_start_time_us": "1794497731988360.671"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 51,
+              "task_start_time_us": "1794497731988962.807"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 52,
+              "task_start_time_us": "1794497731989567.843"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 53,
+              "task_start_time_us": "1794497731990175.239"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 54,
+              "task_start_time_us": "1794497731990778.456"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 55,
+              "task_start_time_us": "1794497731991379.772"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 56,
+              "task_start_time_us": "1794497731991985.068"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 57,
+              "task_start_time_us": "1794497731992586.664"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 58,
+              "task_start_time_us": "1794497731993190.960"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 59,
+              "task_start_time_us": "1794497731993796.657"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 60,
+              "task_start_time_us": "1794497731994398.133"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 61,
+              "task_start_time_us": "1794497731995002.389"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 62,
+              "task_start_time_us": "1794497731995605.625"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 63,
+              "task_start_time_us": "1794497731996209.441"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 64,
+              "task_start_time_us": "1794497731996816.178"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+              "csv_row": 65,
+              "task_start_time_us": "1794497731997420.114"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "MemoryL0",
+      "replay": {
+        "created_at": "2026-11-12T15:35:49.371120+00:00",
+        "specification": {
+          "input_shape": [
+            307,
+            5120
+          ],
+          "weight_shape": [
+            34816,
+            5120
+          ],
+          "output_shape": [
+            307,
+            34816
+          ],
+          "dtype": "bfloat16",
+          "format": "ND",
+          "operation": "torch.nn.functional.linear(x, weight)",
+          "input_stride_assumption": [
+            5120,
+            1
+          ],
+          "weight_stride_assumption": [
+            5120,
+            1
+          ],
+          "stride_evidence_boundary": "Baseline trace lacks physical strides; replay assumes contiguous tensors",
+          "weights_bytes_each": 356515840,
+          "rotating_weights": 3,
+          "cache_boundary": "Weight rotation reduces same-matrix reuse; baseline full-model cache state is independent"
+        },
+        "passed": true,
+        "device": "npu:0",
+        "warmup": 10,
+        "iterations": 16,
+        "input_stride": [
+          5120,
+          1
+        ],
+        "weight_stride": [
+          5120,
+          1
+        ],
+        "input_npu_format": 2,
+        "weight_npu_format": 2,
+        "phases": [
+          {
+            "name": "steady_single_weight",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              10,
+              25
+            ],
+            "device_event_total_ms": 9.636260032653809,
+            "device_event_mean_ms": 0.602266252040863
+          },
+          {
+            "name": "rotating_weights",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              36,
+              51
+            ],
+            "device_event_total_ms": 9.668479919433594,
+            "device_event_mean_ms": 0.6042799949645996
+          }
+        ],
+        "torch_allocated_bytes": 1094070784,
+        "torch_reserved_bytes": 1811939328,
+        "probe_cpu_fp32_max_absolute_difference": 0.0037224292755126953,
+        "wall_seconds": 1.2834064499475062,
+        "scope": "Synthetic one-op replay; use matching_matmul_formal_index_range for each phase in chronological msprof CSV matching kernels; exclude warmup and probe matmul"
+      },
+      "matching_matmul_count": 52,
+      "signature_matches_native_exported_fields": true,
+      "phases": [
+        {
+          "name": "steady_single_weight",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 601.0535625,
+            "p50": 600.546,
+            "min": 597.716,
+            "max": 604.996
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 592.521,
+              "max": 596.585,
+              "mean": 594.3009375
+            },
+            "aic_total_cycles": {
+              "min": 25596906.0,
+              "max": 25772483.0,
+              "mean": 25673804.125
+            },
+            "aic_l0a_read_bw(GB/s)": {
+              "min": 115.949,
+              "max": 116.744,
+              "mean": 116.39450000000001
+            },
+            "aic_l0a_write_bw(GB/s)": {
+              "min": 57.974,
+              "max": 58.372,
+              "mean": 58.1971875
+            },
+            "aic_l0b_read_bw(GB/s)": {
+              "min": 463.794,
+              "max": 466.975,
+              "mean": 465.577875
+            },
+            "aic_l0b_write_bw(GB/s)": {
+              "min": 139.138,
+              "max": 140.093,
+              "mean": 139.673375
+            },
+            "aic_l0c_read_bw_cube(GB/s)": {
+              "min": 228.998,
+              "max": 230.569,
+              "mean": 229.879
+            },
+            "aic_l0c_write_bw_cube(GB/s)": {
+              "min": 231.897,
+              "max": 233.488,
+              "mean": 232.788875
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l0c_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l0c_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 24,
+              "task_start_time_us": "1794497749276458.066"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 25,
+              "task_start_time_us": "1794497749277058.442"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 26,
+              "task_start_time_us": "1794497749277660.018"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 27,
+              "task_start_time_us": "1794497749278258.494"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 28,
+              "task_start_time_us": "1794497749278858.250"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 29,
+              "task_start_time_us": "1794497749279455.986"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 30,
+              "task_start_time_us": "1794497749280055.682"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 31,
+              "task_start_time_us": "1794497749280660.698"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 32,
+              "task_start_time_us": "1794497749281263.734"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 33,
+              "task_start_time_us": "1794497749281866.750"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 34,
+              "task_start_time_us": "1794497749282467.506"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 35,
+              "task_start_time_us": "1794497749283069.702"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 36,
+              "task_start_time_us": "1794497749283669.538"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 37,
+              "task_start_time_us": "1794497749284269.314"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 38,
+              "task_start_time_us": "1794497749284868.530"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 39,
+              "task_start_time_us": "1794497749285471.226"
+            }
+          ]
+        },
+        {
+          "name": "rotating_weights",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 603.8436875,
+            "p50": 603.7860000000001,
+            "min": 601.676,
+            "max": 606.936
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 594.039,
+              "max": 598.935,
+              "mean": 596.5601875
+            },
+            "aic_total_cycles": {
+              "min": 25662468.0,
+              "max": 25873987.0,
+              "mean": 25771399.875
+            },
+            "aic_l0a_read_bw(GB/s)": {
+              "min": 115.494,
+              "max": 116.446,
+              "mean": 115.9539375
+            },
+            "aic_l0a_write_bw(GB/s)": {
+              "min": 57.747,
+              "max": 58.223,
+              "mean": 57.9771875
+            },
+            "aic_l0b_read_bw(GB/s)": {
+              "min": 461.975,
+              "max": 465.782,
+              "mean": 463.815875
+            },
+            "aic_l0b_write_bw(GB/s)": {
+              "min": 138.592,
+              "max": 139.735,
+              "mean": 139.14475000000002
+            },
+            "aic_l0c_read_bw_cube(GB/s)": {
+              "min": 228.1,
+              "max": 229.98,
+              "mean": 229.0090625
+            },
+            "aic_l0c_write_bw_cube(GB/s)": {
+              "min": 230.987,
+              "max": 232.891,
+              "mean": 231.907875
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l0c_read_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_l0c_write_bw(GB/s)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 50,
+              "task_start_time_us": "1794497749292682.659"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 51,
+              "task_start_time_us": "1794497749293284.755"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 52,
+              "task_start_time_us": "1794497749293888.271"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 53,
+              "task_start_time_us": "1794497749294491.247"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 54,
+              "task_start_time_us": "1794497749295095.804"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 55,
+              "task_start_time_us": "1794497749295698.040"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 56,
+              "task_start_time_us": "1794497749296304.196"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 57,
+              "task_start_time_us": "1794497749296908.652"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 58,
+              "task_start_time_us": "1794497749297513.549"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 59,
+              "task_start_time_us": "1794497749298115.845"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 60,
+              "task_start_time_us": "1794497749298718.621"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 61,
+              "task_start_time_us": "1794497749299320.317"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 62,
+              "task_start_time_us": "1794497749299925.553"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 63,
+              "task_start_time_us": "1794497749300529.649"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 64,
+              "task_start_time_us": "1794497749301135.266"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+              "csv_row": 65,
+              "task_start_time_us": "1794497749301742.222"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "metric": "L2Cache",
+      "replay": {
+        "created_at": "2026-11-12T15:36:05.406587+00:00",
+        "specification": {
+          "input_shape": [
+            307,
+            5120
+          ],
+          "weight_shape": [
+            34816,
+            5120
+          ],
+          "output_shape": [
+            307,
+            34816
+          ],
+          "dtype": "bfloat16",
+          "format": "ND",
+          "operation": "torch.nn.functional.linear(x, weight)",
+          "input_stride_assumption": [
+            5120,
+            1
+          ],
+          "weight_stride_assumption": [
+            5120,
+            1
+          ],
+          "stride_evidence_boundary": "Baseline trace lacks physical strides; replay assumes contiguous tensors",
+          "weights_bytes_each": 356515840,
+          "rotating_weights": 3,
+          "cache_boundary": "Weight rotation reduces same-matrix reuse; baseline full-model cache state is independent"
+        },
+        "passed": true,
+        "device": "npu:0",
+        "warmup": 10,
+        "iterations": 16,
+        "input_stride": [
+          5120,
+          1
+        ],
+        "weight_stride": [
+          5120,
+          1
+        ],
+        "input_npu_format": 2,
+        "weight_npu_format": 2,
+        "phases": [
+          {
+            "name": "steady_single_weight",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              10,
+              25
+            ],
+            "device_event_total_ms": 9.637160301208496,
+            "device_event_mean_ms": 0.602322518825531
+          },
+          {
+            "name": "rotating_weights",
+            "warmup": 10,
+            "iterations": 16,
+            "matching_matmul_formal_index_range_0based_inclusive": [
+              36,
+              51
+            ],
+            "device_event_total_ms": 9.677120208740234,
+            "device_event_mean_ms": 0.6048200130462646
+          }
+        ],
+        "torch_allocated_bytes": 1094070784,
+        "torch_reserved_bytes": 1811939328,
+        "probe_cpu_fp32_max_absolute_difference": 0.0037224292755126953,
+        "wall_seconds": 1.250880939885974,
+        "scope": "Synthetic one-op replay; use matching_matmul_formal_index_range for each phase in chronological msprof CSV matching kernels; exclude warmup and probe matmul"
+      },
+      "matching_matmul_count": 52,
+      "signature_matches_native_exported_fields": true,
+      "phases": [
+        {
+          "name": "steady_single_weight",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 601.529875,
+            "p50": 601.136,
+            "min": 599.176,
+            "max": 603.896
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 592.418,
+              "max": 597.4,
+              "mean": 594.80475
+            },
+            "aic_total_cycles": {
+              "min": 25592447.0,
+              "max": 25807668.0,
+              "mean": 25695560.375
+            },
+            "aic_write_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aic_write_cache_miss_allocate": {
+              "min": 41752.0,
+              "max": 41752.0,
+              "mean": 41752.0
+            },
+            "aic_r0_read_cache_hit": {
+              "min": 4429628.0,
+              "max": 4431967.0,
+              "mean": 4431005.8125
+            },
+            "aic_r0_read_cache_miss_allocate": {
+              "min": 1416075.0,
+              "max": 1418414.0,
+              "mean": 1417030.1875
+            },
+            "aic_r1_read_cache_hit": {
+              "min": 4429783.0,
+              "max": 4432333.0,
+              "mean": 4430834.9375
+            },
+            "aic_r1_read_cache_miss_allocate": {
+              "min": 1415697.0,
+              "max": 1418247.0,
+              "mean": 1417201.0625
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_write_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_write_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r0_read_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r0_read_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r1_read_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r1_read_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 24,
+              "task_start_time_us": "1794497765317025.309"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 25,
+              "task_start_time_us": "1794497765317626.166"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 26,
+              "task_start_time_us": "1794497765318229.662"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 27,
+              "task_start_time_us": "1794497765318830.218"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 28,
+              "task_start_time_us": "1794497765319429.414"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 29,
+              "task_start_time_us": "1794497765320030.310"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 30,
+              "task_start_time_us": "1794497765320631.566"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 31,
+              "task_start_time_us": "1794497765321235.482"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 32,
+              "task_start_time_us": "1794497765321836.638"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 33,
+              "task_start_time_us": "1794497765322437.434"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 34,
+              "task_start_time_us": "1794497765323038.590"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 35,
+              "task_start_time_us": "1794497765323640.286"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 36,
+              "task_start_time_us": "1794497765324241.822"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 37,
+              "task_start_time_us": "1794497765324844.918"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 38,
+              "task_start_time_us": "1794497765325448.495"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 39,
+              "task_start_time_us": "1794497765326049.311"
+            }
+          ],
+          "derived_l2_read_hit_fraction_r0_r1": 0.7576766584542229,
+          "l2_fraction_scope": "read_hit / (read_hit + read_miss_allocate), summing exported r0/r1 counters; preserves exporter counter definition"
+        },
+        {
+          "name": "rotating_weights",
+          "sample_count": 16,
+          "task_duration_us": {
+            "mean": 603.2649375,
+            "p50": 603.206,
+            "min": 601.116,
+            "max": 605.296
+          },
+          "hardware_counters_source_labels": {
+            "aicore_time(us)": {
+              "min": 594.397,
+              "max": 597.67,
+              "mean": 595.9746875
+            },
+            "aic_total_cycles": {
+              "min": 25677946.0,
+              "max": 25819357.0,
+              "mean": 25746108.8125
+            },
+            "aic_write_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aic_write_cache_miss_allocate": {
+              "min": 41752.0,
+              "max": 41752.0,
+              "mean": 41752.0
+            },
+            "aic_r0_read_cache_hit": {
+              "min": 4430515.0,
+              "max": 4436002.0,
+              "mean": 4432936.1875
+            },
+            "aic_r0_read_cache_miss_allocate": {
+              "min": 1412038.0,
+              "max": 1417519.0,
+              "mean": 1415099.875
+            },
+            "aic_r1_read_cache_hit": {
+              "min": 4430371.0,
+              "max": 4436381.0,
+              "mean": 4432699.8125
+            },
+            "aic_r1_read_cache_miss_allocate": {
+              "min": 1411651.0,
+              "max": 1417669.0,
+              "mean": 1415336.125
+            },
+            "aiv_time(us)": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_total_cycles": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_write_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_write_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r0_read_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r0_read_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r1_read_cache_hit": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            },
+            "aiv_r1_read_cache_miss_allocate": {
+              "min": 0.0,
+              "max": 0.0,
+              "mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 50,
+              "task_start_time_us": "1794497765333134.475"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 51,
+              "task_start_time_us": "1794497765333739.652"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 52,
+              "task_start_time_us": "1794497765334341.068"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 53,
+              "task_start_time_us": "1794497765334944.484"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 54,
+              "task_start_time_us": "1794497765335547.500"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 55,
+              "task_start_time_us": "1794497765336152.816"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 56,
+              "task_start_time_us": "1794497765336755.213"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 57,
+              "task_start_time_us": "1794497765337357.929"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 58,
+              "task_start_time_us": "1794497765337960.605"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 59,
+              "task_start_time_us": "1794497765338563.941"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 60,
+              "task_start_time_us": "1794497765339167.777"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 61,
+              "task_start_time_us": "1794497765339769.253"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 62,
+              "task_start_time_us": "1794497765340372.369"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 63,
+              "task_start_time_us": "1794497765340977.206"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 64,
+              "task_start_time_us": "1794497765341581.042"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+              "csv_row": 65,
+              "task_start_time_us": "1794497765342182.178"
+            }
+          ],
+          "derived_l2_read_hit_fraction_r0_r1": 0.7580011477357527,
+          "l2_fraction_scope": "read_hit / (read_hit + read_miss_allocate), summing exported r0/r1 counters; preserves exporter counter definition"
+        }
+      ]
+    }
+  ],
+  "baseline_signature": {
+    "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+    "shape": "307,5120;34816,5120",
+    "dtype": "DT_BF16;DT_BF16",
+    "format": "ND;ND",
+    "output_shape": "307,34816",
+    "block_num": 24
+  },
+  "scope": "Synthetic single-op hardware-counter replay with the exported baseline signature; physical baseline strides and full-model cache state remain unverified",
+  "bound_interpretation": "Native PipeUtilization establishes high MTE2 busy time. Replay memory/L0/L2 counters add evidence; absolute HBM saturation needs a validated device-wide bandwidth denominator and counter aggregation scope.",
+  "evidence_index": [
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/manifest.json",
+      "bytes": 3116,
+      "sha256": "09f3d018540065e2e8fb26c9a5ef54a17e1f3a858afbb4f6357404837d94b8f6"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/before-npu-smi.txt",
+      "bytes": 1989,
+      "sha256": "1058da3df0279249632f45128ffe083ea7b7cad7f915edeb984c82f2816d7c6d"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory.log",
+      "bytes": 699,
+      "sha256": "11394232ce0ceae1650157ca93d24017946dde42cf5322acc064c2bf5394a6de"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry.log",
+      "bytes": 3836,
+      "sha256": "2ee76be5eea4de5af6adb558d5f7f34579d42b5397ddb1a1e143d987c4766e44"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry.log",
+      "bytes": 3838,
+      "sha256": "b0621cbdaba8c7a5fba2f4071b81964e4c5f50f14e5fcf5da8f27f94d0c38fbc"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry.log",
+      "bytes": 3836,
+      "sha256": "d6bb5ddccdebb3d5bb76b5fab9967f0b983798a0ff389ebbb2fec4bfd94f162d"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-L2Cache.sh",
+      "bytes": 430,
+      "sha256": "faa1660e1e98f345db56d4226bf983d0fb8bf2d2b79f9b6469fe9c77ead23fc9"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-Memory.sh",
+      "bytes": 429,
+      "sha256": "5c541b659f05085cbfdf038610dd17f1c4f2b2c8f0778d2e900ba2d37359a5de"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/launch-MemoryL0.sh",
+      "bytes": 431,
+      "sha256": "0c30f7fc6ce85e7470528049ceea0e1ff20fe96b5e1637837b3173716c21fb85"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tools/repro_systemone_mlp.py",
+      "bytes": 5189,
+      "sha256": "67a24c56eb588493d3104f7f9b2991e522b6272e01328777b72dd57f33e14c41"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/Memory-retry/PROF_000001_20261112153531144_00098960HECAHJBC/mindstudio_profiler_output/op_summary_20261112153537.csv",
+      "bytes": 18843,
+      "sha256": "ba211c319c02031bffe6b0fb0c2574cd3600a2fdb1e4e78a3f1b719a1640fbec"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/replay-Memory.json",
+      "bytes": 1899,
+      "sha256": "cdd31852001c6c2d0aefda5f56644c37bcd9ce35f810b2762a6833e1740a38ce"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/MemoryL0-retry/PROF_000001_20261112153548491_00099214GPIPGRAL/mindstudio_profiler_output/op_summary_20261112153553.csv",
+      "bytes": 18234,
+      "sha256": "61466fbe46ff30c6fc57d6dd0048025bb4e9bd08be1f7006be9176bde2d4598d"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/replay-MemoryL0.json",
+      "bytes": 1899,
+      "sha256": "464c8b737c78cc7bc17322ddddd44363fe48cf20fdb389b0d90c3d56bb810493"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/L2Cache-retry/PROF_000001_20261112153604562_00099473BICAICCM/mindstudio_profiler_output/op_summary_20261112153610.csv",
+      "bytes": 19860,
+      "sha256": "2a7fecc02816ec96d7d6d3e0d5badda9748ce99778f950c7ea32b884e7010a12"
+    },
+    {
+      "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/micro-hardware/replay-L2Cache.json",
+      "bytes": 1898,
+      "sha256": "c060c3b06cd15a04625734e655d00e231f01eb2e2e6d63eeec32a59e0c7da5ea"
+    }
+  ]
+}

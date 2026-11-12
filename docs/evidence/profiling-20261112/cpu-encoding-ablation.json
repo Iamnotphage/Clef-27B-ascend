@@ -1,0 +1,1219 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-12T15:53:45.571239+00:00",
+  "passed": true,
+  "status": "complete",
+  "weights_loaded": false,
+  "engine_constructed": false,
+  "http_requests_sent": false,
+  "npu_operations_executed": false,
+  "warmup_per_shape_per_variant": 10,
+  "measured_iterations_per_shape_per_variant": 100,
+  "script_sha256": "f4fc05b1fb0e1b3712aa17dd9897d4591f099e073a263974ecf4d73988ca27b1",
+  "clean_environment": {
+    "removed_observer_variable_names": [],
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "TOKENIZERS_PARALLELISM": "false",
+    "observer_variables_remaining": []
+  },
+  "input_provenance": {
+    "manifest_path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/manifest.json",
+    "manifest_sha256": "3ce25c4d3f891c0c7f8d9902292ea88fa9efda8fa293dc287fc91a55f38ce571",
+    "encoding_evidence_path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+    "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+  },
+  "runtime": {
+    "helper_loaded": true,
+    "markers_enabled": false,
+    "observe_directory_enabled": false,
+    "scope_filter_enabled": false,
+    "torch_num_threads": 1
+  },
+  "encoder": {
+    "vllm_head": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+    "vllm_source_diff_sha256": "b0d3c1052956e586db1cfcb34011c10973bc285e89aae67d40b03ad22e8c1891",
+    "encoding_source_files": {
+      "strategies": {
+        "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+        "sha256": "038d534d7f55c49394cf6943ebee80f9703e0c1a53b7a56edee3734f5f4711f4"
+      },
+      "protocol": {
+        "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/protocol.py",
+        "sha256": "c4ea3c8a35e1e1be58c3fe34fa590f92ea832233a3eb47644e5ca9bf964492f6"
+      },
+      "serving": {
+        "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/serving.py",
+        "sha256": "2d4e6422dc008360f76e685cd8ab30a094925f88212c421c85bb73cd86f8da24"
+      }
+    },
+    "tokenizer_class": "vllm.tokenizers.hf.CachedQwen3_5Tokenizer",
+    "versions": {
+      "vllm": "0.1.dev1+g24420b7a3.d20261112.empty",
+      "transformers": "5.19.0",
+      "torch": "2.10.0+cpu"
+    },
+    "model_metadata_sha256": {
+      "config.json": "c42e88892bd3fd84e8276b2ad90df58c1c3b797676ea161035006a72ad468c58",
+      "joint_head_config.json": "890be585d75b981201eb96a35f98a9967afe37bc8d220cfdea2e72d56507534f",
+      "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "tokenizer_config.json": "91a08f825d370d085d692e04cf117cdd7faad7bf18e996f1e6031b6dab03db72",
+      "processor_config.json": "d89ef49ce9cd37fbf510158e13c1ef063d9286411c1ec9049932dbe0487143b1"
+    },
+    "weights_loaded": false,
+    "engine_constructed": false
+  },
+  "load_and_validation_seconds": 22.9076961199753,
+  "schema_cache": {
+    "entries": 63,
+    "hits": 34147,
+    "misses": 63,
+    "state_bypass_calls": 770,
+    "rendered_state_count_excluded": 4,
+    "state_cache_entries": 0,
+    "immutable_cache_entries": true,
+    "fresh_lists_on_cache_hit": true
+  },
+  "comparisons": [
+    {
+      "name": "fixed307",
+      "baseline_encode_mean_ms": 1.0662659,
+      "cached_encode_mean_ms": 0.1030375,
+      "encode_mean_ms_saved": 0.9632284000000001,
+      "baseline_total_mean_ms": 1.1063953,
+      "cached_total_mean_ms": 0.1347525,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "fields-1",
+      "baseline_encode_mean_ms": 0.671473,
+      "cached_encode_mean_ms": 0.0823414,
+      "encode_mean_ms_saved": 0.5891316,
+      "baseline_total_mean_ms": 0.6996681,
+      "cached_total_mean_ms": 0.1040622,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "fields-8",
+      "baseline_encode_mean_ms": 4.9020248,
+      "cached_encode_mean_ms": 0.2769126,
+      "encode_mean_ms_saved": 4.6251122,
+      "baseline_total_mean_ms": 4.9823471,
+      "cached_total_mean_ms": 0.34209860000000003,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "candidates-2",
+      "baseline_encode_mean_ms": 0.4054947,
+      "cached_encode_mean_ms": 0.0681803,
+      "encode_mean_ms_saved": 0.3373144,
+      "baseline_total_mean_ms": 0.4296272,
+      "cached_total_mean_ms": 0.0885869,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "candidates-16",
+      "baseline_encode_mean_ms": 1.8092265,
+      "cached_encode_mean_ms": 0.1365896,
+      "encode_mean_ms_saved": 1.6726369,
+      "baseline_total_mean_ms": 1.8448251,
+      "cached_total_mean_ms": 0.1638675,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "controlled-length-256",
+      "baseline_encode_mean_ms": 0.7097593,
+      "cached_encode_mean_ms": 0.12366,
+      "encode_mean_ms_saved": 0.5860993,
+      "baseline_total_mean_ms": 0.7377503,
+      "cached_total_mean_ms": 0.146737,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    },
+    {
+      "name": "controlled-length-4032",
+      "baseline_encode_mean_ms": 7.8689228,
+      "cached_encode_mean_ms": 7.2794879,
+      "encode_mean_ms_saved": 0.5894348999999997,
+      "baseline_total_mean_ms": 7.9241775,
+      "cached_total_mean_ms": 7.3342001,
+      "scope": "Offline CPU encoding ablation only; service E2E benefit requires an unprofiled API A/B experiment"
+    }
+  ],
+  "measurement_and_equality_checks_seconds": 2.9828790896572173,
+  "timing_scope": "Protocol validation + parse_questions + render_state + strategy.encode; excludes loading, fixture JSON reads, equality checks, hashing and logging. Per-iteration exact equality checks run immediately after the timed region",
+  "ablation_scope": "Temporary instance _tokens wrapper only; every selected rendered state bypasses the cache; immutable tuples with fresh lists on hits; no installed-source/service changes",
+  "resource_usage": {
+    "elapsed_seconds": 25.890602100174874,
+    "user_cpu_seconds": 12.636702,
+    "system_cpu_seconds": 1.9580199999999999,
+    "max_rss_bytes": 2651799552
+  },
+  "finished_at": "2026-11-12T15:54:11.461858+00:00",
+  "baseline": [
+    {
+      "name": "fixed307",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/systemone-encoding-20261112.json",
+        "sha256": "c23aad78e597c71a5a2c2d23d3cedd567df61b776379300c761d1fe9eb31d90e",
+        "case": "mixed"
+      },
+      "actual_input_tokens": 307,
+      "expected_encoding_sha256": "1259cdbd646f0091c1aae8c51db9aa0ea1d2925312fe1bb722bd3b2c93172d79",
+      "field_count": 3,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0239106,
+          "p50": 0.02365,
+          "p95": 0.026252499999999998,
+          "min": 0.02247,
+          "max": 0.0304,
+          "sample_standard_deviation": 0.0012334748649341185,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0157873,
+          "p50": 0.015704999999999997,
+          "p95": 0.0165175,
+          "min": 0.01506,
+          "max": 0.01709,
+          "sample_standard_deviation": 0.0003639121189284994,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0396979,
+          "p50": 0.03943,
+          "p95": 0.0419405,
+          "min": 0.03764,
+          "max": 0.0467,
+          "sample_standard_deviation": 0.0013745436671598662,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004315,
+          "p50": 0.00043,
+          "p95": 0.00048149999999999994,
+          "min": 0.00037,
+          "max": 0.00054,
+          "sample_standard_deviation": 3.105469271131079e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 1.0662659,
+          "p50": 1.0649099999999998,
+          "p95": 1.082569,
+          "min": 1.0506,
+          "max": 1.11416,
+          "sample_standard_deviation": 0.009347123696840673,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 1.1063953,
+          "p50": 1.1045099999999999,
+          "p95": 1.122908,
+          "min": 1.08954,
+          "max": 1.15553,
+          "sample_standard_deviation": 0.009888219136268606,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "fields-1",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/fields-1.json",
+        "sha256": "a50a0411aed9379d677d54dd1a0584546254afc53f89fd9c3267c39d48cb7103",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 215,
+      "expected_encoding_sha256": "1f56a4ced1fe10139cfe83350f8c3b224c6e9687520e40ba598559ecdbb2b1a5",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0184604,
+          "p50": 0.018115,
+          "p95": 0.02076,
+          "min": 0.01707,
+          "max": 0.02192,
+          "sample_standard_deviation": 0.001176629255135365,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.009314,
+          "p50": 0.00918,
+          "p95": 0.009555999999999999,
+          "min": 0.00878,
+          "max": 0.02236,
+          "sample_standard_deviation": 0.0013339892326129448,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0277744,
+          "p50": 0.02727,
+          "p95": 0.030211500000000002,
+          "min": 0.02608,
+          "max": 0.04428,
+          "sample_standard_deviation": 0.0020635349292028966,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004207,
+          "p50": 0.00042,
+          "p95": 0.00047,
+          "min": 0.00035,
+          "max": 0.00066,
+          "sample_standard_deviation": 3.745043862941198e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.671473,
+          "p50": 0.66846,
+          "p95": 0.6880175,
+          "min": 0.66206,
+          "max": 0.70242,
+          "sample_standard_deviation": 0.008064264418163674,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.6996681,
+          "p50": 0.6966600000000001,
+          "p95": 0.7174889999999999,
+          "min": 0.68928,
+          "max": 0.73545,
+          "sample_standard_deviation": 0.009256476596405242,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "fields-8",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/fields-8.json",
+        "sha256": "629a7ab479c2bf3fa6f908ec73ca43934d02713a23c3869f3c2b18b35914d6b3",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 1209,
+      "expected_encoding_sha256": "3da7fd50533b6746ec9e299adac4799d436fa3ddcd3042cc18cea8a368851fa8",
+      "field_count": 8,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0397161,
+          "p50": 0.03876,
+          "p95": 0.0437305,
+          "min": 0.03679,
+          "max": 0.06791,
+          "sample_standard_deviation": 0.004199280095829799,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0400577,
+          "p50": 0.03973,
+          "p95": 0.042964499999999996,
+          "min": 0.03842,
+          "max": 0.04886,
+          "sample_standard_deviation": 0.0014886885659749812,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0797738,
+          "p50": 0.07850499999999999,
+          "p95": 0.085208,
+          "min": 0.07567,
+          "max": 0.11239,
+          "sample_standard_deviation": 0.005094945956831172,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0005484999999999999,
+          "p50": 0.00054,
+          "p95": 0.00065,
+          "min": 0.00045,
+          "max": 0.00085,
+          "sample_standard_deviation": 5.803821450935877e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 4.9020248,
+          "p50": 4.76692,
+          "p95": 4.870881,
+          "min": 4.73046,
+          "max": 11.58719,
+          "sample_standard_deviation": 0.7631695061757415,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 4.9823471,
+          "p50": 4.84607,
+          "p95": 4.952692,
+          "min": 4.80664,
+          "max": 11.66544,
+          "sample_standard_deviation": 0.7630412926715094,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "candidates-2",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/candidates-2.json",
+        "sha256": "e2d991ca8dfc08130dffc6cd1be01bd9b16e343841538613d178c8178ccd1e5a",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 162,
+      "expected_encoding_sha256": "a0c8c2b1990a7bd9b12406311b359ebc411d2c47ab51349e22ef7d1f87e19e17",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.016598,
+          "p50": 0.01653,
+          "p95": 0.0175505,
+          "min": 0.01581,
+          "max": 0.01824,
+          "sample_standard_deviation": 0.0005037255144812441,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0071076,
+          "p50": 0.0071,
+          "p95": 0.007332999999999999,
+          "min": 0.0068,
+          "max": 0.00751,
+          "sample_standard_deviation": 0.00014392141514511916,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0237056,
+          "p50": 0.0236,
+          "p95": 0.024667,
+          "min": 0.02276,
+          "max": 0.0255,
+          "sample_standard_deviation": 0.0005797235844291952,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004269,
+          "p50": 0.00043,
+          "p95": 0.00047,
+          "min": 0.00035,
+          "max": 0.00049,
+          "sample_standard_deviation": 2.661718894764711e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.4054947,
+          "p50": 0.4046,
+          "p95": 0.4136145,
+          "min": 0.40116,
+          "max": 0.41809,
+          "sample_standard_deviation": 0.003439725574853759,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.4296272,
+          "p50": 0.42884,
+          "p95": 0.437512,
+          "min": 0.42518,
+          "max": 0.44195,
+          "sample_standard_deviation": 0.003531542450659212,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "candidates-16",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/candidates-16.json",
+        "sha256": "5d69a4e36aad669d264a49b247d6c493160af8df78a2d1417b06c1f6dec0591d",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 491,
+      "expected_encoding_sha256": "3280cfa790898a562d370a50510aefc2d9ef5d3a35a85504b318a591e8d3ac9e",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0203225,
+          "p50": 0.019685,
+          "p95": 0.021824499999999997,
+          "min": 0.01847,
+          "max": 0.06229,
+          "sample_standard_deviation": 0.004341902104940747,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0148013,
+          "p50": 0.014515,
+          "p95": 0.0149965,
+          "min": 0.01385,
+          "max": 0.03434,
+          "sample_standard_deviation": 0.00215814953236341,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0351238,
+          "p50": 0.034214999999999995,
+          "p95": 0.0370385,
+          "min": 0.03262,
+          "max": 0.09663,
+          "sample_standard_deviation": 0.006353205471065433,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004748,
+          "p50": 0.00046,
+          "p95": 0.000511,
+          "min": 0.00041,
+          "max": 0.00161,
+          "sample_standard_deviation": 0.00012166753839455248,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 1.8092265,
+          "p50": 1.713105,
+          "p95": 1.7436365,
+          "min": 1.70083,
+          "max": 11.0778,
+          "sample_standard_deviation": 0.9362786025153145,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 1.8448251,
+          "p50": 1.747855,
+          "p95": 1.780799,
+          "min": 1.73559,
+          "max": 11.11185,
+          "sample_standard_deviation": 0.9361771095187378,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "controlled-length-256",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/controlled-length-256.json",
+        "sha256": "f9ec31180877a65ffba7d4b4d7aae0e69ae243d4b6288afb5c2f4a5926da69c3",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 256,
+      "expected_encoding_sha256": "8daafdc3da0f939e977c36f795d4821e1d1bdeeea9720f0583d07661ef4c3fb1",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0182697,
+          "p50": 0.018084999999999997,
+          "p95": 0.0196485,
+          "min": 0.01737,
+          "max": 0.01995,
+          "sample_standard_deviation": 0.0005933579412670285,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0092775,
+          "p50": 0.00926,
+          "p95": 0.009661,
+          "min": 0.00891,
+          "max": 0.00984,
+          "sample_standard_deviation": 0.00018702549385988897,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0275472,
+          "p50": 0.02743,
+          "p95": 0.029112,
+          "min": 0.02647,
+          "max": 0.0295,
+          "sample_standard_deviation": 0.0006714285689723986,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004438,
+          "p50": 0.00044,
+          "p95": 0.0004904999999999999,
+          "min": 0.00035,
+          "max": 0.0006,
+          "sample_standard_deviation": 3.36584148303049e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.7097593,
+          "p50": 0.708555,
+          "p95": 0.7199245,
+          "min": 0.70269,
+          "max": 0.72951,
+          "sample_standard_deviation": 0.005159348924353958,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.7377503,
+          "p50": 0.73666,
+          "p95": 0.7488404999999999,
+          "min": 0.73028,
+          "max": 0.75879,
+          "sample_standard_deviation": 0.005340538779425294,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "controlled-length-4032",
+      "variant": "unobserved_baseline",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/controlled-length-4032.json",
+        "sha256": "85ff48a38a0e2b5081f7025c05c3e7beab3cfba8bcdd1c1cd6608ed463d5e638",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 3868,
+      "expected_encoding_sha256": "a3094e699036571ca0aee5eb25eeb4f6cde8af9aa199916fc598cfb853bfdfd0",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0392377,
+          "p50": 0.038470000000000004,
+          "p95": 0.0436005,
+          "min": 0.0359,
+          "max": 0.05349,
+          "sample_standard_deviation": 0.0030587707490018754,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0150821,
+          "p50": 0.014955,
+          "p95": 0.01637,
+          "min": 0.01403,
+          "max": 0.0188,
+          "sample_standard_deviation": 0.0007151580951161085,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0543198,
+          "p50": 0.053295,
+          "p95": 0.059899999999999995,
+          "min": 0.05043,
+          "max": 0.07019,
+          "sample_standard_deviation": 0.0034992128927355745,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0009349,
+          "p50": 0.00093,
+          "p95": 0.00114,
+          "min": 0.00074,
+          "max": 0.00132,
+          "sample_standard_deviation": 9.769562090203606e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 7.8689228,
+          "p50": 7.838255,
+          "p95": 7.9622625,
+          "min": 7.75274,
+          "max": 9.08028,
+          "sample_standard_deviation": 0.16788090445601517,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 7.9241775,
+          "p50": 7.893145,
+          "p95": 8.019894999999998,
+          "min": 7.80545,
+          "max": 9.13269,
+          "sample_standard_deviation": 0.16785917416773125,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    }
+  ],
+  "schema_cache_ablation": [
+    {
+      "name": "fixed307",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/systemone-encoding-20261112.json",
+        "sha256": "c23aad78e597c71a5a2c2d23d3cedd567df61b776379300c761d1fe9eb31d90e",
+        "case": "mixed"
+      },
+      "actual_input_tokens": 307,
+      "expected_encoding_sha256": "1259cdbd646f0091c1aae8c51db9aa0ea1d2925312fe1bb722bd3b2c93172d79",
+      "field_count": 3,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0185469,
+          "p50": 0.0185,
+          "p95": 0.019154,
+          "min": 0.01766,
+          "max": 0.0203,
+          "sample_standard_deviation": 0.0004021600641184018,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0127759,
+          "p50": 0.012745,
+          "p95": 0.013220500000000001,
+          "min": 0.01233,
+          "max": 0.01393,
+          "sample_standard_deviation": 0.00024879140181316883,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0313228,
+          "p50": 0.031225000000000003,
+          "p95": 0.0321875,
+          "min": 0.03009,
+          "max": 0.03353,
+          "sample_standard_deviation": 0.00055348132376583,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0003922,
+          "p50": 0.00039,
+          "p95": 0.00044,
+          "min": 0.00033,
+          "max": 0.00048,
+          "sample_standard_deviation": 2.91835016349438e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.1030375,
+          "p50": 0.10234499999999999,
+          "p95": 0.1069565,
+          "min": 0.10023,
+          "max": 0.1208,
+          "sample_standard_deviation": 0.0027280197335552148,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.1347525,
+          "p50": 0.13403,
+          "p95": 0.139233,
+          "min": 0.13177,
+          "max": 0.15186,
+          "sample_standard_deviation": 0.002841600194725969,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "fields-1",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/fields-1.json",
+        "sha256": "a50a0411aed9379d677d54dd1a0584546254afc53f89fd9c3267c39d48cb7103",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 215,
+      "expected_encoding_sha256": "1f56a4ced1fe10139cfe83350f8c3b224c6e9687520e40ba598559ecdbb2b1a5",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0138507,
+          "p50": 0.013805,
+          "p95": 0.014344,
+          "min": 0.01335,
+          "max": 0.01574,
+          "sample_standard_deviation": 0.00032596478399367075,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0075094,
+          "p50": 0.0075,
+          "p95": 0.0077304999999999995,
+          "min": 0.00718,
+          "max": 0.00828,
+          "sample_standard_deviation": 0.00016392792207663593,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0213601,
+          "p50": 0.021285,
+          "p95": 0.0219405,
+          "min": 0.02063,
+          "max": 0.02402,
+          "sample_standard_deviation": 0.00044653660476375213,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0003607,
+          "p50": 0.00036,
+          "p95": 0.0004,
+          "min": 0.0003,
+          "max": 0.00045,
+          "sample_standard_deviation": 2.7934085474794615e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.0823414,
+          "p50": 0.08134,
+          "p95": 0.0861275,
+          "min": 0.07941,
+          "max": 0.12736,
+          "sample_standard_deviation": 0.004920973464507184,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.1040622,
+          "p50": 0.10305500000000001,
+          "p95": 0.107501,
+          "min": 0.10077,
+          "max": 0.14928,
+          "sample_standard_deviation": 0.005004018906051536,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "fields-8",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/fields-8.json",
+        "sha256": "629a7ab479c2bf3fa6f908ec73ca43934d02713a23c3869f3c2b18b35914d6b3",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 1209,
+      "expected_encoding_sha256": "3da7fd50533b6746ec9e299adac4799d436fa3ddcd3042cc18cea8a368851fa8",
+      "field_count": 8,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.029431,
+          "p50": 0.02936,
+          "p95": 0.0307435,
+          "min": 0.0283,
+          "max": 0.03163,
+          "sample_standard_deviation": 0.0007411559358273542,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0353133,
+          "p50": 0.03517,
+          "p95": 0.0359235,
+          "min": 0.03454,
+          "max": 0.04411,
+          "sample_standard_deviation": 0.0009622501564751051,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0647443,
+          "p50": 0.06467,
+          "p95": 0.066193,
+          "min": 0.06302,
+          "max": 0.07246,
+          "sample_standard_deviation": 0.001180852504067987,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0004417,
+          "p50": 0.00044,
+          "p95": 0.00051,
+          "min": 0.00038,
+          "max": 0.00064,
+          "sample_standard_deviation": 4.114657220280207e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.2769126,
+          "p50": 0.27591,
+          "p95": 0.2836415,
+          "min": 0.27163,
+          "max": 0.29172,
+          "sample_standard_deviation": 0.003524532383913151,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.34209860000000003,
+          "p50": 0.341155,
+          "p95": 0.34908,
+          "min": 0.33538,
+          "max": 0.35671,
+          "sample_standard_deviation": 0.0038392626133336365,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "candidates-2",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/candidates-2.json",
+        "sha256": "e2d991ca8dfc08130dffc6cd1be01bd9b16e343841538613d178c8178ccd1e5a",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 162,
+      "expected_encoding_sha256": "a0c8c2b1990a7bd9b12406311b359ebc411d2c47ab51349e22ef7d1f87e19e17",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0139534,
+          "p50": 0.01395,
+          "p95": 0.014400999999999999,
+          "min": 0.0133,
+          "max": 0.01492,
+          "sample_standard_deviation": 0.00030069018251114524,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.006102,
+          "p50": 0.00611,
+          "p95": 0.0063005,
+          "min": 0.0058,
+          "max": 0.00648,
+          "sample_standard_deviation": 0.00012694546669791526,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0200554,
+          "p50": 0.020055,
+          "p95": 0.020631999999999998,
+          "min": 0.01918,
+          "max": 0.02115,
+          "sample_standard_deviation": 0.00035245006810192344,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0003512,
+          "p50": 0.00035,
+          "p95": 0.0004,
+          "min": 0.0003,
+          "max": 0.00041,
+          "sample_standard_deviation": 2.7090570128718033e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.0681803,
+          "p50": 0.06789,
+          "p95": 0.07041349999999999,
+          "min": 0.06618,
+          "max": 0.07785,
+          "sample_standard_deviation": 0.0016582468867372363,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.0885869,
+          "p50": 0.088195,
+          "p95": 0.09182199999999999,
+          "min": 0.08611,
+          "max": 0.09868,
+          "sample_standard_deviation": 0.0017648336373938386,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "candidates-16",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/candidates-16.json",
+        "sha256": "5d69a4e36aad669d264a49b247d6c493160af8df78a2d1417b06c1f6dec0591d",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 491,
+      "expected_encoding_sha256": "3280cfa790898a562d370a50510aefc2d9ef5d3a35a85504b318a591e8d3ac9e",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0149293,
+          "p50": 0.014865,
+          "p95": 0.0157555,
+          "min": 0.01393,
+          "max": 0.01623,
+          "sample_standard_deviation": 0.00044723901593413936,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0119507,
+          "p50": 0.01193,
+          "p95": 0.012290500000000001,
+          "min": 0.01157,
+          "max": 0.01245,
+          "sample_standard_deviation": 0.00018976995643050652,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.02688,
+          "p50": 0.02681,
+          "p95": 0.027917,
+          "min": 0.02576,
+          "max": 0.02855,
+          "sample_standard_deviation": 0.0005686560445204963,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0003979,
+          "p50": 0.0004,
+          "p95": 0.00045,
+          "min": 0.00034,
+          "max": 0.00046,
+          "sample_standard_deviation": 2.4300101841246453e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.1365896,
+          "p50": 0.13583,
+          "p95": 0.14250149999999998,
+          "min": 0.13342,
+          "max": 0.15258,
+          "sample_standard_deviation": 0.0029340856197872657,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.1638675,
+          "p50": 0.16299,
+          "p95": 0.1711385,
+          "min": 0.15976,
+          "max": 0.17987,
+          "sample_standard_deviation": 0.003199423046157359,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "controlled-length-256",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/controlled-length-256.json",
+        "sha256": "f9ec31180877a65ffba7d4b4d7aae0e69ae243d4b6288afb5c2f4a5926da69c3",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 256,
+      "expected_encoding_sha256": "8daafdc3da0f939e977c36f795d4821e1d1bdeeea9720f0583d07661ef4c3fb1",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0149529,
+          "p50": 0.014905,
+          "p95": 0.0155735,
+          "min": 0.01429,
+          "max": 0.01609,
+          "sample_standard_deviation": 0.00034308550926360424,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0077262,
+          "p50": 0.00772,
+          "p95": 0.007981499999999999,
+          "min": 0.00744,
+          "max": 0.00817,
+          "sample_standard_deviation": 0.00015426449803352467,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0226791,
+          "p50": 0.022615000000000003,
+          "p95": 0.0235405,
+          "min": 0.02191,
+          "max": 0.02398,
+          "sample_standard_deviation": 0.00042693669248957674,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0003979,
+          "p50": 0.000395,
+          "p95": 0.00045049999999999995,
+          "min": 0.00032,
+          "max": 0.0005,
+          "sample_standard_deviation": 3.124665638678057e-05,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 0.12366,
+          "p50": 0.122885,
+          "p95": 0.130161,
+          "min": 0.12022,
+          "max": 0.13687,
+          "sample_standard_deviation": 0.002755736349559375,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 0.146737,
+          "p50": 0.14587,
+          "p95": 0.1534505,
+          "min": 0.14268,
+          "max": 0.1595,
+          "sample_standard_deviation": 0.0028592326087800396,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    },
+    {
+      "name": "controlled-length-4032",
+      "variant": "schema_tokens_cached_state_uncached",
+      "source": {
+        "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/controlled-length-4032.json",
+        "sha256": "85ff48a38a0e2b5081f7025c05c3e7beab3cfba8bcdd1c1cd6608ed463d5e638",
+        "encoding_evidence": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/workloads/encoding-evidence.json",
+        "encoding_evidence_sha256": "f97bd8008d49eb5792276ceefb0fa62cf9a9438107b01fdc4eb3b8d41371d436"
+      },
+      "actual_input_tokens": 3868,
+      "expected_encoding_sha256": "a3094e699036571ca0aee5eb25eeb4f6cde8af9aa199916fc598cfb853bfdfd0",
+      "field_count": 1,
+      "all_exact_encodings_match": true,
+      "timing_ms": {
+        "protocol_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0389499,
+          "p50": 0.037970000000000004,
+          "p95": 0.0425375,
+          "min": 0.03579,
+          "max": 0.07521,
+          "sample_standard_deviation": 0.004308121645347438,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "questions_parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0148815,
+          "p50": 0.01469,
+          "p95": 0.015801999999999997,
+          "min": 0.01368,
+          "max": 0.02938,
+          "sample_standard_deviation": 0.0015949632686312336,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "parse_ms": {
+          "sample_count": 100,
+          "mean": 0.0538314,
+          "p50": 0.052665000000000003,
+          "p95": 0.0588545,
+          "min": 0.05046,
+          "max": 0.10459,
+          "sample_standard_deviation": 0.005719522304698129,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "render_ms": {
+          "sample_count": 100,
+          "mean": 0.0008808,
+          "p50": 0.000845,
+          "p95": 0.0010105000000000001,
+          "min": 0.00064,
+          "max": 0.0033,
+          "sample_standard_deviation": 0.0002621576362851677,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "encode_ms": {
+          "sample_count": 100,
+          "mean": 7.2794879,
+          "p50": 7.22414,
+          "p95": 7.3301894999999995,
+          "min": 7.13586,
+          "max": 11.33993,
+          "sample_standard_deviation": 0.4232167471679545,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        },
+        "total_ms": {
+          "sample_count": 100,
+          "mean": 7.3342001,
+          "p50": 7.27932,
+          "p95": 7.385532,
+          "min": 7.18794,
+          "max": 11.39391,
+          "sample_standard_deviation": 0.42329066166109175,
+          "percentile_method": "linear interpolation at (n-1)*quantile"
+        }
+      }
+    }
+  ]
+}

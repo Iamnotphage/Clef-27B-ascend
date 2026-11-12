@@ -1,0 +1,1527 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-12T16:40:58.345887+00:00",
+  "source_script": {
+    "path": "/tmp/analyze_systemone_batching.py",
+    "sha256": "099a8215e97ca06846f5223796db09d61c6bc3c73d7c44a0c67cb40692617f33"
+  },
+  "run_root": "/workspace/yangchen/logs/profiling/20261112-223732-systemone",
+  "methods": {
+    "layers": 64,
+    "tokens_per_request": 307,
+    "MLP_up_selector": "M,5120;17408,5120",
+    "trace_batches": "Per-M call count / 64; B=M/307; sum(B*count) must equal profiled requests",
+    "formal_B1": "delta(le512)-delta(le256)",
+    "formal_B2_plus_B3": "delta(le1024)-delta(le512)",
+    "formal_B4": "delta(le2048)-delta(le1024)",
+    "formal_B3": "N-B1-2*(B2+B3)-4*B4",
+    "formal_B2": "(B2+B3)-B3",
+    "warmup": "Subtract actual sequential benchmark warmup count from B1",
+    "validation": "Counter creation; token sum; all buckets/count; nonnegative integers; sequence count; scheduler maximum",
+    "communication": "129 all_reduce per forward plus one lexical candidate all_reduce per request, checked against independent native traces",
+    "bytes": "SIO reported MB * 1024**2; duplicate SDMA aliases excluded; transit bytes differ from HBM weight bytes",
+    "population": "Formal unprofiled metrics and profiled trace windows are reported separately"
+  },
+  "formal_metric_windows": [
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-matrix",
+      "max_num_seqs": 1,
+      "concurrency": 2,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-2-metrics-before.txt",
+          "sha256": "4dfc41db07339c0d79d8346f7011efa9938c930bd49ddaa39b95c7fefd4d6838",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-2-metrics-after.txt",
+          "sha256": "12ac3b5b3e0c40ffcc78fafbc9f0254bafb2f0b2d268ab989254f205c1ffb161",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-2.json",
+          "sha256": "dd4ef7ac871dc359483af0ccd0451d5e99c6c0e904d0cad4a783ad3cdc64c52d"
+        }
+      ],
+      "requests_per_second": 8.212690056836289,
+      "latency_mean_ms": 241.4126621481652,
+      "latency_p50_ms": 243.01320500671864,
+      "latency_p95_ms": 249.04656573198736,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-matrix",
+      "max_num_seqs": 1,
+      "concurrency": 4,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-4-metrics-before.txt",
+          "sha256": "12ac3b5b3e0c40ffcc78fafbc9f0254bafb2f0b2d268ab989254f205c1ffb161",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-4-metrics-after.txt",
+          "sha256": "10e417e015ecf77fc753260675f3db1e458fb60b3db1ac9ae27c7ec840b9c672",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-matrix/concurrency-4.json",
+          "sha256": "55f5ed403960d4ac9c08e1541a39bfb73c5111a18728977e7a4b0b83a95d14ea"
+        }
+      ],
+      "requests_per_second": 8.343085310753239,
+      "latency_mean_ms": 467.12170282068354,
+      "latency_p50_ms": 478.4723948687315,
+      "latency_p95_ms": 485.00940492376685,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch2",
+      "max_num_seqs": 2,
+      "concurrency": 1,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-1-metrics-before.txt",
+          "sha256": "032ddf490daba046df07e0ab1961a3d08c72555754929bd2fa25f371f5434216",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-1-metrics-after.txt",
+          "sha256": "038392b52e7dc42d2e9cd41ed0c7afe8e94a79f86c4fb32ce940417ddd36abbf",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-1.json",
+          "sha256": "52449781d987a0e94eef72f11833d3c883c5d4e7f93a108b33a9a0adb3c15faf"
+        }
+      ],
+      "requests_per_second": 7.437243949906383,
+      "latency_mean_ms": 134.38704832612225,
+      "latency_p50_ms": 133.60983016900718,
+      "latency_p95_ms": 146.02314066141844,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch2",
+      "max_num_seqs": 2,
+      "concurrency": 2,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-2-metrics-before.txt",
+          "sha256": "879a49138a5e58aa35e4524e70aca9f1f45ad9403f48bbab201d1cf874e16eff",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-2-metrics-after.txt",
+          "sha256": "46ee19e06beda56a5bb13de8c9cde80d850a17feee8523df8a926987624ad705",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-2.json",
+          "sha256": "274209d7dc8f7758fd9376ac04883ff1467e5436dd0cce992734e05db84191a9"
+        }
+      ],
+      "requests_per_second": 7.493182393413441,
+      "latency_mean_ms": 264.7130279801786,
+      "latency_p50_ms": 262.90524983778596,
+      "latency_p95_ms": 288.59505793079734,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch2",
+      "max_num_seqs": 2,
+      "concurrency": 4,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 2,
+        "2": 29,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 31,
+      "collectives_per_request": 67.65,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-4-metrics-before.txt",
+          "sha256": "d866e1cc643f24b981b9278d4ee8d581f8921dfe74e431d181c7e60641f89df2",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-4-metrics-after.txt",
+          "sha256": "03208846ea77e7f365dcd72eba76a49023482d78ebe3b75cbfc8ba60dd3d839c",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/concurrency-4.json",
+          "sha256": "f0a4a5779fd299be3e3fc0a9f7917f83c7210843beed210bd0894db0dba844a7"
+        }
+      ],
+      "requests_per_second": 14.845047578758209,
+      "latency_mean_ms": 260.75012653600425,
+      "latency_p50_ms": 260.4901751037687,
+      "latency_p95_ms": 263.94885170739144,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 12.0,
+        "1024.0": 41.0,
+        "2048.0": 41.0,
+        "4096.0": 41.0,
+        "8192.0": 41.0,
+        "16384.0": 41.0,
+        "inf": 41.0,
+        "count": 41.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 12,
+        "2": 29,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 2,
+        "2": 29,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch4",
+      "max_num_seqs": 4,
+      "concurrency": 1,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-1-metrics-before.txt",
+          "sha256": "cedcc97bbadf81319eb7a0d25e692b0ce8d6ec5e92c7b0074beeec48e77ec7cd",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-1-metrics-after.txt",
+          "sha256": "0e5422304c6a4f1970addd9857d5ad47bb708842899377f28fc3eabfca73d234",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-1.json",
+          "sha256": "08913d7ea9de723dfa4703ebd620c0b8e0e637cbe6b20381c3a027e82dbc83f2"
+        }
+      ],
+      "requests_per_second": 7.441097730641219,
+      "latency_mean_ms": 134.32798699165383,
+      "latency_p50_ms": 135.2522848173976,
+      "latency_p95_ms": 147.64308261219412,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch4",
+      "max_num_seqs": 4,
+      "concurrency": 2,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "forward_count": 60,
+      "collectives_per_request": 130.0,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-2-metrics-before.txt",
+          "sha256": "6b3613f44d824ca332754cdaa395d1036ce8b9ae980a2d6c8c96d3bb4ad6a4f7",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-2-metrics-after.txt",
+          "sha256": "45990b876b8b238ad9c34a6cbecd69f945aacf9b2e4f3ab4040a16fb26671393",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-2.json",
+          "sha256": "5426c6d14949a0be66b075841bfebc56ebe46c60cb8036546908e6eb531c4912"
+        }
+      ],
+      "requests_per_second": 7.41708621024321,
+      "latency_mean_ms": 267.2141395121192,
+      "latency_p50_ms": 272.03885512426496,
+      "latency_p95_ms": 280.3910005139187,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 70.0,
+        "1024.0": 70.0,
+        "2048.0": 70.0,
+        "4096.0": 70.0,
+        "8192.0": 70.0,
+        "16384.0": 70.0,
+        "inf": 70.0,
+        "count": 70.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 70,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 60,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    },
+    {
+      "measurement_scope": "formal_unprofiled",
+      "configuration": "tp2-4096-batch4",
+      "max_num_seqs": 4,
+      "concurrency": 4,
+      "request_count": 60,
+      "warmup_count": 10,
+      "expected_token_sum_delta": 21490,
+      "batch_histogram": {
+        "1": 15,
+        "2": 0,
+        "3": 15,
+        "4": 0
+      },
+      "forward_count": 30,
+      "collectives_per_request": 65.5,
+      "collective_source": "derived 129*F+N; independently validated by profiled communication exports",
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-4-metrics-before.txt",
+          "sha256": "faf6c0d64a0953f2ff7b9639aa37cb8d8d43d535631fc14cd6f21bf019ac76bc",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-4-metrics-after.txt",
+          "sha256": "0f0668b159e617be805ffc7615e3cb379173679baf2d563af51376c865d153e5",
+          "line_numbers": {
+            "1.0": 219,
+            "8.0": 220,
+            "16.0": 221,
+            "32.0": 222,
+            "64.0": 223,
+            "128.0": 224,
+            "256.0": 225,
+            "512.0": 226,
+            "1024.0": 227,
+            "2048.0": 228,
+            "4096.0": 229,
+            "8192.0": 230,
+            "16384.0": 231,
+            "inf": 232,
+            "count": 233,
+            "sum": 234,
+            "created": 237
+          }
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/concurrency-4.json",
+          "sha256": "077f412b957b423179bc699b23de7b361d4e0b99ca836e15a34038827a63f708"
+        }
+      ],
+      "requests_per_second": 13.708467557975721,
+      "latency_mean_ms": 288.84402378462255,
+      "latency_p50_ms": 291.3427099119872,
+      "latency_p95_ms": 297.70525991916656,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef",
+      "passed": true,
+      "checks": {
+        "same_counter_creation": true,
+        "token_sum_delta": true,
+        "nonnegative_integer_batches": true,
+        "max_num_seqs_bound": true,
+        "all_buckets_match": true,
+        "count_matches": true,
+        "sequential_warmup_available": true,
+        "formal_request_sum": true,
+        "requests_valid_and_fixed307": true
+      },
+      "histogram_deltas": {
+        "1.0": 0.0,
+        "8.0": 0.0,
+        "16.0": 0.0,
+        "32.0": 0.0,
+        "64.0": 0.0,
+        "128.0": 0.0,
+        "256.0": 0.0,
+        "512.0": 25.0,
+        "1024.0": 40.0,
+        "2048.0": 40.0,
+        "4096.0": 40.0,
+        "8192.0": 40.0,
+        "16384.0": 40.0,
+        "inf": 40.0,
+        "count": 40.0,
+        "sum": 21490.0
+      },
+      "all_batch_histogram": {
+        "1": 25,
+        "2": 0,
+        "3": 15,
+        "4": 0
+      },
+      "formal_batch_histogram": {
+        "1": 15,
+        "2": 0,
+        "3": 15,
+        "4": 0
+      },
+      "reported_transit_bytes_per_request": 406456320.0,
+      "byte_source": "derived from invariant native message signature; total bytes per request remain constant"
+    }
+  ],
+  "profiled_trace_windows": [
+    {
+      "measurement_scope": "profiled_trace",
+      "configuration": "b1",
+      "max_num_seqs": 1,
+      "concurrency": 1,
+      "request_count": 5,
+      "warmup_count": 0,
+      "warmup_scope": "External controller warmup is recorded in the window manifest",
+      "ranks": [
+        {
+          "rank": 0,
+          "batch_histogram": {
+            "1": 5
+          },
+          "mlp_calls_by_M": {
+            "307": 320
+          },
+          "forward_count": 5,
+          "shape_examples": {
+            "307": {
+              "csv_row": 84,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 650,
+          "collectives_per_request": 130.0,
+          "collective_types": {
+            "hcom_allReduce": 650
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 645,
+            "921600": 5
+          },
+          "total_reported_transit_bytes": 2032281600,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/traces/rank0_86650_20261112144550231_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "1997f3d38d8532d78c263618c6c716c13798dc9f6941c1429bacfb9576bf123f"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/traces/rank0_86650_20261112144550231_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "8df1f1eaa6cd79364605a92b69f4912dfe780e4eafc784fcda46881a5003fd65"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        },
+        {
+          "rank": 1,
+          "batch_histogram": {
+            "1": 5
+          },
+          "mlp_calls_by_M": {
+            "307": 320
+          },
+          "forward_count": 5,
+          "shape_examples": {
+            "307": {
+              "csv_row": 79,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 650,
+          "collectives_per_request": 130.0,
+          "collective_types": {
+            "hcom_allReduce": 650
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 645,
+            "921600": 5
+          },
+          "total_reported_transit_bytes": 2032281600,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/traces/rank1_86651_20261112144550232_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "fa51f81069d40d4ab7fc7ae25a45ec67dcc970b1ce5c10ef6815534326e0958c"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/traces/rank1_86651_20261112144550232_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "11a3f68aa30ab8623c6f8c7af40705c66ceaec78f2803d016121ae1dfa5ada1b"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        }
+      ],
+      "ranks_agree": true,
+      "passed": true,
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/window-1/manifest.json",
+          "sha256": "4ad3e5ddd1783bb751cd9645ee866f2d3a211a37afba42b5215d03c649665a99"
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-1024-native/window-1/profile-requests.json",
+          "sha256": "b481362c77802a28d7c0dcd7d790c6d191819eba65a3d631dd6ec7ee9b09b253"
+        }
+      ],
+      "requests_per_second": 5.666258442817072,
+      "latency_mean_ms": 176.33272791281343,
+      "latency_p50_ms": 177.03414987772703,
+      "latency_p95_ms": 181.32195193320513,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef"
+    },
+    {
+      "measurement_scope": "profiled_trace",
+      "configuration": "max_seqs2",
+      "max_num_seqs": 2,
+      "concurrency": 4,
+      "request_count": 20,
+      "warmup_count": 0,
+      "warmup_scope": "External controller warmup is recorded in the window manifest",
+      "ranks": [
+        {
+          "rank": 0,
+          "batch_histogram": {
+            "1": 2,
+            "2": 9
+          },
+          "mlp_calls_by_M": {
+            "307": 128,
+            "614": 576
+          },
+          "forward_count": 11,
+          "shape_examples": {
+            "307": {
+              "csv_row": 80,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            },
+            "614": {
+              "csv_row": 2653,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"614,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 1439,
+          "collectives_per_request": 71.95,
+          "collective_types": {
+            "hcom_allReduce": 1439
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 258,
+            "921600": 20,
+            "6287360": 1161
+          },
+          "total_reported_transit_bytes": 8129126400,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/traces/rank0_111098_20261112162029450_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "d1891a3d4d0e6fcc2979edb966716fbef36244254f184a327060a16e0f4d292a"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/traces/rank0_111098_20261112162029450_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "e34479d68a6fcdbd6333c8721a4d966d6824c6b83c1075b3c2b5fe89856e37e6"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        },
+        {
+          "rank": 1,
+          "batch_histogram": {
+            "1": 2,
+            "2": 9
+          },
+          "mlp_calls_by_M": {
+            "307": 128,
+            "614": 576
+          },
+          "forward_count": 11,
+          "shape_examples": {
+            "307": {
+              "csv_row": 79,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            },
+            "614": {
+              "csv_row": 2652,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"614,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 1439,
+          "collectives_per_request": 71.95,
+          "collective_types": {
+            "hcom_allReduce": 1439
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 258,
+            "921600": 20,
+            "6287360": 1161
+          },
+          "total_reported_transit_bytes": 8129126400,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/traces/rank1_111099_20261112162029452_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "35d72bd73b213132d272240cdfe8bcf6f9a00f758e2e7144d234b0d09754f815"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/traces/rank1_111099_20261112162029452_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "9c4dcf100c016c89965fbe01b5b14f78b893d27ff63b85560b96cc64cd3bf4f6"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        }
+      ],
+      "ranks_agree": true,
+      "passed": true,
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/window-batch-c4/manifest.json",
+          "sha256": "5cffa3bd5d1bb33483753b6421c404fd151d87476b3eae67801038596794550e"
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch2/window-batch-c4/profile-requests.json",
+          "sha256": "5d09f0e6a0a14527c62bd2ed0aef26dcf12c3035707342e1057af68ee8563b45"
+        }
+      ],
+      "requests_per_second": 11.855827050093728,
+      "latency_mean_ms": 307.24664747249335,
+      "latency_p50_ms": 306.9189400412142,
+      "latency_p95_ms": 322.074077744037,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef"
+    },
+    {
+      "measurement_scope": "profiled_trace",
+      "configuration": "max_seqs4",
+      "max_num_seqs": 4,
+      "concurrency": 4,
+      "request_count": 20,
+      "warmup_count": 0,
+      "warmup_scope": "External controller warmup is recorded in the window manifest",
+      "ranks": [
+        {
+          "rank": 0,
+          "batch_histogram": {
+            "1": 5,
+            "3": 5
+          },
+          "mlp_calls_by_M": {
+            "307": 320,
+            "921": 320
+          },
+          "forward_count": 10,
+          "shape_examples": {
+            "307": {
+              "csv_row": 82,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            },
+            "921": {
+              "csv_row": 2663,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"921,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 1310,
+          "collectives_per_request": 65.5,
+          "collective_types": {
+            "hcom_allReduce": 1310
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 645,
+            "921600": 20,
+            "9431040": 645
+          },
+          "total_reported_transit_bytes": 8129126400,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/traces/rank0_113405_20261112162523766_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "e97a878e12d75eb57176c04e83669f5f0fe36e3701eb705394d83f05a58c8769"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/traces/rank0_113405_20261112162523766_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "3fcf6d3cdb75efa4c7ee9bb62b963f940b4ff83812dd8b6b01f82bb236cba38c"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        },
+        {
+          "rank": 1,
+          "batch_histogram": {
+            "1": 5,
+            "3": 5
+          },
+          "mlp_calls_by_M": {
+            "307": 320,
+            "921": 320
+          },
+          "forward_count": 10,
+          "shape_examples": {
+            "307": {
+              "csv_row": 79,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"307,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            },
+            "921": {
+              "csv_row": 2653,
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "shape": "\"921,5120;17408,5120\"",
+              "dtype": "DT_BF16;DT_BF16"
+            }
+          },
+          "collective_count": 1310,
+          "collectives_per_request": 65.5,
+          "collective_types": {
+            "hcom_allReduce": 1310
+          },
+          "reported_transit_bytes_histogram": {
+            "3143680": 645,
+            "921600": 20,
+            "9431040": 645
+          },
+          "total_reported_transit_bytes": 8129126400,
+          "reported_transit_bytes_per_request": 406456320.0,
+          "checks": {
+            "shape_counts_integral": true,
+            "request_sum": true,
+            "max_num_seqs_bound": true,
+            "communication_formula_129F_plus_N": true
+          },
+          "passed": true,
+          "sources": [
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/traces/rank1_113406_20261112162523767_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "sha256": "1aa7fb14023b4a224b19904315bae075fc06bed856aa182f2c05ed9c5ea49cf7"
+            },
+            {
+              "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/traces/rank1_113406_20261112162523767_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+              "sha256": "13fa8d967c79daf6b7672b1619e0e01263aa557697328570b41c52217deac876"
+            }
+          ],
+          "communication_examples": [
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_0_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_1_1@5862276106100383503"
+              ]
+            },
+            {
+              "json_path": [
+                "step",
+                "collective",
+                "hcom_allReduce__503_2_1@5862276106100383503"
+              ]
+            }
+          ]
+        }
+      ],
+      "ranks_agree": true,
+      "passed": true,
+      "sources": [
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/window-batch-c4/manifest.json",
+          "sha256": "f83a8d743036005a7cfd339bb247c47813aee02fffb17bc3e02d375ab1c4c3d9"
+        },
+        {
+          "path": "/workspace/yangchen/logs/profiling/20261112-223732-systemone/tp2-4096-batch4/window-batch-c4/profile-requests.json",
+          "sha256": "5d0d3a60d8f6fc1ef734a2d1607a050c083a8576f9265246fed2b893bee707fa"
+        }
+      ],
+      "requests_per_second": 11.691403739380805,
+      "latency_mean_ms": 333.20005394052714,
+      "latency_p50_ms": 345.3127648681402,
+      "latency_p95_ms": 365.4831873718649,
+      "request_template_sha256": "ab2724637a36029759ea673964b59f0c30fc2e27af4b7d7fa3bdcd784de33aef"
+    }
+  ],
+  "unavailable": [
+    {
+      "configuration": "tp2-4096-matrix",
+      "concurrency": 1,
+      "reason": "No complete before/after/benchmark triple"
+    }
+  ],
+  "cross_checks": {
+    "same_transit_bytes_per_request_in_native_traces": true,
+    "same_request_body": true
+  },
+  "passed": true
+}
