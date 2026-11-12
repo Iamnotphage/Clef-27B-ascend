@@ -21,6 +21,7 @@
 | [新机器执行计划](new-machine-plan.md) | 当前目标机器、实测环境、环境检查命令与后续安装顺序 |
 | [实际安装与验收](installation-2026-11-12.md) | Python 与 wheel 哈希、真实版本、双卡误差、依赖补丁、复现命令与构建日志 |
 | [实测 baseline](baseline-2026-11-12.md) | 完整加载、TP1/TP2 精度性能、完整公开评测、HCCL 和多模态证据 |
+| [端到端 profiling](profiling-2026-11-12.md) | 采集与解析工具、统计范围、复现入口和本轮连接/实测状态 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
 | [上游与 NPU 适配](upstream-npu-baseline.md) | 固定提交、版本组合、模型语义、启动候选命令、三类请求与 A3/TP2 风险 |
 | [比赛与数据集](competition-and-datasets.md) | 比赛交付要求、评分已知项、服务器现有数据、决策数据源与评测接入 |

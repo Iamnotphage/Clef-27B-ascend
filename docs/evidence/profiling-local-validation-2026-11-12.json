@@ -1,0 +1,292 @@
+{
+  "created_at": "2026-11-12T14:25:00.937603+00:00",
+  "scope": "local standard-library HTTP integration, failure injection and synthetic trace/summary tests; no NPU model execution",
+  "hardware_executed": false,
+  "python": "3.12.7 (main, Oct  1 2024, 02:05:46) [Clang 15.0.0 (clang-1500.3.9.4)]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "source_head_at_validation": "c31623f8ea9446e670b5e3287ee7823207d8f07a",
+  "checks": [
+    {
+      "argv": [
+        "/opt/homebrew/opt/python@3.12/bin/python3.12",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts",
+        "-p",
+        "test_*.py",
+        "-v"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": "test_duplicate_rank_metadata_fails_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_duplicate_rank_metadata_fails_strict) ... ok\ntest_empty_raw_directories_fail_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_empty_raw_directories_fail_strict) ... ok\ntest_inclusive_cpu_observation_overlap_and_request_index (test_analyze_systemone_profile.SyntheticProfileTests.test_inclusive_cpu_observation_overlap_and_request_index) ... ok\ntest_interval_union_and_overlap (test_analyze_systemone_profile.SyntheticProfileTests.test_interval_union_and_overlap) ... ok\ntest_missing_one_rank_timeline_fails_strict (test_analyze_systemone_profile.SyntheticProfileTests.test_missing_one_rank_timeline_fails_strict) ... ok\ntest_trace_dir_selects_one_window (test_analyze_systemone_profile.SyntheticProfileTests.test_trace_dir_selects_one_window) ... ok\ntest_two_rank_evidence_and_no_double_counting (test_analyze_systemone_profile.SyntheticProfileTests.test_two_rank_evidence_and_no_double_counting) ... ok\ntest_cli_round_robin_minimum_window_and_stage_timing (test_benchmark_systemone.BenchmarkTests.test_cli_round_robin_minimum_window_and_stage_timing) ... ok\ntest_default_request_bytes_and_percentiles (test_benchmark_systemone.BenchmarkTests.test_default_request_bytes_and_percentiles) ... ok\ntest_http_failure_has_timing_and_is_excluded_from_throughput (test_benchmark_systemone.BenchmarkTests.test_http_failure_has_timing_and_is_excluded_from_throughput) ... ok\ntest_sample_file_rejects_empty_and_preserves_order (test_benchmark_systemone.BenchmarkTests.test_sample_file_rejects_empty_and_preserves_order) ... ok\ntest_apply_restore_and_concurrent_edit_guard (test_profile_instrumentation.InstrumentationTests.test_apply_restore_and_concurrent_edit_guard) ... ok\ntest_different_source_head_rejected (test_profile_instrumentation.InstrumentationTests.test_different_source_head_rejected) ... ok\ntest_disabled_returns_original (test_profile_instrumentation.InstrumentationTests.test_disabled_returns_original) ... ok\ntest_exception_preserved_and_context_reset (test_profile_instrumentation.InstrumentationTests.test_exception_preserved_and_context_reset) ... ok\ntest_header_bound_method_async_context_and_explicit_ids (test_profile_instrumentation.InstrumentationTests.test_header_bound_method_async_context_and_explicit_ids) ... ok\ntest_rank_uses_initialized_group_without_initialization (test_profile_instrumentation.InstrumentationTests.test_rank_uses_initialized_group_without_initialization) ... ok\ntest_failed_health_skips_profiler (test_profile_systemone.ProfileControlTests.test_failed_health_skips_profiler) ... ok\ntest_http_success_requires_raw_rank_traces (test_profile_systemone.ProfileControlTests.test_http_success_requires_raw_rank_traces) ... ok\ntest_snapshot_filters_credentials (test_profile_systemone.ProfileControlTests.test_snapshot_filters_credentials) ... ok\ntest_stop_after_failed_start (test_profile_systemone.ProfileControlTests.test_stop_after_failed_start) ... ok\ntest_stop_after_request_interruption (test_profile_systemone.ProfileControlTests.test_stop_after_request_interruption) ... ok\ntest_cli_outputs_csv_and_cannot_self_verify_hardware (test_summarize_systemone_benchmarks.SummaryTests.test_cli_outputs_csv_and_cannot_self_verify_hardware) ... ok\ntest_duplicate_files_and_run_ids_are_rejected (test_summarize_systemone_benchmarks.SummaryTests.test_duplicate_files_and_run_ids_are_rejected) ... ok\ntest_legacy_intervals_and_changed_inputs_are_rejected (test_summarize_systemone_benchmarks.SummaryTests.test_legacy_intervals_and_changed_inputs_are_rejected) ... ok\ntest_recomputes_rates_hashes_and_pooled_percentiles (test_summarize_systemone_benchmarks.SummaryTests.test_recomputes_rates_hashes_and_pooled_percentiles) ... ok\ntest_synthetic_and_historical_short_windows_are_ineligible (test_summarize_systemone_benchmarks.SummaryTests.test_synthetic_and_historical_short_windows_are_ineligible) ... ok\n\n----------------------------------------------------------------------\nRan 27 tests in 1.291s\n\nOK\n"
+    },
+    {
+      "kind": "dry-run against local fixed source material",
+      "argv": [
+        "/opt/homebrew/opt/python@3.12/bin/python3.12",
+        "scripts/profile_instrumentation.py",
+        "--vllm-root",
+        "/tmp/clef-setup-20261112/vllm",
+        "--ascend-root",
+        "/tmp/clef-setup-20261112/vllm-ascend",
+        "--output-dir",
+        "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef-profiling-local-dryrun-gouvoqta/patches"
+      ],
+      "returncode": 0,
+      "stdout": "{\"applied\": false, \"files\": 10, \"manifest\": \"/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef-profiling-local-dryrun-gouvoqta/patches/instrumentation-manifest.json\"}\n",
+      "stderr": "",
+      "source_mutated": false,
+      "generated_manifest": {
+        "created_at": "2026-11-12T14:25:02.542823+00:00",
+        "applied": false,
+        "roots": {
+          "vllm": "/private/tmp/clef-setup-20261112/vllm",
+          "ascend": "/private/tmp/clef-setup-20261112/vllm-ascend"
+        },
+        "scope": "CPU inclusive wall/enqueue scopes; device time requires trace linkage",
+        "synchronization_inserted": false,
+        "observation_overhead": "Inclusive parent scopes contain child logger overhead. Each own logger write is outside that scope's interval. Formal throughput must disable both observation environment variables.",
+        "profiler_forwarded": [
+          "record_shapes",
+          "with_flops"
+        ],
+        "schedule_forwarded": false,
+        "encoding_audit_boundary": "Source SHA audit requires restoring observation patches; saved encoding evidence can be used during numerical comparison.",
+        "marker_coverage": {
+          "status": "static_targets_prepared_pending_runtime_trace_acceptance",
+          "acceptance": "Check each expected marker in actual worker trace; Ascend runtime class overrides can replace source methods.",
+          "targets": [
+            {
+              "file": "vllm/model_executor/models/clef_joint_schema.py",
+              "class": "JointSchemaPooler",
+              "function": "forward",
+              "marker": "clef::joint_pooler"
+            },
+            {
+              "file": "vllm/model_executor/models/clef_joint_schema.py",
+              "class": "JointSchemaPooler",
+              "function": "_indices",
+              "marker": "clef::schema_indices_h2d"
+            },
+            {
+              "file": "vllm/model_executor/models/clef_joint_schema.py",
+              "class": "JointSchemaHead",
+              "function": "forward",
+              "marker": "clef::joint_head"
+            },
+            {
+              "file": "vllm/model_executor/models/clef_joint_schema.py",
+              "class": "EvidenceRoutingLayer",
+              "function": "forward",
+              "marker": "clef::joint_evidence_routing"
+            },
+            {
+              "file": "vllm/model_executor/models/clef_flash.py",
+              "class": "ClefFlashForJointSchema",
+              "function": "_embed_lexical",
+              "marker": "clef::candidate_embedding_tp"
+            },
+            {
+              "file": "vllm/model_executor/models/qwen3_5.py",
+              "class": "Qwen3_5ForConditionalGeneration",
+              "function": "forward",
+              "marker": "clef::backbone"
+            },
+            {
+              "file": "vllm/model_executor/models/qwen3_next.py",
+              "class": "Qwen3NextDecoderLayer",
+              "function": "forward",
+              "marker": "clef::backbone_decoder_layer"
+            },
+            {
+              "file": "vllm/model_executor/models/qwen3_next.py",
+              "class": "Qwen3NextModel",
+              "function": "forward",
+              "marker": "clef::language_backbone"
+            },
+            {
+              "file": "vllm/entrypoints/generate/structured_decisions/serving.py",
+              "class": null,
+              "function": "parse_questions",
+              "marker": "clef::request_schema_parse"
+            },
+            {
+              "file": "vllm/entrypoints/generate/structured_decisions/serving.py",
+              "class": "ServingStructuredDecisions",
+              "function": "create_decision",
+              "marker": "clef::frontend_request"
+            },
+            {
+              "file": "vllm/entrypoints/generate/structured_decisions/api_router.py",
+              "class": null,
+              "function": "create_structured_decision",
+              "marker": "clef::api_handler_including_json"
+            },
+            {
+              "file": "vllm/entrypoints/openai/decisions/strategies.py",
+              "class": "JointSchemaStrategy",
+              "function": "render_state",
+              "marker": "clef::state_render"
+            },
+            {
+              "file": "vllm/entrypoints/openai/decisions/strategies.py",
+              "class": "JointSchemaStrategy",
+              "function": "_tokens",
+              "marker": "clef::tokenizer"
+            },
+            {
+              "file": "vllm/entrypoints/openai/decisions/strategies.py",
+              "class": "JointSchemaStrategy",
+              "function": "encode",
+              "marker": "clef::schema_tokenize_encode"
+            },
+            {
+              "file": "vllm/entrypoints/openai/decisions/strategies.py",
+              "class": "JointSchemaStrategy",
+              "function": "read",
+              "marker": "clef::frontend_read_including_engine"
+            },
+            {
+              "file": "vllm/entrypoints/openai/decisions/strategies.py",
+              "class": "ClefFlashStrategy",
+              "function": "_render_media",
+              "marker": "clef::media_decode_process"
+            },
+            {
+              "file": "vllm/v1/core/sched/scheduler.py",
+              "class": "Scheduler",
+              "function": "schedule",
+              "marker": "clef::scheduler"
+            },
+            {
+              "file": "vllm/v1/core/sched/scheduler.py",
+              "class": "Scheduler",
+              "function": "add_request",
+              "marker": "clef::scheduler_add_request"
+            }
+          ],
+          "rank_mapping": "Prefer RANK env, then an already initialized torch.distributed rank; null requires PID-to-worker metadata mapping."
+        },
+        "files": [
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/profiler/clef_observe.py",
+            "relative": "vllm/profiler/clef_observe.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/profiler/clef_observe.py",
+            "existed": false,
+            "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "after_sha256": "63b5bdd3a0d65dceb707b9c3e6ac6c3a7d0b9b9da8cf1b6bcbab961c90b209e6"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/model_executor/models/clef_joint_schema.py",
+            "relative": "vllm/model_executor/models/clef_joint_schema.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/model_executor/models/clef_joint_schema.py",
+            "existed": true,
+            "before_sha256": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+            "after_sha256": "e40dbb51fe805980904c631c623c2ebce00834c3732cd0dca7798b1794f58f57"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/model_executor/models/clef_flash.py",
+            "relative": "vllm/model_executor/models/clef_flash.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/model_executor/models/clef_flash.py",
+            "existed": true,
+            "before_sha256": "e51277a80e5e6790cd3d4ecb27e1f2a85c4f328425a8262f799a0fc43b1103d9",
+            "after_sha256": "753cd4b61b6582183c7107177c18221ea185ea2928ff7fc56c6d9a92008d2e43"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/model_executor/models/qwen3_5.py",
+            "relative": "vllm/model_executor/models/qwen3_5.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/model_executor/models/qwen3_5.py",
+            "existed": true,
+            "before_sha256": "f9f370f7b4988bd917c1dad4a4d6939e74c5fe4f5b7cea9cedfcf4c2a5637afe",
+            "after_sha256": "d891ec28921f91119d8e45e0bf6ce22df74626bd4549422cb5b4848b19856ec2"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/model_executor/models/qwen3_next.py",
+            "relative": "vllm/model_executor/models/qwen3_next.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/model_executor/models/qwen3_next.py",
+            "existed": true,
+            "before_sha256": "6439d8ed22f5c256baddc8074a20634c7cecf7a68b20c958201ec8a0346b8a60",
+            "after_sha256": "9c7bf3c2db767e77e6cbad714fa2d42a4511f1854509e83a7da8165e17f52a92"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/entrypoints/generate/structured_decisions/serving.py",
+            "relative": "vllm/entrypoints/generate/structured_decisions/serving.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/entrypoints/generate/structured_decisions/serving.py",
+            "existed": true,
+            "before_sha256": "5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a",
+            "after_sha256": "2d4e6422dc008360f76e685cd8ab30a094925f88212c421c85bb73cd86f8da24"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py",
+            "relative": "vllm/entrypoints/generate/structured_decisions/api_router.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py",
+            "existed": true,
+            "before_sha256": "b773cbe561277f376fcc69a68ed6d47dab3c15468ca1ab189e3bd338022460b7",
+            "after_sha256": "97bd72755103bd6af6854e1e249cf91e00ee4bde91c87168e812c8ad857ff654"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+            "relative": "vllm/entrypoints/openai/decisions/strategies.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+            "existed": true,
+            "before_sha256": "d7e25f1d879cd0dc2d8e38629805a66018a9c63e364572d6cbfee6a9fedd97bb",
+            "after_sha256": "038d534d7f55c49394cf6943ebee80f9703e0c1a53b7a56edee3734f5f4711f4"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm/vllm/v1/core/sched/scheduler.py",
+            "relative": "vllm/v1/core/sched/scheduler.py",
+            "root": "vllm",
+            "backup": "source-before/vllm/vllm/v1/core/sched/scheduler.py",
+            "existed": true,
+            "before_sha256": "18199b804ce496d889852395a2b5e2e2acd776571cfcd0e15a7a611cd34e1c2a",
+            "after_sha256": "c428108aa504c4a18e7da607721dda540ef96b7147539ccee569953d6d895507"
+          },
+          {
+            "path": "/private/tmp/clef-setup-20261112/vllm-ascend/vllm_ascend/profiler/torch_npu_profiler.py",
+            "relative": "vllm_ascend/profiler/torch_npu_profiler.py",
+            "root": "ascend",
+            "backup": "source-before/ascend/vllm_ascend/profiler/torch_npu_profiler.py",
+            "existed": true,
+            "before_sha256": "5242ee153033afcf12dbfe022dbd807fa248d991ff5c53efbd1adb372d5575f4",
+            "after_sha256": "7894ea54b50376aef08628687274a76caee5cf728878c80c5f7caebd20bab71f"
+          }
+        ]
+      }
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "source_sha256": {
+    "scripts/analyze_systemone_profile.py": "5b92747887422d34eddb9f9663abef856be40fe3d28540332fe356a3dda74696",
+    "scripts/benchmark_systemone.py": "572a805fbb41949bd71ad3e13a81b620238a1fbb0a81171c0ed3c71828945433",
+    "scripts/profile_instrumentation.py": "bcab9966a83ef04907840288a448d446e33b64ed50b1f278fb11833c494ec489",
+    "scripts/profile_systemone.py": "5e4763c4177a8ad115a1f5c2a7b28bca468eae51c7f5a578d3aebd053e015469",
+    "scripts/snapshot_systemone_profile.py": "1c36692f57a1e0ff745779e072440e362cf91f380f0a54042182ab73e43656ce",
+    "scripts/summarize_systemone_benchmarks.py": "d8fbd46d006f644b21346b90e1278eedb3a4389cf049c8a883223f4ebd4eeeb4",
+    "scripts/test_analyze_systemone_profile.py": "ef10cbffd67e17cec78c50c880decf96eaa24e0ef114f02800db59058e92012d",
+    "scripts/test_benchmark_systemone.py": "bbb31277cec6270f21aed067f6bd704f76336eca7a9c618691ccd2801bcc7e7a",
+    "scripts/test_profile_instrumentation.py": "11b272ce36b8720d590c2d8e6d4f8eaa4020b11f0ebc1db72a342619707740c4",
+    "scripts/test_profile_systemone.py": "9ffc762c70ce9bea2979ce81be3c818709fc214b37763d9c4f2f940cad376112",
+    "scripts/test_summarize_systemone_benchmarks.py": "88e48aa2fffdb2f8e9fe57ff420bb6a03e06d5dcdcbea4ed9880c1867dd73d0d"
+  },
+  "passed": true,
+  "finished_at": "2026-11-12T14:25:02.570033+00:00"
+}

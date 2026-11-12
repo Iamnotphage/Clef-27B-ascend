@@ -1,0 +1,40 @@
+{
+  "created_at": "2026-11-12T14:19:06.197251+00:00",
+  "stage": "local_preparation",
+  "source_head": "869a44292b72325dcb95f8af449cf252d35cd943",
+  "source_worktree_initially_clean": true,
+  "request_sha256": "80153cf2bc4e6830c4d19c0a529e027d229098abcbb03f073da61e01a3690045",
+  "target": "root@199.88.54.221",
+  "jump_host": "113.47.8.48:2234",
+  "remote_actions_performed": false,
+  "service_modified": false,
+  "remote_run_directory_created": false,
+  "hardware_profile_executed": false,
+  "benchmark_executed_on_target": false,
+  "status": "waiting_for_current_jump_credentials",
+  "checks": [
+    {
+      "argv": [
+        "ssh",
+        "-S",
+        "/tmp/clef-target-environment-20261112.sock",
+        "-o",
+        "BatchMode=yes",
+        "-O",
+        "check",
+        "root@199.88.54.221"
+      ],
+      "returncode": 255,
+      "stdout": "",
+      "stderr": "Control socket connect(/tmp/clef-target-environment-20261112.sock): Connection refused\n"
+    },
+    {
+      "kind": "direct_tcp",
+      "host": "199.88.54.221",
+      "port": 22,
+      "timeout_seconds": 5,
+      "passed": false,
+      "error": "TimeoutError: timed out"
+    }
+  ]
+}
