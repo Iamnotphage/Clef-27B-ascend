@@ -6,7 +6,7 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 主评测统一采用 Cloudflare 发布成绩所用的 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**。BFCL、API-Bank 等为 Decision Index 的子项，WorkflowEvals 覆盖四个业务工作流。两套主评测当前待接入与运行，完成状态以实际运行与评分证据为准。[统一评测口径](docs/evaluation-protocol.md)
 
-2026-11-13 11:29（北京时间）通过 SSH 检查目标服务器：两套评测数据均处于待下载状态。检查覆盖 `/workspace/yangchen` 下的数据、缓存与构建目录，以及 `/workspace/shared_assets/datasets`；匹配到的 BFCL 等文件为现有推理和评测框架的代码、文档。后续按套件固定版本下载或重建数据，并保存样本清单与校验结果。
+2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录；模型评测待执行。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
 
 ## 模型与工作区
 
