@@ -15,16 +15,16 @@
 
 ## 当前机器与工作目录
 
-| 项目 | 当前值 |
-| --- | --- |
-| SSH 目标 | `root@199.88.54.221` |
-| 跳板 | `113.47.8.48:2234`，使用平台即时发放的跳板账号及令牌 |
-| 远端工程 | `/workspace/yangchen/Clef-27B-ascend` |
-| 模型目录 | `/workspace/yangchen/models/Clef-27B` |
-| 日志目录 | `/workspace/yangchen/logs` |
-| 下载及构建中间文件 | `/workspace/yangchen/work` |
-| 计划 Python 环境 | `/workspace/yangchen/venvs/clef-py312` |
-| 共享数据 | `/workspace/shared_assets/datasets`，按平台说明只读使用 |
+| 项目               | 当前值                                                  |
+| ------------------ | ------------------------------------------------------- |
+| SSH 目标           | `root@199.88.54.221`                                    |
+| 跳板               | `113.47.8.48:2234`，使用平台即时发放的跳板账号及令牌    |
+| 远端工程           | `/workspace/yangchen/Clef-27B-ascend`                   |
+| 模型目录           | `/workspace/yangchen/models/Clef-27B`                   |
+| 日志目录           | `/workspace/yangchen/logs`                              |
+| 下载及构建中间文件 | `/workspace/yangchen/work`                              |
+| 计划 Python 环境   | `/workspace/yangchen/venvs/clef-py312`                  |
+| 共享数据           | `/workspace/shared_assets/datasets`，按平台说明只读使用 |
 
 SSH 模板如下。凭据通过当前会话或平台提供，仓库保存脱敏连接信息。
 
@@ -36,19 +36,19 @@ ssh -J '<跳板账号>:<临时令牌>@113.47.8.48:2234' root@199.88.54.221
 
 ## 固定的软件组合
 
-| 组件 | 目标 |
-| --- | --- |
-| CANN Toolkit / A3 Ops / NNAL ATB | 9.2.1，新机器已经安装 |
-| Python | 独立 CPython 3.12 环境，安装时记录补丁版本 |
-| torch | `2.10.0+cpu` |
-| torch_npu | `2.10.0.post7` |
-| torchvision / torchaudio | `0.25.0` / `2.10.0`，采用对应 CPU 构建 |
-| Transformers | `5.19.0` |
-| Triton Ascend | `3.6.0.post2` |
-| FLA NPU A3 | `flash-linear-attention-npu-a3==26.9.1` |
-| flash_attn_npu | `0.5.0` |
-| vLLM | `24420b7a341af37a9bc3186e6fc6062512e0aa58` |
-| vLLM-Ascend | `89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d` |
+| 组件                             | 目标                                       |
+| -------------------------------- | ------------------------------------------ |
+| CANN Toolkit / A3 Ops / NNAL ATB | 9.2.1，新机器已经安装                      |
+| Python                           | 独立 CPython 3.12 环境，安装时记录补丁版本 |
+| torch                            | `2.10.0+cpu`                               |
+| torch_npu                        | `2.10.0.post7`                             |
+| torchvision / torchaudio         | `0.25.0` / `2.10.0`，采用对应 CPU 构建     |
+| Transformers                     | `5.19.0`                                   |
+| Triton Ascend                    | `3.6.0.post2`                              |
+| FLA NPU A3                       | `flash-linear-attention-npu-a3==26.9.1`    |
+| flash_attn_npu                   | `0.5.0`                                    |
+| vLLM                             | `24420b7a341af37a9bc3186e6fc6062512e0aa58` |
+| vLLM-Ascend                      | `89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d` |
 
 构建前加载所选 CANN 与 ATB 的环境脚本，安装 CMake 至少 3.26.1、Ninja 及官方 A3 配方要求的编译依赖。按固定源码的 `empty` 构建流程安装 vLLM，随后构建 Ascend 插件与 A3 扩展。运行依赖由 constraints 固定，构建隔离环境的依赖单独记录。验收包含 `pip check`、实际版本、加载路径和 NPU 运算结果。
 
@@ -61,6 +61,27 @@ ssh -J '<跳板账号>:<临时令牌>@113.47.8.48:2234' root@199.88.54.221
 - 首轮配置为 BF16、TP1、eager、max model len 1024、batch 1、纯文本，关闭 prefix caching 和 chunked prefill。
 - 服务模型名统一为 `clef`。请求中的 `joint` 采用默认值，三种决策由模型联合决策头计算。
 - 在相同输入上检查 `choice`、`noul`、`score`、候选概率、多字段和 token/span 对齐，再扩展 TP2 与多模态。
+
+相关参数:
+
+```text
+作品目录包含 start.sh 和 inference.py。start.sh 是统一启动入口，评测统一调用：
+bash start.sh --model-dir xxx --output-dir xxx
+
+start.sh脚本需要支持--model-dir和--output-dir的参数接收
+
+--model-dir 可传入自定义相对路径或绝对路径；评测平台提供的模型目录。start.sh 调用 inference.py，由作品完成模型准备、加载、补丁初始化和服务启动；
+
+默认监听 http://127.0.0.1:18143
+
+接口	功能与返回要求
+GET /health	就绪检查，返回status=ready、model、revision
+GET /v1/decide/info	返回模型身份、任务能力、协议版本及缓存配置
+POST /v1/systemone	正式评测接口，接收题目并返回决策和完整概率
+POST /v1/decide	当前 Demo 的原生交互接口，case体验入口 
+
+后续会进一步完善相关规则
+```
 
 ## 数据、验证与记录
 
