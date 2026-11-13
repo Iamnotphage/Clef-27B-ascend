@@ -87,7 +87,7 @@ POST /v1/decide	当前 Demo 的原生交互接口，case体验入口
 
 - 转换数据与缓存放在 `/workspace/yangchen` 下，保留共享数据来源、revision、split、模板和哈希。
 - 2026-11-13 用户确定主评测统一采用 Cloudflare 已发表结果对应的 Decision Index 0.2.1 与 Typesafe WorkflowEvals 四工作流。BFCL、API-Bank 等按 Decision Index 子项报告；各套件保留原生评分与聚合，执行要求见 `docs/evaluation-protocol.md`。
-- JevBench / OpenDecisions / Typed Decisions 的既有结果作为工程回归记录保留；主评测完成以两套新评测的实际运行与评分证据为准。正式比赛指标使用主办方指定协议。
+- 早期探索评测结果仅作历史归档。当前说明、计划及汇报统一使用 Decision Index 0.2.1 与 Typesafe WorkflowEvals；主评测完成以这两套评测的实际运行与评分证据为准。正式比赛指标使用主办方指定协议。
 - 下载完成以逐文件 SHA-256 校验报告为准。依赖完成以版本与 NPU smoke 日志为准。完整 baseline 以服务、精度和性能记录为准。
 - 新机器的当前状态与后续执行计划见 `docs/new-machine-plan.md`，旧机器记录在文档中保留采集时间和来源。
 - 修改任务涉及的代码和文档，保留用户已有修改。提交前检查文档链接、命令语法以及本次实际执行产生的结果。
