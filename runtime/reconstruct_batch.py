@@ -86,9 +86,19 @@ def batch_regions(b):
 
 solutions = []
 max_b = args.max_batch
+search_nodes = 0
+SEARCH_NODE_BUDGET = 5_000_000
+
+
+class SearchBudgetExceeded(Exception):
+    pass
 
 
 def search(b, iters_left, tokens_left, acc):
+    global search_nodes
+    search_nodes += 1
+    if search_nodes > SEARCH_NODE_BUDGET:
+        raise SearchBudgetExceeded()
     if b > max_b:
         if iters_left == 0 and tokens_left == 0:
             solutions.append(dict(acc))
@@ -112,7 +122,11 @@ def search(b, iters_left, tokens_left, acc):
             acc.pop(b, None)
 
 
-search(1, formal_iters, formal_tokens, {})
+budget_exceeded = False
+try:
+    search(1, formal_iters, formal_tokens, {})
+except SearchBudgetExceeded:
+    budget_exceeded = True
 
 
 def bucket_error(sol):
@@ -144,6 +158,10 @@ if solutions:
     result["alternative_solutions"] = len(solutions) - 1
 else:
     result["batch_solution"] = None
-    result["note"] = "no integer combination matched iterations and tokens exactly"
+    if budget_exceeded:
+        result["note"] = ("search node budget exceeded without an exact solution; "
+                          "metrics deltas are likely inconsistent with the warmup/token model")
+    else:
+        result["note"] = "no integer combination matched iterations and tokens exactly"
 json.dump(result, open(args.output, "w"), indent=1)
 print(json.dumps(result, indent=1))

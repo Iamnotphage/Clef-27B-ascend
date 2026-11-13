@@ -1,9 +1,11 @@
 """Launch the pinned vLLM-Ascend structured-decisions service."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 
@@ -34,6 +36,69 @@ def model_files(model_dir):
     return sorted(names)
 
 
+ENV_WHITELIST_PREFIXES = ("CLEF_", "ASCEND_", "ATB_", "HCCL_")
+ENV_WHITELIST_KEYS = (
+    "PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONUNBUFFERED", "VIRTUAL_ENV",
+    "OMP_NUM_THREADS", "TASK_QUEUE_ENABLE", "MODEL_DIR", "HF_HOME",
+    "TORCH_HOME", "TRITON_CACHE_DIR", "XDG_CACHE_HOME",
+)
+
+
+def software_provenance():
+    """Best-effort source-tree identity of the pinned vLLM / vLLM-Ascend."""
+    import importlib.util
+    provenance = {}
+    for name in ("vllm", "vllm_ascend"):
+        entry = {"origin": "unavailable"}
+        try:
+            spec = importlib.util.find_spec(name)
+            if spec and spec.submodule_search_locations:
+                pkg_dir = Path(list(spec.submodule_search_locations)[0])
+                entry["package_dir"] = str(pkg_dir)
+                try:
+                    head = subprocess.run(
+                        ["git", "-C", str(pkg_dir.parent), "rev-parse", "HEAD"],
+                        capture_output=True, text=True, timeout=10)
+                    dirty = subprocess.run(
+                        ["git", "-C", str(pkg_dir.parent), "status", "--porcelain"],
+                        capture_output=True, text=True, timeout=10)
+                    if head.returncode == 0:
+                        entry["git_head"] = head.stdout.strip()
+                        entry["worktree_dirty"] = bool(dirty.stdout.strip())
+                        entry["dirty_files"] = len(dirty.stdout.splitlines())
+                except OSError:
+                    pass
+                if name == "vllm":
+                    strategies = pkg_dir / "entrypoints" / "openai" / "decisions" / "strategies.py"
+                    if strategies.is_file():
+                        entry["strategies_sha256"] = hashlib.sha256(strategies.read_bytes()).hexdigest()
+        except (ImportError, AttributeError, OSError) as exc:
+            entry["error"] = repr(exc)
+        provenance[name] = entry
+    return provenance
+
+
+def effective_environment():
+    env = {}
+    for key in sorted(os.environ):
+        if key in ENV_WHITELIST_KEYS or key.startswith(ENV_WHITELIST_PREFIXES):
+            env[key] = os.environ[key]
+    return env
+
+
+def parse_limit_mm(value):
+    try:
+        spec = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON 解析失败：{exc}") from exc
+    if not isinstance(spec, dict) or set(spec) != {"image", "video"}:
+        raise ValueError("应形如 {\"image\":<int>,\"video\":<int>} 且只含这两个键")
+    for key in ("image", "video"):
+        if not isinstance(spec[key], int) or isinstance(spec[key], bool) or spec[key] < 0:
+            raise ValueError(f"{key} 应为非负整数")
+    return spec
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="启动 Clef-27B 的 vLLM-Ascend /v1/systemone 服务。",
@@ -52,6 +117,10 @@ def main():
     parser.add_argument(
         "--max-num-batched-tokens", type=int, default=None,
         help="每批调度的 token 上限；省略时与 --max-model-len 保持一致。",
+    )
+    parser.add_argument(
+        "--limit-mm-per-prompt", default=None,
+        help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'；省略时默认 image=1, video=0。',
     )
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.90)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
@@ -80,6 +149,17 @@ def main():
             )
     if not 0 < args.gpu_memory_utilization <= 1:
         parser.error("--gpu-memory-utilization 应在 (0, 1] 之间")
+    passthrough_limit_mm = "--limit-mm-per-prompt" in extra
+    limit_mm_explicit = args.limit_mm_per_prompt is not None
+    if passthrough_limit_mm and limit_mm_explicit:
+        parser.error("--limit-mm-per-prompt 重复指定：只允许启动参数或 -- 之后透传其一")
+    if not passthrough_limit_mm:
+        if args.limit_mm_per_prompt is None:
+            args.limit_mm_per_prompt = '{"image":1,"video":0}'
+        try:
+            parse_limit_mm(args.limit_mm_per_prompt)
+        except ValueError as exc:
+            parser.error(f"--limit-mm-per-prompt 无效：{exc}")
     model_dir = Path(args.model_dir).expanduser().resolve()
     command = [
         sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
@@ -97,12 +177,13 @@ def main():
         "--gpu-memory-utilization", str(args.gpu_memory_utilization),
         "--no-enable-prefix-caching",
         "--no-enable-chunked-prefill",
-        "--limit-mm-per-prompt", '{"image":1,"video":0}',
         "--skip-mm-profiling",
         "--host", args.host,
         "--port", str(args.port),
         *extra,
     ]
+    if not passthrough_limit_mm:
+        command += ["--limit-mm-per-prompt", args.limit_mm_per_prompt]
     launch = {
         "python": sys.executable, "model_dir": str(model_dir), "argv": command,
         "max_model_len": args.max_model_len,
@@ -112,6 +193,14 @@ def main():
             else "explicit" if args.max_num_batched_tokens is not None
             else "default_follows_max_model_len"
         ),
+        "limit_mm_per_prompt": None if passthrough_limit_mm else args.limit_mm_per_prompt,
+        "limit_mm_per_prompt_source": (
+            "passthrough" if passthrough_limit_mm
+            else "explicit" if limit_mm_explicit
+            else "default"
+        ),
+        "environment": effective_environment(),
+        "software": software_provenance(),
     }
     if args.dry_run:
         print(json.dumps(launch, ensure_ascii=False, indent=2))

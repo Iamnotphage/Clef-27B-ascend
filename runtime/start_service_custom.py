@@ -64,7 +64,16 @@ log_path = out / "service.log"
 with log_path.open("wb") as log:
     process = subprocess.Popen(argv, cwd=cwd, env=environment, stdin=subprocess.DEVNULL,
                                stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
-record = {"pid": process.pid, "argv": argv, "cwd": cwd, "environment": original["environment"],
+ENV_PREFIXES = ("CLEF_", "ASCEND_", "ATB_", "HCCL_")
+ENV_KEYS = ("PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONUNBUFFERED", "VIRTUAL_ENV",
+            "OMP_NUM_THREADS", "TASK_QUEUE_ENABLE", "MODEL_DIR", "HF_HOME",
+            "TORCH_HOME", "TRITON_CACHE_DIR", "XDG_CACHE_HOME")
+effective_env = {k: environment[k] for k in sorted(environment)
+                 if k in ENV_KEYS or k.startswith(ENV_PREFIXES)}
+record = {"pid": process.pid, "argv": argv, "cwd": cwd,
+          "environment": effective_env,
+          "environment_source_snapshot": original["environment"],
+          "environment_override_keys": sorted(spec.get("env", {}).keys()),
           "label": args.label, "custom_overrides": spec,
           "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "log": str(log_path)}
 (run / "current-service.json").write_text(json.dumps(record, ensure_ascii=False, indent=1))
@@ -72,11 +81,16 @@ record = {"pid": process.pid, "argv": argv, "cwd": cwd, "environment": original[
 print(json.dumps({"pid": process.pid, "label": args.label}, ensure_ascii=False))
 
 wait_seconds = spec.get("wait_health_seconds", 0)
+port = "8000"
+if "--port" in argv:
+    i = argv.index("--port")
+    if i + 1 < len(argv):
+        port = argv[i + 1]
 deadline = time.monotonic() + wait_seconds
 ok = False
 while time.monotonic() < deadline:
     try:
-        with urlopen("http://127.0.0.1:8000/health", timeout=3) as resp:
+        with urlopen(f"http://127.0.0.1:{port}/health", timeout=3) as resp:
             if resp.status == 200:
                 ok = True
                 break
