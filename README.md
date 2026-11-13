@@ -4,6 +4,8 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
+主评测统一采用 Cloudflare 发布成绩所用的 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**。BFCL、API-Bank 等为 Decision Index 的子项，WorkflowEvals 覆盖四个业务工作流。两套主评测当前待接入与运行；既有 JevBench、OpenDecisions、Typed Decisions 结果保留为首轮工程回归记录。[统一评测口径](docs/evaluation-protocol.md)
+
 ## 模型与工作区
 
 | 项目          | 内容                                        |
@@ -101,7 +103,7 @@ bash scripts/download_model.sh
 
 固定提交的 vLLM 已按 `empty` 安装，vLLM-Ascend、FLA、flash-attn 和 A3 通信内核构建及完整环境验收均已完成。完整服务自动识别为 `ClefFlashForJointSchema`，主干、视觉塔和联合头实际加载；TP1/TP2 的 7 个固定决策均与 CPU 参考一致，token/span 映射完全对应。[实测 baseline](docs/baseline-2026-11-12.md)
 
-固定 307-token、三字段、并发 1 的 30 次测试，TP1 为 7.10 请求/秒、p95 143.5 ms，TP2 为 6.84 请求/秒、p95 159.8 ms。HCCL 与红蓝图片、双向视频自检均通过。TP2/4096 完整公开评测共 2,983 请求，执行错误为 0：JevBench 公开 231 条的 `public_accuracy=0.8701`，OpenDecisions 2,352 条的 `capability=0.7443`，Typed Decisions 400 条、2,000 决策的准确率为 `0.7165`。
+固定 307-token、三字段、并发 1 的 30 次测试，TP1 为 7.10 请求/秒、p95 143.5 ms，TP2 为 6.84 请求/秒、p95 159.8 ms。HCCL 与红蓝图片、双向视频自检均通过。TP2/4096 首轮公开回归评测共 2,983 请求，执行错误为 0：JevBench 公开 231 条的 `public_accuracy=0.8701`，OpenDecisions 2,352 条的 `capability=0.7443`，Typed Decisions 400 条、2,000 决策的准确率为 `0.7165`。
 
 新机器已完成全部 28 个模型文件的下载，总计 54,989,897,681 字节（约 55.0 GB），逐文件 SHA-256 与原 manifest 一致。源码提交、兼容补丁、运行依赖和实际日志均已记录。[新机模型校验报告](docs/evidence/new-machine-model-verification-2026-11-12.json)
 

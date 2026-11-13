@@ -1,6 +1,8 @@
 # 比赛要求与 baseline 数据集
 
-核查日期为 2026-11-12，时区为 Asia/Shanghai。赛事要求来自官方介绍页的公开 API 和已登录 Chrome 中的赛题发布页。本文的数据建议用于本工程构建 baseline，赛事正式数据集和官方 baseline 配置仍待取得。
+赛事核查日期为 2026-11-12，时区为 Asia/Shanghai。2026-11-13 用户确定主评测统一采用 **Decision Index 0.2.1 与 Typesafe WorkflowEvals 四工作流**，子项、指标、执行条件与完成状态见[统一评测口径](evaluation-protocol.md)。两套主评测均待接入与运行，本文保留首轮数据选取依据和赛事调查来源。
+
+赛事要求来自官方介绍页的公开 API 和已登录 Chrome 中的赛题发布页。赛事正式数据集和主办方 baseline 配置仍待取得；发布方已经公开的 Clef 成绩见[统一评测口径中的结果表](evaluation-protocol.md#已发表结果与本工程状态)。
 
 ## 1. 已确认的比赛要求
 
@@ -42,9 +44,9 @@ Clef-27B/
 
 指定提交仓库的默认分支于本次检查指向 `c75448c13fb4a35e7ec0883ce48d05c23eb5b7fa`。按路径检索 `Clef`、`systemone` 和 `evalscope`，未定位到 Clef 专用评测入口。该检查覆盖目录树及根 README，正式评测细节仍以赛事资源为准。[指定仓库](https://gitcode.com/Ascend/model-agent)
 
-## 3. 可以直接用于工程验证的公开数据
+## 3. 首轮工程回归所用的公开数据
 
-以下数据集均有公开来源，赛事采用情况待确认。
+以下数据集均有公开来源。JevBench、OpenDecisions、Typed Decisions 已完成首轮工程评测，继续用于回归验证；后续主评测采用前述两套套件。赛事采用情况待确认。
 
 | 数据集 | 规模与题型 | 用途 | 获取入口 |
 | --- | --- | --- | --- |
@@ -94,7 +96,9 @@ Typed Decisions 的 `state`、`questions`、`gold` 字段是 JSON 字符串，�
 
 远端本次访问 PyPI 的 torch-npu 索引、ModelScope 小文件均得到 HTTP 200，Hugging Face 数据集 API 发生连接重置，GitHub raw 文件读取超时。本地已能读取 Hugging Face 数据卡和元数据。后续公开数据下载可先尝试远端 ModelScope 镜像，也可在本地固定 revision 下载后传入服务器，随后验证 SHA-256 并记录传输后的文件清单。[网络采集证据](evidence/data-and-network-2026-11-12.json)
 
-## 5. EvalScope 接入与最小验证顺序
+## 5. 首轮 EvalScope 接入记录
+
+本节保留 2026-11-12 的验证顺序和命令模板，实际完成结果见[首轮工程 baseline](baseline-2026-11-12.md)。后续主评测按[统一评测口径](evaluation-protocol.md)执行。
 
 本次读取 EvalScope 提交 `3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e` 的文档，已提供 `eval_type='systemone_api'`、原生三题型数据集和 `evalscope perf --api systemone`。该文档声明当前 System One 评测适配支持文本决策，图片和视频需要另做服务调用检查或使用之后提供的赛事适配器。[System One 文档](https://github.com/modelscope/evalscope/blob/3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e/docs/zh/user_guides/systemone.md) · [压测示例](https://github.com/modelscope/evalscope/blob/3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e/docs/zh/best_practice/decision_evaluation.md)
 
@@ -105,7 +109,7 @@ Typed Decisions 的 `state`、`questions`、`gold` 字段是 JSON 字符串，�
 5. 使用相同输入和软件环境做 TP1/TP2 对照，再扩展并发、图片与视频。
 6. 正式赛题配置取得后，按其数据、指标和压测定义补齐竞赛 baseline。
 
-以下命令是服务跑通后的工程验证模板，尚未在本机执行。模型名 `clef` 与[上游启动示例](upstream-npu-baseline.md)中的 `--served-model-name clef` 保持一致。`api_url` 使用 `/v1` 基地址，由 EvalScope 追加 `/systemone`。
+以下命令为首轮工程验证模板；实际离线评测 driver、输入与评分结果已在 baseline 文档中记录。模型名 `clef` 与[上游启动示例](upstream-npu-baseline.md)中的 `--served-model-name clef` 保持一致。`api_url` 使用 `/v1` 基地址，由 EvalScope 追加 `/systemone`。
 
 ```bash
 evalscope eval \
@@ -131,7 +135,7 @@ evalscope perf \
 
 正式精度比较时去掉 `--limit` 并固定数据 revision。EvalScope 的 `eval_batch_size` 控制并发请求数，服务端实际 batching 由推理引擎控制。性能记录至少保留成功率、成功吞吐、请求延迟 p50/p95、输入 token 数、题目数、候选项数、预热次数和设备配置，以便解释相同模型在不同 workload 下的差异。[EvalScope 配置说明](https://github.com/modelscope/evalscope/blob/3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e/docs/zh/user_guides/systemone.md)
 
-## 6. 构建 baseline 前待取得的信息
+## 6. 正式赛事评测待取得的信息
 
 - 正式评测数据集的 ID、下载地址、访问条件、revision、split 和样本数，以及多模态占比。
 - 官方 baseline 的代码提交、完整依赖、设备型号与设备数，以及真实精度和性能结果。
@@ -139,4 +143,4 @@ evalscope perf \
 - 性能评分的吞吐与延迟定义、权重、并发、输入长度、预热、重复次数和时间窗口。
 - `results.csv`、`metrics.csv` 的正式列名和导出规范，以及提交 PR 的目标分支与目录。
 
-本轮已经取得可用于文本功能、联合决策及后续多模态探索的数据入口。环境安装、样本下载、格式转换、推理执行和评分仍属于下一轮 baseline 实现工作。
+首轮环境、三来源公开数据评测和功能自检的实际结果已归档。后续按统一评测口径补齐 Decision Index 0.2.1 与 WorkflowEvals 四工作流，并继续取得本节列出的赛事参数。

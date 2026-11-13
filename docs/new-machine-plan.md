@@ -1,6 +1,8 @@
 # 新机器环境与执行计划
 
-更新日期为 2026-11-13，北京时间。CANN 9.2.1 / PyTorch 2.10 环境与完整 baseline 已完成；本轮端到端 profiling、TP1/TP2 稳定测量、长输入/多模态/batching 对照及服务恢复已验收。[profiling 实测记录](profiling-2026-11-12.md)
+更新日期为 2026-11-13，北京时间。CANN 9.2.1 / PyTorch 2.10 环境与首轮工程 baseline 已完成；本轮端到端 profiling、TP1/TP2 稳定测量、长输入/多模态/batching 对照及服务恢复已验收。[profiling 实测记录](profiling-2026-11-12.md)
+
+主评测现统一为 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，两套均待接入与运行。已有 JevBench、OpenDecisions、Typed Decisions 结果保留为工程回归记录；后续版本、指标与同协议对照按[统一评测口径](evaluation-protocol.md)执行。
 
 ## 1. 连接与目录
 
@@ -177,13 +179,13 @@ python -m pip check
 
 ### 阶段 E — 精度、性能和比赛产物
 
-1. 以固定小样本确认 EvalScope `systemone_api` 与服务连接，再运行 JevBench / OpenDecisions。
-2. 用 Typed Decisions 保留每条 case 的五个联合问题，比较离散输出及逐候选概率误差。
-3. 固定输入长度、问题数、候选数、并发和预热，记录吞吐、p50/p95、成功率、峰值 HBM 及原始日志。
-4. 增加两卡 HCCL 自检，再比较 TP1 / TP2 的输出和显存。随后验证图片、视频、长输入与并发。
-5. 填写 `results.csv`、`metrics.csv`、`optimization.md`，保存实际运行截图，并按正式赛题数据和指标补齐比赛验收。
+1. 固定 Decision Index 0.2.1 的源码、数据来源、子集和哈希，使用 HTTP 引擎接入 `POST /v1/systemone`，保存 BFCL、API-Bank 等子项的原生指标和套件汇总。
+2. 固定 Typesafe WorkflowEvals 的代码、数据 revision、业务策略和共识参考标签，适配 Clef 客户端后运行四个工作流，保存 `exact_actions`、`primary_action` 等适用指标。
+3. 保留已完成的 JevBench / OpenDecisions / Typed Decisions 评测作为工程回归；模型或服务改动后按需要复测协议、联合问题和候选概率。
+4. 在固定输入、长度、问题数、候选数、并发和预热条件下，分别记录 TP1 / TP2 的吞吐、p50/p95、成功率、峰值 HBM 与原始日志，并保留 HCCL、多模态和长输入自检。
+5. 填写 `results.csv`、`metrics.csv`、`optimization.md`，标明两套主评测与历史回归的来源、配置和完成状态，按正式赛题协议补齐比赛验收。
 
-正式评测数据包、官方 baseline 数值及性能聚合公式仍待取得。现有公开数据及共享数据入口可用于项目 baseline。[比赛与数据说明](competition-and-datasets.md)
+发布方同口径主评测的当前状态与接入条件见[统一评测口径](evaluation-protocol.md)。比赛专用正式评测数据包、主办方 baseline 数值及性能聚合公式仍待取得。[比赛与数据说明](competition-and-datasets.md)
 
 ## 6. 本轮完成状态
 
@@ -194,6 +196,7 @@ python -m pip check
 - 固定 PyTorch / TorchNPU / torchvision / torchaudio、Transformers 与 Triton-Ascend 已安装，激活 CANN / ATB 后 `pip check` 通过。两卡 FP16 / BF16 的 2048×2048 matmul 均通过数值验收。
 - 固定 vLLM、Ascend 及递归 submodules 已构建，FLA / flash-attn / A3 通信内核安装完成；最终 `pip check`、自动架构识别和 78 个自定义算子加载通过。
 - TP1、TP2 完整主干、视觉塔和联合头实际加载。两种 TP 的固定七个决策均与 CPU BF16 参考一致，token/span/候选映射差异为 0，性能和 1 秒采样 HBM 已保存。
-- 双 rank HCCL、两张纯色图片和双向视频请求通过。完整公开评测 2,983 请求、4,583 决策已完成，执行错误为 0。
+- 双 rank HCCL、两张纯色图片和双向视频请求通过。2026-11-12 首轮公开回归评测 2,983 请求、4,583 决策已完成，执行错误为 0。
+- Decision Index 0.2.1 与 Typesafe WorkflowEvals 已确认为后续主评测口径，版本固定、客户端接入和实际评分待完成。[统一评测口径](evaluation-protocol.md)
 - 当前运行服务为目标机 `127.0.0.1:8000` 上的 `clef`，TP2、4096、BF16、eager、单序列，图片/视频各限 1。2026-11-13 profiling 结束后已按原 argv/cwd 恢复，API PID 为 `115206`；PID 文件 `/workspace/yangchen/logs/clef-tp2-4096-mm-20261112.pid` 已更新。当前日志为 `/workspace/yangchen/logs/profiling/20261112-223732-systemone/restored-tp2-4096/service.log`，服务指针为同一 run 的 `service-current.json`。原工程、vLLM 与 Ascend 的 diff 与实验前完全对应，协议/参考精度/重新编码/多模态均通过。[恢复证据](evidence/profiling-20261112/restoration.json)
 - 两份 CSV、运行报告图、兼容记录和完整评测报告已整理。正式赛题输入、官方 baseline 数值和截图规范继续按主办方协议对齐。[实际安装记录](installation-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md)

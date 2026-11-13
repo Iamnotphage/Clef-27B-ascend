@@ -2,7 +2,9 @@
 
 ## 当前状态
 
-完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[完整 baseline 记录](../docs/baseline-2026-11-12.md)
+完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[首轮工程 baseline 记录](../docs/baseline-2026-11-12.md)
+
+主评测统一为 **Decision Index 0.2.1**（BFCL、API-Bank 等为子项）与 **Typesafe WorkflowEvals**（四个业务工作流），当前两套待接入与运行。已完成的 JevBench、OpenDecisions、Typed Decisions 结果作为工程回归记录保留。[统一评测口径](../docs/evaluation-protocol.md)
 
 ## 环境记录
 
@@ -36,4 +38,4 @@ python scripts/verify_systemone.py \
 
 ## 结果记录
 
-`results.csv` 保存固定请求的服务性能，`metrics.csv` 保存精度、延迟、采样 HBM 和各来源评测指标；未知官方 baseline 数值保留为空。原始日志在远端 `/workspace/yangchen/logs/`，本地证据在 [docs/evidence/](../docs/evidence/)。运行图为实测报告导出图，保留来源时间和原始数据。[优化与兼容记录](optimization.md)
+`results.csv` 保存固定请求的服务性能，`metrics.csv` 保存精度、延迟、采样 HBM 和各来源评测指标。两套主评测结果按实际执行后补入，比赛主办方待发布的 baseline 数值保留为空。原始日志在远端 `/workspace/yangchen/logs/`，本地证据在 [docs/evidence/](../docs/evidence/)。运行图为实测报告导出图，保留来源时间和原始数据。[优化与兼容记录](optimization.md)
