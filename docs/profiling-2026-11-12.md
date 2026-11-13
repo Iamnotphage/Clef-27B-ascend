@@ -2,6 +2,8 @@
 
 本轮于北京时间 2026-11-12 启动、2026-11-13 完成。TP1/TP2 各 900 次固定请求全部成功；14 个采集窗口、24 份 rank trace 通过完整性检查。主干占据主要设备计算，联合头有效计算约 2–3 ms；TP2 短输入的缩放同时受到细粒度下发、归约启动和同步等待影响。TP2/4096 原服务已按原 argv/cwd 恢复，API PID `115206`，健康、协议、重新编码、参考精度和多模态均通过。
 
+后续分析：[2026-11-13 调优建议与最小实验顺序](tuning-review-2026-11-13.md)，补充双 TP1 副本、BF16 NZ 格式、GDN 布局转换及 batching token 预算的验证方案。
+
 远端实验目录：`/workspace/yangchen/logs/profiling/20261112-223732-systemone/`。24 个原始 `_ascend_pt` 目录及现有导出合计 **5,890,605,633 bytes**，保留远端；仓库保存摘要、源文件 SHA、原始数据索引和复现工具。[运行总 manifest](evidence/profiling-20261112/run-manifest.json) · [完整文件 SHA 索引](evidence/profiling-20261112/raw-file-index.json) · [90 份测量汇总](evidence/profiling-20261112/run-summary.json) · [统一性能矩阵 CSV](evidence/profiling-20261112/all-performance-matrix.csv)
 
 ![固定输入、长度、batching 与真实重叠区间](assets/profiling-20261112.png)

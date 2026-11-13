@@ -1,0 +1,594 @@
+{
+  "checked_at": "2026-11-13T11:15:45.201595+08:00",
+  "scope": "Read-only inspection; no restart, benchmark, profiling, or source/configuration mutation",
+  "/health": {
+    "http_status": 200,
+    "body": ""
+  },
+  "/v1/decide/info": {
+    "http_status": 404,
+    "body": "{\"detail\":\"Not Found\"}"
+  },
+  "/openapi.json": {
+    "http_status": 200,
+    "decision_paths": [
+      "/health",
+      "/v1/systemone"
+    ]
+  },
+  "/sys/fs/cgroup/memory/memory.usage_in_bytes": "83192487936",
+  "/sys/fs/cgroup/memory/memory.limit_in_bytes": "137438953472",
+  "/sys/fs/cgroup/cpu/cpu.stat": "nr_periods 688231\nnr_throttled 43\nthrottled_time 39460583820\nnr_bursts 0\nburst_time 0",
+  "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "3200000",
+  "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000",
+  "115206": {
+    "status": [
+      "Name:\tpython",
+      "State:\tS (sleeping)",
+      "VmRSS:\t 3958536 kB",
+      "Threads:\t52",
+      "Cpus_allowed_list:\t0-639",
+      "Mems_allowed_list:\t0-7"
+    ],
+    "argv": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "-m",
+      "vllm.entrypoints.cli.main",
+      "serve",
+      "/workspace/yangchen/models/Clef-27B",
+      "--served-model-name",
+      "clef",
+      "--runner",
+      "pooling",
+      "--dtype",
+      "bfloat16",
+      "--tensor-parallel-size",
+      "2",
+      "--enforce-eager",
+      "--max-model-len",
+      "4096",
+      "--max-num-seqs",
+      "1",
+      "--max-num-batched-tokens",
+      "4096",
+      "--gpu-memory-utilization",
+      "0.9",
+      "--no-enable-prefix-caching",
+      "--no-enable-chunked-prefill",
+      "--limit-mm-per-prompt",
+      "{\"image\":1,\"video\":0}",
+      "--skip-mm-profiling",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8000",
+      "--distributed-executor-backend",
+      "mp",
+      "--limit-mm-per-prompt",
+      "{\"image\":1,\"video\":1}",
+      "--mm-processor-kwargs",
+      "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+    ]
+  },
+  "115252": {
+    "status": [
+      "Name:\tVLLM::EngineCor",
+      "State:\tS (sleeping)",
+      "VmRSS:\t 2840444 kB",
+      "Threads:\t20",
+      "Cpus_allowed_list:\t0-639",
+      "Mems_allowed_list:\t0-7"
+    ]
+  },
+  "115266": {
+    "status": [
+      "Name:\tVLLM::Worker_TP",
+      "State:\tS (sleeping)",
+      "VmRSS:\t 3663348 kB",
+      "Threads:\t398",
+      "Cpus_allowed_list:\t2-317",
+      "Mems_allowed_list:\t0-7"
+    ]
+  },
+  "115267": {
+    "status": [
+      "Name:\tVLLM::Worker_TP",
+      "State:\tS (sleeping)",
+      "VmRSS:\t 3657360 kB",
+      "Threads:\t397",
+      "Cpus_allowed_list:\t322-637",
+      "Mems_allowed_list:\t0-7"
+    ]
+  },
+  "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 155.5                39                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59734/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59400/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 115206        | python             | 106                   | 115206                  |\n| 7       0                 | 115266        | VLLMWorker_TP      | 56570                 | 115266                  |\n| 7       1                 | 115267        | VLLMWorker_TP      | 56570                 | 115267                  |\n+===========================+===============+======================================================================+\n",
+  "source_heads": {
+    "application": "3e83ae17df7b559ec2dd6b2a38aa029c2777e061",
+    "vllm": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+    "vllm_ascend": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"
+  },
+  "local_evidence": {
+    "docs/evidence/profiling-20261112/stable-summary.json": {
+      "sha256": "059b416126f2da28d97ad9dd6e1cb4884cc06f24be37cd09dfe177d556e169df"
+    },
+    "docs/evidence/profiling-20261112/all-performance-matrix.csv": {
+      "sha256": "ff4a2e72b42c310710328a2814f6d116dfb277b3a2dfc4e1daa4fca5cd507ea8"
+    },
+    "docs/evidence/profiling-20261112/top20.csv": {
+      "sha256": "4bb705ce8f2c8d3d639094a342b07fb290c6ccea79c12311c87bd08ee3349031"
+    },
+    "docs/evidence/profiling-20261112/batching.json": {
+      "sha256": "66e86e44eb46d339318e30039e96a2860df10bff8bbf99c7865ce558079091d9"
+    },
+    "docs/evidence/profiling-20261112/memory-startup.json": {
+      "sha256": "0abe2f45e408103581c99a68d9adfeb26de75c3cfcdae349f70ee7f8b4769968"
+    },
+    "docs/evidence/profiling-20261112/micro-mlp.json": {
+      "sha256": "7a0c78bd001cfa29771dbff0d1627bf366f22ce025fb8c829608d26dd80c239c"
+    },
+    "docs/evidence/profiling-20261112/cpu-encoding-ablation.json": {
+      "sha256": "5f775fe0666e0f1591f84ff6f6eecd259599cf942f7c01e4c26b3dc94d2a8d9f"
+    }
+  },
+  "derived_top20": {
+    "native-tp1.json:rank0": {
+      "top20_transpose_ms_per_request": 8.5596114,
+      "top20_matmul_ms_per_request": 88.5004368,
+      "scope": "Five-request native profile; Top20 subset; sums are device task duration, not end-to-end latency savings"
+    },
+    "native-tp2.json:rank0": {
+      "top20_transpose_ms_per_request": 7.8758792,
+      "top20_matmul_ms_per_request": 46.3915162,
+      "scope": "Five-request native profile; Top20 subset; sums are device task duration, not end-to-end latency savings"
+    },
+    "native-tp2.json:rank1": {
+      "top20_transpose_ms_per_request": 8.1307358,
+      "top20_matmul_ms_per_request": 46.4010956,
+      "scope": "Five-request native profile; Top20 subset; sums are device task duration, not end-to-end latency savings"
+    }
+  },
+  "source_capabilities": [
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ascend_config.py",
+      "sha256": "65bc9b1855f48e117c19a31f598dc4201561198ec3687f2f14fe1a6553528167",
+      "excerpts": [
+        {
+          "start_line": 610,
+          "end_line": 625,
+          "lines": [
+            "      ``recompute_scheduler_enable``, ``short_request_first_config``,",
+            "      ``profiling_chunk_config``, ``batch_job_sched_config``) still resolve,",
+            "      but emit deprecation warnings; prefer nesting under",
+            "      ``scheduler_config`` as shown above.",
+            "    \"\"\"",
+            "",
+            "    model_config = ConfigDict(extra=\"forbid\")",
+            "",
+            "    # ---- user-input switches: bool/int/list/str, auto type validation ----",
+            "    enable_cpu_binding: bool = True",
+            "    multistream_dsv4_dsa_overlap: bool = True",
+            "    # Prepare Engram hashes, lookups and DP/TP exchanges on an auxiliary stream;",
+            "    # FULL graphs wait on descriptor-specific external events at consumers.",
+            "    # Default to overlap on A5 only; explicit settings override this policy.",
+            "    multistream_engram_overlap: bool = dataclasses.field(",
+            "        default_factory=lambda: ("
+          ]
+        },
+        {
+          "start_line": 674,
+          "end_line": 685,
+          "lines": [
+            "    # normal local-prefill paths (recompute / fallback / preempt) that crash",
+            "    # when the weights are freed (issue #11882). Default False (preserve",
+            "    # existing memory-saving behavior).",
+            "    mlapo_keep_prefill_weights: bool = False",
+            "    msmonitor_use_daemon: bool = False",
+            "    enable_transpose_kv_cache_by_block: bool = True",
+            "    weight_nz_mode: int = 1",
+            "",
+            "    # ---- sub-configs (no vllm_config dep): pydantic dict→dataclass coercion ----",
+            "    ascend_compilation_config: AscendCompilationConfig = dataclasses.field(default_factory=AscendCompilationConfig)",
+            "    ascend_fusion_config: AscendFusionConfig = dataclasses.field(default_factory=AscendFusionConfig)",
+            "    ascend_warmup_config: AscendWarmupConfig = dataclasses.field(default_factory=AscendWarmupConfig)"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/utils.py",
+      "sha256": "52585cf4a5785a8d36a279b4d17bf02de8b1fce214f1333612d1b7ab165e303b",
+      "excerpts": [
+        {
+          "start_line": 369,
+          "end_line": 425,
+          "lines": [
+            "",
+            "def _should_trans_nz(weight: torch.Tensor) -> bool:",
+            "    # FP32 cannot use NZ.",
+            "    if weight.dtype == torch.float32:",
+            "        return False",
+            "",
+            "    # meta tensor only keeps shape/dtype meta info without physical memory, it is not necessary to trans it to NZ",
+            "    if weight.is_meta:",
+            "        return False",
+            "",
+            "    # aclnnMatmulWeightNZ does not support matrices whose reduction/output",
+            "    # dimension is one (k=1 or n=1). Keep these weights in ND format so the",
+            "    # subsequent linear/matmul dispatch does not select the NZ-only path.",
+            "    if weight.ndim >= MIN_MATMUL_WEIGHT_NDIMS and (",
+            "        weight.shape[-1] == SINGLETON_DIM_SIZE or weight.shape[-2] == SINGLETON_DIM_SIZE",
+            "    ):",
+            "        return False",
+            "",
+            "    # Some hardware profiles require NZ weight layout.",
+            "    if get_current_hardware_profile().weight_layout_policy is WeightLayoutPolicy.FORCE_NZ:",
+            "        return True",
+            "",
+            "    # Get config value instead of env",
+            "    config = get_ascend_config()",
+            "    nz_mode = config.weight_nz_mode",
+            "",
+            "    # NZ is disabled when mode is 0.",
+            "    if not nz_mode:",
+            "        return False",
+            "",
+            "    # BF16/FP16 convert only when nz_mode == 2.",
+            "    if weight.dtype in {torch.bfloat16, torch.float16}:",
+            "        return nz_mode == 2",
+            "",
+            "    # Quantized or other supported dtypes convert by default.",
+            "    return True",
+            "",
+            "",
+            "# NZ conversion policy:",
+            "# - 310P: always convert supported weights to FRACTAL_NZ",
+            "# - non-310P: follow additional_config.weight_nz_mode",
+            "# - FP32: never convert",
+            "# - meta tensor: never convert",
+            "def maybe_trans_nz(",
+            "    weight: torch.Tensor,",
+            "    customize_dtype: torch.dtype | None = None,",
+            "    input_dtype: torch.dtype | None = None,",
+            ") -> torch.Tensor:",
+            "    if not _should_trans_nz(weight):",
+            "        return weight",
+            "    kwargs = {}",
+            "    if customize_dtype is not None:",
+            "        kwargs[\"customize_dtype\"] = customize_dtype",
+            "    if input_dtype is not None:",
+            "        kwargs[\"input_dtype\"] = input_dtype",
+            "    return torch_npu.npu_format_cast(weight, ACL_FORMAT_FRACTAL_NZ, **kwargs)",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/linear.py",
+      "sha256": "13c21d2fac777d60ef89c7a1bb32fd70b45ffb03af82b57d54145a4fb467ef34",
+      "excerpts": [
+        {
+          "start_line": 108,
+          "end_line": 139,
+          "lines": [
+            "        super().process_weights_after_loading(layer)",
+            "        keep_nd_weight = _should_keep_nd_for_compatibility_weight(layer.weight.data)",
+            "        skip_weight_nz_conversion = getattr(layer, \"skip_weight_nz_conversion\", False)",
+            "        # must use fp32 to avoid accuracy degradation in dsv4.",
+            "        if getattr(layer, \"precast_fp32_weight\", False):",
+            "            weight_fp32 = layer.weight.data.to(torch.float32)",
+            "            new_fp32 = weight_fp32 if keep_nd_weight or skip_weight_nz_conversion else maybe_trans_nz(weight_fp32)",
+            "            # keep the captured graph's weight reference to the updated weight",
+            "            # during RL weight updates. vLLM main (#62326) dropped `prefer_copy`",
+            "            # and keeps the parameter object by default.",
+            "            replace_parameter(layer, \"weight_fp32\", new_fp32)",
+            "        if \"conv1d\" not in layer.prefix and not skip_weight_nz_conversion:",
+            "            # 310P torch_npu rejects FRACTAL_NZ matmul when the weight-side",
+            "            # matrix has n=1 or k=1. Keep scalar gates such as Qwen MoE's",
+            "            # shared_expert_gate in ND format, leaving non-310P policy intact.",
+            "            if not keep_nd_weight:",
+            "                layer.weight.data = maybe_trans_nz(layer.weight.data)",
+            "",
+            "        # DSV4 wo_a is consumed by npu_transpose_batchmatmul in the 3D layout",
+            "        # [n_local_groups, hidden_size, o_lora_rank]. Reshape it here so it",
+            "        # applies to load-format=dummy too, where weight_loader never runs.",
+            "        if _should_reshape_wo_a_to_3d(layer.prefix, layer.weight.data.dtype) and layer.weight.data.ndim == 2:",
+            "            layer.weight.data = (",
+            "                layer.weight.data.view(layer.n_local_groups, layer.o_lora_rank, -1).transpose(2, 1).contiguous()",
+            "            )",
+            "",
+            "    def apply(",
+            "        self,",
+            "        layer: torch.nn.Module,",
+            "        x: torch.Tensor,",
+            "        bias: torch.Tensor | None = None,",
+            "    ) -> torch.Tensor:"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/device/device_op.py",
+      "sha256": "0cbc9f9d8121d76c5ef874e5e066679f15b361024196c4d05e36ee17a62af5c6",
+      "excerpts": [
+        {
+          "start_line": 1005,
+          "end_line": 1080,
+          "lines": [
+            "    def fla_gdn_prefill(",
+            "        q: torch.Tensor,",
+            "        k: torch.Tensor,",
+            "        v: torch.Tensor,",
+            "        g: torch.Tensor,",
+            "        beta: torch.Tensor,",
+            "        initial_state: torch.Tensor,",
+            "        scale: float,",
+            "        prebuilt_meta,",
+            "        fused_fwd,",
+            "    ) -> tuple[torch.Tensor, torch.Tensor]:",
+            "        \"\"\"Run the A2/A3 Phase6 FLA NPU GDN prefill kernel.\"\"\"",
+            "        # FLA's import-time capability queries can initialize an NPU context;",
+            "        # defer them until execution on the selected worker device.",
+            "        # TODO: Restore the top-level import once supported vLLM FLA or Triton",
+            "        # Ascend versions make these queries safe before device selection.",
+            "        from vllm.third_party.flash_linear_attention.ops.l2norm import l2norm_fwd",
+            "",
+            "        q = l2norm_fwd(q.contiguous()).contiguous()",
+            "        k = l2norm_fwd(k.contiguous()).contiguous()",
+            "        v = v.contiguous()",
+            "        g = g.to(torch.float32).contiguous()",
+            "        beta = beta.to(v.dtype).contiguous()",
+            "        initial_state = initial_state.contiguous()",
+            "",
+            "        # BNSD/NTD take [B, H, T, D]; q/k/v arrive sequence-major. The output is",
+            "        # still returned sequence-major, so only the inputs are permuted.",
+            "        q = q.transpose(1, 2).contiguous()",
+            "        k = k.transpose(1, 2).contiguous()",
+            "        v = v.transpose(1, 2).contiguous()",
+            "",
+            "        cu_seqlens = prebuilt_meta.cu_seqlens_host",
+            "        chunk_indices = prebuilt_meta.chunk_indices_chunk64_host",
+            "        keep_meta = prebuilt_meta.keep_meta",
+            "        # stateVFirst=false takes [N, Hv, K, V], i.e. the transpose of ssm_state.",
+            "        initial_state_kern = initial_state.transpose(-1, -2).contiguous()",
+            "        if keep_meta is not None:",
+            "            cu_seqlens = prebuilt_meta.cu_seqlens_kern",
+            "            initial_state_kern = initial_state[keep_meta].transpose(-1, -2).contiguous()",
+            "",
+            "        output, final_state, *_ = fused_fwd(",
+            "            q,",
+            "            k,",
+            "            v,",
+            "            g,",
+            "            beta,",
+            "            initial_state=initial_state_kern,",
+            "            output_final_state=True,",
+            "            chunk_size=64,",
+            "            cu_seqlens=cu_seqlens,",
+            "            chunk_indices=chunk_indices,",
+            "            scale=scale,",
+            "            layout=\"BNSD\",",
+            "            use_exp2=False,",
+            "            use_qk_l2norm_in_kernel=False,",
+            "            allow_neg_eigval=False,",
+            "            disable_recompute=True,",
+            "            state_v_first=False,",
+            "        )",
+            "        if keep_meta is not None:",
+            "            # Scatter in the kernel layout so empty segments keep their initial state,",
+            "            # then flip back to the caller's [.., Dv, Dk].",
+            "            full_final_state = initial_state.transpose(-1, -2).contiguous()",
+            "            full_final_state[keep_meta] = final_state",
+            "            final_state = full_final_state",
+            "        return output, final_state.transpose(-1, -2).contiguous()",
+            "",
+            "    @staticmethod",
+            "    def fused_gdn_gating(A_log: torch.Tensor, a: torch.Tensor, b: torch.Tensor, dt_bias: torch.Tensor):",
+            "        return fused_gdn_gating_patch(A_log, a, b, dt_bias)",
+            "",
+            "    @staticmethod",
+            "    def split_qkv_rmsnorm_rope(",
+            "        input,",
+            "        q_weight,",
+            "        k_weight,"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/config/vllm.py",
+      "sha256": "c19cddb25940412e61f813ac62bb057848e765f835ccf5495e6f2b795f6da3f5",
+      "excerpts": [
+        {
+          "start_line": 1701,
+          "end_line": 1716,
+          "lines": [
+            "        elif self.scheduler_config.async_scheduling is None:",
+            "            # Enable async scheduling unless there is an incompatible option.",
+            "            if (",
+            "                self.model_config is not None",
+            "                and self.model_config.runner_type == \"pooling\"",
+            "            ):",
+            "                # The current implementation of asynchronous scheduling negatively",
+            "                # impacts performance of pooling models, so we disable by default.",
+            "                logger.debug(",
+            "                    \"Disabling asynchronous scheduling by default for pooling model.\"",
+            "                )",
+            "                self.scheduler_config.async_scheduling = False",
+            "            elif not executor_supports_async_sched:",
+            "                logger.warning_once(",
+            "                    \"Async scheduling will be disabled because it is not supported \"",
+            "                    \"with the `%s` distributed executor backend. \","
+          ]
+        },
+        {
+          "start_line": 1965,
+          "end_line": 1982,
+          "lines": [
+            "",
+            "        if current_platform.support_static_graph_mode():",
+            "            # if cudagraph_mode has full cudagraphs, we need to check support",
+            "            if model_config := self.model_config:",
+            "                if (",
+            "                    self.compilation_config.cudagraph_mode.has_full_cudagraphs()",
+            "                    and model_config.pooler_config is not None",
+            "                ):",
+            "                    logger.warning_once(",
+            "                        \"Pooling models do not support full cudagraphs. \"",
+            "                        \"Overriding cudagraph_mode to PIECEWISE.\"",
+            "                    )",
+            "                    self.compilation_config.cudagraph_mode = CUDAGraphMode.PIECEWISE",
+            "                elif (",
+            "                    model_config.is_encoder_decoder",
+            "                    and self.compilation_config.cudagraph_mode",
+            "                    not in (CUDAGraphMode.NONE, CUDAGraphMode.FULL_DECODE_ONLY)",
+            "                ):"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+      "sha256": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+      "excerpts": [
+        {
+          "start_line": 148,
+          "end_line": 175,
+          "lines": [
+            "    def forward(",
+            "        self,",
+            "        hidden_states: torch.Tensor,",
+            "        lexical: torch.Tensor,",
+            "        schema: SchemaIndices,",
+            "    ) -> torch.Tensor:",
+            "        \"\"\"The ``[O]`` option logits of one prompt, from its ``[L, hidden]``",
+            "        final hidden states and each option's ``[O, hidden]`` mean output",
+            "        embedding.\"\"\"",
+            "        num_questions = schema.question_types.shape[0]",
+            "        option_question = schema.option_question",
+            "        hidden_states = self.hidden_norm(hidden_states)",
+            "        memory = self.memory_projection(hidden_states).unsqueeze(0)",
+            "        global_vector = hidden_states[-1]",
+            "        means = segment_mean(",
+            "            hidden_states[schema.positions], schema.span_ids, schema.span_lengths",
+            "        )",
+            "        question_vectors, contexts = means[:num_questions], means[num_questions:]",
+            "",
+            "        options = (",
+            "            self.option_context_projection(contexts)",
+            "            + self.option_lexical_projection(lexical)",
+            "            + self.option_question_projection(question_vectors)[option_question]",
+            "        ).unsqueeze(0)",
+            "        for layer in self.evidence_layers:",
+            "            options = layer(options, memory)",
+            "        options = options[0]",
+            ""
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+      "sha256": "d7e25f1d879cd0dc2d8e38629805a66018a9c63e364572d6cbfee6a9fedd97bb",
+      "excerpts": [
+        {
+          "start_line": 1022,
+          "end_line": 1063,
+          "lines": [
+            "    def encode(",
+            "        self, questions: list[Question], state: str, prefix: list[int] | None = None",
+            "    ) -> tuple[list[int], dict[str, list[Any]], list[list[int]]]:",
+            "        \"\"\"The prompt, the schema for the pooler, and each question's option",
+            "        indices in the order of the output. ``prefix`` is what precedes the",
+            "        state: the system prompt, and the media if there are any.\"\"\"",
+            "        prefix = self.prefix if prefix is None else prefix",
+            "        schema_ids = self._tokens(\"\\n\\nSCHEMA FIELDS:\\n\")",
+            "        question_spans, option_spans, orders = [], [], []",
+            "        for n, q in enumerate(questions, start=1):",
+            "            schema_ids += self._tokens(",
+            "                f\"\\nFIELD {n}\\nID: {q.id}\\nTYPE: {q.type.name}\\nINSTRUCTION: \"",
+            "            )",
+            "            start = len(schema_ids)",
+            "            schema_ids += self._tokens(q.instructions or q.id)",
+            "            question_spans.append([start, len(schema_ids)])",
+            "            schema_ids += self._tokens(\"\\nALLOWED OPTIONS:\\n\")",
+            "            options = self._options(q)",
+            "            for m, (_, option_id, description) in enumerate(options, start=1):",
+            "                schema_ids += self._tokens(f\"OPTION {m}: \")",
+            "                start = len(schema_ids)",
+            "                semantics = {\"option_id\": option_id}",
+            "                if description is not None:",
+            "                    semantics[\"description\"] = description",
+            "                schema_ids += self._tokens(self._render(semantics))",
+            "                option_spans.append([start, len(schema_ids)])",
+            "                schema_ids += self._tokens(\"\\n\")",
+            "            schema_ids += self._tokens(\"END FIELD\\n\")",
+            "            orders.append([i for i, _, _ in options])",
+            "",
+            "        fixed = len(prefix) + len(schema_ids) + len(self.suffix)",
+            "        if fixed > self.max_length:",
+            "            raise StructuredDecisionError(",
+            "                f\"the questions take {fixed} tokens, more than the \"",
+            "                f\"{self.max_length} this model reads\"",
+            "            )",
+            "        state_ids = self._tokens(state)[: self.max_length - fixed]",
+            "        prompt = prefix + state_ids + schema_ids + self.suffix",
+            "        # The schema ends len(self.suffix) tokens before the prompt does.",
+            "        end = len(schema_ids) + len(self.suffix)",
+            "        schema: dict[str, list[Any]] = {",
+            "            \"question_types\": [self.TYPE_IDS[q.type.name] for q in questions],"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/layers/pooler/tokwise/methods.py",
+      "sha256": "d6970def31d87bd8ad2052487e91d2d6234bc79243dcc8e9a032f8bd1f830d3d",
+      "excerpts": [
+        {
+          "start_line": 81,
+          "end_line": 108,
+          "lines": [
+            "        pooling_states = pooling_metadata.pooling_states",
+            "        finished_mask = pooling_cursor.get_finished_mask()",
+            "",
+            "        # If chunked_prefill is enabled",
+            "        # 1. first store the chunked hidden_states in pooling_states.hidden_states_cache",
+            "        for p, hs_chunk, finished in zip(",
+            "            pooling_states, hidden_states_lst, finished_mask",
+            "        ):",
+            "            # Own data retained across steps or returned without concatenation.",
+            "            needs_owned_storage = not finished or (",
+            "                self.clone_finished and not p.hidden_states_cache",
+            "            )",
+            "            p.hidden_states_cache.append(",
+            "                hs_chunk.clone() if needs_owned_storage else hs_chunk",
+            "            )",
+            "",
+            "        # 2. Once prefill is finished, send hidden_states_cache to PoolerHead",
+            "        output_list = list[TokenPoolingMethodOutputItem]()",
+            "        for p, finished in zip(pooling_states, finished_mask):",
+            "            if finished:",
+            "                hidden_states_cache = p.hidden_states_cache",
+            "                if len(hidden_states_cache) == 1:",
+            "                    output_list.append(hidden_states_cache[0])",
+            "                else:",
+            "                    output_list.append(torch.concat(hidden_states_cache, dim=0))",
+            "                p.clean()",
+            "            else:",
+            "                output_list.append(None)"
+          ]
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "checked_at": "2026-11-13T11:23:17.123486+08:00",
+    "passed": true,
+    "markdown_links_checked": 54,
+    "source_excerpt_files": 8,
+    "source_evidence_sha256_checked": 7,
+    "transpose_sums_recomputed": 3,
+    "git_diff_check": "passed",
+    "scope": "Documentation links, JSON parsing, source excerpt markers, archived source hashes, derived arithmetic; no new performance or precision execution"
+  }
+}
