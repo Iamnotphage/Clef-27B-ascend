@@ -6,6 +6,10 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
 
+资源限制：**允许并行，限用 A3 单物理卡内两个逻辑 NPU，禁止跨物理卡**。TP1、TP2 与并发调优均遵循该限制；当前映射为 `npu-smi` 卡号 7、Chip 0 / 1、逻辑设备 0 / 1。
+
+OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输出参考为 Calibration / Intelligence / Capability **82.3 / 65.8 / 74.1**，论文作者额外温度校准后为 **83.4 / 65.4 / 74.4**；引用与复现保留处理条件。[分数来源与版本说明](docs/submission-rules-2026-11-13.md#10-clef-在-opendecisions-上的公开参考)
+
 发布方对照评测采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，BFCL、API-Bank 等为 Decision Index 子项。2026-11-13 WorkflowEvals 已全量完成，Decision Index 已于北京时间 13:46 启动后台评测，结果以原生输出和退出记录为准。[对照评测口径](docs/evaluation-protocol.md) · [客户端与预检证据](Clef-27B/logs/official-baseline-preparation-20261113.json)
 
 2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
@@ -57,7 +61,7 @@ tail -f full-native.log
 | 模型目录      | `/workspace/yangchen/models/Clef-27B`       |
 | 远端工程      | `/workspace/yangchen/Clef-27B-ascend`       |
 | 本地工程      | `~/Documents/code/projects/Clef-27B-ascend` |
-| 目标设备      | 两个 NPU 计算单元，每个 64 GiB HBM          |
+| 目标设备      | A3 单物理卡内两个逻辑 NPU，各 64 GiB HBM；禁止跨卡 |
 
 上游 README 标注基座为 `Qwen/Qwen3.8-27B`。实际配置使用 `Qwen3_5ForConditionalGeneration`，`model_type=qwen3_5`，主干为 BF16，包含视觉编码器。完整模型包含 12 个主干权重分片，以及 `joint_head.safetensors`、`joint_head_config.json` 和 `joint_schema_model.py`。[模型来源](https://www.modelscope.cn/models/Cloudflare/clef)
 

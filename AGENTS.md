@@ -5,6 +5,7 @@
 - 使用中文直接陈述结论、证据和下一步，遵循用户关于肯定表达的要求。
 - 当前任务为在现有昇腾 A3 环境建立可复现的 Clef-27B 比赛提交版本，包含完整主干、联合决策头、文本与图文接口、质量及性能评测证据。
 - 2026-11-13 用户补充的比赛交付规则见 `docs/submission-rules-2026-11-13.md`。当前按该版本准备验收；后续以主办方最终协议与模板更新，规则来源和版本均需保留。
+- 2026-11-13 用户补充资源限制：允许并行，全部推理与评测进程合计限用 **A3 单物理卡内的两个逻辑 NPU**，禁止跨物理卡。TP1、TP2 及并发调优均在此范围内进行，记录实际设备映射和进程配置。
 - 2026-11-12 用户已选择新机器现有的 CANN 9.2.1，并采用 PyTorch 2.10 配套环境。
 - 环境安装、服务运行及精度性能结论使用实际日志和检查结果标注完成状态。
 
@@ -33,7 +34,7 @@ SSH 模板如下。凭据通过当前会话或平台提供，仓库保存脱敏�
 ssh -J '<跳板账号>:<临时令牌>@113.47.8.48:2234' root@199.88.54.221
 ```
 
-新机实测为 Ubuntu 22.04.5 / aarch64，两个 `Ascend910_9382`，各 64 GiB HBM，逻辑设备 0、1 对应物理 14、15。`npu-smi` 卡号为 7。容器资源为 128 GiB 内存和 32 核等价 CPU 时间配额。设备编号和资源配额在实例变化后重新查询。
+新机实测为 Ubuntu 22.04.5 / aarch64，A3 单物理卡内两个 `Ascend910_9382` 逻辑 NPU，各 64 GiB HBM。`npu-smi` 卡号为 7，Chip 0 / 1 对应逻辑设备 0 / 1、`Phy-ID` 14 / 15；资源统计按 **1 物理卡、2 逻辑 NPU** 记录。容器资源为 128 GiB 内存和 32 核等价 CPU 时间配额。设备编号和资源配额在实例变化后重新查询。
 
 ## 固定的软件组合
 
@@ -79,7 +80,8 @@ ssh -J '<跳板账号>:<临时令牌>@113.47.8.48:2234' root@199.88.54.221
 
 - 转换数据与缓存放在 `/workspace/yangchen` 下，保留共享数据来源、revision、split、模板和哈希。
 - 比赛验收按本次补充规则的 OpenDecisions / ERQA 与 S1 / S2 组织。Decision Index 0.2.1、Typesafe WorkflowEvals 保留为模型发布方对照评测，BFCL、API-Bank 等按 Decision Index 子项报告；保留各套件原生评分和聚合，既有执行说明见 `docs/evaluation-protocol.md`。
-- 早期探索评测结果仅作历史归档，赛事提交采用指定协议下的提交版本实测值。OpenDecisions 数据集作者公开的 Clef 参考值为 Capability 74.1、Intelligence 65.8、Calibration 82.3；引用时注明数据集作者来源，主办方正式 baseline 按赛事资源确认。
+- 早期探索评测结果仅作历史归档，赛事提交采用指定协议下的提交版本实测值。OpenDecisions 数据集作者公布的 Clef 原始服务输出参考为 Calibration 82.3、Intelligence 65.8、Capability 74.1；论文 Table 3 的作者额外温度校准后参考为 83.4、65.4、74.4。引用时注明来源和校准条件，评测配置分别记录原始与校准后结果；主办方正式 baseline 按赛事资源确认。
+- OpenDecisions 当前公开版本为 1.0.1（2026-10-15），历史初版为 1.0（2026-10-12），均为 2,352 条；1.0.1 公告确认题目、标签及原有评分保持一致。复现同时固定数据与评分器 revision、哈希和 split，版本及论文分数差异的证据见 `docs/submission-rules-2026-11-13.md` 第 10 节。
 - 发布方对照评测的两套数据快照已于 2026-11-13 下载并校验，目录为 `/workspace/yangchen/datasets/clef-official-20261113/`。逐文件来源、revision、大小和服务器 SHA-256，以及 Decision Index 官方解压哈希与行数对照见 `Clef-27B/logs/official-datasets-download-20261113.json`；模型评测状态单独记录。
 - 2026-11-13 发布方对照运行保持 A3 / TP2 / BF16 / eager / 4096 / 单序列服务。WorkflowEvals 采用官方 `questions=one` 完成全部 705 case，原生评分与配置见 `Clef-27B/logs/workflowevals-baseline-20261113.json`；Decision Index 0.2.1 已于 13:46 启动后台全量评测，输出位于 `/workspace/yangchen/logs/official-baseline-20261113/decision-index/`。本轮按用户要求停止持续监控，后续查看实际 `status.json`、`exit.json` 和评分文件确定进度与完成状态。
 - 下载完成以逐文件 SHA-256 校验报告为准。依赖完成以版本与 NPU smoke 日志为准。完整 baseline 以服务、精度和性能记录为准。

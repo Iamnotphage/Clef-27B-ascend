@@ -2,6 +2,8 @@
 
 来源为用户于 2026-11-13 在本会话粘贴的“提交内容”及两份 CSV 字段说明。本文保存该版本的要求、单位和待明确项；本轮整理依据为会话原文，官网对应版本尚待独立核对。原文注明“当前交付物非最终版本，后续会进一步完善相关内容，请持续关注官网”。
 
+同日用户另行补充资源规则：**允许并行，限用 A3 单物理卡内两个逻辑 NPU，禁止跨卡**。该限制按本会话授权执行，详见第 7 节。
+
 ## 1. 赛事验收范围
 
 | 范围 | 本轮规则要求 |
@@ -149,7 +151,9 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 
 规则正文要求 **昇腾 910C**；`results.csv` 示例的 `resources` 使用 **A3**，镜像示例也带 `-a3`。两种称谓之间的赛事认可映射和提交平台要求，需按主办方最终说明核对。
 
-当前工程已有的机器事实为：`Ascend910_9382` 两个逻辑计算单元，各 64 GiB HBM，逻辑设备 0、1 映射物理 14、15，`npu-smi` 卡号 7；工程中使用 A3 环境称谓。后续证据继续保留原始设备输出，910C 身份及其与平台资源说明的关系取得实际或官方证据后标注。
+**2026-11-13 用户补充的资源约束：允许并行，全部推理与评测进程合计限用 A3 单物理卡内两个逻辑 NPU，禁止跨物理卡。** TP1、TP2、请求并发和其他并行方式均遵循该资源上限；启动与性能记录保存实际设备列表、并行度和全部相关进程。变更设备或实例后，先核对逻辑设备到物理卡的映射，再执行测试。
+
+当前工程已有的机器事实为：A3 单物理卡内两个 `Ascend910_9382` 逻辑 NPU，各 64 GiB HBM；`npu-smi` 卡号 7，Chip 0 / 1 对应逻辑设备 0 / 1、`Phy-ID` 14 / 15。资源字段按 `A3;1物理卡;2逻辑设备` 记录。[已采集设备映射](evidence/new-machine-2026-11-12.json) 中的 `Phy-ID` 是芯片设备标识，物理卡归属按 `NPU ID` 和 `Chip ID` 核对。后续证据继续保留原始设备输出，910C 身份及其与平台资源说明的关系取得实际或官方证据后标注。
 
 本轮仅整理用户提供的新规则，入口改造、CSV 导出、ERQA 适配、S1/S2 正式扫描及截图完成状态，分别以代码检查和实际执行证据更新。当前后台评测按用户此前安排保留。
 
@@ -163,7 +167,7 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 | ERQA | 数据入口、revision、split、图像处理规则、准确率定义与分项格式 |
 | 执行正确率 | 计算分母、有效响应判定、超时/拒绝/错误的处理 |
 | S1 / S2 有效性 | 数据与请求构造、计时边界、预热、窗口、重复次数、并发范围、准入阈值和有效吞吐计算 |
-| 硬件要求 | 910C 与 A3 称谓的认可映射、正式复现设备和资源配额 |
+| 硬件要求 | 已按用户补充限定 A3 单物理卡内两个逻辑 NPU；继续核实 910C 与 A3 称谓的赛事认可映射、正式复现设备 |
 | 服务细节 | 四接口完整协议、默认配置、`--output-dir` 产物规范及最终 Demo 启动方式 |
 | 最终规则版本 | 官网对应版本、更新时间及后续修改内容 |
 
@@ -186,16 +190,45 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 
 ## 10. Clef 在 OpenDecisions 上的公开参考
 
-联网核查日期为 2026-11-13。OpenDecisions 数据集作者在 **v1.0.1、test 2,352 条、2026-10-15 榜单**中公布了 `Cloudflare/clef` 的以下结果，分数为 0～100：
+### 10.1 原始服务输出与论文温度校准结果
 
-| 指标 | 数据集作者公布值 |
-| --- | ---: |
-| Calibration | 82.3 |
-| Intelligence | 65.8 |
-| Capability | 74.1 |
+联网核查日期为 2026-11-13。OpenDecisions 数据集作者在 **v1.0.1、test 2,352 条、2026-10-15 榜单**和论文中公布了 `Cloudflare/clef` 的两种结果，分数为 0～100：
+
+| 评测条件 | Calibration | Intelligence | Capability | 依据 |
+| --- | ---: | ---: | ---: | --- |
+| 原始服务输出（as served） | 82.3 | 65.8 | 74.1 | 数据卡榜单三项分数；论文 Table 19 的 as-served Capability |
+| 作者额外温度校准后 | 83.4 | 65.4 | 74.4 | 论文 Table 3 三项分数；Table 19 的 with-temperatures Capability |
 
 来源：[原始数据集榜单](https://huggingface.co/datasets/jgeuter/OpenDecisions#leaderboard-october-15-2026) · [ModelScope 镜像](https://modelscope.cn/datasets/evalscope/OpenDecisions)。榜单行还给出 **TVD 0.245**，对应 129 条具有真实概率分布的校准样本；TVD 与提交字段 `score_mae` 各有定义，分别记录。该榜单行的 accuracy、score_mae、硬件和完整运行配置仍需另行取得。
 
 上述成绩属于**数据集作者的公开评测**。本轮已读 Cloudflare 模型卡、公开发布文章及 `.eval_results` 中尚未定位到模型发布方自行公布的 OpenDecisions 数值；官方 dashboard 本轮读取受限，检索结论限定于已取得资料。[Cloudflare 模型卡](https://huggingface.co/Cloudflare/clef) · [模型评测元数据目录](https://huggingface.co/Cloudflare/clef/tree/main/.eval_results)
 
-数据集作者论文还区分 Clef 的 **as served 74.1** 和作者额外温度校准后的 **74.4**，引用时保留处理条件。[论文与校准实验](https://arxiv.org/html/2610.17205v1) 原始未加额外校准的服务优先参考 as-served 榜单；比赛正式准入仍使用主办方指定 baseline、数据版本、评分器及配置。
+[论文 v1](https://arxiv.org/pdf/2610.17205v1) 的具体依据如下：
+
+- **第 7 页 Table 3** 的表注说明，公开系统采用原始服务输出与拟合温度结果中 OpenDecisions Capability 较高的一组；Clef 该行采用 74.4。
+- **第 22 页 Table 19** 明列 Clef 的 as served 74.1 与 with temperatures 74.4。Choice / Yes-no / Score 的拟合温度分别为 0.87 / 1.15 / 1.12；作者将小于 1 的温度设为 1，实际应用为 1 / 1.15 / 1.12。温度使用独立的 held-out 校准集拟合。
+- **第 20 页 Appendix G，Where temperatures act** 解释温度保持最大概率选项，同时改变 Score 的期望等级。Score competence 按期望等级误差计算，因此 Intelligence 也会变化。
+
+[固定 revision 评分源码](https://huggingface.co/datasets/jgeuter/OpenDecisions/blob/ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe/score.py) 中 Score 使用 `expected_level = sum(k * p_k)`，归一化误差为 `abs(expected_level - gold) / (K - 1)`，再校正机会水平；连续期望值直接参与计算。Score 的 argmax accuracy 单独统计。温度变化能同时提高 Calibration、改变 Intelligence，并最终改变两项均值 Capability。精确到 Intelligence 下降 0.4 分的逐题贡献，仍需作者原始与校准后预测复算。
+
+工程对照原始服务输出时采用 74.1 及其配套三项分数；复现论文时单独记录概率后处理、校准数据和温度参数，并报告校准后的整组三项指标。比赛正式准入继续使用主办方指定 baseline、数据版本、评分器及配置。本轮记录文献条件，现有服务和后台任务配置保持原状。
+
+### 10.2 OpenDecisions 版本与复现定位
+
+截至核查日，原始仓库公开命名的语义版本共 **2 个**：
+
+| 版本 | 发布日期 | 条目数 | 主要变化 |
+| --- | --- | ---: | --- |
+| 1.0 | 2026-10-12 | 2,352 | 初始发布，初版 split 名称为 `train` |
+| 1.0.1（当前） | 2026-10-15 | 2,352 | 清理多余字段、增加 `trap_answer`、说明 `target_probs`、增加 TVD 报告与榜单、split 改名为 `test` |
+
+当前题型为 Choice 1,178 条、Yes/no 586 条、Score 588 条。[Changes](https://huggingface.co/datasets/jgeuter/OpenDecisions#changes) 明确声明 **“Items, labels, and scores are unchanged.”** 两版评分脚本的原有 Calibration / Intelligence / Capability 计算保持一致；1.0.1 新增 129 个真实概率校准样本的 mean TVD 报告，该值单独输出。因此公告中的版本变更支持保留相同题目、标签与原有评分；论文与榜单的两组 Clef 分数按额外温度校准条件解释。
+
+原始仓库当前 main revision 为 `ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe`，仓库无 Git tags。语义版本、Git revision、评分器内容和论文修订各自记录；[arXiv 提交历史](https://arxiv.org/abs/2610.17205) 当前仅有 2026-10-12 的 v1。
+
+| 当前文件 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| `opendecisions.jsonl` | 4,931,936 | `78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6` |
+| `score.py` | 11,463 | `478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377` |
+
+本轮核查的 [ModelScope 镜像](https://www.modelscope.cn/datasets/evalscope/OpenDecisions) 与原始仓库当前 README、JSONL 的 SHA-256 一致。下载与复现固定实际 revision、split 和文件哈希，保留来源及评分器，后续版本变更据实更新。[原始提交历史](https://huggingface.co/datasets/jgeuter/OpenDecisions/commits/main)
