@@ -10,7 +10,7 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输出参考为 Calibration / Intelligence / Capability **82.3 / 65.8 / 74.1**，论文作者额外温度校准后为 **83.4 / 65.4 / 74.4**；引用与复现保留处理条件。[分数来源与版本说明](docs/submission-rules-2026-11-13.md#10-clef-在-opendecisions-上的公开参考)
 
-发布方对照评测采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，BFCL、API-Bank 等为 Decision Index 子项。2026-11-13 WorkflowEvals 已全量完成，Decision Index 已于北京时间 13:46 启动后台评测，结果以原生输出和退出记录为准。[对照评测口径](docs/evaluation-protocol.md) · [客户端与预检证据](Clef-27B/logs/official-baseline-preparation-20261113.json)
+发布方对照评测采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，BFCL、API-Bank 等为 Decision Index 子项。2026-11-13 WorkflowEvals 已全量完成；Decision Index 于北京时间 **15:55 按用户要求终止**，其部分输出按未完成记录保留。[对照评测口径](docs/evaluation-protocol.md) · [终止记录](Clef-27B/logs/decision-index-stopped-20261113.json)
 
 2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
 
@@ -37,19 +37,32 @@ WorkflowEvals 使用官方 `questions=one`、`workers=1`、`question_workers=1`�
   --questions one --name clef-tp2-4096-one-20261113
 ```
 
-Decision Index 使用固定 `--edition 0.2.1`、原生串行 HTTP 引擎和全部 150,759 请求。正式命令为 `bash /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/decision_index_baseline.sh`，已由独立 supervisor 托管（启动时 supervisor PID `146512`、评测 PID `146869`），SSH 断开后继续运行，完成后自动生成原生评分并记录退出码。本轮保留现有 26 候选及 4096-token 容量限制和类型转换行为，错误、拒绝及覆盖率随原生结果报告。2026-11-13 用户要求停止持续监控，辅助守护和轮询已停止。
+Decision Index 使用固定 `--edition 0.2.1`、原生串行 HTTP 引擎，计划请求数为 150,759。正式命令为 `bash /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/decision_index_baseline.sh`，启动时 supervisor PID `146512`、评测 PID `146869`。2026-11-13 **15:55 已按用户要求终止两个进程**，终止前最后一条进度为已处理 42,150、成功 30,052、错误 12,098，保留部分逐题结果及终止记录。该次运行保持既有 26 候选及 4096-token 容量限制，按未完成评测记录。
 
-登录服务器后，可查看进程、实时进度与日志：
+登录服务器后，可读取该次中止运行的记录：
 
 ```bash
 ssh clef
 cd /workspace/yangchen/logs/official-baseline-20261113/decision-index
-ps -p 146512,146869 -o pid,ppid,etime,pcpu,pmem,args
-watch -n 5 'cat full/status.json'
-tail -f full-native.log
+cat stopped-by-user-20261113.json
+cat full/status.json
+tail -n 20 full-native.log
 ```
 
-`Ctrl+C` 结束当前查看命令。完成后读取 `exit.json`、`full/scores.json` 和 `full/benchmark-summary.json`；逐请求结果在 `full/results.jsonl`，WorkflowEvals 汇总在相邻 `workflowevals/summary.json`。
+部分逐请求结果在 `full/results.jsonl`，该次中止运行的状态以 `stopped-by-user-20261113.json` 为准；WorkflowEvals 完整汇总在相邻 `workflowevals/summary.json`。
+
+## OpenDecisions 当前全量评测
+
+2026-11-13 15:58 启动一次全新 OpenDecisions 1.0.1 全量评测，2,352 条输入重新请求现有 `clef` 服务，保持原始概率。使用 EvalScope 固定源码 `3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e` 的原生评分和聚合，仅适配本地 JSONL 加载。启动与环境证据见 [本轮记录](Clef-27B/logs/opendecisions-baseline-20261113/launch.json)。
+
+```bash
+ssh clef
+/workspace/yangchen/venvs/clef-eval-py312/bin/python \
+  /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/open_decisions_baseline.py \
+  --output-dir /workspace/yangchen/logs/opendecisions-baseline-20261113-1600
+```
+
+复测时为 `--output-dir` 指定全新的空目录。入口校验完整数据 SHA-256 和 2,352 条记录，保存实际命令、原生输出及退出码。输出中的 `native.log` 为执行日志；`evalscope/predictions/` 保存请求和完整响应概率，`evalscope/reviews/` 保存逐题评分，`evalscope/reports/` 保存总体与分项指标。完成后核对退出码、执行覆盖和 Calibration / Intelligence / Capability，评分器的 0～1 原生值按 0～100 分展示。
 
 ## 模型与工作区
 

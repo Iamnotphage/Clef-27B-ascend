@@ -1,0 +1,44 @@
+{
+  "captured_utc": "2026-11-13T07:59:45.893905+00:00",
+  "service_processes": [
+    {
+      "pid": 115206,
+      "command": "/workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --enforce-eager --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --limit-mm-per-prompt {\"image\":1,\"video\":0} --skip-mm-profiling --host 127.0.0.1 --port 8000 --distributed-executor-backend mp --limit-mm-per-prompt {\"image\":1,\"video\":1} --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+    },
+    {
+      "pid": 115252,
+      "command": "VLLM::EngineCore"
+    }
+  ],
+  "service_config": {
+    "model": "clef",
+    "dtype": "bfloat16",
+    "tensor_parallel_size": 2,
+    "enforce_eager": true,
+    "max_model_len": 4096,
+    "max_num_seqs": 1,
+    "max_num_batched_tokens": 4096,
+    "prefix_caching": false,
+    "chunked_prefill": false,
+    "additional_temperature_calibration": false
+  },
+  "resources": {
+    "physical_card": 7,
+    "logical_npus": [
+      0,
+      1
+    ],
+    "chip_ids": [
+      0,
+      1
+    ],
+    "phy_ids": [
+      14,
+      15
+    ],
+    "physical_card_count": 1
+  },
+  "device_mapping": "\tNPU ID                         Chip ID                        Chip Logic ID                  Chip Phy-ID                    Chip Name                     \n\t7                              0                              0                              14                             Ascend910\n\t7                              1                              1                              15                             Ascend910\n\t7                              2                              -                              -                              Mcu                           \n",
+  "evalscope_source_commit": "3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e",
+  "previous_job_stop_record": "/workspace/yangchen/logs/official-baseline-20261113/decision-index/stopped-by-user-20261113.json"
+}

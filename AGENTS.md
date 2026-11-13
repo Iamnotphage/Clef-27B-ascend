@@ -83,7 +83,8 @@ ssh -J '<跳板账号>:<临时令牌>@113.47.8.48:2234' root@199.88.54.221
 - 早期探索评测结果仅作历史归档，赛事提交采用指定协议下的提交版本实测值。OpenDecisions 数据集作者公布的 Clef 原始服务输出参考为 Calibration 82.3、Intelligence 65.8、Capability 74.1；论文 Table 3 的作者额外温度校准后参考为 83.4、65.4、74.4。引用时注明来源和校准条件，评测配置分别记录原始与校准后结果；主办方正式 baseline 按赛事资源确认。
 - OpenDecisions 当前公开版本为 1.0.1（2026-10-15），历史初版为 1.0（2026-10-12），均为 2,352 条；1.0.1 公告确认题目、标签及原有评分保持一致。复现同时固定数据与评分器 revision、哈希和 split，版本及论文分数差异的证据见 `docs/submission-rules-2026-11-13.md` 第 10 节。
 - 发布方对照评测的两套数据快照已于 2026-11-13 下载并校验，目录为 `/workspace/yangchen/datasets/clef-official-20261113/`。逐文件来源、revision、大小和服务器 SHA-256，以及 Decision Index 官方解压哈希与行数对照见 `Clef-27B/logs/official-datasets-download-20261113.json`；模型评测状态单独记录。
-- 2026-11-13 发布方对照运行保持 A3 / TP2 / BF16 / eager / 4096 / 单序列服务。WorkflowEvals 采用官方 `questions=one` 完成全部 705 case，原生评分与配置见 `Clef-27B/logs/workflowevals-baseline-20261113.json`；Decision Index 0.2.1 已于 13:46 启动后台全量评测，输出位于 `/workspace/yangchen/logs/official-baseline-20261113/decision-index/`。本轮按用户要求停止持续监控，后续查看实际 `status.json`、`exit.json` 和评分文件确定进度与完成状态。
+- 2026-11-13 发布方对照运行保持 A3 / TP2 / BF16 / eager / 4096 / 单序列服务。WorkflowEvals 采用官方 `questions=one` 完成全部 705 case，原生评分与配置见 `Clef-27B/logs/workflowevals-baseline-20261113.json`；Decision Index 0.2.1 已于 15:55 按用户要求终止评测及 supervisor，部分输出保留在 `/workspace/yangchen/logs/official-baseline-20261113/decision-index/`，终止证据见 `Clef-27B/logs/decision-index-stopped-20261113.json`。该次运行按未完成记录。
+- 2026-11-13 15:58 已启动全新 OpenDecisions 1.0.1 全量原始概率评测，使用 `scripts/official_eval/open_decisions_baseline.py`、固定数据和 EvalScope 原生评分器。输出目录为 `/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/`，启动和卡内双逻辑 NPU 配置见 `Clef-27B/logs/opendecisions-baseline-20261113/`；完成状态、全量覆盖和指标以正式报告及退出记录更新。
 - 下载完成以逐文件 SHA-256 校验报告为准。依赖完成以版本与 NPU smoke 日志为准。完整 baseline 以服务、精度和性能记录为准。
 - 新机器的当前状态与后续执行计划见 `docs/new-machine-plan.md`，旧机器记录在文档中保留采集时间和来源。
 - 修改任务涉及的代码和文档，保留用户已有修改。提交前检查文档链接、命令语法以及本次实际执行产生的结果。
