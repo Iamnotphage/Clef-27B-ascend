@@ -4,11 +4,13 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
-主评测统一采用 Cloudflare 发布成绩所用的 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**。BFCL、API-Bank 等为 Decision Index 的子项，WorkflowEvals 覆盖四个业务工作流。2026-11-13 WorkflowEvals 已全量完成，Decision Index 已于北京时间 13:46 启动后台全量评测，结果以原生输出和退出记录为准。[评测口径](docs/evaluation-protocol.md) · [客户端与预检证据](Clef-27B/logs/official-baseline-preparation-20261113.json)
+2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
+
+发布方对照评测采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，BFCL、API-Bank 等为 Decision Index 子项。2026-11-13 WorkflowEvals 已全量完成，Decision Index 已于北京时间 13:46 启动后台评测，结果以原生输出和退出记录为准。[对照评测口径](docs/evaluation-protocol.md) · [客户端与预检证据](Clef-27B/logs/official-baseline-preparation-20261113.json)
 
 2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
 
-## 本轮主评测与后台运行
+## 发布方对照评测与后台运行
 
 复用现有 A3 / TP2 / BF16 / eager / 4096-token / 单序列服务，通过 `http://127.0.0.1:8000/v1/systemone` 调用。客户端、源码和数据均独立固定版本，保留各套件原生业务逻辑与评分器。
 

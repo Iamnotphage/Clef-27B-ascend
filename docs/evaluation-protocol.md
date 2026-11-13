@@ -1,5 +1,7 @@
 # Clef-27B 统一评测口径
 
+2026-11-13 后续补充：比赛验收现按用户提供的 OpenDecisions / ERQA 及 S1 / S2 要求组织，详见[比赛提交规范](submission-rules-2026-11-13.md)。本文保留 Decision Index 与 WorkflowEvals 的发布方对照用途和既有执行方案，具体本轮运行参数见根 README 与原始报告。
+
 决策日期：2026-11-13，北京时间。用户确定本工程主评测采用 Cloudflare 已发表结果对应的 **Decision Index 0.2.1** 和 **Typesafe WorkflowEvals**。两者均为包含多个测试任务、数据和评分器的评测套件。[发布方结果](https://huggingface.co/Cloudflare/clef#results) · [发布文章](https://blog.cloudflare.com/clef-decision-models/)
 
 ## 套件、子项与结果的关系
