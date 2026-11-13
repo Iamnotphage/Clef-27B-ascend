@@ -155,7 +155,7 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 
 当前工程已有的机器事实为：A3 单物理卡内两个 `Ascend910_9382` 逻辑 NPU，各 64 GiB HBM；`npu-smi` 卡号 7，Chip 0 / 1 对应逻辑设备 0 / 1、`Phy-ID` 14 / 15。资源字段按 `A3;1物理卡;2逻辑设备` 记录。[已采集设备映射](evidence/new-machine-2026-11-12.json) 中的 `Phy-ID` 是芯片设备标识，物理卡归属按 `NPU ID` 和 `Chip ID` 核对。后续证据继续保留原始设备输出，910C 身份及其与平台资源说明的关系取得实际或官方证据后标注。
 
-本轮仅整理用户提供的新规则，入口改造、CSV 导出、ERQA 适配、S1/S2 正式扫描及截图完成状态，分别以代码检查和实际执行证据更新。当前后台评测按用户此前安排保留。
+入口改造、CSV 导出、ERQA 适配、S1/S2 正式扫描及截图完成状态，分别以代码检查和实际执行证据更新。后续按用户要求于 15:55 终止 Decision Index，并于 15:58—16:05 完成一次全新 OpenDecisions 全量原始概率评测；质量结果与执行证据见[本轮运行记录](opendecisions-baseline-2026-11-13.md)。
 
 ## 8. 最终模板与规则待明确项
 

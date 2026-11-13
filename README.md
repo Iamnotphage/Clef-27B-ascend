@@ -53,16 +53,18 @@ tail -n 20 full-native.log
 
 ## OpenDecisions 当前全量评测
 
-2026-11-13 15:58 启动一次全新 OpenDecisions 1.0.1 全量评测，2,352 条输入重新请求现有 `clef` 服务，保持原始概率。使用 EvalScope 固定源码 `3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e` 的原生评分和聚合，仅适配本地 JSONL 加载。启动与环境证据见 [本轮记录](Clef-27B/logs/opendecisions-baseline-20261113/launch.json)。
+2026-11-13 15:58—16:05 已完成一次全新 OpenDecisions 1.0.1 全量评测，**2,352/2,352 成功，0 错误**，耗时约 7 分 18 秒。Calibration **82.7941**、Intelligence **66.0568**、Capability **74.4255**；accuracy **0.810374**，Score MAE **0.401389**（588 条）。保持原始概率，作者固定版评分脚本与 EvalScope 未舍入三项指标完全一致。[运行及复现说明](docs/opendecisions-baseline-2026-11-13.md) · [结果汇总](Clef-27B/logs/opendecisions-baseline-20261113/summary.json) · [质量 CSV](Clef-27B/metrics.csv)
+
+使用 EvalScope 固定源码 `3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e` 的原生评分和聚合，仅适配本地 JSONL 加载。本轮保持 A3 单物理卡两个逻辑 NPU、TP2 / BF16 / eager / 4096 / 单序列服务，全部输入重新请求 `POST /v1/systemone`。[启动与环境证据](Clef-27B/logs/opendecisions-baseline-20261113/launch.json)
 
 ```bash
 ssh clef
 /workspace/yangchen/venvs/clef-eval-py312/bin/python \
   /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/open_decisions_baseline.py \
-  --output-dir /workspace/yangchen/logs/opendecisions-baseline-20261113-1600
+  --output-dir /workspace/yangchen/logs/opendecisions-repeat-01
 ```
 
-复测时为 `--output-dir` 指定全新的空目录。入口校验完整数据 SHA-256 和 2,352 条记录，保存实际命令、原生输出及退出码。输出中的 `native.log` 为执行日志；`evalscope/predictions/` 保存请求和完整响应概率，`evalscope/reviews/` 保存逐题评分，`evalscope/reports/` 保存总体与分项指标。完成后核对退出码、执行覆盖和 Calibration / Intelligence / Capability，评分器的 0～1 原生值按 0～100 分展示。
+复测时为 `--output-dir` 指定全新的空目录。入口校验完整数据 SHA-256 和 2,352 条记录，保存实际命令、原生输出及退出码。输出中的 `native.log` 为执行日志；`evalscope/predictions/` 保存请求和完整响应概率，`evalscope/reviews/` 保存逐题评分，`evalscope/reports/` 保存总体与分项指标。本轮完整原始概率导出见 [author-predictions.jsonl](Clef-27B/logs/opendecisions-baseline-20261113/author-predictions.jsonl)，作者复核的精确分数为 0～100 分；EvalScope 顶层 0～1 值保留了四位小数。
 
 ## 模型与工作区
 
