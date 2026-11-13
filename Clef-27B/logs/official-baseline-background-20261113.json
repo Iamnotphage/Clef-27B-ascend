@@ -1,0 +1,151 @@
+{
+  "recorded_at_utc": "2026-11-13T05:59:40.016555+00:00",
+  "status": "user_handoff_background_evaluation_running",
+  "user_instruction": "Stop continuous monitoring; leave the official baseline run in the background and provide run/process/log commands.",
+  "workflowevals": {
+    "status": "complete",
+    "case_count": 705,
+    "http_requests": 12244,
+    "all_case_executions_ok": true,
+    "all_http_requests_ok": true,
+    "local_report": "Clef-27B/logs/workflowevals-baseline-20261113.json",
+    "server_report": "/workspace/yangchen/logs/official-baseline-20261113/workflowevals/summary.json"
+  },
+  "decision_index": {
+    "status": "background_running_at_handoff",
+    "full_baseline_complete": false,
+    "expected_requests": 150759,
+    "launch": {
+      "started_at_utc": "2026-11-13T05:46:00.270660+00:00",
+      "pid": 146869,
+      "supervisor_pid": 146512,
+      "command": [
+        "bash",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/decision_index_baseline.sh"
+      ],
+      "working_directory": "/workspace/yangchen/Clef-27B-ascend",
+      "wrapper_sha256": "66985e2fef559e5f3a24bde95f71f42f249510e6d3cc5d859dfa6b0c07287b0e",
+      "setup_report": "/workspace/yangchen/logs/official-baseline-20261113/decision-index/setup.json",
+      "suite_verification": "/workspace/yangchen/logs/official-baseline-20261113/decision-index/suite-verification.json",
+      "environment_overrides": {
+        "HF_HUB_OFFLINE": "1",
+        "PYTHONUNBUFFERED": "1"
+      },
+      "workflow_gate": {
+        "checked_at_utc": "2026-11-13T05:46:00.269477+00:00",
+        "supervisor_pid": 146512,
+        "workflow_status_file": "/workspace/yangchen/logs/official-baseline-20261113/workflowevals/clef-tp2-4096-one-20261113-status.json",
+        "workflow_status": "complete",
+        "workflows": {
+          "invoice_processing": "complete",
+          "customer_service": "complete",
+          "security_incidents": "complete",
+          "agent_trace_observability": "complete"
+        },
+        "ready": true
+      }
+    },
+    "monitor_stopped": {
+      "stopped_at_utc": "2026-11-13T05:54:14.295498+00:00",
+      "monitor_processes_terminated": [
+        {
+          "pid": 147226,
+          "started_utc": "2026-11-13T05:50:26.820000+00:00"
+        }
+      ],
+      "preserved_client_pid": 146869,
+      "preserved_supervisor_pid": 146512,
+      "reason": "User requested background evaluation without continuous monitoring."
+    },
+    "last_reported_native_status": {
+      "time_utc": "2026-11-13T05:54:14Z",
+      "completed": 11910,
+      "ok": 1812,
+      "error": 10098,
+      "elapsed_seconds": 491.6
+    },
+    "native_output": "/workspace/yangchen/logs/official-baseline-20261113/decision-index/full",
+    "exit_record": "/workspace/yangchen/logs/official-baseline-20261113/decision-index/exit.json",
+    "completion_rule": "Read the native exit record and scores after execution; this handoff does not claim the Decision Index run has completed."
+  },
+  "service_guard": {
+    "stopped_at_utc": "2026-11-13T05:54:01.690275+00:00",
+    "guard_pid": 140481,
+    "guard_identity_verified": true,
+    "stop_method": "stop_file",
+    "guard_active": false,
+    "continuous_monitoring_stopped": true,
+    "tail_watchers_stopped": [
+      140558
+    ],
+    "check_count": 78,
+    "all_checks_ok": true,
+    "alert_count": 0,
+    "first_check_utc": "2026-11-13T04:35:30.989855+00:00",
+    "last_check_utc": "2026-11-13T05:53:07.090235+00:00",
+    "last_check": {
+      "event": "check",
+      "sequence": 78,
+      "checked_at_utc": "2026-11-13T05:53:07.090235+00:00",
+      "api_pid": 115206,
+      "npu_decision_requests": 0,
+      "api_alive": true,
+      "argv_unchanged": true,
+      "cwd_unchanged": true,
+      "argv_sha256": "9782130c9d522948be8bce2e21157745641717bc699f2eadebfadd5819b87257",
+      "health_http_status": 200,
+      "code": {
+        "vllm": {
+          "head": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+          "tracked_diff_sha256": "4a6e0a99feb33c6cd136fda1b4379ac64aa8377ca128a9093f900efd196506a6",
+          "head_unchanged": true,
+          "tracked_diff_unchanged": true
+        },
+        "vllm_ascend": {
+          "head": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+          "tracked_diff_sha256": "80d29c074438fd4f3fccf5d3008007da4e3bfd5c29b17b4600f028e296f5c9f8",
+          "head_unchanged": true,
+          "tracked_diff_unchanged": true
+        }
+      },
+      "npu_processes": [
+        {
+          "pid": 115206,
+          "name": "python"
+        },
+        {
+          "pid": 115266,
+          "name": "VLLMWorker_TP"
+        },
+        {
+          "pid": 115267,
+          "name": "VLLMWorker_TP"
+        }
+      ],
+      "additional_npu_processes": [],
+      "status": "ok",
+      "alerts": [],
+      "check_wall_seconds": 0.498
+    },
+    "guard_log": "/workspace/yangchen/logs/official-baseline-20261113/service-guard.jsonl",
+    "guard_log_bytes": 71897,
+    "guard_log_sha256": "9c1723b0973398b4e08cce0c7a51319b6e0a172a63d46b3c222bdef4a7f24f03",
+    "preserved_processes": {
+      "115206": {
+        "alive": true,
+        "cmdline_sha256": "569634cc0e8f33cd55732b1178d58fd323801455b627a3bdb387bc84cb0a9e7c"
+      },
+      "146869": {
+        "alive": true,
+        "cmdline_sha256": "22dd44a44cd23b89d282d5b02606224248a19717b29a7d2fd71c45c844d2c178"
+      },
+      "146512": {
+        "alive": true,
+        "cmdline_sha256": "058088d32cc37dafaa5e12bf414bf43b0932ca9b94db35acf98c19387f0f93ec"
+      }
+    },
+    "model_or_evaluation_processes_signalled": false,
+    "future_polling": false
+  },
+  "continuous_agent_monitoring_stopped": true
+}

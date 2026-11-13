@@ -89,6 +89,7 @@ POST /v1/decide	当前 Demo 的原生交互接口，case体验入口
 - 2026-11-13 用户确定主评测统一采用 Cloudflare 已发表结果对应的 Decision Index 0.2.1 与 Typesafe WorkflowEvals 四工作流。BFCL、API-Bank 等按 Decision Index 子项报告；各套件保留原生评分与聚合，执行要求见 `docs/evaluation-protocol.md`。
 - 早期探索评测结果仅作历史归档。当前说明、计划及汇报统一使用 Decision Index 0.2.1 与 Typesafe WorkflowEvals；主评测完成以这两套评测的实际运行与评分证据为准。正式比赛指标使用主办方指定协议。
 - 两套主评测的数据快照已于 2026-11-13 下载并校验，目录为 `/workspace/yangchen/datasets/clef-official-20261113/`。逐文件来源、revision、大小和服务器 SHA-256，以及 Decision Index 官方解压哈希与行数对照见 `Clef-27B/logs/official-datasets-download-20261113.json`；模型评测状态单独记录。
+- 2026-11-13 本轮保持 A3 / TP2 / BF16 / eager / 4096 / 单序列服务。WorkflowEvals 采用官方 `questions=one` 完成全部 705 case，原生评分与配置见 `Clef-27B/logs/workflowevals-baseline-20261113.json`；Decision Index 0.2.1 全量在服务器后台运行，输出位于 `/workspace/yangchen/logs/official-baseline-20261113/decision-index/`。本轮按用户要求停止持续监控，后续查看实际 `status.json`、`exit.json` 和评分文件确定进度与完成状态。
 - 下载完成以逐文件 SHA-256 校验报告为准。依赖完成以版本与 NPU smoke 日志为准。完整 baseline 以服务、精度和性能记录为准。
 - 新机器的当前状态与后续执行计划见 `docs/new-machine-plan.md`，旧机器记录在文档中保留采集时间和来源。
 - 修改任务涉及的代码和文档，保留用户已有修改。提交前检查文档链接、命令语法以及本次实际执行产生的结果。

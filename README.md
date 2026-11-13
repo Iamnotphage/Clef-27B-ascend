@@ -4,9 +4,44 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
-主评测统一采用 Cloudflare 发布成绩所用的 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**。BFCL、API-Bank 等为 Decision Index 的子项，WorkflowEvals 覆盖四个业务工作流。两套主评测当前待接入与运行，完成状态以实际运行与评分证据为准。[统一评测口径](docs/evaluation-protocol.md)
+主评测统一采用 Cloudflare 发布成绩所用的 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**。BFCL、API-Bank 等为 Decision Index 的子项，WorkflowEvals 覆盖四个业务工作流。2026-11-13 WorkflowEvals 已全量完成，Decision Index 已于北京时间 13:46 启动后台全量评测，结果以原生输出和退出记录为准。[评测口径](docs/evaluation-protocol.md) · [客户端与预检证据](Clef-27B/logs/official-baseline-preparation-20261113.json)
 
-2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录；模型评测待执行。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
+2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
+
+## 本轮主评测与后台运行
+
+复用现有 A3 / TP2 / BF16 / eager / 4096-token / 单序列服务，通过 `http://127.0.0.1:8000/v1/systemone` 调用。客户端、源码和数据均独立固定版本，保留各套件原生业务逻辑与评分器。
+
+WorkflowEvals 使用官方 `questions=one`、`workers=1`、`question_workers=1`：发票 `all` 模式首例的问题 schema 为 28,719 tokens，超出现有服务上限。北京时间 12:17:41—13:45:27，705/705 case 执行成功，1,524 个策略决策全部计分，12,244 次正式 HTTP 请求全部返回 200。[完整汇总](Clef-27B/logs/workflowevals-baseline-20261113.json)
+
+| 工作流 | 原生 consensus 指标 | 本轮结果 |
+| --- | --- | ---: |
+| 发票处理 | exact_actions | 62.89%（283/450） |
+| 客服 | exact_actions | 72.71%（445/612） |
+| 安全事件 | exact_actions | 67.92%（163/240） |
+| Agent 运行审查 | primary_action | 69.37%（154/222） |
+
+原生 WorkflowEvals 正式命令如下，输出与断点均按 `--name` 保存：
+
+```bash
+/workspace/yangchen/venvs/workflowevals-py313/bin/python \
+  /workspace/yangchen/work/workflowevals-runner-20261113/workflow_baseline.py \
+  --questions one --name clef-tp2-4096-one-20261113
+```
+
+Decision Index 使用固定 `--edition 0.2.1`、原生串行 HTTP 引擎和全部 150,759 请求。正式命令为 `bash /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/decision_index_baseline.sh`，已由独立 supervisor 托管（启动时 supervisor PID `146512`、评测 PID `146869`），SSH 断开后继续运行，完成后自动生成原生评分并记录退出码。本轮保留现有 26 候选及 4096-token 容量限制和类型转换行为，错误、拒绝及覆盖率随原生结果报告。2026-11-13 用户要求停止持续监控，辅助守护和轮询已停止。
+
+登录服务器后，可查看进程、实时进度与日志：
+
+```bash
+ssh clef
+cd /workspace/yangchen/logs/official-baseline-20261113/decision-index
+ps -p 146512,146869 -o pid,ppid,etime,pcpu,pmem,args
+watch -n 5 'cat full/status.json'
+tail -f full-native.log
+```
+
+`Ctrl+C` 结束当前查看命令。完成后读取 `exit.json`、`full/scores.json` 和 `full/benchmark-summary.json`；逐请求结果在 `full/results.jsonl`，WorkflowEvals 汇总在相邻 `workflowevals/summary.json`。
 
 ## 模型与工作区
 
