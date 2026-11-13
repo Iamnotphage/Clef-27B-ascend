@@ -1,0 +1,1477 @@
+{
+  "created_at_utc": "2026-11-13T04:24:28.227896+00:00",
+  "status": "clients_prepared_workflow_running_decision_index_queued",
+  "baseline": {
+    "captured_at_utc": "2026-11-13T04:02:36.226143+00:00",
+    "host": "25e6d0590726",
+    "service": {
+      "/health": {
+        "http_status": 200,
+        "body": null
+      },
+      "/v1/models": {
+        "http_status": 200,
+        "body": {
+          "object": "list",
+          "data": [
+            {
+              "id": "clef",
+              "object": "model",
+              "created": 1794542556,
+              "owned_by": "vllm",
+              "root": "/workspace/yangchen/models/Clef-27B",
+              "parent": null,
+              "max_model_len": 4096,
+              "permission": [
+                {
+                  "id": "modelperm-acaac72903a82d90",
+                  "object": "model_permission",
+                  "created": 1794542556,
+                  "allow_create_engine": false,
+                  "allow_sampling": true,
+                  "allow_logprobs": true,
+                  "allow_search_indices": false,
+                  "allow_view": true,
+                  "allow_fine_tuning": false,
+                  "organization": "*",
+                  "group": null,
+                  "is_blocking": false
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "processes": [
+      {
+        "pid": 115206,
+        "argv": [
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "-m",
+          "vllm.entrypoints.cli.main",
+          "serve",
+          "/workspace/yangchen/models/Clef-27B",
+          "--served-model-name",
+          "clef",
+          "--runner",
+          "pooling",
+          "--dtype",
+          "bfloat16",
+          "--tensor-parallel-size",
+          "2",
+          "--enforce-eager",
+          "--max-model-len",
+          "4096",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "4096",
+          "--gpu-memory-utilization",
+          "0.9",
+          "--no-enable-prefix-caching",
+          "--no-enable-chunked-prefill",
+          "--limit-mm-per-prompt",
+          "{\"image\":1,\"video\":0}",
+          "--skip-mm-profiling",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8000",
+          "--distributed-executor-backend",
+          "mp",
+          "--limit-mm-per-prompt",
+          "{\"image\":1,\"video\":1}",
+          "--mm-processor-kwargs",
+          "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+        ],
+        "cwd": "/workspace/yangchen/Clef-27B-ascend",
+        "selected_environment": {
+          "VIRTUAL_ENV": "/workspace/yangchen/venvs/clef-py312",
+          "ATB_HOME_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1",
+          "HF_HOME": "/workspace/yangchen/cache/huggingface",
+          "PYTHONPATH": "/usr/local/Ascend/cann-9.2.1/python/site-packages:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe:",
+          "ASCEND_OPP_PATH": "/usr/local/Ascend/cann-9.2.1/opp",
+          "LD_LIBRARY_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+          "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+          "MODEL_DIR": "/workspace/yangchen/models/Clef-27B"
+        }
+      },
+      {
+        "pid": 115252,
+        "argv": [
+          "VLLM::EngineCore"
+        ],
+        "cwd": "/workspace/yangchen/Clef-27B-ascend",
+        "selected_environment": {
+          "LD_LIBRARY_PATH": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/cv2/../../lib64:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+          "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+          "MODEL_DIR": "/workspace/yangchen/models/Clef-27B"
+        }
+      },
+      {
+        "pid": 115266,
+        "argv": [
+          "VLLM::Worker_TP0"
+        ],
+        "cwd": "/workspace/yangchen/Clef-27B-ascend",
+        "selected_environment": {
+          "LD_LIBRARY_PATH": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/cv2/../../lib64:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/cv2/../../lib64:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+          "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+          "MODEL_DIR": "/workspace/yangchen/models/Clef-27B"
+        }
+      },
+      {
+        "pid": 115267,
+        "argv": [
+          "VLLM::Worker_TP1"
+        ],
+        "cwd": "/workspace/yangchen/Clef-27B-ascend",
+        "selected_environment": {
+          "LD_LIBRARY_PATH": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/cv2/../../lib64:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/cv2/../../lib64:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+          "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+          "MODEL_DIR": "/workspace/yangchen/models/Clef-27B"
+        }
+      }
+    ],
+    "repositories": {
+      "project": {
+        "path": "/workspace/yangchen/Clef-27B-ascend",
+        "head": "3e83ae17df7b559ec2dd6b2a38aa029c2777e061",
+        "diff_sha256": "3af559c2dd712cafc9809d2c550ef978113d4307b709623056ae68c8351ff5f1",
+        "diff_bytes": 48797,
+        "status": "M Clef-27B/README.md\n M Clef-27B/inference.py\n M Clef-27B/metrics.csv\n M Clef-27B/optimization.md\n M Clef-27B/results.csv\n M Clef-27B/start.sh\n M README.md\n?? AGENTS.md\n?? Clef-27B/npu_device_call.png\n?? Clef-27B/result.png\n?? docs/\n?? requirements/\n?? runtime/\n?? scripts/activate_env.sh\n?? scripts/benchmark_systemone.py\n?? scripts/bootstrap_python.sh\n?? scripts/download_model_manifest.py\n?? scripts/evaluate_systemone.py\n?? scripts/generate_multimodal_fixtures.py\n?? scripts/patches/\n?? scripts/reference_systemone.py\n?? scripts/run_evalscope_offline.py\n?? scripts/verify_hccl.py\n?? scripts/verify_npu_environment.py\n?? scripts/verify_systemone.py\n?? scripts/verify_systemone_encoding.py\n?? scripts/verify_systemone_multimodal.py\n?? scripts/verify_systemone_precision.py"
+      },
+      "vllm": {
+        "path": "/workspace/yangchen/work/src/vllm",
+        "head": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+        "diff_sha256": "4a6e0a99feb33c6cd136fda1b4379ac64aa8377ca128a9093f900efd196506a6",
+        "diff_bytes": 170586,
+        "status": "M requirements/common.txt\n D rust/Cargo.lock\n M vllm/model_executor/model_loader/default_loader.py"
+      },
+      "vllm_ascend": {
+        "path": "/workspace/yangchen/work/src/vllm-ascend",
+        "head": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+        "diff_sha256": "80d29c074438fd4f3fccf5d3008007da4e3bfd5c29b17b4600f028e296f5c9f8",
+        "diff_bytes": 972,
+        "status": "M vllm_ascend/ops/vocab_parallel_embedding.py"
+      }
+    },
+    "runtime_versions": {
+      "returncode": 0,
+      "stdout": "{\"python\": \"3.12.16 (main, Nov 11 2026, 00:17:04) [Clang 23.1.3 ]\", \"packages\": {\"torch\": \"2.10.0+cpu\", \"torch-npu\": \"2.10.0.post7\", \"transformers\": \"5.19.0\", \"vllm\": \"0.1.dev1+g24420b7a3.d20261112.empty\", \"vllm-ascend\": \"0.1.dev1+g89eb8a5e7\"}}",
+      "stderr": ""
+    },
+    "resources": {
+      "/sys/fs/cgroup/memory/memory.limit_in_bytes": "137438953472",
+      "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "3200000",
+      "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000"
+    },
+    "npu_smi": {
+      "returncode": 0,
+      "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 155.6                39                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59735/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59400/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 115206        | python             | 106                   | 115206                  |\n| 7       0                 | 115266        | VLLMWorker_TP      | 56570                 | 115266                  |\n| 7       1                 | 115267        | VLLMWorker_TP      | 56570                 | 115267                  |\n+===========================+===============+======================================================================+",
+      "stderr": ""
+    },
+    "service_changed": false,
+    "model_evaluation_executed": false,
+    "installation_files": {
+      "/usr/local/Ascend/cann/aarch64-linux/ascend_toolkit_install.info": "package_name=Ascend-cann-toolkit\nversion=9.2.1\ninnerversion=V100R001C12SPC002B201\ncompatible_version=[V100R001C15],[V100R001C23],[V100R001C10],[V100R001C11],[V100R001C12]\narch=aarch64\nos=linux\npath=/usr/local/Ascend/cann-9.2.1\n",
+      "/usr/local/Ascend/driver/version.info": "Version=26.1.1\nascendhal_version=7.35.23\naicpu_version=1.0\ntdt_version=1.0\nlog_version=1.0\nprof_version=2.0\ndvppkernels_version=1.1\ntsfw_version=1.0\nInnerversion=V100R001C10SPC009B220\ncompatible_version=[V100R001C21],[V100R001C22],[V100R001C23],[V100R001C25],[V100R001C10]\ncompatible_version_fw=[7.0.0,9.9.9]\npackage_version=26.1.1\n"
+    },
+    "length_audit": {
+      "captured_at_utc": "2026-11-13T04:03:47.345527+00:00",
+      "scope": "physical rows before edition filtering; proxy_tokens is suite metadata, not Clef encoded length",
+      "files": [
+        {
+          "file": "selected-rows.jsonl.gz",
+          "rows_with_proxy_tokens": 124971,
+          "missing_proxy_tokens": 0,
+          "minimum": 36.0,
+          "p50": 300.0,
+          "p95": 6380.0,
+          "p99": 8206.0,
+          "maximum": 53653.0,
+          "over_4096": 8047,
+          "over_16384": 496,
+          "tracks_over_4096": {
+            "ACOS": {
+              "rows": 5479,
+              "over_4096": 5479,
+              "maximum": 8235.0
+            },
+            "API-Bank": {
+              "rows": 508,
+              "over_4096": 508,
+              "maximum": 7137.0
+            },
+            "BFCL": {
+              "rows": 1694,
+              "over_4096": 2,
+              "maximum": 9043.0
+            },
+            "BRIGHT": {
+              "rows": 637,
+              "over_4096": 635,
+              "maximum": 38577.0
+            },
+            "ContractNLI": {
+              "rows": 123,
+              "over_4096": 66,
+              "maximum": 12271.0
+            },
+            "HLE": {
+              "rows": 513,
+              "over_4096": 1,
+              "maximum": 5485.0
+            },
+            "POP909-CL": {
+              "rows": 2000,
+              "over_4096": 3,
+              "maximum": 7526.0
+            },
+            "RouterBench": {
+              "rows": 10000,
+              "over_4096": 19,
+              "maximum": 4791.0
+            },
+            "SATA-Bench": {
+              "rows": 1650,
+              "over_4096": 26,
+              "maximum": 6219.0
+            },
+            "ToolRet": {
+              "rows": 1328,
+              "over_4096": 1308,
+              "maximum": 53653.0
+            }
+          },
+          "first_row_structure": {
+            "keys": [
+              "id",
+              "family",
+              "split",
+              "state",
+              "questions",
+              "expected",
+              "metadata",
+              "_evaluation"
+            ],
+            "evaluation_keys": [
+              "run_id",
+              "catalog_id",
+              "dataset",
+              "group_id",
+              "track",
+              "source_path",
+              "payload_sha256",
+              "proxy_tokens",
+              "benchmark_origin"
+            ],
+            "proxy_tokens": 270
+          }
+        },
+        {
+          "file": "added-rows.jsonl.gz",
+          "rows_with_proxy_tokens": 30419,
+          "missing_proxy_tokens": 0,
+          "minimum": 42.0,
+          "p50": 263.0,
+          "p95": 1040.0,
+          "p99": 1510.0,
+          "maximum": 4164.0,
+          "over_4096": 3,
+          "over_16384": 0,
+          "tracks_over_4096": {
+            "When2Call MCQ": {
+              "rows": 3652,
+              "over_4096": 3,
+              "maximum": 4164.0
+            }
+          },
+          "first_row_structure": {
+            "keys": [
+              "id",
+              "benchmark",
+              "family",
+              "split",
+              "state",
+              "questions",
+              "expected",
+              "metadata",
+              "scoring",
+              "_evaluation"
+            ],
+            "evaluation_keys": [
+              "run_id",
+              "catalog_id",
+              "dataset",
+              "track",
+              "group_id",
+              "payload_sha256",
+              "benchmark_origin",
+              "proxy_tokens",
+              "batch"
+            ],
+            "proxy_tokens": 173
+          }
+        }
+      ],
+      "all_rows_with_proxy_tokens": 155390,
+      "all_over_4096": 8050,
+      "all_over_16384": 496,
+      "model_executed": false
+    },
+    "prompt_policy": {
+      "effective_max_tokens": 4096,
+      "clef_strategy_max_tokens": 16384,
+      "formula": "effective_max_tokens = min(Clef strategy MAX_LENGTH, served max_model_len)",
+      "fixed_schema_overflow": "Raises StructuredDecisionError before inference if prefix + schema + suffix > effective_max_tokens.",
+      "state_overflow": "Tokenizes rendered state then keeps the first effective_max_tokens - fixed_schema_tokens tokens.",
+      "truncation_in_api_diagnostics": false,
+      "diagnostics_fields": [
+        "label_mass",
+        "argmax_is_label"
+      ],
+      "usage_input_tokens": "Encoded prompt length after any state truncation; whole request counted once.",
+      "input_tokens_equal_limit_interpretation": "4096-token requests indicate prompt-length saturation; this alone cannot distinguish exact fit from state truncation.",
+      "exact_truncation_audit_requirement": "Encode original requests offline using the same Clef tokenizer and prompt/schema algorithm, then compare full and served state tokens.",
+      "source_references": [
+        {
+          "path": "vllm/entrypoints/openai/decisions/strategies.py",
+          "lines": [
+            875,
+            880,
+            1052,
+            1058,
+            1131,
+            1142
+          ],
+          "sha256": "d7e25f1d879cd0dc2d8e38629805a66018a9c63e364572d6cbfee6a9fedd97bb"
+        },
+        {
+          "path": "vllm/entrypoints/generate/structured_decisions/protocol.py",
+          "lines": [
+            68,
+            79,
+            92,
+            100
+          ],
+          "sha256": "c4ea3c8a35e1e1be58c3fe34fa590f92ea832233a3eb47644e5ca9bf964492f6"
+        },
+        {
+          "path": "vllm/entrypoints/generate/structured_decisions/serving.py",
+          "lines": [
+            119,
+            125,
+            138,
+            142
+          ],
+          "sha256": "5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a"
+        }
+      ]
+    },
+    "baseline_summary": {
+      "model": "clef",
+      "dtype": "bfloat16",
+      "tensor_parallel_size": 2,
+      "max_model_len": 4096,
+      "max_num_seqs": 1,
+      "max_num_batched_tokens": 4096,
+      "enforce_eager": true,
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "image_limit": 1,
+      "video_limit": 1,
+      "api_url": "http://127.0.0.1:8000/v1/systemone",
+      "api_pid": 115206
+    }
+  },
+  "decision_index": {
+    "setup": {
+      "created_at_utc": "2026-11-13T04:13:09.030406+00:00",
+      "upstream_repository": "https://github.com/apolinario/decision-index",
+      "upstream_commit": "25c6ec7b6b5f44a216c63c3a700de3a9c6d6699d",
+      "source_archive_url": "https://codeload.github.com/apolinario/decision-index/tar.gz/25c6ec7b6b5f44a216c63c3a700de3a9c6d6699d",
+      "source_archive_sha256": "f79c4c44c50610613925871b5265259042c9720cf030b93da997f699e898df88",
+      "source_directory": "/workspace/yangchen/work/src/decision-index-25c6ec7b6b5f44a216c63c3a700de3a9c6d6699d",
+      "installed_package_directory": "/workspace/yangchen/venvs/clef-decision-index-py312/lib/python3.12/site-packages/decision_index",
+      "python": "3.12.16 (main, Nov 11 2026, 00:17:04) [Clang 23.1.3 ]",
+      "platform": "Linux-5.10.0-216.0.0.115.oe2203sp4.aarch64-aarch64-with-glibc2.35",
+      "package_version": "0.3",
+      "edition": "0.2.1",
+      "upstream_files_verified": [
+        {
+          "path": "runner.py",
+          "sha256": "f4c9f36c4c557f537f1d8184db7bf00c5a84d9f4f0aa67f8c06198cead25818d"
+        },
+        {
+          "path": "constants.py",
+          "sha256": "e15cb302a9b302bd588931f32c437a0cbab3c1d0c4d6f02069c073c3977ba082"
+        },
+        {
+          "path": "__init__.py",
+          "sha256": "802fef8d0a617d28cd906facf8582b707ca7baa35475ce834ef8af41ab9aa54f"
+        },
+        {
+          "path": "hf_job.py",
+          "sha256": "9e438d899b354e4e2b6483dc10ddbcd59236ed5f53063f04dfc5a310b7d5e765"
+        },
+        {
+          "path": "cli.py",
+          "sha256": "ddbbafe11877b096296f691e25b30ea8f921e0b8009a475aae3f6aa89b3e4bde"
+        },
+        {
+          "path": "pipeline.py",
+          "sha256": "33b178538392f22283f1b623e3c078f55582bf36cc9f51f74ccb0ccdb23498f1"
+        },
+        {
+          "path": "editions.py",
+          "sha256": "189dea1a4b6fbc77ce33aa157867f6f8018b392efd0f02c0036b8bd1c6bd437a"
+        },
+        {
+          "path": "__main__.py",
+          "sha256": "22950564c4001e4c1ee193a0207857f06a69c0dfaf3ce4546b07eae9e864d6c9"
+        },
+        {
+          "path": "vision/build.py",
+          "sha256": "8228f1d8218f7d371cbee4aaf4f215fb3f39a0553d62b2282d174258f26787ac"
+        },
+        {
+          "path": "vision/run.py",
+          "sha256": "89e9563aec2a842cf7ea906f1ddc1a34d909be54bf655c2c5d05380040ab82a3"
+        },
+        {
+          "path": "vision/engines.py",
+          "sha256": "a2b48aad22908cd6cc988fc1d585773b48d4671f2a4384e3a252f4571676b1ce"
+        },
+        {
+          "path": "vision/convert.py",
+          "sha256": "c3baf1ad7b79ead7b6afdfa88c43bdc29359c4b88dc0a01fd515d390b198726e"
+        },
+        {
+          "path": "vision/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "vision/spec.py",
+          "sha256": "ce43e156403ad2c67c0175dbb8cdcfd808970a1d08cfba57602bd7acdfc5ae24"
+        },
+        {
+          "path": "vision/images.py",
+          "sha256": "1920ea8e3f2f85b301322c7b329feaa9e09855154cc6e1b322657fb0dcc922ac"
+        },
+        {
+          "path": "vision/rows.py",
+          "sha256": "5084ef6dfee7530a715efe99f4f6b2b2343d3bffc8a067e20743b31e8d0f13ba"
+        },
+        {
+          "path": "vision/score.py",
+          "sha256": "fc5429a62a863ce924f37db892c6c94dd2ac278db7dca83807da27c1b0685966"
+        },
+        {
+          "path": "engines/__init__.py",
+          "sha256": "808a0971ad2ce9f9a1afc3c071691001375aa73b26f3ba891beb8364dcabba77"
+        },
+        {
+          "path": "engines/transformers_engine.py",
+          "sha256": "af70ecd8e28e4459c79e02c5f3697587e947c90415d6d55e5b1670d1056b36b8"
+        },
+        {
+          "path": "engines/http.py",
+          "sha256": "d8dbb8146ca5e002dd790f3b1c35e80cc42f99a7c56eddd39dc14b69ffaf9aae"
+        },
+        {
+          "path": "engines/base.py",
+          "sha256": "ae548636cfbd583fe774b67e4d3d2cdc6db10f580f47d9559d5de44373b79ca5"
+        },
+        {
+          "path": "scoring/metrics.py",
+          "sha256": "b4e240511bd4978082233127a98672cd5558783c8e3aed1e9fb5420e9a52dcc1"
+        },
+        {
+          "path": "scoring/index.py",
+          "sha256": "ee8d3b9677ed9e0ffba7eda40a0cae35cb4d89cbc79864cbf37514d5ccaa9d24"
+        },
+        {
+          "path": "scoring/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "scoring/added.py",
+          "sha256": "81d53ce5f9905e572797f7a02a8f63ac9a15d1332028529f5e38b64351376165"
+        },
+        {
+          "path": "scoring/index02.py",
+          "sha256": "7cb9e5d12bb98a08d0fef2136988bd55457865ef8e819a5dc8a6fbef94d5a227"
+        },
+        {
+          "path": "scoring/report.py",
+          "sha256": "14279d8c10a83b0aab2edeaccf69110d3bd03719eb550ab8bcd0895b42fd1d42"
+        },
+        {
+          "path": "suite/download.py",
+          "sha256": "47ceff984fb0b3ac02cfad789a617143321c9a66c45019a181f8098ac214802e"
+        },
+        {
+          "path": "suite/io.py",
+          "sha256": "c814245aba0a79866a3749e6e7faf038dd41d29fb596008259afcd585a0c8dee"
+        },
+        {
+          "path": "suite/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "suite/sample.py",
+          "sha256": "deef072e9f0a8d4e78734273b8e6c29972319d012d009727a1fedeae5dda0dac"
+        },
+        {
+          "path": "data/benchmarks.json",
+          "sha256": "e7c9ef019a0f2ecc3269cbc3897a07a524550629d74cade64b9567c6c130db3c"
+        },
+        {
+          "path": "data/index-panel.json",
+          "sha256": "a9823d5d8ce1dcf81da91f285d9de5b77b8bb1c9a5ad4fa2d51df6c3d0850a21"
+        },
+        {
+          "path": "data/vision-0.3.json",
+          "sha256": "5b8e834213ab40cb36933e55e916408e7be78aabb486cc77eeee8903807f7a00"
+        },
+        {
+          "path": "data/chance-baselines.json",
+          "sha256": "b68bb94e1ce0d2a40b4f69d0b7a9acf796c4bc64c973d5c291625aec34629bfa"
+        },
+        {
+          "path": "data/index-0.2.json",
+          "sha256": "d7165596fe3f9ae10690089b7175d5bdb1973677257c914ce6b3cfa91ac3dcd1"
+        },
+        {
+          "path": "data/index-0.3.json",
+          "sha256": "158c38439c004a1bfb371dab02ec614046aabd3de08a02629ae89e7137d67167"
+        },
+        {
+          "path": "data/index-0.2.1.json",
+          "sha256": "5df3732bc876803b0064fcbc0d69cbba8efff4838ae171a0e41b2d87c6f7b3f8"
+        },
+        {
+          "path": "suite/build/adapters_added.py",
+          "sha256": "66bdf8a82b33d5ffa8d10c25f701904620ec52da41ad040bf752879bad1291b2"
+        },
+        {
+          "path": "suite/build/home_appliance.py",
+          "sha256": "89666f0c5af54cc7d35addcb1feb29cb6ed022dfa6de8f2419ee96325e3c6bc3"
+        },
+        {
+          "path": "suite/build/adapters_retrieval.py",
+          "sha256": "3179d605cf87578eb04d86ec7fb3b950d33a33288301779e0fe80d302c2cb40f"
+        },
+        {
+          "path": "suite/build/acquire.py",
+          "sha256": "94bc9997f9c95ae33ed9d2d00e6c715bd1408b69ecb64de9e31e06317b761c16"
+        },
+        {
+          "path": "suite/build/layout.py",
+          "sha256": "21d36d35cf8c5369cadbd2f509e1dc508b6dae3ec3d408447643895ffade38fb"
+        },
+        {
+          "path": "suite/build/adapters_mechanical.py",
+          "sha256": "d4afcabd4f54ba4a7a4e835b39246bb08672f8db09aa0fc7578d7b2b006421a6"
+        },
+        {
+          "path": "suite/build/release_v2.py",
+          "sha256": "1df6e4375a2f1cd1b42d0839e931de682f46e055cbb2bfea4e03e56d87b2a4ac"
+        },
+        {
+          "path": "suite/build/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "suite/build/normalize_text.py",
+          "sha256": "9b73af4ce3b0bd71591c1f0bb915732c567234685429a9e31a19a78c6d70bcdb"
+        },
+        {
+          "path": "suite/build/adapters_selection.py",
+          "sha256": "62e2ea8bdbac5873ca6e05e428a3d94582c0f18117c0ca00db771d03daa5aba7"
+        },
+        {
+          "path": "suite/build/adapters_creative.py",
+          "sha256": "0e8ec014260d75de864e6af2c6bc3488b5cd7f80ef2dee0f2adf0c9ecb91ea61"
+        },
+        {
+          "path": "suite/build/adapters_scored.py",
+          "sha256": "872061974ab9e3061e9a1e795cf5a6e07f5b0359c96b7451313e36288337b736"
+        },
+        {
+          "path": "suite/build/freeze.py",
+          "sha256": "e74f275de704d6bd5d315a479d16a922a89283d3af9af3d3d1d66716f76ea04c"
+        },
+        {
+          "path": "suite/build/gsm8k_v3.py",
+          "sha256": "bb8246a271fc07a35c283ead1aa853833d3c40d27abbe993f10d49a35d797503"
+        },
+        {
+          "path": "suite/build/rebuild.py",
+          "sha256": "5569093debd38250cc507482e541107efa286c330582a81d1c6219f402ee209c"
+        },
+        {
+          "path": "suite/build/normalize_direct.py",
+          "sha256": "98f7fcc03edc25fa03a62d48fdc467748ee23cbbf8ba4442086bd0840df60431"
+        },
+        {
+          "path": "data/release-v2.1/toolret-subset.json",
+          "sha256": "c301d5503955c14d99485e284d434bb1533f51229c34da1edc19dd8388116f01"
+        },
+        {
+          "path": "data/release-v2.1/home-appliances-subset.json",
+          "sha256": "d2d0df922a47a9757bef17f382a4ed4c5c3bfff953f941c29404e93a490bce2c"
+        },
+        {
+          "path": "data/release-v2.1/bright-subset.json",
+          "sha256": "ed3a05220e09be2b96c02514345c61894f7a0ffc73e6884a100392d23692cfb8"
+        },
+        {
+          "path": "data/release-v2/acos-subset.json",
+          "sha256": "3b20eea1613ae3e1644339e6f89a4287b307a5750a86239bb8bca6f8238b8e45"
+        },
+        {
+          "path": "data/release-v2/retrieval-subsets.json",
+          "sha256": "9228a9492ea40c499d8bb024417f566d0c0ced62c71ed4c1bf908e87ed50d8df"
+        }
+      ],
+      "all_installed_upstream_files_identical": true,
+      "npu_requests_sent_in_setup": 0,
+      "full_run_command": [
+        "bash",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/decision_index_baseline.sh"
+      ],
+      "model_evaluation_executed": false
+    },
+    "suite_verification": {
+      "edition": "0.2.1",
+      "rows_file": "/workspace/yangchen/datasets/clef-official-20261113/decision-index/selected-rows.jsonl.gz",
+      "sha256": "a80af4becf5c5add037453fc96849181608b6d428954b5a8203cdf381ef6b231",
+      "expected_sha256": "25aac5e890a54a3172c7a0c184b4cc8b9a43f10b6ee89bbad8da923be423c656",
+      "match": true,
+      "uncompressed_sha256": "b2b56d6fb636837ca469e689087bdbf373dda8de7638aa2da6793e6eda0792d5",
+      "uncompressed_match": true,
+      "added_file": "/workspace/yangchen/datasets/clef-official-20261113/decision-index/added-rows.jsonl.gz",
+      "added_sha256": "7429f3c9cdddb772c1cfc42bb2a45e8516b0032152b746e6929f1c8b52f4ce89",
+      "added_match": true,
+      "exclusions_sha256": "331df32d4b719c7db43214d0e5d85859d39c3b2eb7d0b3812214cce150155e81",
+      "exclusions_match": true,
+      "subsets_match": true
+    },
+    "data_audit": {
+      "created_at_utc": "2026-11-13T04:05:58.578164+00:00",
+      "edition": "0.2.1",
+      "requests_before_official_exclusions": 150759,
+      "official_exclusion_count": 442,
+      "scoreable_requests": 150317,
+      "questions": 333398,
+      "question_types": {
+        "choice": 318698,
+        "noul": 14700
+      },
+      "max_questions_per_request": 64,
+      "max_named_options": 151,
+      "proxy_tokens": {
+        "n": 150759,
+        "min": 36,
+        "p50": 279,
+        "p95": 1898,
+        "p99": 8088,
+        "max": 53653,
+        "gt_4096": 3494,
+        "note": "Proxy token counts from frozen suite metadata; not the service tokenizer or proof of truncation."
+      },
+      "by_catalog": {
+        "1": {
+          "requests": 1694,
+          "questions": 4768,
+          "proxy_gt_4096": 2,
+          "proxy_max": 9043,
+          "dataset": "BFCL"
+        },
+        "2": {
+          "requests": 1013,
+          "questions": 30047,
+          "proxy_gt_4096": 994,
+          "proxy_max": 53653,
+          "dataset": "ToolRet"
+        },
+        "3": {
+          "requests": 508,
+          "questions": 508,
+          "proxy_gt_4096": 508,
+          "proxy_max": 7137,
+          "dataset": "API-Bank"
+        },
+        "4": {
+          "requests": 3080,
+          "questions": 3080,
+          "proxy_gt_4096": 0,
+          "proxy_max": 809,
+          "dataset": "BANKING77"
+        },
+        "5": {
+          "requests": 5500,
+          "questions": 5500,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1105,
+          "dataset": "CLINC150+OOS"
+        },
+        "6": {
+          "requests": 10000,
+          "questions": 20000,
+          "proxy_gt_4096": 19,
+          "proxy_max": 4791,
+          "dataset": "RouterBench"
+        },
+        "9": {
+          "requests": 88,
+          "questions": 1590,
+          "proxy_gt_4096": 0,
+          "proxy_max": 2080,
+          "dataset": "Home appliance simulator"
+        },
+        "10": {
+          "requests": 2500,
+          "questions": 2500,
+          "proxy_gt_4096": 0,
+          "proxy_max": 2094,
+          "dataset": "SGD/SGD-X"
+        },
+        "11": {
+          "requests": 123,
+          "questions": 2091,
+          "proxy_gt_4096": 66,
+          "proxy_max": 12271,
+          "dataset": "ContractNLI"
+        },
+        "12": {
+          "requests": 3200,
+          "questions": 3200,
+          "proxy_gt_4096": 0,
+          "proxy_max": 285,
+          "dataset": "ANLI"
+        },
+        "20": {
+          "requests": 5000,
+          "questions": 5000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 210,
+          "dataset": "BPoMP"
+        },
+        "21": {
+          "requests": 2628,
+          "questions": 2628,
+          "proxy_gt_4096": 0,
+          "proxy_max": 114,
+          "dataset": "Humicroedit"
+        },
+        "22": {
+          "requests": 2000,
+          "questions": 2000,
+          "proxy_gt_4096": 3,
+          "proxy_max": 7526,
+          "dataset": "POP909-CL"
+        },
+        "23": {
+          "requests": 5000,
+          "questions": 5000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 243,
+          "dataset": "cfcolor"
+        },
+        "24": {
+          "requests": 14042,
+          "questions": 14042,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1244,
+          "dataset": "MMLU"
+        },
+        "25": {
+          "requests": 198,
+          "questions": 198,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1444,
+          "dataset": "GPQA Diamond"
+        },
+        "26": {
+          "requests": 2376,
+          "questions": 2376,
+          "proxy_gt_4096": 0,
+          "proxy_max": 270,
+          "dataset": "ARC-Easy"
+        },
+        "27": {
+          "requests": 1172,
+          "questions": 1172,
+          "proxy_gt_4096": 0,
+          "proxy_max": 259,
+          "dataset": "ARC-Challenge"
+        },
+        "28": {
+          "requests": 1267,
+          "questions": 1267,
+          "proxy_gt_4096": 0,
+          "proxy_max": 86,
+          "dataset": "WinoGrande"
+        },
+        "29": {
+          "requests": 10042,
+          "questions": 10042,
+          "proxy_gt_4096": 0,
+          "proxy_max": 426,
+          "dataset": "HellaSwag"
+        },
+        "30": {
+          "requests": 2638,
+          "questions": 2638,
+          "proxy_gt_4096": 0,
+          "proxy_max": 330,
+          "dataset": "GSM8K"
+        },
+        "31": {
+          "requests": 5000,
+          "questions": 5000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 822,
+          "dataset": "ChessBench"
+        },
+        "32": {
+          "requests": 756,
+          "questions": 756,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1884,
+          "dataset": "MuSR"
+        },
+        "33": {
+          "requests": 1650,
+          "questions": 15517,
+          "proxy_gt_4096": 26,
+          "proxy_max": 6219,
+          "dataset": "SATA-Bench"
+        },
+        "34": {
+          "requests": 10,
+          "questions": 10,
+          "proxy_gt_4096": 0,
+          "proxy_max": 294,
+          "dataset": "SimpleBench"
+        },
+        "36": {
+          "requests": 307,
+          "questions": 9824,
+          "proxy_gt_4096": 307,
+          "proxy_max": 38577,
+          "dataset": "BRIGHT"
+        },
+        "37": {
+          "requests": 5000,
+          "questions": 5000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1298,
+          "dataset": "Amazon ESCI"
+        },
+        "38": {
+          "requests": 1565,
+          "questions": 91092,
+          "proxy_gt_4096": 1565,
+          "proxy_max": 8223,
+          "dataset": "ACOS"
+        },
+        "39": {
+          "requests": 979,
+          "questions": 2129,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1602,
+          "dataset": "FinEntity"
+        },
+        "40": {
+          "requests": 4600,
+          "questions": 11600,
+          "proxy_gt_4096": 0,
+          "proxy_max": 401,
+          "dataset": "iSarcasmEval"
+        },
+        "41": {
+          "requests": 3006,
+          "questions": 3006,
+          "proxy_gt_4096": 0,
+          "proxy_max": 379,
+          "dataset": "VAST"
+        },
+        "42": {
+          "requests": 5500,
+          "questions": 5500,
+          "proxy_gt_4096": 0,
+          "proxy_max": 3618,
+          "dataset": "NLI4CT"
+        },
+        "43": {
+          "requests": 570,
+          "questions": 570,
+          "proxy_gt_4096": 0,
+          "proxy_max": 296,
+          "dataset": "CRUXEval"
+        },
+        "44": {
+          "requests": 5000,
+          "questions": 5000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 434,
+          "dataset": "CLadder"
+        },
+        "45": {
+          "requests": 513,
+          "questions": 513,
+          "proxy_gt_4096": 1,
+          "proxy_max": 5485,
+          "dataset": "HLE"
+        },
+        "48": {
+          "requests": 10139,
+          "questions": 10139,
+          "proxy_gt_4096": 0,
+          "proxy_max": 3463,
+          "dataset": "ForecastBench"
+        },
+        "50": {
+          "requests": 1676,
+          "questions": 1676,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1888,
+          "dataset": "Habermas Machine"
+        },
+        "57": {
+          "requests": 12032,
+          "questions": 12032,
+          "proxy_gt_4096": 0,
+          "proxy_max": 1241,
+          "dataset": "MMLU-Pro"
+        },
+        "58": {
+          "requests": 5507,
+          "questions": 5507,
+          "proxy_gt_4096": 0,
+          "proxy_max": 586,
+          "dataset": "BBH fixed-option tasks"
+        },
+        "62": {
+          "requests": 3652,
+          "questions": 3652,
+          "proxy_gt_4096": 3,
+          "proxy_max": 4164,
+          "dataset": "When2Call MCQ"
+        },
+        "64": {
+          "requests": 528,
+          "questions": 528,
+          "proxy_gt_4096": 0,
+          "proxy_max": 247,
+          "dataset": "New Yorker caption matching"
+        },
+        "59": {
+          "requests": 2700,
+          "questions": 2700,
+          "proxy_gt_4096": 0,
+          "proxy_max": 2423,
+          "dataset": "RAGTruth response-level hallucination"
+        },
+        "61": {
+          "requests": 4000,
+          "questions": 4000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 976,
+          "dataset": "HoVer claim verification"
+        },
+        "56": {
+          "requests": 2000,
+          "questions": 18000,
+          "proxy_gt_4096": 0,
+          "proxy_max": 928,
+          "dataset": "PhishNChips phishing decisions"
+        }
+      }
+    },
+    "instructions_audit": {
+      "question_instruction_types": {
+        "str": 293527,
+        "dict": 39871
+      },
+      "requests_with_instruction_type": {
+        "str": 149439,
+        "dict": 1320
+      },
+      "structured_instruction_requests": 1320,
+      "by_catalog": {
+        "2": {
+          "dataset": "ToolRet",
+          "requests": 1013,
+          "instruction_types": {
+            "dict": 30047
+          }
+        },
+        "36": {
+          "dataset": "BRIGHT",
+          "requests": 307,
+          "instruction_types": {
+            "dict": 9824
+          }
+        }
+      },
+      "policy": "The native HTTP engine sends the original frozen state/questions without normalization. Current server instructions rendering is recorded separately."
+    },
+    "choice_capacity_audit": {
+      "model_protocol_choice_limit": 26,
+      "affected_requests": 14500,
+      "affected_questions": 14500,
+      "affected_question_option_counts": {
+        "27": 127,
+        "28": 164,
+        "29": 186,
+        "30": 202,
+        "31": 210,
+        "32": 181,
+        "33": 192,
+        "34": 214,
+        "35": 205,
+        "36": 195,
+        "37": 191,
+        "38": 182,
+        "39": 156,
+        "40": 173,
+        "41": 133,
+        "42": 114,
+        "43": 120,
+        "44": 97,
+        "45": 84,
+        "46": 70,
+        "47": 52,
+        "48": 34,
+        "49": 39,
+        "50": 17,
+        "51": 19,
+        "52": 15,
+        "53": 514,
+        "54": 6,
+        "55": 7,
+        "56": 5,
+        "57": 4,
+        "58": 3,
+        "59": 5,
+        "61": 1,
+        "64": 1,
+        "67": 1,
+        "77": 3080,
+        "81": 1,
+        "129": 2000,
+        "151": 5500
+      },
+      "by_catalog": {
+        "3": {
+          "dataset": "API-Bank",
+          "requests": 508,
+          "questions": 508,
+          "max_options": 53
+        },
+        "4": {
+          "dataset": "BANKING77",
+          "requests": 3080,
+          "questions": 3080,
+          "max_options": 77
+        },
+        "5": {
+          "dataset": "CLINC150+OOS",
+          "requests": 5500,
+          "questions": 5500,
+          "max_options": 151
+        },
+        "22": {
+          "dataset": "POP909-CL",
+          "requests": 2000,
+          "questions": 2000,
+          "max_options": 129
+        },
+        "31": {
+          "dataset": "ChessBench",
+          "requests": 3412,
+          "questions": 3412,
+          "max_options": 81
+        }
+      },
+      "interpretation": "A CPU-side audit identified the current vLLM strategy choice limit. The native HTTP runner retains its own error/unsupported classification.",
+      "native_http_classification_probe": {
+        "message": "question 'tool': at most 26 options for this model",
+        "native_capacity_marker_match": false,
+        "exception": "HTTPStatusError",
+        "runner_status": "error",
+        "transport": "httpx.MockTransport reproducing the audited capacity response",
+        "npu_requests_sent": 0
+      }
+    }
+  },
+  "workflowevals": {
+    "preflight": {
+      "checked_at_utc": "2026-11-13T04:18:55.278521+00:00",
+      "upstream_commit": "0ac3b8ad845429f0d8e064ecfb2430a47c5a25cb",
+      "business_and_scoring_source_files": [
+        {
+          "path": "core/answers.py",
+          "sha256": "f9d640688d44c3d4d2a45e4db2cf46cd99267deb6c606ae1340ac7cde9fe29bf",
+          "upstream_sha256": "f9d640688d44c3d4d2a45e4db2cf46cd99267deb6c606ae1340ac7cde9fe29bf",
+          "unchanged": true
+        },
+        {
+          "path": "core/contract.py",
+          "sha256": "93308316b9fcf8229724c7170f44e860a15a9cf83661e55a3648e3fcc6f1d06d",
+          "upstream_sha256": "93308316b9fcf8229724c7170f44e860a15a9cf83661e55a3648e3fcc6f1d06d",
+          "unchanged": true
+        },
+        {
+          "path": "core/io.py",
+          "sha256": "62affdb4e9f2ae14b1956f1fd46ab5fdb85125a57489f68caae087963449de0e",
+          "upstream_sha256": "62affdb4e9f2ae14b1956f1fd46ab5fdb85125a57489f68caae087963449de0e",
+          "unchanged": true
+        },
+        {
+          "path": "core/question_types.py",
+          "sha256": "7ef0ad90faafe27e77c9b74d557a5975a8113efcaf0a9fde06ebfb5d3b975f29",
+          "upstream_sha256": "7ef0ad90faafe27e77c9b74d557a5975a8113efcaf0a9fde06ebfb5d3b975f29",
+          "unchanged": true
+        },
+        {
+          "path": "core/runner.py",
+          "sha256": "8267b459cc2a5447cf5d9f5fa32fb3ac5d9439479e58e338eb111f234a37e3a2",
+          "upstream_sha256": "8267b459cc2a5447cf5d9f5fa32fb3ac5d9439479e58e338eb111f234a37e3a2",
+          "unchanged": true
+        },
+        {
+          "path": "core/scoring.py",
+          "sha256": "aaf0d13e2dcd90e3d3fd85afae883f63b250282e06af0329bbd78ab9a3071173",
+          "upstream_sha256": "aaf0d13e2dcd90e3d3fd85afae883f63b250282e06af0329bbd78ab9a3071173",
+          "unchanged": true
+        },
+        {
+          "path": "core/session.py",
+          "sha256": "98b199334b019459801cacd9b2a677e5a9d21a9c5b02782fc7c7505aa9ed0a55",
+          "upstream_sha256": "98b199334b019459801cacd9b2a677e5a9d21a9c5b02782fc7c7505aa9ed0a55",
+          "unchanged": true
+        },
+        {
+          "path": "core/workflow.py",
+          "sha256": "4a56a355f3da8c5c5cca8c110ab86503eeda0551b281dbc43c09ce4cd033a65c",
+          "upstream_sha256": "4a56a355f3da8c5c5cca8c110ab86503eeda0551b281dbc43c09ce4cd033a65c",
+          "unchanged": true
+        },
+        {
+          "path": "evals/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/actions.py",
+          "sha256": "a318aea6614160b057d6b6a3489f81695769d2c4bbe917aae5c7fa901c35c013",
+          "upstream_sha256": "a318aea6614160b057d6b6a3489f81695769d2c4bbe917aae5c7fa901c35c013",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/eval_adapter.py",
+          "sha256": "5061930d7e220216475f7a4da3f8b974a7339afe25426aba42a0f20870eb76e2",
+          "upstream_sha256": "5061930d7e220216475f7a4da3f8b974a7339afe25426aba42a0f20870eb76e2",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/facts.py",
+          "sha256": "59d5e99b738c301d357a0f1264184b0307d8605032c3f14b3b107ea43a1f357c",
+          "upstream_sha256": "59d5e99b738c301d357a0f1264184b0307d8605032c3f14b3b107ea43a1f357c",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/gates.py",
+          "sha256": "e9b662f84f0d4af577a1ecf58ae40758eb355e8af4d3b40e7914433c2b8db16f",
+          "upstream_sha256": "e9b662f84f0d4af577a1ecf58ae40758eb355e8af4d3b40e7914433c2b8db16f",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/questions.py",
+          "sha256": "9175165aab2239f8d6ebd1531bb03e4eccb5674f7fa3e5012c8ed56f5d472757",
+          "upstream_sha256": "9175165aab2239f8d6ebd1531bb03e4eccb5674f7fa3e5012c8ed56f5d472757",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/state.py",
+          "sha256": "53f6ff83128218264930563343902dfca4cbada17dafb6763688ce5a622644b4",
+          "upstream_sha256": "53f6ff83128218264930563343902dfca4cbada17dafb6763688ce5a622644b4",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/trace.py",
+          "sha256": "8451c336c5539fd6eeb011cfdf26364b0941978bf9c676ef2f50990954b1e501",
+          "upstream_sha256": "8451c336c5539fd6eeb011cfdf26364b0941978bf9c676ef2f50990954b1e501",
+          "unchanged": true
+        },
+        {
+          "path": "evals/agent_trace_observability/workflow.py",
+          "sha256": "71f28d2aeb6b01730203a645d050514cbcc406fbe94f5b5f3539e3aee90a6031",
+          "upstream_sha256": "71f28d2aeb6b01730203a645d050514cbcc406fbe94f5b5f3539e3aee90a6031",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/actions.py",
+          "sha256": "a314933b4af0eeb71dcc8853aa204843fe12d223dd954502000748d2035b1daf",
+          "upstream_sha256": "a314933b4af0eeb71dcc8853aa204843fe12d223dd954502000748d2035b1daf",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/answers.py",
+          "sha256": "dbd39d0fa5af3db2b2dbe30e08aa5c3f4a6a1b5045095bacae3d75dbf3ace0ec",
+          "upstream_sha256": "dbd39d0fa5af3db2b2dbe30e08aa5c3f4a6a1b5045095bacae3d75dbf3ace0ec",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/eval_adapter.py",
+          "sha256": "4ddea9b07727fa7d389e493579b3bc3ebeff5763d70e1162dba8b69a6bf4f641",
+          "upstream_sha256": "4ddea9b07727fa7d389e493579b3bc3ebeff5763d70e1162dba8b69a6bf4f641",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/gates.py",
+          "sha256": "b442a050e461b941124d33d823e51549a3d0392476337d773584b70ae009a9d3",
+          "upstream_sha256": "b442a050e461b941124d33d823e51549a3d0392476337d773584b70ae009a9d3",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/__init__.py",
+          "sha256": "7b4e9d4eaddaad83cfcc675dec9dfbfce2bf77e5ed14834da9f1566e3a88b665",
+          "upstream_sha256": "7b4e9d4eaddaad83cfcc675dec9dfbfce2bf77e5ed14834da9f1566e3a88b665",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/base.py",
+          "sha256": "f084c493366b2b11a08fb02c3c3a8d2fb9520930ec182f30d148cae54f00a097",
+          "upstream_sha256": "f084c493366b2b11a08fb02c3c3a8d2fb9520930ec182f30d148cae54f00a097",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/facts.py",
+          "sha256": "8ab5bdc446a0c90c1a6b31bc3afd0b7f69ed1359b1d51c71d7d4a4df5cdf2b8f",
+          "upstream_sha256": "8ab5bdc446a0c90c1a6b31bc3afd0b7f69ed1359b1d51c71d7d4a4df5cdf2b8f",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/policy_a.py",
+          "sha256": "64af9119758ff584208b2380e7f5dabd24799c76ded7b0a578b5532bdd52d3b9",
+          "upstream_sha256": "64af9119758ff584208b2380e7f5dabd24799c76ded7b0a578b5532bdd52d3b9",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/policy_b.py",
+          "sha256": "5fef1ae3ead4a6b059010eddb2ca630e1b0fa290782fe14e449476117a160bf3",
+          "upstream_sha256": "5fef1ae3ead4a6b059010eddb2ca630e1b0fa290782fe14e449476117a160bf3",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/policies/policy_c.py",
+          "sha256": "6f33a392af39af703abf83c0b5dcd29b0b99d0683deff09e69412506a7816fcb",
+          "upstream_sha256": "6f33a392af39af703abf83c0b5dcd29b0b99d0683deff09e69412506a7816fcb",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/questions.py",
+          "sha256": "873605dceb4439725f80150ec0f55d9a5ae22d96b0d594e6f4cf7fab1a28b3d2",
+          "upstream_sha256": "873605dceb4439725f80150ec0f55d9a5ae22d96b0d594e6f4cf7fab1a28b3d2",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/state.py",
+          "sha256": "8a68a06ea7d63e2de7338d9c6252b7d9cf02551ad1c093ae27728054c6289905",
+          "upstream_sha256": "8a68a06ea7d63e2de7338d9c6252b7d9cf02551ad1c093ae27728054c6289905",
+          "unchanged": true
+        },
+        {
+          "path": "evals/customer_service/workflow.py",
+          "sha256": "196f328aa3aa39333dfe76f360ba22ba5ee590e15595a7476f60570ac43101fe",
+          "upstream_sha256": "196f328aa3aa39333dfe76f360ba22ba5ee590e15595a7476f60570ac43101fe",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/eval_adapter.py",
+          "sha256": "b7cfab741089218c4917e1032aaf0bc12a0665810ffc6bf7810c61753fa1cbc3",
+          "upstream_sha256": "b7cfab741089218c4917e1032aaf0bc12a0665810ffc6bf7810c61753fa1cbc3",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/actions.py",
+          "sha256": "082320d6bb65d4002831ac25b1407cd46d2e9ec7a5a45cf951b3450614597930",
+          "upstream_sha256": "082320d6bb65d4002831ac25b1407cd46d2e9ec7a5a45cf951b3450614597930",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/decompose.py",
+          "sha256": "e78b8a32d6471f103a8c1fe324d1474c80256c40dc196a75894a0c9a490856b5",
+          "upstream_sha256": "e78b8a32d6471f103a8c1fe324d1474c80256c40dc196a75894a0c9a490856b5",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/facts.py",
+          "sha256": "5156d1ffb08fd59c64266f6082a2f840a3747cdbfb8372c6c01386ab5b0283d9",
+          "upstream_sha256": "5156d1ffb08fd59c64266f6082a2f840a3747cdbfb8372c6c01386ab5b0283d9",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/findings.py",
+          "sha256": "a11756bc12c5ab2b4b9ef3e9d52065c2847f1ec0e323f1432db8458083d0d843",
+          "upstream_sha256": "a11756bc12c5ab2b4b9ef3e9d52065c2847f1ec0e323f1432db8458083d0d843",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/flow.py",
+          "sha256": "2e49f7c869899a011600b340fd59dfad6490dbe1ef850abb269d4198ba19dffd",
+          "upstream_sha256": "2e49f7c869899a011600b340fd59dfad6490dbe1ef850abb269d4198ba19dffd",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/policy.py",
+          "sha256": "02ef8552437fe7678580da8e91bef802df3f7fa55309c522347d985c976f2985",
+          "upstream_sha256": "02ef8552437fe7678580da8e91bef802df3f7fa55309c522347d985c976f2985",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/questions.py",
+          "sha256": "6d29572bf24be39a0d8a7199e8b02e0f0d0d891a9f7c13d4e8427761e2b218d1",
+          "upstream_sha256": "6d29572bf24be39a0d8a7199e8b02e0f0d0d891a9f7c13d4e8427761e2b218d1",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/semantic.py",
+          "sha256": "72f2f0153d9f54d20ae46233abd8e7cbf14b832dde7078f34fbce8c78d0dff4d",
+          "upstream_sha256": "72f2f0153d9f54d20ae46233abd8e7cbf14b832dde7078f34fbce8c78d0dff4d",
+          "unchanged": true
+        },
+        {
+          "path": "evals/invoice_processing/structured/state.py",
+          "sha256": "44cdf8d90b1a6faadaf67f5bca315b8949010c4d9dc9f958d6313dc83a032392",
+          "upstream_sha256": "44cdf8d90b1a6faadaf67f5bca315b8949010c4d9dc9f958d6313dc83a032392",
+          "unchanged": true
+        },
+        {
+          "path": "evals/security_incidents/__init__.py",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "upstream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unchanged": true
+        },
+        {
+          "path": "evals/security_incidents/eval_adapter.py",
+          "sha256": "caaf274f5dfd0aeb743285d2e25f2a23c85631ae4245dea1011d44ac50454ff5",
+          "upstream_sha256": "caaf274f5dfd0aeb743285d2e25f2a23c85631ae4245dea1011d44ac50454ff5",
+          "unchanged": true
+        },
+        {
+          "path": "evals/security_incidents/workflow.py",
+          "sha256": "8bdeb95d0b72b859fdbcadd298ad82bf4227397e5a07552a085bfc6a45bc1ae3",
+          "upstream_sha256": "8bdeb95d0b72b859fdbcadd298ad82bf4227397e5a07552a085bfc6a45bc1ae3",
+          "unchanged": true
+        }
+      ],
+      "all_business_and_scoring_files_unchanged": true,
+      "formal_question_mode": "one",
+      "formal_workers": 1,
+      "formal_question_workers": 1,
+      "one_smoke": [
+        {
+          "workflow": "invoice_processing",
+          "cases": 1,
+          "execution_status": "ok",
+          "http_calls": 55,
+          "wall_time_s": 31.20159132964909,
+          "scored_decisions": 3
+        },
+        {
+          "workflow": "customer_service",
+          "cases": 1,
+          "execution_status": "ok",
+          "http_calls": 11,
+          "wall_time_s": 1.5160953500308096,
+          "scored_decisions": 3
+        },
+        {
+          "workflow": "security_incidents",
+          "cases": 1,
+          "execution_status": "ok",
+          "http_calls": 14,
+          "wall_time_s": 4.312186770141125,
+          "scored_decisions": 1
+        },
+        {
+          "workflow": "agent_trace_observability",
+          "cases": 1,
+          "execution_status": "ok",
+          "http_calls": 15,
+          "wall_time_s": 4.190893920138478,
+          "scored_decisions": 2
+        }
+      ],
+      "all_preflight": [
+        {
+          "workflow": "invoice_processing",
+          "question_mode": "all",
+          "http_status": 400,
+          "response_error": {
+            "message": "the questions take 28719 tokens, more than the 4096 this model reads",
+            "type": "BadRequestError",
+            "param": null,
+            "code": 400
+          },
+          "client_error": "HTTPStatusError: Client error '400 Bad Request' for url 'http://127.0.0.1:8000/v1/systemone'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400",
+          "trace": "/workspace/yangchen/logs/official-baseline-20261113/workflowevals/http/invoice_processing-clef-tp2-4096-20261113-smoke.jsonl"
+        },
+        {
+          "workflow": "customer_service",
+          "question_mode": "all",
+          "http_status": 200,
+          "response_error": null,
+          "client_error": "ValidationError: 18 validation errors for SystemOneResponse\nanswers.frustration.score.legend.0.[key]\n  Input should be a valid integer [type=int_type, input_value='0', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.legend.1.[key]\n  Input should be a valid integer [type=int_type, input_value='1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.legend.2.[key]\n  Input should be a valid integer [type=int_type, input_value='2', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.legend.3.[key]\n  Input should be a valid integer [type=int_type, input_value='3', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.legend.4.[key]\n  Input should be a valid integer [type=int_type, input_value='4', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.probabilities.0.[key]\n  Input should be a valid integer [type=int_type, input_value='0', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.probabilities.1.[key]\n  Input should be a valid integer [type=int_type, input_value='1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.probabilities.2.[key]\n  Input should be a valid integer [type=int_type, input_value='2', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.probabilities.3.[key]\n  Input should be a valid integer [type=int_type, input_value='3', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.frustration.score.probabilities.4.[key]\n  Input should be a valid integer [type=int_type, input_value='4', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.legend.0.[key]\n  Input should be a valid integer [type=int_type, input_value='0', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.legend.1.[key]\n  Input should be a valid integer [type=int_type, input_value='1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.legend.2.[key]\n  Input should be a valid integer [type=int_type, input_value='2', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.legend.3.[key]\n  Input should be a valid integer [type=int_type, input_value='3', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.probabilities.0.[key]\n  Input should be a valid integer [type=int_type, input_value='0', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.probabilities.1.[key]\n  Input should be a valid integer [type=int_type, input_value='1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.probabilities.2.[key]\n  Input should be a valid integer [type=int_type, input_value='2', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type\nanswers.urgency.score.probabilities.3.[key]\n  Input should be a valid integer [type=int_type, input_value='3', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/int_type",
+          "trace": "/workspace/yangchen/logs/official-baseline-20261113/workflowevals/http/customer_service-clef-tp2-4096-20261113-smoke.jsonl"
+        }
+      ],
+      "all_one_smoke_executions_ok": true,
+      "sdk_json_parse_verification": {
+        "native_sdk_json_parse_samples": 95,
+        "answer_values_and_choice_score_probabilities_unchanged": true,
+        "noul_semantics": "native SDK retains exact noul P(true); native Session derives true/false probabilities from it; raw HTTP probabilities remain in trace"
+      }
+    },
+    "formal_run_name": "clef-tp2-4096-one-20261113",
+    "formal_case_count": 705,
+    "formal_output_root": "/workspace/yangchen/logs/official-baseline-20261113/workflowevals",
+    "formal_question_mode": "one",
+    "formal_workers": 1
+  },
+  "full_baseline_complete": false
+}
