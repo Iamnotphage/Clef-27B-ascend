@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-11-13T09:05+08:00",
+  "purpose": "tuning round 2 phase 0: site confirmation and rollback preparation",
+  "resource_boundary": "A3 single physical card, 2 logical NPU (npu-smi card 7, chip 0/1, logical 0/1, phy-id 14/15, 64GiB HBM each); cgroup 32-core-equivalent CPU quota, 128GiB memory limit",
+  "local_git": {"branch": "main", "head": "f0df6fa", "modified": ["docs/profiling-2026-11-12.md"]},
+  "remote_git": {"branch": "main", "head": "3e83ae1", "uncommitted_baseline_preserved": true},
+  "service_before": {"pid": 115206, "config": "TP2/BF16/eager/4096/seqs1/tokens4096/mem0.9/mm-image1-video1", "port": 8000, "hbm_per_device_mib": 57192},
+  "conflicts_checked": "no other eval/benchmark/supervisor processes found; only clef API 115206 + workers 115266/115267 + clabagent",
+  "snapshot_dir": "/workspace/yangchen/logs/tuning/20261113-085408-perf2a/before",
+  "restore_service": "/workspace/yangchen/logs/tuning/20261113-085408-perf2a/restore-service.json",
+  "baseline_responses_before": "/workspace/yangchen/logs/tuning/20261113-085408-perf2a/baseline/baseline-responses.json",
+  "restart_verification": {
+    "stopped_pid": 115206, "restored_pid": 165871,
+    "health_wait_seconds": "about 90",
+    "baseline_after": "/workspace/yangchen/logs/tuning/20261113-085408-perf2a/baseline-after-restart/baseline-responses.json",
+    "comparison": {"worst_probability_abs_diff": 0.0, "discrete_diffs": 0, "request_sha_changes": 0}
+  },
+  "note": "service switch + rollback flow validated; all phase-1 experiments use manage_systemone_profile_service.py which only manages the snapshotted service"
+}

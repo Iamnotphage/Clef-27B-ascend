@@ -16,18 +16,22 @@ from urllib.request import urlopen
 parser = argparse.ArgumentParser()
 parser.add_argument("--run-dir", required=True)
 parser.add_argument("--label", required=True)
-parser.add_argument("--overrides", required=True,
+parser.add_argument("--overrides", required=False,
                     help='JSON: {"set":{"flag":"value"},"remove":["flag"],"append":["arg"],'
                          '"env":{"KEY":"value"},"wait_health_seconds":600}')
+parser.add_argument("--overrides-file", required=False, help="Read the overrides JSON from this file")
 args = parser.parse_args()
-spec = json.loads(args.overrides)
+if bool(args.overrides) == bool(args.overrides_file):
+    parser.error("provide exactly one of --overrides or --overrides-file")
+spec = json.loads(open(args.overrides_file).read() if args.overrides_file else args.overrides)
 run = Path(args.run_dir)
 original = json.loads((run / "restore-service.json").read_text())
 out = run / args.label
-if out.exists():
-    print(json.dumps({"error": f"label dir exists: {out}"}))
+launch_marker = out / "launch.json"
+if launch_marker.exists():
+    print(json.dumps({"error": f"label already launched: {out}"}))
     sys.exit(1)
-out.mkdir(parents=True)
+out.mkdir(parents=True, exist_ok=True)
 
 argv = list(original["argv"])
 for flag, value in spec.get("set", {}).items():
