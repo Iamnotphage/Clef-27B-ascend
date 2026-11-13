@@ -49,6 +49,10 @@ def main():
     parser.add_argument("--tensor-parallel-size", type=int, default=1)
     parser.add_argument("--max-model-len", type=int, default=1024)
     parser.add_argument("--max-num-seqs", type=int, default=1)
+    parser.add_argument(
+        "--max-num-batched-tokens", type=int, default=None,
+        help="每批调度的 token 上限；省略时与 --max-model-len 保持一致。",
+    )
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.90)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)
@@ -57,12 +61,26 @@ def main():
         parser.error("--port 应在 1 到 65535 之间")
     if min(args.tensor_parallel_size, args.max_model_len, args.max_num_seqs) < 1:
         parser.error("并行数、上下文长度和序列数应为正数")
-    if not 0 < args.gpu_memory_utilization <= 1:
-        parser.error("--gpu-memory-utilization 应在 (0, 1] 之间")
-    model_dir = Path(args.model_dir).expanduser().resolve()
     extra = args.vllm_args
     if extra[:1] == ["--"]:
         extra = extra[1:]
+    passthrough_batched_tokens = "--max-num-batched-tokens" in extra
+    if passthrough_batched_tokens and args.max_num_batched_tokens is not None:
+        parser.error("--max-num-batched-tokens 重复指定：只允许启动参数或 -- 之后透传其一")
+    max_num_batched_tokens = args.max_num_batched_tokens
+    if max_num_batched_tokens is None and not passthrough_batched_tokens:
+        max_num_batched_tokens = args.max_model_len
+    if max_num_batched_tokens is not None:
+        if max_num_batched_tokens < 1:
+            parser.error("--max-num-batched-tokens 应为正数")
+        if max_num_batched_tokens < args.max_model_len:
+            parser.error(
+                "--max-num-batched-tokens 不应小于 --max-model-len（chunked prefill 已关闭，"
+                f"单请求最多 {args.max_model_len} tokens）"
+            )
+    if not 0 < args.gpu_memory_utilization <= 1:
+        parser.error("--gpu-memory-utilization 应在 (0, 1] 之间")
+    model_dir = Path(args.model_dir).expanduser().resolve()
     command = [
         sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
         "--served-model-name", "clef",
@@ -72,7 +90,10 @@ def main():
         "--enforce-eager",
         "--max-model-len", str(args.max_model_len),
         "--max-num-seqs", str(args.max_num_seqs),
-        "--max-num-batched-tokens", str(args.max_model_len),
+    ]
+    if not passthrough_batched_tokens:
+        command += ["--max-num-batched-tokens", str(max_num_batched_tokens)]
+    command += [
         "--gpu-memory-utilization", str(args.gpu_memory_utilization),
         "--no-enable-prefix-caching",
         "--no-enable-chunked-prefill",
@@ -82,7 +103,16 @@ def main():
         "--port", str(args.port),
         *extra,
     ]
-    launch = {"python": sys.executable, "model_dir": str(model_dir), "argv": command}
+    launch = {
+        "python": sys.executable, "model_dir": str(model_dir), "argv": command,
+        "max_model_len": args.max_model_len,
+        "max_num_batched_tokens": max_num_batched_tokens,
+        "max_num_batched_tokens_source": (
+            "passthrough" if passthrough_batched_tokens
+            else "explicit" if args.max_num_batched_tokens is not None
+            else "default_follows_max_model_len"
+        ),
+    }
     if args.dry_run:
         print(json.dumps(launch, ensure_ascii=False, indent=2))
         return
