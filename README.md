@@ -24,6 +24,7 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 Clef-27B-ascend/
 ├── AGENTS.md
 ├── README.md
+├── connect.sh
 ├── .gitignore
 ├── docs/
 │   └── new-machine-plan.md
@@ -41,6 +42,38 @@ Clef-27B-ascend/
 ```
 
 `Clef-27B/` 按调优赛道组织提交文件。后续上板运行完成后补充真实的 `result.png`、`npu_device_call.png`、评测数据与原始日志。[赛事说明](https://competition.gitcode.com/competition/2119684851993116674/intro)
+
+## 本机 SSH 连接
+
+本机 `~/.ssh/config` 使用固定别名与 socket，平台跳板凭据在运行 `connect.sh` 时提供：
+
+```sshconfig
+Host clef
+    HostName 199.88.54.221
+    User root
+    Port 22
+    ControlMaster auto
+    ControlPath ~/.ssh/clef-master.sock
+    ControlPersist yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ProxyCommand /usr/bin/false
+```
+
+在仓库根目录运行：
+
+```bash
+./connect.sh
+ssh clef
+ssh clef 'hostname'
+./connect.sh status
+```
+
+`connect.sh` 优先复用现有主连接；连接缺失时，按隐藏输入提示粘贴最新 `jt_跳板账号:临时令牌` 或平台完整 `ssh -J` 命令，再按 SSH 提示输入服务器密码。跳板账号与令牌会一起变化，需要同时更新。也可通过 `CLEF_JUMP_AUTH` 环境变量提供这组凭据。脚本只解析凭据，输入内容始终作为数据处理，凭据仅用于本次连接进程。
+
+主连接建立后在后台保持，本机同一用户下的终端与 agent 统一使用 `ssh clef`。`ControlPersist yes` 表示无限期保留空闲连接；实际连接受休眠、断网、服务器和平台会话策略影响。连接中断时，`ssh clef` 会快速失败，重新运行 `./connect.sh` 并提供最新凭据即可恢复。
+
+`./connect.sh status` 检查本地主连接进程；执行 `ssh clef 'true'` 可验证远端命令。主动关闭使用 `./connect.sh stop`，会同时断开所有复用会话。远端长任务建议使用 `tmux`。凭据轮换周期与已有会话是否到期关闭，遵循平台实际规则。
 
 ## 下载
 
