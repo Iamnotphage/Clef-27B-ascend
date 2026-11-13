@@ -86,10 +86,10 @@ fi
 
 stop_svc
 python3 - <<'EOF'
-import os, shutil
+import os, shutil, time
 p = "/workspace/yangchen/logs/tuning/20261113-120651-perf3/restored-tp2-4096"
 if os.path.exists(p):
-    shutil.move(p, p + "-old")
+    shutil.move(p, p + "-" + time.strftime("%H%M%S"))
 EOF
 python scripts/manage_systemone_profile_service.py --run-dir "$RUN" restore >> "$LOG" 2>&1
 for _w in $(seq 1 120); do C=$(curl -s -m 3 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/health || true); [ "$C" = "200" ] && break; sleep 10; done
