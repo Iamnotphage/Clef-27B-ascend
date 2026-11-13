@@ -21,6 +21,8 @@ WorkflowEvals 使用官方 `questions=one`、`workers=1`、`question_workers=1`�
 | 安全事件 | exact_actions | 67.92%（163/240） |
 | Agent 运行审查 | primary_action | 69.37%（154/222） |
 
+精度可靠性另按固定输出计算了 10,000 次分组 bootstrap：同一 case 的策略结果整组保留，客服按对话分组，安全事件按 activity 分组，Agent 按 group_id 分组。[95% 抽样区间与方法](Clef-27B/logs/workflowevals-uncertainty-20261113.json)用于量化有限样本的不确定性；模型跨次推理波动与参考标签偏差保留为后续验证项。本轮已有一次正式全量推理；独立重复推理应使用新的 `--name`，以独立生成结果及检查点。
+
 原生 WorkflowEvals 正式命令如下，输出与断点均按 `--name` 保存：
 
 ```bash
