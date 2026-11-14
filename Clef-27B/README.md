@@ -10,6 +10,8 @@
 
 2026-11-14 另行完成 CPU BF16 独立参考链路：两套数据全量输入等价（OpenDecisions 2,352/2,352、ERQA 400/400 token 数等于 NPU 实测），NPU 复放 24/24 逐位一致；逐题前向按用户要求完成 OpenDecisions 154/2352 后终止，未生成完整 CPU 评分。[CPU 参考对照](../docs/cpu-npu-reference-2026-11-14.md) · [证据](logs/cpu-reference-20261114/)
 
+2026-11-15 完成 GDN 决策专用 prefill 路径：纯 prefill 场景跳过无人读取的循环状态读写与反向中间量，全量 2,352 题逐位不变，6 对交错 A/B 全部更快（p95 中位 −3.80%）。补丁默认关，验证后源码已回退、原服务恢复至 PID 475769。[GDN 报告](../docs/gdn-decision-prefill-2026-11-15.md) · [证据](logs/gdn-decision-20261115/)
+
 Decision Index 和 Typesafe WorkflowEvals 保留发布方对照用途。Decision Index 本次运行已于 2026-11-13 15:55 按用户要求终止，部分结果按未完成记录保留；WorkflowEvals 已完成。[比赛交付规则](../docs/submission-rules-2026-11-13.md)
 
 ## 环境记录
