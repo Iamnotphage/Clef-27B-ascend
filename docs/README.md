@@ -1,6 +1,6 @@
 # Clef-27B baseline 调查与执行计划
 
-更新：2026-11-14（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching。比赛质量交付已完成 OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题，最终性能配置为 seqs1/B1。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) · [ERQA 全量](erqa-baseline-2026-11-14.md)
+更新：2026-11-14（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching。比赛质量交付已完成 OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题，最终性能配置为 seqs1/B1。CPU 独立参考完成两套数据的全量输入等价验收与部分逐题对照（OpenDecisions 154/2352），按用户要求终止。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) · [ERQA 全量](erqa-baseline-2026-11-14.md) · [CPU 参考对照](cpu-npu-reference-2026-11-14.md)
 
 比赛质量验收采用 **OpenDecisions + ERQA**，性能验收采用 **S1 单并发 P95 / S2 最大有效 decisions/s**；Decision Index 与 Typesafe WorkflowEvals 保留为发布方对照记录。[比赛提交规范](submission-rules-2026-11-13.md)
 
@@ -26,6 +26,7 @@
 | [统一评测口径](evaluation-protocol.md) | Decision Index 0.2.1 子项、WorkflowEvals 四工作流、同协议对照与执行状态 |
 | [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) | 2,352 条原始概率、作者评分复核、EvalScope 固定源码与复现命令 |
 | [ERQA 全量](erqa-baseline-2026-11-14.md) | 官方 400 题数据清单、图文协议、图像预算、8 类分项、离线复核与适配补丁 |
+| [CPU 参考对照](cpu-npu-reference-2026-11-14.md) | 发布方参考实现的 CPU BF16 独立前向、全量输入等价、逐题概率差与终止范围 |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |

@@ -14,6 +14,8 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 
 2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
 
+2026-11-14 完成发布方参考实现的 **CPU BF16 独立前向**验收：OpenDecisions 2,352 条与 ERQA 400 条的编码 token 数与 NPU 实测 `usage.input_tokens` **逐题相等**（含 16 图 10,294 token 极值题），参考媒体布局与服务策略一致、无需补丁；8 条冻结请求在当前服务复放 24/24 次逐位一致。逐题前向按用户要求在完成 OpenDecisions 154/2352 后终止：该子集最大概率差 p50 0.00048、max 0.0385、1 次近边界翻转，非竞争候选最大差 p95 0.0016，未发现输入、候选映射或加载错误。[CPU 参考对照报告](docs/cpu-npu-reference-2026-11-14.md) · [证据目录](Clef-27B/logs/cpu-reference-20261114/)
+
 ## 发布方对照评测与后台运行
 
 复用现有 A3 / TP2 / BF16 / eager / 4096-token / 单序列服务，通过 `http://127.0.0.1:8000/v1/systemone` 调用。客户端、源码和数据均独立固定版本，保留各套件原生业务逻辑与评分器。
