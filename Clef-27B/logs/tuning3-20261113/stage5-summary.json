@@ -1,0 +1,118 @@
+{
+ "acceptance_data": "OpenDecisions 1.0.1 test 2352, revision ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+ "s1": {
+  "config": "tp2-seqs1-t4096-len4096-eager-cacheoff",
+  "requested": 2352,
+  "successful": 2352,
+  "failed": 0,
+  "wall_seconds": 446.6,
+  "rps": 5.2666,
+  "mean_ms": 189.73,
+  "p50_ms": 212.6,
+  "p95_ms": 219.0,
+  "p99_ms": 221.52,
+  "input_tokens_per_second": 2353.0,
+  "decisions_per_second": 5.2666,
+  "method": "full-sequence ramp pass (2352) then formal pass (2352), warmup 0, concurrency 1"
+ },
+ "s2": {
+  "config": "tp2-seqs4-t4096-len4096-eager-cacheON",
+  "concurrency": 8,
+  "decisions_per_second": 13.764,
+  "rps": 13.764,
+  "p95_ms": 938.66,
+  "p99_ms": 1086.41,
+  "successful": 2352,
+  "failed": 0,
+  "input_tokens_per_second": 6150.0,
+  "method": "per-point 2352 requests, warmup 1 per sample, concurrency scan 2/4/8/16"
+ },
+ "quality": {
+  "calibration": 82.79411494415206,
+  "intelligence": 66.0568428084581,
+  "capability": 74.42547887630508,
+  "items": 2352,
+  "predicted": 2352,
+  "tvd_129": 0.23756445782618107,
+  "accuracy_per_type": {
+   "choice": 83.276740237691,
+   "noul": 85.6655290102389,
+   "score": 71.93877551020408
+  },
+  "baseline_check": "all three scores and TVD digit-identical to the 2026-11-13 baseline run"
+ },
+ "subset_regression": {
+  "s1_config": {
+   "succ": 102,
+   "of": 102
+  },
+  "s2_config": {
+   "succ": 102,
+   "of": 102
+  }
+ },
+ "measurements": [
+  {
+   "measurement_id": "od-s1-full2352",
+   "labels": "od-s1-full2352",
+   "phase": "stage5-s1",
+   "run_id": "tuning-20261113-120651-perf3",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "Clef-27B/logs/tuning3-20261113/stage5-summary.json",
+   "source_sha256": "59a7b507245cc32c4db9611d2c88e0b6b39ac7221d65dde6defde67858b22d62",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 446.6,
+   "rps": 5.2666,
+   "decisions_per_second": 5.2666,
+   "input_tokens_per_second": 2353.0,
+   "p50_ms": 212.6,
+   "p95_ms": 219.0,
+   "p99_ms": 221.52,
+   "percentile_basis": "per_run",
+   "batch_evidence": "c1 sequential (B1)",
+   "failed": 0,
+   "notes": "S1 acceptance on OpenDecisions full sequence after ramp pass"
+  },
+  {
+   "measurement_id": "od-s2-c8",
+   "labels": "od-s2-c2;od-s2-c4;od-s2-c8;od-s2-c16",
+   "phase": "stage5-s2",
+   "run_id": "tuning-20261113-120651-perf3",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "Clef-27B/logs/tuning3-20261113/stage5-summary.json",
+   "source_sha256": "59a7b507245cc32c4db9611d2c88e0b6b39ac7221d65dde6defde67858b22d62",
+   "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 4,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "on",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": "",
+   "rps": 13.764,
+   "decisions_per_second": 13.764,
+   "input_tokens_per_second": 6150.0,
+   "p50_ms": "",
+   "p95_ms": 938.66,
+   "p99_ms": 1086.41,
+   "percentile_basis": "per_run",
+   "batch_evidence": "mixed by arrival (seqs4)",
+   "failed": 0,
+   "notes": "S2 acceptance: max effective decisions/s at concurrency 8 of scan 2/4/8/16, 0 errors"
+  }
+ ]
+}

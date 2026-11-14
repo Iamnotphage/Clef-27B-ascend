@@ -66,7 +66,8 @@ def main():
                         json.loads(ev)
                     except json.JSONDecodeError:
                         problems.append(f"line {i}: batch_evidence not valid JSON")
-                elif not (ev.startswith("warmup 5/5") or ev.startswith("A:{")):
+                elif not (ev.startswith("warmup 5/5") or ev.startswith("A:{")
+                          or ev.startswith("c1 sequential") or ev.startswith("mixed by arrival")):
                     problems.append(f"line {i}: batch_evidence unrecognized form: {ev[:40]}")
         versions = {row.get("schema_version") for row in rows}
         if len(versions) > 1:
