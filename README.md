@@ -4,7 +4,7 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
-2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
+2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果：OpenDecisions 全量 2,352 条与 ERQA 官方 400 题均已完成，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
 
 资源限制：**允许并行，限用 A3 单物理卡内两个逻辑 NPU，禁止跨物理卡**。TP1、TP2 与并发调优均遵循该限制；当前映射为 `npu-smi` 卡号 7、Chip 0 / 1、逻辑设备 0 / 1。
 
@@ -65,6 +65,24 @@ ssh clef
 ```
 
 复测时为 `--output-dir` 指定全新的空目录。入口校验完整数据 SHA-256 和 2,352 条记录，保存实际命令、原生输出及退出码。输出中的 `native.log` 为执行日志；`evalscope/predictions/` 保存请求和完整响应概率，`evalscope/reviews/` 保存逐题评分，`evalscope/reports/` 保存总体与分项指标。本轮完整原始概率导出见 [author-predictions.jsonl](Clef-27B/logs/opendecisions-baseline-20261113/author-predictions.jsonl)，作者复核的精确分数为 0～100 分；EvalScope 顶层 0～1 值保留了四位小数。
+
+## ERQA 当前全量评测
+
+2026-11-14 使用官方 ERQA TFRecord（commit `5bba488`，91,402,921 字节，SHA-256 `1974f5e5…b4c93e2`）完成全量 **400 题、630 图**评测：**219/400 = 0.5475**，400/400 成功、0 失败、0 重试。8 类分项中 Pointing 0.7353、State Estimation 0.6182、Spatial Reasoning 0.5952、Action Reasoning 0.5833、Task Reasoning 0.5526、Trajectory Reasoning 0.5152、Multi-view Reasoning 0.2703、Other 0.2143；单图 170/287 = 0.5923，多图 49/113 = 0.4336。[完整报告与数据清单](docs/erqa-baseline-2026-11-14.md) · [结果汇总](Clef-27B/logs/erqa-baseline-20261114/summary.json) · [逐题预测](Clef-27B/logs/erqa-baseline-20261114/predictions.jsonl)
+
+服务沿用 **TP2 / BF16 / eager / max_model_len 16384 / max_num_seqs 1 / 缓存关**，`--limit-mm-per-prompt {"image":16,"video":0}`，图像像素上限 `65,536～1,048,576`。全量输入 tokens 最大 10,294、均值 931.7；C1 wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。客户端并发 1，正式请求走 `POST /v1/decide`。
+
+```bash
+ssh clef
+/workspace/yangchen/venvs/clef-eval-py312/bin/python \
+  /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_baseline.py \
+  --data-dir /workspace/yangchen/datasets/erqa-official-20261114 \
+  --output-dir /workspace/yangchen/logs/erqa-repeat-01 --scope full
+```
+
+复测使用全新空目录；`--resume` 按样本 ID 与请求结构化 SHA-256 续跑。`scripts/official_eval/erqa_score.py --verify-requests` 从固定数据重建 400 条请求并离线重算，本轮 219/400 与 400/400 请求哈希均通过。EvalScope ERQAAdapter 的 `visual_indices` 与图文 SystemOne 转换缺口已修补，19 题交叉验证与直接路径 **19/19 逐题一致**。[适配补丁](Clef-27B/logs/erqa-baseline-20261114/adapter-patch/erqa-evalscope.patch)
+
+`metrics.csv` 的 ERQA 行记 accuracy 0.5475，`score_mae`、`calibration`、`intelligence`、`capability` 为 `NA`，表示这些字段不适用于 ERQA 的字母准确率协议；S1/S2 仍以 OpenDecisions 性能工作负载的 `results.csv` 为准，本轮 ERQA C1 延迟单独记录，不与 S1/S2 混用。
 
 ## 模型与工作区
 

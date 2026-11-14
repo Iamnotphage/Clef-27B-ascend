@@ -74,3 +74,15 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **GDN 候选**：旧 guard 在真实 prefill 因非连续 `[1,T,H,D]` 视图 100% 回退；修正后真实服务命中、0 回退、8/8 冻结用例逐位一致；不再声称端到端收益。
 - **启动与补丁**：`start.sh --output-dir` 真实落盘 manifest/log，默认 18143，`--config s1/s2` 显式配置；schema cache v2 安装器支持上游 SHA 校验、版本识别、幂等安装与精确回退。
 - **统计修正**：cgroup v1/v2 单位、unknown 有效性、预注册顺序条件、B4 分母（2.762 ms/req）、输入长度 446.809、每并发点独立证据与 SHA。
+
+## ERQA 图文配置与结果，2026-11-14
+
+完整报告见 [docs/erqa-baseline-2026-11-14.md](../docs/erqa-baseline-2026-11-14.md)。
+
+- **数据**：官方 ERQA TFRecord，commit `5bba488`，91,402,921 字节，SHA-256 `1974f5e5…b4c93e2`；400 题、630 图、8 类，单题 1～16 图。
+- **服务**：TP2 / BF16 / eager / `max_model_len=16384` / `max_num_seqs=1` / 缓存关；`--limit-mm-per-prompt {"image":16,"video":0}`。
+- **图像策略**：`shortest_edge=65536`、`longest_edge=1048576`（`JointSchemaStrategy.IMAGE_SIZE` 参考边界）；全量前逐题 processor 预算最大 10,294 tokens，实测 `usage.input_tokens` 与预算一致。
+- **质量**：219/400 = **0.5475**，400/400 成功、0 重试；单图 0.5923、多图 0.4336；8 类分项见报告。
+- **C1 计时**：wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。该窗口为 ERQA 质量运行，不与 OpenDecisions S1/S2 混用。
+- **适配**：EvalScope ERQAAdapter 修补 `visual_indices` 图文排列、2～4 候选解析与 SystemOne 图文转换；19 题原生路径与直接 `/v1/decide` 逐题一致。补丁与 SHA 见 [logs/erqa-baseline-20261114/adapter-patch/](logs/erqa-baseline-20261114/adapter-patch/)。
+- **边界**：Clef 原生协议将图片放在 `state` 前，未按官方字符索引交错插入；30 条交错样本单独统计。图像上限 1,048,576 像素为 16 图与 16,384 token 的联合约束。

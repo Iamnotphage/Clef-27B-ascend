@@ -82,7 +82,7 @@ model,dataset,accuracy,score_mae,calibration,intelligence,capability
 | `intelligence` | 决策能力分，按题型、难度加权并校正机会水平，范围 **0～100 分** |
 | `capability` | 综合质量分，`(calibration + intelligence) / 2`；两输入采用相同的 0～100 分量纲 |
 
-依原文“每个模型、每个数据集一行”组织提交版本的汇总。ERQA 的分项结果、质量字段适用性与缺失值表示，随最终模板确认并保留原生报告。
+依原文“每个模型、每个数据集一行”组织提交版本的汇总。ERQA 的分项结果、质量字段适用性与缺失值表示，随最终模板确认并保留原生报告。2026-11-14 已完成 ERQA 官方 400 题全量：accuracy **219/400 = 0.5475**，`metrics.csv` 中 ERQA 行的 `score_mae`、`calibration`、`intelligence`、`capability` 记为 `NA`（该数据集不适用），分项与复现见[ERQA 全量报告](erqa-baseline-2026-11-14.md)。
 
 ### 4.2 总表同时给出的长表表头
 
@@ -155,7 +155,7 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 
 当前工程已有的机器事实为：A3 单物理卡内两个 `Ascend910_9382` 逻辑 NPU，各 64 GiB HBM；`npu-smi` 卡号 7，Chip 0 / 1 对应逻辑设备 0 / 1、`Phy-ID` 14 / 15。资源字段按 `A3;1物理卡;2逻辑设备` 记录。[已采集设备映射](evidence/new-machine-2026-11-12.json) 中的 `Phy-ID` 是芯片设备标识，物理卡归属按 `NPU ID` 和 `Chip ID` 核对。后续证据继续保留原始设备输出，910C 身份及其与平台资源说明的关系取得实际或官方证据后标注。
 
-入口改造、CSV 导出、ERQA 适配、S1/S2 正式扫描及截图完成状态，分别以代码检查和实际执行证据更新。后续按用户要求于 15:55 终止 Decision Index，并于 15:58—16:05 完成一次全新 OpenDecisions 全量原始概率评测；质量结果与执行证据见[本轮运行记录](opendecisions-baseline-2026-11-13.md)。
+入口改造、CSV 导出、ERQA 适配、S1/S2 正式扫描及截图完成状态，分别以代码检查和实际执行证据更新。后续按用户要求于 15:55 终止 Decision Index，并于 15:58—16:05 完成一次全新 OpenDecisions 全量原始概率评测；2026-11-14 完成 ERQA 官方 400 题全量图文评测与 EvalScope 适配交叉验证。质量结果与执行证据见[OpenDecisions 运行记录](opendecisions-baseline-2026-11-13.md)与[ERQA 运行记录](erqa-baseline-2026-11-14.md)。
 
 ## 8. 最终模板与规则待明确项
 
@@ -164,7 +164,7 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 | `metrics.csv` 格式 | 五列长表与七列宽表的最终模板；样本数、基线/优化值、执行正确率、阈值及结论的承载位置 |
 | `results.csv` 格式 | 最终提交汇总与完整扫描明细的列名、关联方式及优化前后结果的记录方式 |
 | OpenDecisions | 数据集 revision、split、样本范围、模板、原生评分器版本、失败处理及发布方 baseline 对照条件 |
-| ERQA | 数据入口、revision、split、图像处理规则、准确率定义与分项格式 |
+| ERQA | 数据入口、revision、split、图像处理规则、准确率定义与分项格式 | 已固定官方 `5bba488` / TFRecord SHA-256 / 400 题 / 1～16 图 / 65,536～1,048,576 像素 / 官方精确匹配；结果 219/400 |
 | 执行正确率 | 计算分母、有效响应判定、超时/拒绝/错误的处理 |
 | S1 / S2 有效性 | 数据与请求构造、计时边界、预热、窗口、重复次数、并发范围、准入阈值和有效吞吐计算 |
 | 硬件要求 | 已按用户补充限定 A3 单物理卡内两个逻辑 NPU；继续核实 910C 与 A3 称谓的赛事认可映射、正式复现设备 |
@@ -181,7 +181,7 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 | --- | --- | --- |
 | 入口参数 | `start.sh` 透传参数，`inference.py` 已支持 `--model-dir` 和相对/绝对路径；参数表待增加 `--output-dir` | 输出目录参数、日志和结果落盘 |
 | 端口与接口 | 启动器默认端口为 8000，直接调用上游 vLLM；已保留 `/v1/systemone` 调用证据 | 目标端口 18143，四接口及各自返回格式逐项验收 |
-| 图文质量 | 视觉塔和图像功能自检已有记录 | ERQA 数据协议、请求适配、完整准确率及分项报告 |
+| 图文质量 | 视觉塔和图像功能自检已有记录；ERQA 官方 400 题全量完成，219/400，400/400 成功，离线复核与请求哈希 400/400 通过 | 分项报告、数据清单与复现命令见 `docs/erqa-baseline-2026-11-14.md` |
 | CSV | 现有两份 CSV 使用内部记录格式 | 按最终比赛模板导出，核对质量分单位和完整扫描明细 |
 | S1 / S2 | 已有固定请求和有限并发的探索性性能记录 | 指定比赛数据下的 S1、完整并发扫描和有效 S2 |
 | 截图与硬件 | 已有两张报告导出图，硬件原始标识为 A3 / `Ascend910_9382` | 正式提交版本的真实截图、910C 认可信息及 CSV/日志一致性 |

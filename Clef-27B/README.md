@@ -4,7 +4,7 @@
 
 完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[首轮工程 baseline 记录](../docs/baseline-2026-11-12.md)
 
-比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；原始概率 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 0.810374，Score MAE 0.401389（588 条）。作者固定版评分脚本与 EvalScope 未舍入指标完全一致。[本轮复现说明](../docs/opendecisions-baseline-2026-11-13.md) · [结果汇总](logs/opendecisions-baseline-20261113/summary.json)
+比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；原始概率 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 0.810374，Score MAE 0.401389（588 条）。作者固定版评分脚本与 EvalScope 未舍入指标完全一致。2026-11-14 完成 ERQA 官方 400 题全量图文评测，400/400 成功、0 重试，accuracy **219/400 = 0.5475**；单图 0.5923、多图 0.4336，8 类分项见报告。[本轮复现说明](../docs/opendecisions-baseline-2026-11-13.md) · [结果汇总](logs/opendecisions-baseline-20261113/summary.json) · [ERQA 报告](../docs/erqa-baseline-2026-11-14.md)
 
 2026-11-14 第四轮复核确认：seqs4 合批配置（13.764 decisions/s @ C8）的全量质量未通过 0.03/0.05 工程门槛（Capability 74.200，4 条 choice 变化，最大概率差 0.097399）；最终提交配置改为 **seqs1/B1**，全量质量与 baseline 逐位一致，S1 P95 **217.036 ms**，S2 **5.715 decisions/s @ C16**。完整根因、GDN 覆盖和接口验收见 [第四轮报告](../docs/tuning4-2026-11-14.md)。
 
@@ -45,4 +45,4 @@ python scripts/verify_systemone.py \
 
 ## 结果记录
 
-`metrics.csv` 采用比赛七列质量汇总，保存本次 OpenDecisions 实测值；三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。逐题原始概率、作者评分、EvalScope 报告、数据版本、运行命令和退出记录见 [logs/opendecisions-baseline-20261113/](logs/opendecisions-baseline-20261113/)。`results.csv` 已按第四轮最终值重建：S1 seqs1/缓存关 P95 217.036 ms；S2 seqs1/B1 5.715 decisions/s @ C16；seqs4 13.764 dec/s 行标注 `throughput-candidate-quality-fail`。ERQA 按正式协议继续补齐。原始请求、完整响应与 reviews 在远端本轮输出目录保留。[优化与兼容记录](optimization.md)
+`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值；OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位；ERQA 行 accuracy 记 0.5475，其余四项记 `NA`（不适用）。逐题原始概率、作者评分、EvalScope 报告、数据版本、运行命令和退出记录见 [logs/opendecisions-baseline-20261113/](logs/opendecisions-baseline-20261113/)；ERQA 的 `summary.json`、`predictions.jsonl`、离线复核与适配补丁见 [logs/erqa-baseline-20261114/](logs/erqa-baseline-20261114/)。`results.csv` 已按第四轮最终值重建：S1 seqs1/缓存关 P95 217.036 ms；S2 seqs1/B1 5.715 decisions/s @ C16；seqs4 13.764 dec/s 行标注 `throughput-candidate-quality-fail`。ERQA 的 C1 延迟（p95 323.476 ms）单独记录，不并入 S1/S2。原始请求、完整响应与 reviews 在远端本轮输出目录保留。[优化与兼容记录](optimization.md)
