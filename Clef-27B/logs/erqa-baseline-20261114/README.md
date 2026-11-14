@@ -21,6 +21,8 @@
 | `restore/snapshot.json` | 恢复后 PID 432954 的快照、`/health` 实际状态与 8/8 冻结回放 |
 | `restore/comparison.json` | 恢复前后 argv/cwd/env 逐项一致、关键文件哈希与回放对比 |
 | `restore/current-service.json` | 当前服务指针（PID 432954，原 argv/cwd/4096 配置） |
+| `restore/final-replay.json` | 恢复后再次执行 8/8 冻结用例，全部逐位一致 |
+| `delivery-state.json` | 本地/远端/推送提交对应关系、文件哈希核对与服务状态 |
 | `service-stop.json` | ERQA 服务 PID 430985 的停止记录 |
 | `artifact-manifest.json` | 本目录文件大小/SHA-256 与远端原始路径 |
 
