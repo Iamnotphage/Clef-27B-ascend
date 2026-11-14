@@ -142,5 +142,26 @@ st = strategy._schema_cache.stats()
 if st["entries"] == 0:
     failures.append("normal budget cached nothing")
 
+# v2: the request state never enters the schema cache.
+strategy._schema_cache = _SchemaTokenCache(strategy.tokenizer, True, 4096, 4_000_000)
+seen = []
+original_tokens = strategy._schema_cache.tokens
+
+
+def record_tokens(tokenizer, text):
+    seen.append(text)
+    return original_tokens(tokenizer, text)
+
+
+strategy._schema_cache.tokens = record_tokens
+marker = "CLEF-STATE-BYPASS-MARKER-7f3a"
+state_request = dict(requests[0])
+state_request["state"] = marker + " " + state_request["state"]
+state_questions = parse(state_request)
+strategy.encode(state_questions, strategy.render_state(state_request["state"]))
+if any(marker in text for text in seen):
+    failures.append("request state entered the schema cache")
+print("state-bypass schema keys:", len(seen))
+
 print("failures:", failures if failures else "none")
 sys.exit(1 if failures else 0)
