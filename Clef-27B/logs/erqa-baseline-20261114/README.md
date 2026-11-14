@@ -18,6 +18,7 @@
 | `adapter-patch/erqa-evalscope.patch` | EvalScope ERQAAdapter 与 SystemOne 图文转换补丁 |
 | `adapter-patch/patch-manifest.json` | 补丁前后文件 SHA-256 与补丁 SHA-256 |
 | `adapter-patch/apply-check.log` | 补丁对 preimage 的 `patch --dry-run` 全部通过 |
+| `adapter-patch/opendecisions-smoke-report.json` | 补丁后 OpenDecisions 文本路径 12/12 准确率 1.0 的回归报告 |
 | `restore/snapshot.json` | 恢复后 PID 432954 的快照、`/health` 200（空 body）与 8/8 冻结回放 |
 | `restore/comparison.json` | 恢复前后 argv/cwd/env 逐项一致、关键文件哈希与回放对比 |
 | `restore/current-service.json` | 当前服务指针（PID 432954，原 argv/cwd/4096 配置） |

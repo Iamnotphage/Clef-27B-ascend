@@ -168,7 +168,7 @@ Clef 的原生请求协议把 `images` 作为独立字段，`joint_schema_model.
 
 补丁应用前后的文件 SHA-256 见 [patch-manifest.json](../Clef-27B/logs/erqa-baseline-20261114/adapter-patch/patch-manifest.json)。
 
-**交叉验证**：在固定 19 题 smoke 子集上，EvalScope 原生 `systemone_api` 路径（服务同 `StructuredDecisionRequest` 处理器，端点 `/v1/systemone`）与项目直接 `/v1/decide` 路径的逐题预测 **19/19 完全一致**，accuracy 均为 7/19 = 0.3684；对比见 [evalscope-smoke-comparison.json](../Clef-27B/logs/erqa-baseline-20261114/evalscope-smoke-comparison.json)，原生报告见 [evalscope-smoke-report.json](../Clef-27B/logs/erqa-baseline-20261114/evalscope-smoke-report.json)。正式全量结果采用直接 `/v1/decide` 路径。
+**交叉验证**：在固定 19 题 smoke 子集上，EvalScope 原生 `systemone_api` 路径（服务同 `StructuredDecisionRequest` 处理器，端点 `/v1/systemone`）与项目直接 `/v1/decide` 路径的逐题预测 **19/19 完全一致**，accuracy 均为 7/19 = 0.3684；对比见 [evalscope-smoke-comparison.json](../Clef-27B/logs/erqa-baseline-20261114/evalscope-smoke-comparison.json)，原生报告见 [evalscope-smoke-report.json](../Clef-27B/logs/erqa-baseline-20261114/evalscope-smoke-report.json)。补丁后另跑 OpenDecisions 文本路径 12 条 smoke，accuracy 12/12，确认新增的图文分支未改变纯文本转换。正式全量结果采用直接 `/v1/decide` 路径。
 
 ## 7. 复现命令
 
