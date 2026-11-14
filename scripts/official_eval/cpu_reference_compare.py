@@ -88,6 +88,27 @@ def cpu_probabilities(kind, probabilities):
     return dict(probabilities)
 
 
+def boundary_shape(cpu_probs, npu_probs):
+    """How the probability mass moves: top-2 share and non-contender spread.
+
+    A mapping or ordering error moves every option; a numerical logit
+    perturbation on a close decision moves the two contenders and leaves the
+    rest almost untouched.
+    """
+    keys = sorted(set(cpu_probs) | set(npu_probs))
+    differences = {key: abs(cpu_probs.get(key, 0.0) - npu_probs.get(key, 0.0)) for key in keys}
+    total = sum(differences.values())
+    top = sorted(keys, key=lambda key: npu_probs.get(key, 0.0), reverse=True)[:2]
+    top2 = sum(differences.get(key, 0.0) for key in top)
+    rest = [differences.get(key, 0.0) for key in keys
+            if key not in top and cpu_probs.get(key, 0.0) < 0.1
+            and npu_probs.get(key, 0.0) < 0.1]
+    return {
+        "top2_diff_share": (top2 / total) if total else None,
+        "non_contender_max_diff": max(rest) if rest else None,
+    }
+
+
 def top_margin(probabilities):
     ordered = sorted(probabilities.values(), reverse=True)
     if len(ordered) < 2:
@@ -179,6 +200,7 @@ def compare_opendecisions(args):
             "npu_margin": top_margin(npu_probs),
             "cpu_probs": cpu_probs,
             "npu_probs": npu_probs,
+            **boundary_shape(cpu_probs, npu_probs),
         }
         if kind == "choice":
             cpu_best = max(sorted(npu_probs), key=lambda key: cpu_probs[key])
@@ -236,6 +258,11 @@ def compare_opendecisions(args):
         "max_prob_diff_quantiles": quantiles(max_diffs),
         "mean_prob_diff_quantiles": quantiles([item["mean_prob_diff"] for item in valid_items]),
         "tvd_quantiles": quantiles([item["tvd"] for item in valid_items]),
+        "top2_diff_share_quantiles": quantiles(
+            [item["top2_diff_share"] for item in valid_items if item["top2_diff_share"] is not None]),
+        "non_contender_max_diff_quantiles": quantiles(
+            [item["non_contender_max_diff"] for item in valid_items
+             if item["non_contender_max_diff"] is not None]),
         "max_prob_diff_over": {
             str(threshold): sum(1 for value in max_diffs if value > threshold)
             for threshold in (0.001, 0.01, 0.03, 0.05, 0.1)

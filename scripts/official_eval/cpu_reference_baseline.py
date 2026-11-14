@@ -326,6 +326,8 @@ def weight_manifest(model_dir):
 
 
 def build_inputs(release, processor, sample, max_length, media_kwargs):
+    import torch
+
     request = dict(sample["request"])
     if sample["images"]:
         request["images"] = load_pil_images(sample["request"]["images"])
@@ -347,8 +349,19 @@ def build_inputs(release, processor, sample, max_length, media_kwargs):
     media = {}
     if encoded.media:
         for key, value in encoded.media.items():
-            if key == "mm_token_type_ids":
-                media[key] = list(value)
+            if key in ("pixel_values", "pixel_values_videos"):
+                # The pixel tensors are tens of megabytes per image; keep their
+                # identity (shape, dtype, byte hash) instead of the payload.
+                tensor = value.detach().cpu().contiguous()
+                media[f"{key}_shape"] = list(tensor.shape)
+                media[f"{key}_dtype"] = str(tensor.dtype).replace("torch.", "")
+                media[f"{key}_sha256"] = sha256_bytes(
+                    tensor.view(torch.uint8).numpy().tobytes())
+            elif key == "mm_token_type_ids":
+                values = list(value)
+                media["mm_token_type_ids_count"] = len(values)
+                media["mm_token_type_ids_nonzero"] = sum(1 for item in values if item)
+                media["mm_token_type_ids_sha256"] = digest(values)
             elif hasattr(value, "tolist"):
                 media[key] = value.tolist()
             else:
