@@ -429,8 +429,9 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=18143,
                         help="默认监听 127.0.0.1:18143（比赛接口约定）。")
-    parser.add_argument("--config", choices=sorted(CONFIGS), default="custom",
-                        help="s1：TP2/4096/seqs1/缓存关；s2：TP2/4096/seqs4/缓存 v2 开。")
+    parser.add_argument("--config", choices=sorted(CONFIGS), default="s1",
+                        help="s1（默认，最终采用）：TP2/4096/seqs1/缓存关；"
+                             "s2：TP2/4096/seqs4/缓存 v2 开；custom：TP1/1024 保守默认。")
     parser.add_argument("--tensor-parallel-size", type=int, default=None)
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
