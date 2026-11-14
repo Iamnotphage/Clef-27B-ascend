@@ -6,6 +6,8 @@
 
 比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；原始概率 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 0.810374，Score MAE 0.401389（588 条）。作者固定版评分脚本与 EvalScope 未舍入指标完全一致。[本轮复现说明](../docs/opendecisions-baseline-2026-11-13.md) · [结果汇总](logs/opendecisions-baseline-20261113/summary.json)
 
+2026-11-14 第四轮复核确认：seqs4 合批配置（13.764 decisions/s @ C8）的全量质量未通过 0.03/0.05 工程门槛（Capability 74.200，4 条 choice 变化，最大概率差 0.097399）；最终提交配置改为 **seqs1/B1**，全量质量与 baseline 逐位一致，S1 P95 **217.036 ms**，S2 **5.715 decisions/s @ C16**。完整根因、GDN 覆盖和接口验收见 [第四轮报告](../docs/tuning4-2026-11-14.md)。
+
 Decision Index 和 Typesafe WorkflowEvals 保留发布方对照用途。Decision Index 本次运行已于 2026-11-13 15:55 按用户要求终止，部分结果按未完成记录保留；WorkflowEvals 已完成。[比赛交付规则](../docs/submission-rules-2026-11-13.md)
 
 ## 环境记录
@@ -22,10 +24,13 @@ Decision Index 和 Typesafe WorkflowEvals 保留发布方对照用途。Decision
 cd /workspace/yangchen/Clef-27B-ascend
 source scripts/activate_env.sh
 bash Clef-27B/start.sh --dry-run
-bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B
+bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B \
+  --output-dir /workspace/yangchen/logs/clef-run --config s1
 ```
 
-`start.sh` 使用 `PYTHON_BIN` 指定的解释器转发到 `inference.py`，启动前检查完整分片和联合头文件。默认 BF16、TP1、eager、1024、单序列、`127.0.0.1:8000`，关闭 prefix caching 和 chunked prefill；保留视觉塔并跳过视觉预热，初始请求全部使用纯文本。附加 vLLM 参数放在 `--` 后。
+`start.sh` 使用 `PYTHON_BIN` 指定的解释器转发到 `inference.py`，启动前检查完整分片和联合头文件。`--output-dir` 写入 `launch-manifest.json` 和 `service.log`；默认监听 `127.0.0.1:18143`。`--config s1` 为最终采用的 TP2/4096/seqs1/缓存关；`--config s2` 为 TP2/4096/seqs4/schema cache v2 开（吞吐候选，质量不通过）。不指定 `--config` 时保持 BF16、TP1、1024、单序列的保守默认。附加 vLLM 参数放在 `--` 后，`--flag value` 与 `--flag=value` 均可；重复参数报错，passthrough 覆盖同名 launcher 参数时 manifest 记录实际生效值和来源。
+
+服务接口：`GET /health`（JSON：status/model/revision）、`GET /v1/decide/info`（身份、任务、协议、缓存）、`POST /v1/systemone`（文本决策）、`POST /v1/decide`（文本/图文决策，与 systemone 同协议）。
 
 ```bash
 python scripts/verify_systemone.py \
@@ -40,4 +45,4 @@ python scripts/verify_systemone.py \
 
 ## 结果记录
 
-`metrics.csv` 采用比赛七列质量汇总，保存本次 OpenDecisions 实测值；三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。逐题原始概率、作者评分、EvalScope 报告、数据版本、运行命令和退出记录见 [logs/opendecisions-baseline-20261113/](logs/opendecisions-baseline-20261113/)。`results.csv` 保留已有性能记录，S1/S2 与 ERQA 按正式协议继续补齐。原始请求、完整响应与 reviews 在远端本轮输出目录保留。[优化与兼容记录](optimization.md)
+`metrics.csv` 采用比赛七列质量汇总，保存本次 OpenDecisions 实测值；三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。逐题原始概率、作者评分、EvalScope 报告、数据版本、运行命令和退出记录见 [logs/opendecisions-baseline-20261113/](logs/opendecisions-baseline-20261113/)。`results.csv` 已按第四轮最终值重建：S1 seqs1/缓存关 P95 217.036 ms；S2 seqs1/B1 5.715 decisions/s @ C16；seqs4 13.764 dec/s 行标注 `throughput-candidate-quality-fail`。ERQA 按正式协议继续补齐。原始请求、完整响应与 reviews 在远端本轮输出目录保留。[优化与兼容记录](optimization.md)

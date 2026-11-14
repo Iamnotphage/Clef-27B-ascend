@@ -63,3 +63,14 @@ A3 单物理卡内两个逻辑 NPU 边界内完成。完整实验报告见 [docs
 质量回归：推荐配置（seqs1）完整 OpenDecisions 1.0.1 2,352 条重跑，Calibration 82.7941149442 / Intelligence 66.0568428085 / Capability 74.4254788763、accuracy 1906/2352、Score MAE 0.401389，与既有 baseline **逐位一致**；B4 混合并发与缓存开启两种条件下 771/771 离散决策一致、概率最大差 0.000851（阈值 0.03）。
 
 S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 130.296 ms（三轮均值）；S2 = seqs4，57.98 dec/s @ 并发 8（关缓存）或 58.14（开缓存）。备选低延迟部署：双 TP1 C2 14.27 rps @ p95 141 ms。
+
+## 第四轮复核与最终配置，2026-11-14
+
+完整报告见 [docs/tuning4-2026-11-14.md](../docs/tuning4-2026-11-14.md)。
+
+- **S2 合批质量**：seqs4/cache-on C8 的全量 2,352 条重算 Capability **74.200178**，4 条 choice 变化、2 条 noul 跨 0.5、26 条概率差 >0.03（最大 0.097399）、3 条 score 差 >0.05（最大 0.076599），未通过 0.03/0.05 工程门槛。C2 与 S1 逐位一致。根因是跨请求合批的批内位置相关 BF16 数值差（相同输入在不同批位置得到不同结果）；GDN 融合算子、conv1d 均验证为多序列隔离正确，差异首先出现在 `in_proj_ba` 的 1 ulp 行差，按序列执行 BA 仍残留 0.104 最大概率差。
+- **最终采用**：seqs1/B1（TP2/4096/eager/cache off）。全量质量 74.425479 与 baseline 逐位一致；S1 P95 **217.036 ms**；S2 **5.715 decisions/s @ C16**（C2/C4/C8 为 5.626/5.673/5.584）。
+- **吞吐候选**：seqs4/C8 13.764 dec/s 保留在 `results.csv`，标注 `throughput-candidate-quality-fail`。
+- **GDN 候选**：旧 guard 在真实 prefill 因非连续 `[1,T,H,D]` 视图 100% 回退；修正后真实服务命中、0 回退、8/8 冻结用例逐位一致；不再声称端到端收益。
+- **启动与补丁**：`start.sh --output-dir` 真实落盘 manifest/log，默认 18143，`--config s1/s2` 显式配置；schema cache v2 安装器支持上游 SHA 校验、版本识别、幂等安装与精确回退。
+- **统计修正**：cgroup v1/v2 单位、unknown 有效性、预注册顺序条件、B4 分母（2.762 ms/req）、输入长度 446.809、每并发点独立证据与 SHA。
