@@ -234,7 +234,17 @@ EvalScope 适配交叉验证：
 
 远端根目录：`/workspace/yangchen/logs/erqa-baseline-20261114/`。
 
-## 9. 已知边界
+## 9. 服务恢复
+
+ERQA 服务停止后按本轮 phase-0 快照恢复原服务：
+
+- 恢复 PID **432954**，argv、cwd、环境白名单与 phase-0 的 PID 424593 逐项一致；
+- 12 个关键文件 SHA-256 全部未变；
+- 8/8 冻结用例逐位一致，恢复后再次回放仍为 8/8；
+- `GET /health` **200**（空 body），`GET /v1/decide/info` 200；phase-0 快照辅助脚本当时把 `/health` 拼在 `/v1` 基址后，实际请求了 `/v1/health` 并记录 404，已在 [restore/comparison.json](../Clef-27B/logs/erqa-baseline-20261114/restore/comparison.json) 中注明；
+- 当前服务指针已更新为 PID 432954，原 4096/seqs1/`image=1` 配置保持不变。
+
+## 10. 已知边界
 
 1. **图文位置**：Clef 原生协议只支持图片置于 `state` 之前，未按官方 harness 的字符索引交错插入。图片顺序与数量保持官方排序；30 条交错样本的分项准确率单独列出。
 2. **图像像素上限**：固定为 1,048,576 像素，以同时满足 16 图与 16,384 token 上限；未尝试更高分辨率策略。

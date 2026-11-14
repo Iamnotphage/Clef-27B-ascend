@@ -12,36 +12,16 @@
   "cases": 8,
   "passed": 8
  },
- "hash_changes": {
-  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/protocol.py": {
-   "phase0": "c4ea3c8a35e1e1be58c3fe34fa590f92ea832233a3eb47644e5ca9bf964492f6",
-   "restore": null
-  },
-  "/workspace/yangchen/models/Clef-27B/processor_config.json": {
-   "phase0": "d89ef49ce9cd37fbf510158e13c1ef063d9286411c1ec9049932dbe0487143b1",
-   "restore": null
-  },
-  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/question_types.py": {
-   "phase0": "a18d95063cc9bd0e26795840fad25f2b6682d178bca8517d08b7796cbba7f757",
-   "restore": null
-  },
-  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/state.py": {
-   "phase0": "0bedf03db4c424b7d3c9a2a19c8bd58aa563dc8281edd8ee3375b7ad36a2dea0",
-   "restore": null
-  },
-  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/serving.py": {
-   "phase0": "5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a",
-   "restore": null
-  },
-  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py": {
-   "phase0": "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f",
-   "restore": null
-  }
- },
+ "common_hashes": 12,
+ "hash_changes": {},
  "health_phase0": {
-  "error": "HTTPError: HTTP Error 404: Not Found"
+  "url": "http://127.0.0.1:8000/v1/health",
+  "status_code": 404,
+  "note": "phase-0 helper appended /health to the /v1 base, so this probe hit /v1/health and returned 404; the service's actual /health returns 200 with an empty body as verified on the restored service."
  },
  "health_restore": {
-  "error": "HTTPError: HTTP Error 404: Not Found"
+  "url": "http://127.0.0.1:8000/health",
+  "status_code": 200,
+  "body_bytes": 0
  }
 }

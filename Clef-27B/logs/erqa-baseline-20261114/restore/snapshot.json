@@ -1,5 +1,5 @@
 {
- "captured_at": "2026-11-14T06:30:47.881303+00:00",
+ "captured_at": "2026-11-14T06:45:49.286281+00:00",
  "host": "25e6d0590726",
  "pid": 432954,
  "process": {
@@ -91,11 +91,11 @@
     "432954"
    ],
    "returncode": 0,
-   "stdout": "    PID    PPID                  STARTED     ELAPSED COMMAND\n 432954       1 Sat Nov 14 06:29:00 2026       01:47 /workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --enforce-eager --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --limit-mm-per-prompt {\"image\":1,\"video\":0} --skip-mm-profiling --host 127.0.0.1 --port 8000 --distributed-executor-backend mp --limit-mm-per-prompt {\"image\":1,\"video\":1} --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}\n",
+   "stdout": "    PID    PPID                  STARTED     ELAPSED COMMAND\n 432954       1 Sat Nov 14 06:29:00 2026       16:49 /workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --enforce-eager --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --limit-mm-per-prompt {\"image\":1,\"video\":0} --skip-mm-profiling --host 127.0.0.1 --port 8000 --distributed-executor-backend mp --limit-mm-per-prompt {\"image\":1,\"video\":1} --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}\n",
    "stderr": ""
   }
  },
- "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 156.4                39                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59468/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    39                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59131/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 433002        | VLLMWorker_TP      | 56302                 | 433002                  |\n| 7       0                 | 432954        | python             | 106                   | 432954                  |\n| 7       1                 | 433003        | VLLMWorker_TP      | 56302                 | 433003                  |\n+===========================+===============+======================================================================+\n",
+ "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 156.3                39                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59877/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    39                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59539/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 433002        | VLLMWorker_TP      | 56710                 | 433002                  |\n| 7       0                 | 432954        | python             | 106                   | 432954                  |\n| 7       1                 | 433003        | VLLMWorker_TP      | 56710                 | 433003                  |\n+===========================+===============+======================================================================+\n",
  "source": {
   "/workspace/yangchen/work/src/vllm": {
    "exists": true,
@@ -118,20 +118,73 @@
     " M vllm_ascend/device/device_op.py",
     " M vllm_ascend/ops/vocab_parallel_embedding.py"
    ]
+  },
+  "/workspace/yangchen/work/src/evalscope-3d39bab09c1d63095490a8b0f4a6dcbcc5ea843e": {
+   "exists": true,
+   "git_head": "",
+   "git_branch": "",
+   "git_status": []
+  },
+  "/workspace/yangchen/Clef-27B-ascend": {
+   "exists": true,
+   "git_head": "3e83ae17df7b559ec2dd6b2a38aa029c2777e061",
+   "git_branch": "main",
+   "git_status": [
+    " M Clef-27B/README.md",
+    " M Clef-27B/inference.py",
+    " M Clef-27B/metrics.csv",
+    " M Clef-27B/optimization.md",
+    " M Clef-27B/results.csv",
+    " M Clef-27B/start.sh",
+    " M README.md",
+    "?? AGENTS.md",
+    "?? Clef-27B/._optimization.md",
+    "?? Clef-27B/._results.csv",
+    "?? Clef-27B/logs/erqa-baseline-20261114/",
+    "?? Clef-27B/logs/tuning2-20261113/",
+    "?? Clef-27B/logs/tuning3-20261113/",
+    "?? Clef-27B/npu_device_call.png",
+    "?? Clef-27B/result.png",
+    "?? docs/",
+    "?? requirements/",
+    "?? runtime/",
+    "?? scripts/activate_env.sh",
+    "?? scripts/benchmark_systemone.py",
+    "?? scripts/bootstrap_python.sh",
+    "?? scripts/download_model_manifest.py",
+    "?? scripts/evaluate_systemone.py",
+    "?? scripts/generate_multimodal_fixtures.py",
+    "?? scripts/official_eval/",
+    "?? scripts/patches/",
+    "?? scripts/reference_systemone.py",
+    "?? scripts/run_evalscope_offline.py",
+    "?? scripts/verify_hccl.py",
+    "?? scripts/verify_npu_environment.py",
+    "?? scripts/verify_systemone.py",
+    "?? scripts/verify_systemone_encoding.py",
+    "?? scripts/verify_systemone_multimodal.py",
+    "?? scripts/verify_systemone_precision.py"
+   ]
   }
  },
  "file_sha256": {
   "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py": "0ddd92b44b38ae7a64d6057cacb205b5164b47dfeb330ea3fcab2bf2f2198a4c",
+  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/question_types.py": "a18d95063cc9bd0e26795840fad25f2b6682d178bca8517d08b7796cbba7f757",
+  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/state.py": "0bedf03db4c424b7d3c9a2a19c8bd58aa563dc8281edd8ee3375b7ad36a2dea0",
+  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py": "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f",
+  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/serving.py": "5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a",
+  "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/protocol.py": "c4ea3c8a35e1e1be58c3fe34fa590f92ea832233a3eb47644e5ca9bf964492f6",
   "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn.py": "b235e34d8a2427b167d4ce0e9068312904ecd1473fe288cefe1e9b6f95de030d",
   "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/device/device_op.py": "a08d44b41b337d839548c02b7457510968d5c5057ece01243b022a91348a0823",
   "/workspace/yangchen/models/Clef-27B/joint_schema_model.py": "0e304cf7c6500e8bb59bef7e2afd2c6373f82596dfb3b57d1aa93c175e2dc3a3",
   "/workspace/yangchen/models/Clef-27B/joint_head_config.json": "890be585d75b981201eb96a35f98a9967afe37bc8d220cfdea2e72d56507534f",
-  "/workspace/yangchen/models/Clef-27B/config.json": "c42e88892bd3fd84e8276b2ad90df58c1c3b797676ea161035006a72ad468c58"
+  "/workspace/yangchen/models/Clef-27B/config.json": "c42e88892bd3fd84e8276b2ad90df58c1c3b797676ea161035006a72ad468c58",
+  "/workspace/yangchen/models/Clef-27B/processor_config.json": "d89ef49ce9cd37fbf510158e13c1ef063d9286411c1ec9049932dbe0487143b1"
  },
  "process_tree": [
-  " 432954       1 Ssl  Sat Nov 14 06:29:00 2026       01:48 /workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --enforce-eager --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --limit-mm-per-prompt {\"image\":1,\"video\":0} --skip-mm-profiling --host 127.0.0.1 --port 8000 --distributed-executor-backend mp --limit-mm-per-prompt {\"image\":1,\"video\":1} --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
-  " 432984  432954 S    Sat Nov 14 06:29:23 2026       01:25 /workspace/yangchen/venvs/clef-py312/bin/python -c from multiprocessing.resource_tracker import main;main(46)",
-  " 432985  432954 Sl   Sat Nov 14 06:29:23 2026       01:25 VLLM::EngineCore"
+  " 432954       1 Ssl  Sat Nov 14 06:29:00 2026       16:49 /workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --enforce-eager --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --limit-mm-per-prompt {\"image\":1,\"video\":0} --skip-mm-profiling --host 127.0.0.1 --port 8000 --distributed-executor-backend mp --limit-mm-per-prompt {\"image\":1,\"video\":1} --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+  " 432984  432954 S    Sat Nov 14 06:29:23 2026       16:26 /workspace/yangchen/venvs/clef-py312/bin/python -c from multiprocessing.resource_tracker import main;main(46)",
+  " 432985  432954 Sl   Sat Nov 14 06:29:23 2026       16:26 VLLM::EngineCore"
  ],
  "process_tree_command": [
   "ps",
@@ -140,7 +193,16 @@
   "--sort=pid"
  ],
  "health": {
-  "error": "HTTPError: HTTP Error 404: Not Found"
+  "url": "http://127.0.0.1:8000/health",
+  "status_code": 200,
+  "body": "",
+  "headers": {
+   "date": "Sat, 14 Nov 2026 06:45:49 GMT",
+   "server": "uvicorn",
+   "content-length": "0",
+   "vary": "Origin",
+   "connection": "close"
+  }
  },
  "frozen_replay": {
   "url": "http://127.0.0.1:8000/v1/systemone",

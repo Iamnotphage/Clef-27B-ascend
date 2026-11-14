@@ -183,8 +183,11 @@ def main() -> int:
     document["process_tree"] = selected
     document["process_tree_command"] = tree.get("command")
     try:
-        with urllib.request.urlopen(f"{args.url.rstrip('/')}/health", timeout=30) as response:
+        base = args.url.rstrip("/")
+        health_url = (base[:-3] if base.endswith("/v1") else base) + "/health"
+        with urllib.request.urlopen(health_url, timeout=30) as response:
             document["health"] = {
+                "url": health_url,
                 "status_code": response.status,
                 "body": response.read().decode("utf-8", "replace"),
                 "headers": dict(response.headers.items()),
