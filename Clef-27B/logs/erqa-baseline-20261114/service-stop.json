@@ -1,0 +1,9 @@
+{
+ "pid": 430985,
+ "stopped_at": "2026-11-14T06:28:40+0000",
+ "signal": "SIGTERM",
+ "gone": true,
+ "remaining": [
+  " 432925  135423 bash -c /workspace/yangchen/venvs/clef-eval-py312/bin/python - <<\"PY\" import json, os, signal, subprocess, time pid=430985 doc={\"pid\":pid,\"stopped_at\":time.strftime(\"%Y-%m-%dT%H:%M:%S%z\")} try:     os.kill(pid, signal.SIGTERM); doc[\"signal\"]=\"SIGTERM\" except ProcessLookupError:     doc[\"signal\"]=\"already-gone\" for _ in range(120):     if not os.path.exists(f\"/proc/{pid}\"): break     time.sleep(0.5) doc[\"gone\"]=not os.path.exists(f\"/proc/{pid}\") time.sleep(2) out=subprocess.run([\"ps\",\"-eo\",\"pid,ppid,args\"],capture_output=True,text=True).stdout doc[\"remaining\"]=[l for l in out.splitlines() if \"vllm.entrypoints\" in l or \"VLLM::\" in l] open(\"/workspace/yangchen/logs/erqa-baseline-20261114/service/stop.json\",\"w\").write(json.dumps(doc,ensure_ascii=False,indent=1)+\"\\n\") print(json.dumps(doc,ensure_ascii=False)[:600]) PY"
+ ]
+}

@@ -1,0 +1,203 @@
+--- a/evalscope/api/model/decision.py
++++ b/evalscope/api/model/decision.py
+@@ -34,6 +34,7 @@
+     state: JsonValue
+     instructions: str = Field(min_length=1)
+     criteria: dict[str, str] | list[str] | None = None
++    images: list[str] | None = None
+     answer_prefix: Literal['ANSWER: ', '答案：'] = 'ANSWER: '
+ 
+     @model_validator(mode='after')
+@@ -41,8 +42,8 @@
+         if self.kind == 'choice':
+             if not isinstance(self.criteria, dict) or not 2 <= len(self.criteria) <= 255:
+                 raise ValueError('Choice requires 2-255 named options.')
+-            if any(not key.strip() or not value.strip() for key, value in self.criteria.items()):
+-                raise ValueError('Choice options must not be empty.')
++            if any(not key.strip() for key in self.criteria):
++                raise ValueError('Choice option names must not be empty.')
+         elif self.kind == 'score':
+             if not isinstance(self.criteria, list) or not 2 <= len(self.criteria) <= 10:
+                 raise ValueError('Score requires 2-10 ordered levels.')
+--- a/evalscope/models/utils/decision.py
++++ b/evalscope/models/utils/decision.py
+@@ -20,7 +20,10 @@
+     question = {'type': request.kind, 'instructions': request.instructions}
+     if request.criteria is not None:
+         question['criteria'] = request.criteria
+-    return {'model': model, 'state': request.state, 'questions': {'answer': question}}
++    payload = {'model': model, 'state': request.state, 'questions': {'answer': question}}
++    if request.images:
++        payload['images'] = list(request.images)
++    return payload
+ 
+ 
+ def build_autotrust_request(request: DecisionInput) -> dict[str, Any]:
+@@ -58,6 +61,7 @@
+             state=body['state'],
+             instructions=question['instructions'],
+             criteria=question.get('criteria'),
++            images=body.get('images'),
+         )
+     if protocol != 'autotrust':
+         raise ValueError(f'Unsupported decision protocol: {protocol}')
+--- a/evalscope/api/benchmark/adapters/multi_choice_adapter.py
++++ b/evalscope/api/benchmark/adapters/multi_choice_adapter.py
+@@ -103,6 +103,11 @@
+ 
+     def build_systemone_messages(self, sample: Sample, subset: str) -> List[ChatMessage]:
+         """Prepare chat messages with the MCQ data needed by the System One provider."""
++        if isinstance(sample.input, list):
++            users = [message for message in sample.input if message.role == 'user']
++            if len(users) != 1 or not isinstance(users[0].internal, dict) or 'systemone' not in users[0].internal:
++                raise ValueError('System One vision samples require annotated conversion data.')
++            return [ChatMessageUser(content=users[0].text or '', internal={'systemone': users[0].internal['systemone']})]
+         if not isinstance(sample.input, str) or sample.tools:
+             raise ValueError('System One Choice requires raw text input without tools.')
+         criteria = {answer_character(i): value for i, value in enumerate(sample.choices or [])}
+--- a/evalscope/benchmarks/erqa/erqa_adapter.py
++++ b/evalscope/benchmarks/erqa/erqa_adapter.py
+@@ -1,8 +1,11 @@
++import base64
++import re
++from pathlib import Path
+ from typing import Any, Dict, List
+ 
+ from evalscope.api.benchmark import BenchmarkMeta, MultiChoiceAdapter, VisionLanguageAdapter
+ from evalscope.api.dataset import Sample
+-from evalscope.api.messages import ChatMessageUser, Content, ContentText
++from evalscope.api.messages import ChatMessageUser, Content, ContentImage, ContentText
+ from evalscope.api.registry import register_benchmark
+ from evalscope.constants import Tags
+ 
+@@ -17,7 +20,70 @@
+     'Other',
+ ]
+ 
+-PROMPT_TEMPLATE = """{question}"""
++PROMPT_TEMPLATE = "{question}"
++DEFAULT_INSTRUCTIONS = "Which option correctly answers `question`?"
++ANSWER_INSTRUCTION = re.compile(r"Please answer directly", re.IGNORECASE)
++
++
++def parse_options(question: str) -> List[tuple[str, str]]:
++    """Parse ``A.`` / ``A:`` / ``A)`` options, including empty option texts."""
++    heading = re.search(r"Choices:", question, re.IGNORECASE)
++    body = question[heading.end():] if heading else question
++    body = ANSWER_INSTRUCTION.split(body, 1)[0].rstrip()
++    markers = []
++    position = 0
++    for expected in range(4):
++        letter = chr(ord("A") + expected)
++        match = re.search(rf"(?<![A-Za-z0-9]){letter}\s*[.):]\s*", body[position:])
++        if match is None:
++            break
++        markers.append((letter, position + match.start(), position + match.end()))
++        position = position + match.end()
++    if len(markers) < 2:
++        raise ValueError(f"no multiple-choice options found: {question[:120]!r}")
++    options = []
++    for index, (letter, _, text_start) in enumerate(markers):
++        end = markers[index + 1][1] if index + 1 < len(markers) else len(body)
++        options.append((letter, body[text_start:end].strip()))
++    return options
++
++
++def interleave(question: str, images: List[Any], visual_indices: List[int]) -> List[Content]:
++    """Official eval_harness.py placement: character slices, images first when
++    the indices are empty or all zero."""
++    if not visual_indices or all(index == 0 for index in visual_indices):
++        return [*images, ContentText(text=question)]
++    contents: List[Content] = []
++    last = 0
++    for image, index in sorted(zip(images, visual_indices), key=lambda pair: pair[1]):
++        if index == 0:
++            contents.append(image)
++        elif index <= len(question):
++            segment = question[last:index]
++            if segment:
++                contents.append(ContentText(text=segment))
++            contents.append(image)
++            last = index
++        else:
++            contents.append(image)
++    if last < len(question):
++        contents.append(ContentText(text=question[last:]))
++    if not contents:
++        contents = [ContentText(text=question), *images]
++    return contents
++
++
++def data_url(path: str) -> str:
++    blob = Path(path).read_bytes()
++    if blob.startswith(b"\xff\xd8\xff"):
++        media = "image/jpeg"
++    elif blob.startswith(b"\x89PNG\r\n\x1a\n"):
++        media = "image/png"
++    elif blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
++        media = "image/webp"
++    else:
++        media = "application/octet-stream"
++    return f"data:{media};base64,{base64.b64encode(blob).decode('ascii')}"
+ 
+ 
+ @register_benchmark(
+@@ -57,6 +123,7 @@
+         eval_split='test',
+         prompt_template=PROMPT_TEMPLATE,
+         evaluation_version='v1.1',
++        supports_choice=True,
+     )
+ )
+ class ERQAAdapter(VisionLanguageAdapter, MultiChoiceAdapter):
+@@ -67,19 +134,40 @@
+     def record_to_sample(self, record: Dict[str, Any]) -> Sample:
+         question = record.get('question', '')
+         answer = record.get('answer', '')
+-
+-        content_list: List[Content] = [ContentText(text=question)]
+-
+-        for image in self._extract_media(record, 'image').values():
+-            content_list.append(self._content_image_from_value(image))
+-
++        question_type = record.get('question_type', 'Unknown')
++        options = parse_options(question)
++        letters = [letter for letter, _ in options]
++        texts = [text for _, text in options]
++
++        media = self._extract_media(record, 'image')
++        image_values = [media[index]['url'] for index in sorted(media)]
++        visual_indices = [int(value) for value in (record.get('visual_indices') or [])]
++        order = (
++            sorted(range(len(image_values)), key=lambda index: visual_indices[index])
++            if visual_indices else list(range(len(image_values)))
++        )
++        ordered = [image_values[index] for index in order]
++        images = [self._content_image_from_value(value) for value in ordered]
++        contents = interleave(question, images, visual_indices)
++
++        internal = {
++            'kind': 'choice',
++            'state': {'question': question},
++            'instructions': DEFAULT_INSTRUCTIONS,
++            'criteria': {letter: text for letter, text in options},
++            'images': [data_url(value) for value in ordered],
++        }
+         return Sample(
+-            input=[ChatMessageUser(content=content_list)],
+-            choices=['A', 'B', 'C', 'D'],
++            input=[ChatMessageUser(content=contents, internal={'systemone': internal})],
++            choices=texts,
+             target=answer,
+-            subset_key=record.get('question_type'),
++            subset_key=question_type,
+             metadata={
+                 'question_id': record.get('question_id'),
+-                'question_type': record.get('question_type'),
++                'question_type': question_type,
++                'option_letters': letters,
++                'image_count': len(ordered),
++                'image_order': order,
++                'visual_indices': visual_indices,
+             },
+         )
