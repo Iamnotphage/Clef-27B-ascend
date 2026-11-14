@@ -463,6 +463,32 @@
     "max_score_ev_diff": 0.14506864314898849
    }
   },
+  "b2_subset": {
+   "source": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/b2-subset16-c4.json",
+   "source_sha256": "b470fb3fd8180240e0f42e4117ca348b39fd318d277c6dd49c3f10f9d0d89fe4",
+   "items": 16,
+   "successful": 16,
+   "max_prob_diff": 0.179360032081604,
+   "over_0_03": [
+    {
+     "sample": "od-0678",
+     "max_prob_diff": 0.0455629825592041
+    },
+    {
+     "sample": "od-0833",
+     "max_prob_diff": 0.179360032081604
+    },
+    {
+     "sample": "od-0985",
+     "max_prob_diff": 0.06059184670448303
+    },
+    {
+     "sample": "od-1099",
+     "max_prob_diff": 0.07544682919979095
+    }
+   ],
+   "verdict": "seqs2 (B2) also fails the 0.03 gate; B1 is the only passing batch config"
+  },
   "verdict": "seqs4 batching fails the 0.03 probability / 0.05 score gate; the accepted config is seqs1 (B1)"
  },
  "gdn_bsnd": {
@@ -822,7 +848,7 @@
   "note": "first three pairs lack cgroup sampling; only the last three have known zero throttling; order conflict remains"
  },
  "restored_service": {
-  "pid": 421329,
+  "pid": 424593,
   "argv_sha256": null,
   "cwd": "/workspace/yangchen/Clef-27B-ascend",
   "baseline_replay": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/restored-replay.json",

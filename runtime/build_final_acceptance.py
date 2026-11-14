@@ -130,6 +130,38 @@ def main():
     probe_path = RUN / "gdn-kernel-probes.json"
     probes = json.loads(probe_path.read_text()) if probe_path.is_file() else None
 
+    # B2 boundary check: seqs2 on the 16-item diff subset.
+    b2_path = RUN / "b2-subset16-c4.json"
+    b2_subset = None
+    if b2_path.is_file():
+        def probs_of(path):
+            data = json.loads(Path(path).read_text())
+            return {
+                row["sample_name"]: row["response"]["answers"]["answer"]
+                for row in data["requests"]
+            }
+        s1_answers = probs_of(OD / "s1-final-full.json")
+        def vector(answer):
+            p = answer.get("probabilities")
+            if p is None:
+                p = {"yes": answer["noul"], "no": 1 - answer["noul"]}
+            return p
+        b2 = json.loads(b2_path.read_text())
+        worst, over = 0.0, []
+        for request in b2["requests"]:
+            name = request["sample_name"]
+            p, q = vector(request["response"]["answers"]["answer"]), vector(s1_answers[name])
+            max_diff = max(abs(p[key] - q[key]) for key in q)
+            worst = max(worst, max_diff)
+            if max_diff > 0.03:
+                over.append({"sample": name, "max_prob_diff": max_diff})
+        b2_subset = {
+            "source": str(b2_path.resolve()), "source_sha256": sha(b2_path),
+            "items": len(b2["requests"]), "successful": b2["summary"]["successful_requests"],
+            "max_prob_diff": worst, "over_0_03": over,
+            "verdict": "seqs2 (B2) also fails the 0.03 gate; B1 is the only passing batch config",
+        }
+
     summary = {
         "run_id": RUN.name,
         "acceptance_data": {
@@ -200,6 +232,7 @@ def main():
                     "max_prob_diff", "score_diff_over_0_05", "max_score_ev_diff")}
                 for key in ("c2", "c4", "c8", "c16")
             },
+            "b2_subset": b2_subset,
             "verdict": "seqs4 batching fails the 0.03 probability / 0.05 score gate; "
                        "the accepted config is seqs1 (B1)",
         },
