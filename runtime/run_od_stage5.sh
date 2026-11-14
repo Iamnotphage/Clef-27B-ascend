@@ -12,7 +12,7 @@ mkdir -p "$OD"
 cd "$TOOLS"
 source scripts/activate_env.sh >/dev/null 2>&1
 LOG="$OD/run.log"
-ALL="$RUN/opendecisions/all2352.jsonl"
+ALL="$RUN/opendecisions/all2352.json"
 SUB="$RUN/opendecisions/subset-regression.json"
 
 stop_svc() { python scripts/manage_systemone_profile_service.py --run-dir "$RUN" stop >> "$LOG" 2>&1; sleep 3; }
