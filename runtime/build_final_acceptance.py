@@ -146,7 +146,10 @@ def main():
             "description": "TP2, BF16, eager, max_model_len 4096, max_num_seqs 1, cache off; "
                            "the only batching configuration that passes the 0.03/0.05 gate",
             "service_argv": json.loads((RUN / "current-service.json").read_text())["argv"],
-            "source": json.loads((RUN / "source-preimage.json").read_text())["files"],
+            "source_phase0": json.loads((RUN / "source-preimage.json").read_text())["files"],
+            "source_final": (
+                json.loads((RUN / "final-verification.json").read_text())["source_sha256"]
+                if (RUN / "final-verification.json").is_file() else None),
         },
         "s1": {
             "config_id": S1_CONFIG,
