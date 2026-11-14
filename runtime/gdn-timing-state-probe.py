@@ -57,6 +57,7 @@ def cand_path(q, k, v, g, beta, st, cu, ci):
     return o, fs.transpose(-1, -2).contiguous()
 
 def bench(fn, q, k, v, g, beta, st, cu, ci, iters=30):
+    # Scope: host dispatch through device completion. Not device-only time.
     for _ in range(5):
         fn(q, k, v, g, beta, st, cu, ci)
     torch.npu.synchronize()
@@ -68,7 +69,7 @@ def bench(fn, q, k, v, g, beta, st, cu, ci, iters=30):
         ts.append((time.perf_counter() - t0) * 1000)
     return statistics.median(ts)
 
-print("== C1' timing: full wrapper path (ref) vs BSND path ==")
+print("== C1' timing: wrapper synchronous wall (perf_counter + npu.synchronize; includes host dispatch and device wait) ==")
 for T in (307, 1024, 2048, 3868):
     q, k, v, g, beta, st = make(T)
     cu, ci = meta(T)

@@ -1,12 +1,25 @@
 diff --git a/vllm_ascend/device/device_op.py b/vllm_ascend/device/device_op.py
-index 2175a06..e94b496 100644
+index 2175a06..3c1b281 100644
 --- a/vllm_ascend/device/device_op.py
 +++ b/vllm_ascend/device/device_op.py
-@@ -50,6 +50,17 @@ else:
+@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
+ import torch
+ import torch.nn.functional as F
+ import torch_npu
++from vllm.logger import init_logger
+ from vllm.triton_utils import HAS_TRITON
+
+ from vllm_ascend.device import utils as device_utils
+@@ -50,6 +51,36 @@ else:
      triton_q_rms = None  # type: ignore
- 
- 
+
+
++logger = init_logger(__name__)
++
 +_GDN_BSND_ENABLED: bool | None = None
++_GDN_BSND_STATS = {"hits": 0, "fallbacks": 0, "reasons": {}}
++_GDN_BSND_TRACE = os.environ.get("CLEF_GDN_TRACE", "0") == "1"
++_GDN_BSND_LEGACY_GUARD = os.environ.get("CLEF_GDN_LEGACY_GUARD", "0") == "1"
 +
 +
 +def _gdn_bsnd_enabled() -> bool:
@@ -14,33 +27,52 @@ index 2175a06..e94b496 100644
 +    global _GDN_BSND_ENABLED
 +    if _GDN_BSND_ENABLED is None:
 +        _GDN_BSND_ENABLED = os.environ.get("CLEF_GDN_BSND", "0") == "1"
++        if _GDN_BSND_ENABLED:
++            logger.info("CLEF_GDN_BSND=1: BSND prefill candidate enabled")
 +    return _GDN_BSND_ENABLED
++
++
++def _gdn_bsnd_trace(kind, q, k, v, reason=None):
++    if not _GDN_BSND_TRACE:
++        return
++    count = _GDN_BSND_STATS["hits"] if kind == "hit" else _GDN_BSND_STATS["fallbacks"]
++    if count <= 3 or count % 500 == 0:
++        logger.info(
++            "clef-gdn-bsnd %s n=%d reason=%s q=%s stride=%s contig=%s dtype=%s",
++            kind, count, reason, tuple(q.shape), tuple(q.stride()),
++            (q.is_contiguous(), k.is_contiguous(), v.is_contiguous()), q.dtype,
++        )
 +
 +
  class BaseDeviceAdaptor:
      native_dcp_indexer = False
- 
-@@ -1020,6 +1031,60 @@ class BaseDeviceAdaptor:
+
+@@ -1020,6 +1051,80 @@ class BaseDeviceAdaptor:
          # Ascend versions make these queries safe before device selection.
          from vllm.third_party.flash_linear_attention.ops.l2norm import l2norm_fwd
- 
-+        # Clef round-3 candidate C1': pass sequence-major contiguous q/k/v with
-+        # layout="BSND" (bit-exact against the BNSD path in the microrepro;
-+        # removes the q/k/v transpose/contiguous pairs). Enabled by
-+        # CLEF_GDN_BSND=1. The stable ABI silently mis-computes non-contiguous
-+        # inputs under BSND (microrepro max-diff 0.889), so any non-contiguous
-+        # or non-BF16 q/k/v falls back to the original conversion path.
-+        if (
+
++        # Clef C1' candidate (round 3; guard fixed in round 4): pass
++        # sequence-major q/k/v with layout="BSND" (bit-exact against the BNSD
++        # path in the microrepro; removes the q/k/v transpose/contiguous
++        # pairs). Enabled by CLEF_GDN_BSND=1. The stable ABI requires
++        # contiguous inputs under BSND, so this path contiguates the caller's
++        # sequence-major views before the kernel. Non-4D or non-BF16 inputs
++        # fall back to the original conversion path.
++        if _gdn_bsnd_enabled() and _GDN_BSND_TRACE:
++            _gdn_bsnd_trace("input", q, k, v)
++        candidate = (
 +            _gdn_bsnd_enabled()
 +            and q.dim() == 4
 +            and q.dtype == torch.bfloat16
 +            and v.dtype == torch.bfloat16
-+            and q.is_contiguous()
-+            and k.is_contiguous()
-+            and v.is_contiguous()
-+        ):
-+            q = l2norm_fwd(q).contiguous()
-+            k = l2norm_fwd(k).contiguous()
++        )
++        if candidate and _GDN_BSND_LEGACY_GUARD:
++            candidate = q.is_contiguous() and k.is_contiguous() and v.is_contiguous()
++        if candidate:
++            # Callers pass sequence-major views; the stable ABI needs contiguous
++            # inputs, so normalization contiguates the caller view first.
++            q = l2norm_fwd(q.contiguous()).contiguous()
++            k = l2norm_fwd(k.contiguous()).contiguous()
 +            v = v.contiguous()
 +            g = g.to(torch.float32).contiguous()
 +            beta = beta.to(v.dtype).contiguous()
@@ -76,7 +108,22 @@ index 2175a06..e94b496 100644
 +                full_final_state = initial_state.transpose(-1, -2).contiguous()
 +                full_final_state[keep_meta] = final_state
 +                final_state = full_final_state
++            _GDN_BSND_STATS["hits"] += 1
++            _gdn_bsnd_trace("hit", q, k, v)
 +            return output, final_state.transpose(-1, -2).contiguous()
++
++        if _gdn_bsnd_enabled():
++            if q.dim() != 4:
++                reason = "rank"
++            elif q.dtype != torch.bfloat16 or v.dtype != torch.bfloat16:
++                reason = "dtype"
++            elif not (q.is_contiguous() and k.is_contiguous() and v.is_contiguous()):
++                reason = "non-contiguous"
++            else:
++                reason = "unknown"
++            _GDN_BSND_STATS["fallbacks"] += 1
++            _GDN_BSND_STATS["reasons"][reason] = _GDN_BSND_STATS["reasons"].get(reason, 0) + 1
++            _gdn_bsnd_trace("fallback", q, k, v, reason)
 +
          q = l2norm_fwd(q.contiguous()).contiguous()
          k = l2norm_fwd(k.contiguous()).contiguous()

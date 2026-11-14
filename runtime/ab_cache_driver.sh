@@ -1,6 +1,9 @@
 #!/bin/bash
 # Cache v2 interleaved A/B: same source, CLEF_SCHEMA_TOKEN_CACHE 0/1 only.
 # S2: s4-c8 fixed307 x3 pairs. S1-latency: s1-c1 fields-8 x3 pairs (with ramp).
+# Pair order is balanced (odd pairs OFF->ON, even pairs ON->OFF). The archived
+# cache-ab-analysis.json was collected OFF->ON for all three pairs and is
+# therefore a fixed-order observation, not a causal estimate.
 set -u
 TOOLS=/workspace/yangchen/work/profiling-tools-20261113
 RUN=$(cat /workspace/yangchen/logs/tuning/CURRENT_RUN)
@@ -30,20 +33,22 @@ bench() { # $1 tag $2 conc $3 sample-file(or empty)
 
 # --- S2 throughput pairs (no ramp needed: s4 saturates) ---
 for i in 1 2 3; do
-  stop_svc; start_svc "c4-off-$i" '{"--max-num-seqs":"4"}' '{"CLEF_SCHEMA_TOKEN_CACHE":"0"}'
-  bench "c4-off-$i" 8 ""
-  stop_svc; start_svc "c4-on-$i" '{"--max-num-seqs":"4"}' '{"CLEF_SCHEMA_TOKEN_CACHE":"1"}'
-  bench "c4-on-$i" 8 ""
+  if [ $((i % 2)) -eq 1 ]; then first=off; second=on; else first=on; second=off; fi
+  stop_svc; start_svc "c4-$first-$i" '{"--max-num-seqs":"4"}' "{\"CLEF_SCHEMA_TOKEN_CACHE\":\"$([ $first = on ] && echo 1 || echo 0)\"}"
+  bench "c4-$first-$i" 8 ""
+  stop_svc; start_svc "c4-$second-$i" '{"--max-num-seqs":"4"}' "{\"CLEF_SCHEMA_TOKEN_CACHE\":\"$([ $second = on ] && echo 1 || echo 0)\"}"
+  bench "c4-$second-$i" 8 ""
 done
 
 # --- fields-8 single-concurrency pairs (with ramp) ---
 for i in 1 2 3; do
-  stop_svc; start_svc "c8f-off-$i" '{}' '{"CLEF_SCHEMA_TOKEN_CACHE":"0"}'
-  bench "c8f-off-$i-ramp" 1 "$FIELDS8"
-  bench "c8f-off-$i" 1 "$FIELDS8"
-  stop_svc; start_svc "c8f-on-$i" '{}' '{"CLEF_SCHEMA_TOKEN_CACHE":"1"}'
-  bench "c8f-on-$i-ramp" 1 "$FIELDS8"
-  bench "c8f-on-$i" 1 "$FIELDS8"
+  if [ $((i % 2)) -eq 1 ]; then first=off; second=on; else first=on; second=off; fi
+  stop_svc; start_svc "c8f-$first-$i" '{}' "{\"CLEF_SCHEMA_TOKEN_CACHE\":\"$([ $first = on ] && echo 1 || echo 0)\"}"
+  bench "c8f-$first-$i-ramp" 1 "$FIELDS8"
+  bench "c8f-$first-$i" 1 "$FIELDS8"
+  stop_svc; start_svc "c8f-$second-$i" '{}' "{\"CLEF_SCHEMA_TOKEN_CACHE\":\"$([ $second = on ] && echo 1 || echo 0)\"}"
+  bench "c8f-$second-$i-ramp" 1 "$FIELDS8"
+  bench "c8f-$second-$i" 1 "$FIELDS8"
 done
 
 stop_svc

@@ -1,12 +1,88 @@
-"""Launch the pinned vLLM-Ascend structured-decisions service."""
+"""Launch the pinned vLLM-Ascend structured-decisions service.
+
+The competition entry is ``bash start.sh --model-dir <dir> --output-dir <dir>``.
+``--output-dir`` receives the launch manifest, the service log and runtime
+artifacts. Extra vLLM arguments go after ``--``; both ``--flag value`` and
+``--flag=value`` are accepted, and a passthrough value overrides the launcher
+default for the same flag. The manifest records the effective value and its
+source for every configurable flag.
+"""
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
+import time
+
+DEFAULT_MODEL_DIR = "/workspace/yangchen/models/Clef-27B"
+SERVED_MODEL_NAME = "clef"
+PROTOCOL_VERSION = "2026-11-13"
+MM_PROCESSOR_KWARGS = (
+    '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
+    '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
+    '"do_sample_frames":false}}'
+)
+
+CONFIGS = {
+    "custom": {},
+    "s1": {
+        "tensor_parallel_size": 2,
+        "max_model_len": 4096,
+        "max_num_seqs": 1,
+        "max_num_batched_tokens": 4096,
+        "limit_mm_per_prompt": '{"image":1,"video":1}',
+        "schema_token_cache": "off",
+        "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
+    },
+    "s2": {
+        "tensor_parallel_size": 2,
+        "max_model_len": 4096,
+        "max_num_seqs": 4,
+        "max_num_batched_tokens": 4096,
+        "limit_mm_per_prompt": '{"image":1,"video":1}',
+        "schema_token_cache": "on",
+        "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
+    },
+}
+
+# Launcher-owned value flags that a passthrough argument may override.
+OVERRIDABLE = {
+    "--host": "host",
+    "--port": "port",
+    "--tensor-parallel-size": "tensor_parallel_size",
+    "--max-model-len": "max_model_len",
+    "--max-num-seqs": "max_num_seqs",
+    "--max-num-batched-tokens": "max_num_batched_tokens",
+    "--gpu-memory-utilization": "gpu_memory_utilization",
+    "--limit-mm-per-prompt": "limit_mm_per_prompt",
+    "--distributed-executor-backend": "distributed_executor_backend",
+}
+# Fixed flags: passing the same flag through is harmless only with the same
+# value; a conflicting value is rejected.
+FIXED_FLAGS = {
+    "--served-model-name": SERVED_MODEL_NAME,
+    "--runner": "pooling",
+    "--dtype": "bfloat16",
+    "--enforce-eager": None,
+    "--no-enable-prefix-caching": None,
+    "--no-enable-chunked-prefill": None,
+    "--skip-mm-profiling": None,
+}
+ENV_WHITELIST_PREFIXES = ("CLEF_", "ASCEND_", "ATB_", "HCCL_")
+ENV_WHITELIST_KEYS = (
+    "PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONUNBUFFERED", "VIRTUAL_ENV",
+    "OMP_NUM_THREADS", "TASK_QUEUE_ENABLE", "MODEL_DIR", "HF_HOME",
+    "TORCH_HOME", "TRITON_CACHE_DIR", "XDG_CACHE_HOME",
+)
+
+
+def sha256_bytes(blob):
+    return hashlib.sha256(blob).hexdigest()
 
 
 def model_files(model_dir):
@@ -36,17 +112,18 @@ def model_files(model_dir):
     return sorted(names)
 
 
-ENV_WHITELIST_PREFIXES = ("CLEF_", "ASCEND_", "ATB_", "HCCL_")
-ENV_WHITELIST_KEYS = (
-    "PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONUNBUFFERED", "VIRTUAL_ENV",
-    "OMP_NUM_THREADS", "TASK_QUEUE_ENABLE", "MODEL_DIR", "HF_HOME",
-    "TORCH_HOME", "TRITON_CACHE_DIR", "XDG_CACHE_HOME",
-)
+def model_revision(model_dir):
+    """Deterministic local revision from the files that define the model."""
+    parts = []
+    for name in ("config.json", "joint_head_config.json", "model.safetensors.index.json"):
+        path = model_dir / name
+        if path.is_file():
+            parts.append(f"{name}:{sha256_bytes(path.read_bytes())}")
+    return "local-" + sha256_bytes("\n".join(parts).encode())[:12]
 
 
 def software_provenance():
     """Best-effort source-tree identity of the pinned vLLM / vLLM-Ascend."""
-    import importlib.util
     provenance = {}
     for name in ("vllm", "vllm_ascend"):
         entry = {"origin": "unavailable"}
@@ -71,11 +148,44 @@ def software_provenance():
                 if name == "vllm":
                     strategies = pkg_dir / "entrypoints" / "openai" / "decisions" / "strategies.py"
                     if strategies.is_file():
-                        entry["strategies_sha256"] = hashlib.sha256(strategies.read_bytes()).hexdigest()
+                        entry["strategies_sha256"] = sha256_bytes(strategies.read_bytes())
+                        entry["schema_cache_version"] = schema_cache_version(strategies)
         except (ImportError, AttributeError, OSError) as exc:
             entry["error"] = repr(exc)
         provenance[name] = entry
     return provenance
+
+
+def schema_cache_version(path):
+    """Read the schema cache version marker from strategies.py; 0 if absent."""
+    try:
+        text = Path(path).read_text()
+    except OSError:
+        return 0
+    match = re.search(r"^SCHEMA_CACHE_VERSION\s*=\s*(\d+)$", text, re.MULTILINE)
+    if match:
+        return int(match.group(1))
+    return 1 if "_SchemaTokenCache" in text else 0
+
+
+def resolve_schema_cache(config, explicit):
+    """Return (enabled, version, strategies_path)."""
+    requested = explicit if explicit is not None else CONFIGS[config].get("schema_token_cache", "off")
+    enabled = requested == "on"
+    spec = importlib.util.find_spec("vllm")
+    strategies = None
+    if spec and spec.submodule_search_locations:
+        strategies = (
+            Path(list(spec.submodule_search_locations)[0])
+            / "entrypoints" / "openai" / "decisions" / "strategies.py"
+        )
+    version = schema_cache_version(strategies) if strategies else 0
+    if enabled and version != 2:
+        raise ValueError(
+            "S2 配置要求 schema cache v2，但固定源码中的版本为 "
+            f"{version}（{strategies}）。先运行 runtime/apply_schema_cache_patch.py --apply。"
+        )
+    return enabled, version, strategies
 
 
 def effective_environment():
@@ -99,120 +209,278 @@ def parse_limit_mm(value):
     return spec
 
 
+def parse_passthrough(tokens):
+    """Parse ``--`` arguments into (flag, value, original) triples.
+
+    Supports ``--flag value`` and ``--flag=value``; a bare ``--flag`` has
+    value ``None``. Positional arguments are rejected.
+    """
+    parsed = []
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if not token.startswith("--"):
+            raise ValueError(f"-- 之后只接受 vLLM 选项，收到位置参数：{token}")
+        if "=" in token:
+            flag, value = token.split("=", 1)
+            parsed.append((flag, value, token))
+            index += 1
+            continue
+        flag = token
+        if index + 1 < len(tokens) and not tokens[index + 1].startswith("--"):
+            parsed.append((flag, tokens[index + 1], f"{flag} {tokens[index + 1]}"))
+            index += 2
+        else:
+            parsed.append((flag, None, flag))
+            index += 1
+    return parsed
+
+
+def apply_passthrough(parsed, effective, sources, passthrough):
+    seen = {}
+    for flag, value, original in parsed:
+        if flag in seen:
+            raise ValueError(f"重复的透传参数：{flag}")
+        seen[flag] = True
+        if flag in FIXED_FLAGS:
+            expected = FIXED_FLAGS[flag]
+            if expected is None:
+                if value is not None:
+                    raise ValueError(f"{flag} 是布尔开关，不接受值：{original}")
+            elif value != expected:
+                raise ValueError(
+                    f"{flag} 固定为 {expected!r}，透传值 {value!r} 冲突")
+            sources[flag] = "passthrough-fixed"
+            continue
+        if flag in OVERRIDABLE:
+            if value is None:
+                raise ValueError(f"{flag} 需要值：{original}")
+            key = OVERRIDABLE[flag]
+            cast = {
+                "port": int,
+                "tensor_parallel_size": int,
+                "max_model_len": int,
+                "max_num_seqs": int,
+                "max_num_batched_tokens": int,
+                "gpu_memory_utilization": float,
+            }.get(key, str)
+            try:
+                effective[key] = cast(value)
+            except ValueError as exc:
+                raise ValueError(f"{flag} 的值无效：{value!r}") from exc
+            sources[key] = "passthrough"
+            continue
+        passthrough.append(original)
+
+
+def choose(config, explicit, key, cast):
+    if explicit is not None:
+        return cast(explicit), "explicit"
+    if key in CONFIGS[config]:
+        return cast(CONFIGS[config][key]), f"config:{config}"
+    return None, "default"
+
+
+def build_launch(args):
+    model_dir = Path(args.model_dir).expanduser().resolve()
+    output_dir = Path(args.output_dir).expanduser().resolve()
+    config = args.config
+
+    effective, sources = {}, {}
+    effective["host"], sources["host"] = args.host, "default" if args.host == "127.0.0.1" else "explicit"
+    effective["port"], sources["port"] = args.port, "default" if args.port == 18143 else "explicit"
+
+    for key, explicit_value, cast in (
+        ("tensor_parallel_size", args.tensor_parallel_size, int),
+        ("max_model_len", args.max_model_len, int),
+        ("max_num_seqs", args.max_num_seqs, int),
+        ("max_num_batched_tokens", args.max_num_batched_tokens, int),
+        ("gpu_memory_utilization", args.gpu_memory_utilization, float),
+        ("limit_mm_per_prompt", args.limit_mm_per_prompt, str),
+        ("distributed_executor_backend", args.distributed_executor_backend, str),
+    ):
+        value, source = choose(config, explicit_value, key, cast)
+        if value is None:
+            if key == "tensor_parallel_size":
+                value = 1
+            elif key == "max_model_len":
+                value = 1024
+            elif key == "max_num_seqs":
+                value = 1
+            elif key == "gpu_memory_utilization":
+                value = 0.90
+            elif key == "limit_mm_per_prompt":
+                value = '{"image":1,"video":0}'
+            elif key == "distributed_executor_backend":
+                value = "mp" if effective.get("tensor_parallel_size", 1) > 1 else None
+            source = "default"
+        effective[key] = value
+        sources[key] = source
+
+    schema_enabled, schema_version, strategies = resolve_schema_cache(
+        config, args.schema_token_cache)
+    effective["schema_token_cache"] = "on" if schema_enabled else "off"
+    sources["schema_token_cache"] = (
+        "explicit" if args.schema_token_cache is not None else f"config:{config}")
+
+    # Extra vLLM arguments.
+    extra = args.vllm_args
+    if extra[:1] == ["--"]:
+        extra = extra[1:]
+    parsed = parse_passthrough(extra)
+    passthrough = []
+    apply_passthrough(parsed, effective, sources, passthrough)
+
+    if effective["tensor_parallel_size"] < 1 or effective["max_model_len"] < 1 or effective["max_num_seqs"] < 1:
+        raise ValueError("并行数、上下文长度和序列数应为正数")
+    if not 1 <= effective["port"] <= 65535:
+        raise ValueError("--port 应在 1 到 65535 之间")
+    if not 0 < effective["gpu_memory_utilization"] <= 1:
+        raise ValueError("--gpu-memory-utilization 应在 (0, 1] 之间")
+    parse_limit_mm(effective["limit_mm_per_prompt"])
+    batched = effective["max_num_batched_tokens"]
+    if batched is None:
+        batched = effective["max_model_len"]
+        sources["max_num_batched_tokens"] = (
+            "passthrough" if sources.get("max_num_batched_tokens") == "passthrough"
+            else "default_follows_max_model_len")
+    if batched < 1:
+        raise ValueError("--max-num-batched-tokens 应为正数")
+    if batched < effective["max_model_len"]:
+        raise ValueError(
+            "--max-num-batched-tokens 不应小于 --max-model-len（chunked prefill 已关闭，"
+            f"单请求最多 {effective['max_model_len']} tokens）")
+    effective["max_num_batched_tokens"] = batched
+
+    command = [
+        sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
+        "--served-model-name", SERVED_MODEL_NAME,
+        "--runner", "pooling",
+        "--dtype", "bfloat16",
+        "--tensor-parallel-size", str(effective["tensor_parallel_size"]),
+        "--enforce-eager",
+        "--max-model-len", str(effective["max_model_len"]),
+        "--max-num-seqs", str(effective["max_num_seqs"]),
+        "--max-num-batched-tokens", str(batched),
+        "--gpu-memory-utilization", str(effective["gpu_memory_utilization"]),
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host", effective["host"],
+        "--port", str(effective["port"]),
+        "--limit-mm-per-prompt", effective["limit_mm_per_prompt"],
+    ]
+    if effective.get("distributed_executor_backend"):
+        command += ["--distributed-executor-backend", effective["distributed_executor_backend"]]
+    if config in ("s1", "s2") and "mm_processor_kwargs" in CONFIGS[config]:
+        command += ["--mm-processor-kwargs", CONFIGS[config]["mm_processor_kwargs"]]
+    command += passthrough
+
+    environment = {
+        "CLEF_MODEL_NAME": SERVED_MODEL_NAME,
+        "CLEF_MODEL_DIR": str(model_dir),
+        "CLEF_MODEL_REVISION": model_revision(model_dir),
+        "CLEF_PROTOCOL_VERSION": PROTOCOL_VERSION,
+        "CLEF_CONFIG": config,
+        "CLEF_MAX_MODEL_LEN": str(effective["max_model_len"]),
+        "CLEF_TENSOR_PARALLEL_SIZE": str(effective["tensor_parallel_size"]),
+        "CLEF_HEALTH_JSON": "1",
+        "CLEF_SCHEMA_TOKEN_CACHE": "1" if schema_enabled else "0",
+        "CLEF_SCHEMA_TOKEN_CACHE_VERSION": str(schema_version if schema_enabled else 0),
+    }
+    return {
+        "python": sys.executable,
+        "model_dir": str(model_dir),
+        "output_dir": str(output_dir),
+        "config": config,
+        "revision": environment["CLEF_MODEL_REVISION"],
+        "argv": command,
+        "effective": effective,
+        "sources": sources,
+        "environment": effective_environment(),
+        "service_environment": environment,
+        "software": software_provenance(),
+        "schema_cache": {
+            "enabled": schema_enabled,
+            "version": schema_version if schema_enabled else 0,
+            "strategies": str(strategies) if strategies else None,
+            "strategies_sha256": (
+                sha256_bytes(strategies.read_bytes()) if strategies else None),
+        },
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="启动 Clef-27B 的 vLLM-Ascend /v1/systemone 服务。",
+        description="启动 Clef-27B 的 vLLM-Ascend 服务（/health、/v1/decide/info、"
+                    "/v1/systemone、/v1/decide）。",
         epilog="先加载 scripts/activate_env.sh；附加 vLLM 参数放在 -- 之后。",
     )
     parser.add_argument(
         "--model-dir",
-        default=os.environ.get("MODEL_DIR", "/workspace/yangchen/models/Clef-27B"),
+        default=os.environ.get("MODEL_DIR", DEFAULT_MODEL_DIR),
         help="完整模型目录，可通过 MODEL_DIR 设置默认值。",
     )
+    parser.add_argument(
+        "--output-dir",
+        default=os.environ.get("OUTPUT_DIR"),
+        help="日志、manifest 与运行产物目录；默认 <model-dir>/output。",
+    )
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--tensor-parallel-size", type=int, default=1)
-    parser.add_argument("--max-model-len", type=int, default=1024)
-    parser.add_argument("--max-num-seqs", type=int, default=1)
-    parser.add_argument(
-        "--max-num-batched-tokens", type=int, default=None,
-        help="每批调度的 token 上限；省略时与 --max-model-len 保持一致。",
-    )
-    parser.add_argument(
-        "--limit-mm-per-prompt", default=None,
-        help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'；省略时默认 image=1, video=0。',
-    )
-    parser.add_argument("--gpu-memory-utilization", type=float, default=0.90)
+    parser.add_argument("--port", type=int, default=18143,
+                        help="默认监听 127.0.0.1:18143（比赛接口约定）。")
+    parser.add_argument("--config", choices=sorted(CONFIGS), default="custom",
+                        help="s1：TP2/4096/seqs1/缓存关；s2：TP2/4096/seqs4/缓存 v2 开。")
+    parser.add_argument("--tensor-parallel-size", type=int, default=None)
+    parser.add_argument("--max-model-len", type=int, default=None)
+    parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
+    parser.add_argument("--max-num-batched-tokens", type=int, default=None)
+    parser.add_argument("--gpu-memory-utilization", type=float, default=None)
+    parser.add_argument("--limit-mm-per-prompt", default=None,
+                        help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')
+    parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
+                        help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
+    parser.add_argument("--distributed-executor-backend", default=None)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
-    if not 1 <= args.port <= 65535:
-        parser.error("--port 应在 1 到 65535 之间")
-    if min(args.tensor_parallel_size, args.max_model_len, args.max_num_seqs) < 1:
-        parser.error("并行数、上下文长度和序列数应为正数")
-    extra = args.vllm_args
-    if extra[:1] == ["--"]:
-        extra = extra[1:]
-    passthrough_batched_tokens = "--max-num-batched-tokens" in extra
-    if passthrough_batched_tokens and args.max_num_batched_tokens is not None:
-        parser.error("--max-num-batched-tokens 重复指定：只允许启动参数或 -- 之后透传其一")
-    max_num_batched_tokens = args.max_num_batched_tokens
-    if max_num_batched_tokens is None and not passthrough_batched_tokens:
-        max_num_batched_tokens = args.max_model_len
-    if max_num_batched_tokens is not None:
-        if max_num_batched_tokens < 1:
-            parser.error("--max-num-batched-tokens 应为正数")
-        if max_num_batched_tokens < args.max_model_len:
-            parser.error(
-                "--max-num-batched-tokens 不应小于 --max-model-len（chunked prefill 已关闭，"
-                f"单请求最多 {args.max_model_len} tokens）"
-            )
-    if not 0 < args.gpu_memory_utilization <= 1:
-        parser.error("--gpu-memory-utilization 应在 (0, 1] 之间")
-    passthrough_limit_mm = "--limit-mm-per-prompt" in extra
-    limit_mm_explicit = args.limit_mm_per_prompt is not None
-    if passthrough_limit_mm and limit_mm_explicit:
-        parser.error("--limit-mm-per-prompt 重复指定：只允许启动参数或 -- 之后透传其一")
-    if not passthrough_limit_mm:
-        if args.limit_mm_per_prompt is None:
-            args.limit_mm_per_prompt = '{"image":1,"video":0}'
-        try:
-            parse_limit_mm(args.limit_mm_per_prompt)
-        except ValueError as exc:
-            parser.error(f"--limit-mm-per-prompt 无效：{exc}")
-    model_dir = Path(args.model_dir).expanduser().resolve()
-    command = [
-        sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
-        "--served-model-name", "clef",
-        "--runner", "pooling",
-        "--dtype", "bfloat16",
-        "--tensor-parallel-size", str(args.tensor_parallel_size),
-        "--enforce-eager",
-        "--max-model-len", str(args.max_model_len),
-        "--max-num-seqs", str(args.max_num_seqs),
-    ]
-    if not passthrough_batched_tokens:
-        command += ["--max-num-batched-tokens", str(max_num_batched_tokens)]
-    command += [
-        "--gpu-memory-utilization", str(args.gpu_memory_utilization),
-        "--no-enable-prefix-caching",
-        "--no-enable-chunked-prefill",
-        "--skip-mm-profiling",
-        "--host", args.host,
-        "--port", str(args.port),
-        *extra,
-    ]
-    if not passthrough_limit_mm:
-        command += ["--limit-mm-per-prompt", args.limit_mm_per_prompt]
-    launch = {
-        "python": sys.executable, "model_dir": str(model_dir), "argv": command,
-        "max_model_len": args.max_model_len,
-        "max_num_batched_tokens": max_num_batched_tokens,
-        "max_num_batched_tokens_source": (
-            "passthrough" if passthrough_batched_tokens
-            else "explicit" if args.max_num_batched_tokens is not None
-            else "default_follows_max_model_len"
-        ),
-        "limit_mm_per_prompt": None if passthrough_limit_mm else args.limit_mm_per_prompt,
-        "limit_mm_per_prompt_source": (
-            "passthrough" if passthrough_limit_mm
-            else "explicit" if limit_mm_explicit
-            else "default"
-        ),
-        "environment": effective_environment(),
-        "software": software_provenance(),
-    }
+
+    if args.output_dir is None:
+        args.output_dir = str(Path(args.model_dir).expanduser().resolve() / "output")
+
+    try:
+        launch = build_launch(args)
+    except ValueError as exc:
+        parser.error(str(exc))
+
     if args.dry_run:
         print(json.dumps(launch, ensure_ascii=False, indent=2))
         return
+
+    model_dir = Path(launch["model_dir"])
     try:
         launch["model_files"] = model_files(model_dir)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.error(f"完整模型检查失败：{exc}")
+
+    output_dir = Path(launch["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    launch["pid"] = os.getpid()
+    launch["started_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    launch["log"] = str(output_dir / "service.log")
+    manifest_path = output_dir / "launch-manifest.json"
+    manifest_path.write_text(json.dumps(launch, ensure_ascii=False, indent=1) + "\n")
+
+    os.environ.update(launch["service_environment"])
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("TASK_QUEUE_ENABLE", "1")
-    print(json.dumps(launch, ensure_ascii=False), flush=True)
-    os.execv(sys.executable, command)
+
+    log_fd = os.open(launch["log"], os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    os.dup2(log_fd, 1)
+    os.dup2(log_fd, 2)
+    print(json.dumps({"launch_manifest": str(manifest_path), **launch},
+                     ensure_ascii=False), flush=True)
+    os.execv(sys.executable, launch["argv"])
 
 
 if __name__ == "__main__":
