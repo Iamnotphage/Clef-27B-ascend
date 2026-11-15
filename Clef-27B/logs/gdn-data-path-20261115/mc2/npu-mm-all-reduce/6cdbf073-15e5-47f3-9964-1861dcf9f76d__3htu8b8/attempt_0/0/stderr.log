@@ -1,0 +1,17 @@
+[rank0]:[W1115 17:34:46.222401900 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/mc2_down_probe.py", line 142, in <module>
+[rank0]:     raise SystemExit(main())
+[rank0]:                      ^^^^^^
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/mc2_down_probe.py", line 113, in main
+[rank0]:     fused = torch_npu.npu_mm_all_reduce_base(
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py", line 1209, in __call__
+[rank0]:     return self._op(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: RuntimeError: npu_mm_all_reduce_base:../third_party/op-plugin/op_plugin/ops/opapi/MatmulAllReduceBaseKernelNpuOpApi.cpp:426 NPU function error: call aclnnMatmulAllReduce failed, error code is 161001
+[rank0]: [ERROR] 2026-11-15-17:34:46 (PID:610625, Device:0, RankID:0) ERR00100 PTA call acl api failed.
+[rank0]: [PID: 610625] 2026-11-15-17:34:46.786.854 Execution_Error(EZ1009): Failed to execute operator MatmulAllReduce_4. Reason: 1.SoC version ascend910_93 verification failed. This SoC is not configured through the AddConfig API of the OpDef class. 2.The binary_info_config.json file to which the MatmulAllReduce operator belongs fails to be loaded because the file is damaged or does not exist or the user does not have sufficient permissions. 3.The operator package to which the MatmulAllReduce operator belongs is not installed.
+[rank0]: TraceBack (most recent call last):
+[rank0]:         Check nnopExecutor != nullptr failed
+

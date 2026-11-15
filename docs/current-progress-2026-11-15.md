@@ -284,7 +284,8 @@
 ### 7.2 TP2 allreduce（20.40 ms，20.1%）
 
 - 与 MLP 同量级；是否在关键路径取决于重叠。
-- 问题：vLLM-Ascend 是否支持 MC2/通信-计算融合或更细粒度的 allreduce 重叠？在 eager + seqs1 下可用的手段有哪些？
+- 2026-11-16 MC2 原型：`npu_mm_all_reduce_base` 在 `ascend910_93` 上缺 `MatmulAllReduce` 内核（161001）；`aclnnGroupedMatMulAllReduce` 单组调用分别 SIGSEGV / 挂起；`MLPRowParallelOp` 的 reduce_scatter 仅在 graph mode 的 `mlp_tensor_parallel_size>1` 下可用，当前 eager 服务无法使用。**MC2 down+allreduce 在当前 A3 栈不可用**，保留为负结果。[报告](mc2-down-allreduce-2026-11-16.md)
+- 结论：长序列通信优化暂时只能依赖调度/合批，或等待支持 A3 MatmulAllReduce 的 CANN/torch_npu。
 
 ### 7.3 GDN 剩余布局（6.73 ms，6.6%）
 
