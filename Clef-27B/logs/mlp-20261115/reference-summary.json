@@ -1,0 +1,365 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-15T03:52:37.732228+00:00",
+  "reference": "BF16 TP2, max_model_len16384, same full-dataset evaluation configuration",
+  "verification_status": "passed_with_resource_coverage_boundary",
+  "archive": {
+    "directory": "Clef-27B/logs/mlp-20261115/bf16-eval",
+    "index_sha256": "9ea6c63d9df1637a22afcc8d3a6df2fc76e5cda62967a69c0102af32c6d272ff",
+    "file_count": 10,
+    "all_file_sizes_and_sha256_match": true,
+    "decompressed_od_reports": {
+      "od-warmup": {
+        "uncompressed_bytes": 14654072,
+        "sha256": "e7ebf90830aba5f00043a7e10a3fe039981758a5c762b3c14eaa02eb09141ae5",
+        "driver_sha256_matches": true
+      },
+      "od-full": {
+        "uncompressed_bytes": 14654268,
+        "sha256": "e2fb47dcd21770423892ecc89c1b9b778af411b854c80f106cf862a44c885d19",
+        "driver_sha256_matches": true
+      }
+    },
+    "quality_source_links": {
+      "od_candidate_matches_decompressed_full": true,
+      "od_baseline_matches_driver_source": true,
+      "od_data_matches_driver_source": true,
+      "od_scorer_matches_driver_source": true,
+      "od_template_matches_driver_source": true,
+      "erqa_candidate_matches_predictions": true,
+      "erqa_reference_matches_driver_source": true,
+      "erqa_dataset_hash_matches_all_reports": true,
+      "od-score_report_matches_driver": true,
+      "erqa-full_report_matches_driver": true,
+      "erqa-score_report_matches_driver": true,
+      "erqa-diff_report_matches_driver": true
+    },
+    "remote_source_checks": [
+      {
+        "name": "od_sample_file",
+        "sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141",
+        "passed": true
+      },
+      {
+        "name": "od_data",
+        "sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6",
+        "passed": true
+      },
+      {
+        "name": "od_reference",
+        "sha256": "dae6550127957e7ec50ca84bc717d44c22a0cc9e1fe98a29250b03a52dcf929b",
+        "passed": true
+      },
+      {
+        "name": "od_scorer",
+        "sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377",
+        "passed": true
+      },
+      {
+        "name": "od_template",
+        "sha256": "29fe80b8062b9966277f0d34b1aed76d8ef80ac260eed3c53f2bd0a83f25e915",
+        "passed": true
+      },
+      {
+        "name": "erqa_manifest",
+        "sha256": "a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb",
+        "passed": true
+      },
+      {
+        "name": "erqa_samples",
+        "sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af",
+        "passed": true
+      },
+      {
+        "name": "erqa_reference",
+        "sha256": "e086980af28c954b2c1270d808d6434e721f2629051ec5cbc6e1979ce4ab5047",
+        "passed": true
+      }
+    ]
+  },
+  "od2352": {
+    "successful": 2352,
+    "failed": 0,
+    "decisions_per_second": 5.7547814121477625,
+    "latency_ms": {
+      "p50": 199.5145350228995,
+      "p95": 207.70802032202482,
+      "p99": 213.29081119038165,
+      "mean": 173.63504139879927
+    },
+    "quality": {
+      "capability": 74.42547887630508,
+      "intelligence": 66.0568428084581,
+      "calibration": 82.79411494415206
+    },
+    "semantic_comparison_to_frozen_bf16": {
+      "items": 2352,
+      "request_equal_items": 2352,
+      "answers_equal_items": 2352,
+      "usage_equal_items": 2352,
+      "diagnostics_equal_items": 2352,
+      "joint_equal_items": 2352
+    },
+    "performance_scope": "Single full-dataset run at client concurrency 1; OD warmup is a separate window; ERQA runner timings include its recorded retry policy"
+  },
+  "erqa400": {
+    "successful": 400,
+    "failed": 0,
+    "retry_count": 0,
+    "accuracy": {
+      "correct": 219,
+      "total": 400,
+      "value": 0.5475
+    },
+    "decisions_per_second": 3.5286301857841904,
+    "latency_ms": {
+      "p50": 277.87701995112,
+      "p95": 331.49547409266233,
+      "p99": 562.7664496889331,
+      "mean": 280.82298467867076
+    },
+    "exact_equal_probability_items": 400,
+    "prediction_changes": 0,
+    "request_and_input_token_alignment": true,
+    "offline_requests_verified": true,
+    "runner_offline_accuracy_equal": true
+  },
+  "resources": {
+    "source": {
+      "path": "Clef-27B/logs/mlp-20261115/bf16-eval/resources.jsonl",
+      "sha256": "34c644e867ec62225eb5abece18bc96a6a4a82b1a11df1c2f2785cb2494b64a5"
+    },
+    "samples": 34,
+    "all_npu_and_cgroup_reads_ok": true,
+    "terminal_driver_seen": true,
+    "cpu_quota_cores": 32,
+    "sample_interval_seconds": {
+      "min": 15.000862949993461,
+      "max": 15.014681670349091
+    },
+    "od_formal": {
+      "request_utc": [
+        "2026-11-15T03:21:28.348966+00:00",
+        "2026-11-15T03:28:17.052125+00:00"
+      ],
+      "http_monotonic_seconds": [
+        3629868.33568146,
+        3630277.03872694
+      ],
+      "full_window_resource_coverage": false,
+      "initial_uncovered_seconds_bounds": [
+        38.34314806992188,
+        38.69449531007558
+      ],
+      "throttling_initial_uncovered_interval": "unknown",
+      "guaranteed_observable_complete_requests": {
+        "count": 2070,
+        "first_index": 282,
+        "last_index": 2351
+      },
+      "observed_throttle": {
+        "first_sample_1based": 1,
+        "last_sample_1based": 26,
+        "first_read_utc_bounds": [
+          "2026-11-15T03:22:06.692156+00:00",
+          "2026-11-15T03:22:07.043523+00:00"
+        ],
+        "last_read_utc_bounds": [
+          "2026-11-15T03:28:22.026762+00:00",
+          "2026-11-15T03:28:22.377736+00:00"
+        ],
+        "nr_periods": [
+          2348259,
+          2352012
+        ],
+        "nr_throttled": [
+          5767,
+          5767
+        ],
+        "throttled_time_ns": [
+          545556930340,
+          545556930340
+        ],
+        "nr_periods_delta": 3753,
+        "nr_throttled_delta": 0,
+        "throttled_time_delta_ns": 0
+      }
+    },
+    "erqa_formal": {
+      "request_utc": [
+        "2026-11-15T03:28:18.212853+00:00",
+        "2026-11-15T03:30:11.570097+00:00"
+      ],
+      "full_window_resource_coverage": true,
+      "enclosing_throttle": {
+        "first_sample_1based": 25,
+        "last_sample_1based": 34,
+        "first_read_utc_bounds": [
+          "2026-11-15T03:28:07.012091+00:00",
+          "2026-11-15T03:28:07.365729+00:00"
+        ],
+        "last_read_utc_bounds": [
+          "2026-11-15T03:30:22.144076+00:00",
+          "2026-11-15T03:30:22.508064+00:00"
+        ],
+        "nr_periods": [
+          2351862,
+          2353213
+        ],
+        "nr_throttled": [
+          5767,
+          5767
+        ],
+        "throttled_time_ns": [
+          545556930340,
+          545556930340
+        ],
+        "nr_periods_delta": 1351,
+        "nr_throttled_delta": 0,
+        "throttled_time_delta_ns": 0
+      }
+    },
+    "all_samples_throttle": {
+      "first_sample_1based": 1,
+      "last_sample_1based": 34,
+      "first_read_utc_bounds": [
+        "2026-11-15T03:22:06.692156+00:00",
+        "2026-11-15T03:22:07.043523+00:00"
+      ],
+      "last_read_utc_bounds": [
+        "2026-11-15T03:30:22.144076+00:00",
+        "2026-11-15T03:30:22.508064+00:00"
+      ],
+      "nr_periods": [
+        2348259,
+        2353213
+      ],
+      "nr_throttled": [
+        5767,
+        5767
+      ],
+      "throttled_time_ns": [
+        545556930340,
+        545556930340
+      ],
+      "nr_periods_delta": 4954,
+      "nr_throttled_delta": 0,
+      "throttled_time_delta_ns": 0
+    },
+    "scope": "Periodic device snapshots and cumulative container CPU counters; counter reads occur within recorded sample boundaries"
+  },
+  "subset588_scan": {
+    "scope": "subset588 exploratory scan; one window per concurrency; caller-prewarmed service",
+    "sample_file": {
+      "path": "/workspace/yangchen/logs/gdn-decision-20261115/ab/ab-subset-stride4.json",
+      "sha256": "f60edc2a95eed65679f861ba885147d4aba2010ec17e6c57306f6979d5092df4"
+    },
+    "points": [
+      {
+        "concurrency": 2,
+        "successful_requests_per_second": 5.771833762609481,
+        "p50_ms": 366.80404003709555,
+        "p95_ms": 430.49601207021624,
+        "p99_ms": 438.8616622472182,
+        "successful_requests": 588,
+        "failed_requests": 0,
+        "completed_requests": 588,
+        "measurement_wall_seconds": 101.87403591023758,
+        "passed": true,
+        "returncode": 0,
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/c2.json",
+          "sha256": "d04421e20e69286e11c12bb01cb1bf9a4f8100efa442c03f72d880482b158232"
+        },
+        "report_sha256_verified": true,
+        "actual_request_count": 588
+      },
+      {
+        "concurrency": 4,
+        "successful_requests_per_second": 5.841442320990132,
+        "p50_ms": 710.1738699711859,
+        "p95_ms": 828.19954585284,
+        "p99_ms": 834.8117200518027,
+        "successful_requests": 588,
+        "failed_requests": 0,
+        "completed_requests": 588,
+        "measurement_wall_seconds": 100.66007121000439,
+        "passed": true,
+        "returncode": 0,
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/c4.json",
+          "sha256": "b9566b8dcc268d78bd2a87e9dbae79ddc94d9f347de5b6d1e79a5a93fdfc9c3f"
+        },
+        "report_sha256_verified": true,
+        "actual_request_count": 588
+      },
+      {
+        "concurrency": 8,
+        "successful_requests_per_second": 5.835668760434725,
+        "p50_ms": 1408.0639951862395,
+        "p95_ms": 1627.4547305889428,
+        "p99_ms": 1660.496841170825,
+        "successful_requests": 588,
+        "failed_requests": 0,
+        "completed_requests": 588,
+        "measurement_wall_seconds": 100.7596599701792,
+        "passed": true,
+        "returncode": 0,
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/c8.json",
+          "sha256": "93778084fa787b1007cdd685b7df2e4b9c6eaf3f661f284ab1b86f35a6f3592c"
+        },
+        "report_sha256_verified": true,
+        "actual_request_count": 588
+      },
+      {
+        "concurrency": 16,
+        "successful_requests_per_second": 5.860027328636669,
+        "p50_ms": 2795.019665034488,
+        "p95_ms": 3168.1252440437675,
+        "p99_ms": 3199.604154769331,
+        "successful_requests": 588,
+        "failed_requests": 0,
+        "completed_requests": 588,
+        "measurement_wall_seconds": 100.34082897985354,
+        "passed": true,
+        "returncode": 0,
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/c16.json",
+          "sha256": "07c1087791dc81dfeee00525d744130089b83aa0d71fa0d42fe4b72991064911"
+        },
+        "report_sha256_verified": true,
+        "actual_request_count": 588
+      }
+    ],
+    "peak_successful_requests_per_second": {
+      "concurrency": 16,
+      "successful_requests_per_second": 5.860027328636669,
+      "p50_ms": 2795.019665034488,
+      "p95_ms": 3168.1252440437675,
+      "p99_ms": 3199.604154769331,
+      "successful_requests": 588,
+      "failed_requests": 0,
+      "completed_requests": 588,
+      "measurement_wall_seconds": 100.34082897985354,
+      "passed": true,
+      "returncode": 0,
+      "report": {
+        "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/c16.json",
+        "sha256": "07c1087791dc81dfeee00525d744130089b83aa0d71fa0d42fe4b72991064911"
+      }
+    },
+    "peak_scope": "Highest observed successful requests per second among completed reports in this scan",
+    "status": "complete",
+    "failed_requests_total": 0,
+    "summary_source": {
+      "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/summary.json",
+      "sha256": "7e6ba4adfddcafa79324580d81dd21de54ab514b8a0bae2ecd711fc22934f7ce"
+    },
+    "driver_source": {
+      "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-scan/driver.json",
+      "sha256": "e771a5feaac11de50ebcc67ffbb9924f082e8063e4dc1120e3aee4832b8d9d5e"
+    },
+    "sample_source_sha256_verified": true
+  }
+}

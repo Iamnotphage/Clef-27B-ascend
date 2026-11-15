@@ -5,7 +5,7 @@ The runner keeps the official record order, builds one multimodal Choice
 request per sample, sends it at client concurrency 1, and stores the complete
 wire request, raw response, every attempt, timings and token usage.  Scoring
 uses the official exact-match rule from ``eval_harness.py``; failures stay in
-the fixed 400-sample denominator.
+the fixed selected-sample denominator (400 samples for the full run).
 
 A new output directory is required for a new run.  ``--resume`` reuses an
 existing directory: a sample is skipped only when its saved structural request
@@ -243,7 +243,7 @@ def summarize(records, elapsed, args, service, manifest):
         "accuracy": {
             "correct": correct, "total": len(records),
             "value": correct / len(records) if records else None,
-            "denominator": "fixed 400-sample set; failures count as incorrect",
+            "denominator": f"fixed {len(records)}-sample set; failures count as incorrect",
             "ok_only_correct": correct, "ok_only_total": len(ok),
             "ok_only_value": correct / len(ok) if ok else None,
         },

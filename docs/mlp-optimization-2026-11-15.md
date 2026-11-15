@@ -2,13 +2,13 @@
 
 ## 阶段结果
 
-真实激活的 W8A8_DYNAMIC 完整 MLP 链完成 12 点验证，设备事件配对加速比为 **1.354–1.633×**，同步 wall 配对加速比为 **1.284–1.604×**。每点六轮均获得局部加速，输出全部有限。相对 RMSE 为 **1.06%–14.37%**，完整模型任务质量待 OD2352 与 ERQA400 验证。 [W8A8 运行清单](../Clef-27B/logs/mlp-20261115/w8a8-nz-v2/driver.json)
+真实激活的 W8A8_DYNAMIC 完整 MLP 链完成 12 点验证，设备事件配对加速比为 **1.354–1.633×**，同步 wall 配对加速比为 **1.284–1.604×**。每点六轮均获得局部加速，输出全部有限。相对 RMSE 为 **1.06%–14.37%**，gate/up 候选的完整 OD2352 与 ERQA400 结果见第8节。 [W8A8 运行清单](../Clef-27B/logs/mlp-20261115/w8a8-nz-v2/driver.json)
 
 当前 `npu_ffn` SwiGLU 接口接受 FP16。四个真实 layer0 输入的 BF16→FP16→FFN→BF16 完整局部链耗时为 BF16 分解实现的 **1.777–2.573 倍**，各点六轮方向一致。后续优先评估 W8A8 的量化范围与完整模型质量。 [FFN 运行清单](../Clef-27B/logs/mlp-20261115/ffn-v1/driver.json)
 
 选择性量化补充 12 点四臂实验。`gate_up_only` 的 device 配对收益为 **1.205–1.376×**，wall 为 **1.176–1.371×**，首个完整模型候选采用全部 64 层 gate/up W8A8。layer31 局部 relative RMSE 为 10.90%–12.50%，任务质量以完整 OD/ERQA 评测继续确认。 [四臂运行清单](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/driver.json)
 
-本阶段测量输出为 TP2 的单 rank、单层 down projection 部分和，all-reduce 位于测量终点之后。完整请求的调度、注意力、GDN、通信、视觉编码与联合头成本由后续服务 A/B 记录覆盖。当前倍数用于评价该局部计算链，服务吞吐与 HTTP 延迟仍待实测。
+本阶段测量输出为 TP2 的单 rank、单层 down projection 部分和，all-reduce 位于测量终点之后。完整请求的调度、注意力、GDN、通信、视觉编码与联合头成本纳入第8节服务实测。当前倍数用于评价该局部计算链。
 
 ## 1. 输入、模型和复现范围
 
@@ -54,7 +54,7 @@ BF16 权重实际为 ND、format 2。INT8 权重先转置为 `[K,N]`，启用 `t
 
 ### 同输入局部数值差异
 
-下表比较 BF16 与 W8A8 的本 rank 部分和，relative RMSE 按 BF16 输出 RMS 归一化。每点两端输出均为有限值。layer63 的最大绝对差同时结合相对 RMSE 与 cosine 解读，完整网络中的误差传播、决策变化和校准分数由后续评测确认。
+下表比较 BF16 与 W8A8 的本 rank 部分和，relative RMSE 按 BF16 输出 RMS 归一化。每点两端输出均为有限值。layer63 的最大绝对差同时结合相对 RMSE 与 cosine 解读，gate/up 候选完整网络的决策变化和校准分数见第8节。
 
 | 输入 | 层 | max absolute error | RMSE | relative RMSE | cosine |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -193,7 +193,7 @@ layer31 的 gate/up 误差与其他采样层存在明显差异，后续可按任
 3. 运行 ERQA400，按官方 exact-match 统计 accuracy、正确转错误与错误转正确，核对固定请求结构哈希、样本集合和 token 对齐。
 4. 对可接受的候选采集同输入服务 A/B，记录实际吞吐、p50/p95/p99、错误率和显存。完成后恢复基线服务并重新执行协议、多模态及模型身份验收。
 
-截至本微基准阶段，完整候选模型量化、OD2352/ERQA400 候选评分、服务端性能与最终服务恢复验收均待完成。后续阶段在本报告追加实际日志及结论。
+正常入口验证阶段完成模型转换、原生量化加载和 OD18/ERQA19 冒烟。完整 OD2352/ERQA400 评测、已完成的性能窗口与暂停位置见第8节。
 
 ## 6. 复现与归档
 
@@ -227,11 +227,55 @@ python runtime/run_mlp_microbench.py \
 | [capture-requests.json](../Clef-27B/logs/mlp-20261115/capture-requests.json) | `dee7b915dccbd55b920fbad6dd00c6028e394c8a835908b35ee9de793e82b02c` |
 | [probe_mlp_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-nz-v2/probe_mlp_w8a8.py) | `b6372bf9d7a503893157874ce62e854abf20b443f858882d7e250468c7c2cddf` |
 | [probe_mlp_ffn.py](../Clef-27B/logs/mlp-20261115/ffn-v1/probe_mlp_ffn.py) | `659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e` |
+| [partial/probe_mlp_partial_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_partial_w8a8.py) | `7458b57d3b0b7adef4430830d230590e8720bfd3d6952876db0cd4fcee13a581` |
+| [partial/probe_mlp_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_w8a8.py) | `8b2224bc91cf6e63206ec36f31ba7966a0f670f9029fc5d7ab343519b92dc17e` |
 
-## 6. 混合模型转换与正常入口
+## 7. 混合模型转换与正常入口
 
 全 64 层 gate/up 转换已完成，128 份原始权重转为 INT8，增加逐输出通道 BF16 scale 与零 offset。主干索引共 1440 个张量、43,313,863,136 字节，目录为 `/workspace/yangchen/models/Clef-27B-mlp-gateup-w8a8`。CPU 独立复核确认 layers 0/31/63 的两 rank 共 12 个分片与重新量化结果一致，rank0 的权重及 scale 哈希与微基准一致。1056 个保留主干张量逐项字节 SHA 一致，覆盖全部 down、attention、vision，联合头整文件 SHA 一致。[转换清单](../Clef-27B/logs/mlp-20261115/conversion-manifest.json) · [独立核验](../Clef-27B/logs/mlp-20261115/model-conversion-check.json)
 
 正常启动测试发现 `inference.py` 将未知的双 token 透传参数拼成了一个 argv 元素，导致图像处理器覆盖参数被 CLI 拒绝。修复保留参数与值的 token 边界，将 `mm_processor_kwargs` 纳入有效配置和来源记录，并在最终 argv 输出一次。10 项新增启动器回归与 34 项原有 GDN 检查通过。正常 `start.sh` 入口已启动 BF16 对照服务，TP2、seqs1、16384、16 图、像素 65,536～1,048,576，GDN 决策 prefill 开启，冻结回放 8/8 逐位一致。[入口验证](../Clef-27B/logs/mlp-20261115/launch-validation.json) · [实际 manifest](../Clef-27B/logs/mlp-20261115/bf16-entry-manifest.json) · [冻结回放](../Clef-27B/logs/mlp-20261115/bf16-entry-frozen8.json)
-| [partial/probe_mlp_partial_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_partial_w8a8.py) | `7458b57d3b0b7adef4430830d230590e8720bfd3d6952876db0cd4fcee13a581` |
-| [partial/probe_mlp_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_w8a8.py) | `8b2224bc91cf6e63206ec36f31ba7966a0f670f9029fc5d7ab343519b92dc17e` |
+
+候选通过正常入口显式指定 `--quantization ascend`，服务启动 PID 为 517359。加载审计确认每个 rank 的 64 个 gate/up INT8 参数合计 5,704,253,440 个元素，联合头 122 个参数全部加载。首次启动额外启用严格跟踪后，两个 rank 均报告 48 个 `ascend_conv1d_weight` 派生缓存缺失。这些缓存由已加载的 `conv1d.weight` 在权重后处理阶段转置生成，跟踪检查发生在该阶段之前。随后沿用原生量化加载默认值，实际审计记录为 `strict_tracking_enabled=false`。首次检查完整缺失集合与成功启动日志分别保存在远端 run 的 `gateup-entry/service.log` 和 `gateup-entry-v2/service.log`。
+
+候选 OD 冒烟完成 18/18，ERQA 冒烟完成 19/19，均无请求失败。ERQA 子集与 BF16 对照的请求结构哈希及输入 token 全部对齐，正确数从 7/19 变为 6/19，包含 1 条正确转错误。完整质量结论继续以 OD2352 和 ERQA400 为准。实际记录保存在远端 run 的 `gateup-smoke-od.json`、`gateup-smoke-erqa/summary.json` 和 `gateup-smoke-erqa/diff.json`。
+
+
+## 8. 全量结果与暂停位置
+
+2026-11-15 用户因 token 预算要求暂停后续实验。两配置的完整质量评测已经完成，候选并发扫描、短形状 ND 复测与下一候选优化留待交接执行。
+
+两配置均由正常入口启动，使用 TP2、BF16 主干、seqs1、eager、16384 上下文与 token 预算、GDN 决策 prefill 开启、schema 缓存关闭、16 图上限、像素 65,536～1,048,576。候选将全 64 层 gate/up 设为动态 W8A8。OpenDecisions 每配置先运行完整 2352 题预热，再测量一次完整 2352 题，均无错误。
+
+| 指标 | BF16 对照 | gate/up W8A8 候选 |
+| --- | ---: | ---: |
+| OD Calibration | 82.794115 | 82.649369 |
+| OD Intelligence | 66.056843 | 65.526827 |
+| OD Capability | 74.425479 | 74.088098 |
+| OD accuracy | 1906/2352 | 1903/2352 |
+| OD Score MAE | 0.401389 | 0.401847 |
+| OD C1 p50 / p95 / p99 ms | 199.515 / 207.708 / 213.291 | 195.245 / 207.105 / 210.495 |
+| OD C1 wall 秒 | 408.704 | 416.646 |
+| OD C1 decisions/s | 5.754781 | 5.645078 |
+| ERQA accuracy | 219/400 | 219/400 |
+| ERQA C1 p95 ms | 331.495 | 292.618 |
+| ERQA C1 decisions/s | 3.528630 | 3.870919 |
+
+这些性能值来自每配置一次全量窗口。ERQA 的 BF16 对照在冻结8例回放后运行，候选此前还执行了19题 ERQA 冒烟，视觉形状预热覆盖不同。后续应给两配置统一完整 ERQA 预热与测量协议，再确认性能收益。OD 正式窗口前约38.34～38.69秒缺少资源采样前界，后续2070条完整请求所在区间与整个 ERQA 区间的 CPU throttling 增量均为0。[BF16 核验摘要](../Clef-27B/logs/mlp-20261115/reference-summary.json)
+
+候选 OD 的 choice 变化15条、noul 跨0.5共5条，作者有效性判定下18条正确变错误、15条错误变正确。最大概率差0.396890，319条概率差超过0.03，68条 score 期望差超过0.05，作为数值诊断保留。候选自身预热与正式轮2352条输出、8683个返回概率位模式完全一致。[候选重复性](../Clef-27B/logs/mlp-20261115/candidate-repeatability.json)
+
+正式 OD 吞吐下降1.906%，p95减少0.603ms。小于512 tokens 的1636条请求累计增加10.573秒，至少512 tokens 的716条请求节省2.627秒。部分固定短形状出现约60～90ms的整请求退化，例如203、204、206、252、269、280、448 tokens。下一步优先确认这些形状的 INT8 GEMM 格式与 tiling 行为。[正式配对分析](../Clef-27B/logs/mlp-20261115/formal-paired-latency.json) · [短形状交接记录](../Clef-27B/logs/mlp-20261115/short-shape-followup.md)
+
+BF16 的588题分层探索扫描在 C2/C4/C8/C16 分别测得5.7718/5.8414/5.8357/5.8600请求/秒，最高观测点 C16 的 p95 为3168.125ms。候选的对应扫描尚待执行。正式提交配置与 CSV 的采用结论以各自验收记录为准，本轮候选作为独立实验记录。[扫描结果](../Clef-27B/logs/mlp-20261115/bf16-scan/summary.json)
+
+CPU 诊断还发现 layer31 的输入通道3994几乎总是决定 per-token INT8 scale。该层四种输入的近似输入量化 relative RMSE 为8.845%～9.649%，gate/up 权重重建误差约1%。进一步的激活平滑和选择性 BF16 可沿此证据开展，原生动态路径当前尚未接入 smooth_scales。[激活诊断](../Clef-27B/logs/mlp-20261115/activation-quantization-diagnostics.json)
+
+
+## 9. 恢复与交接
+
+用户要求暂停后，候选服务已停止。原服务恢复为 PID **520642**，8000端口 `/health` 200，冻结8/8通过，argv、cwd、记录环境与实验前快照完全一致。临时MLP输入采集源码恢复到 preimage SHA，采集处于未武装状态，实验驱动和探针进程全部结束。当前服务指针已更新到实际恢复进程。[恢复核验](../Clef-27B/logs/mlp-20261115/restore/verification.json)
+
+候选全量原始输出、概率、启动manifest、严格追踪首次失败与原生加载日志均已保存，并核对压缩内容SHA与源文件SHA。[候选摘要](../Clef-27B/logs/mlp-20261115/candidate-summary.json) · [候选归档索引](../Clef-27B/logs/mlp-20261115/candidate-archive-index.json)
+
+后续可直接复制独立交接prompt，按短形状ND/NZ、统一ERQA预热与候选并发扫描的顺序接续。[DeepSeek交接prompt](handoff-mlp-deepseek-2026-11-15.md)

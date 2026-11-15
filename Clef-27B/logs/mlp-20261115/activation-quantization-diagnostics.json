@@ -1,0 +1,1148 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-15T03:21:29.753789+00:00",
+  "status": "complete",
+  "scope": "12 rank0 captured inputs, layers 0/31/63, four requests; local CPU diagnostics",
+  "execution": {
+    "device": "cpu",
+    "torch_device_backend_autoload": "0",
+    "npu_backend_imported": false
+  },
+  "activation_quantization": {
+    "status": "CPU approximation of symmetric per-token INT8",
+    "input": "exact saved BF16 converted to FP32",
+    "scale": "FP32 max(abs(x),dim=-1)/127; all-zero row uses scale1",
+    "quantization": "round ties-to-even, clamp[-127,127], INT8",
+    "reconstruction": "INT8 * FP32 scale, no BF16 output rounding",
+    "difference_from_device": "NPU kernel rounding/scale implementation is not executed in this diagnostic"
+  },
+  "definitions": {
+    "relative_rmse": "sqrt(sum(error^2)/sum(reference^2))",
+    "quantiles": "linear interpolation at (n-1)*q",
+    "extreme_channel": "per-token absmax channel, first channel on ties; channel frequency over tokens",
+    "weight_reconstruction": "actual converted INT8 weight times stored BF16 scale promoted to FP32"
+  },
+  "capture_manifest": {
+    "path": "/workspace/yangchen/logs/mlp-20261115-1027/capture-requests.json",
+    "sha256": "dee7b915dccbd55b920fbad6dd00c6028e394c8a835908b35ee9de793e82b02c"
+  },
+  "source_model": "/workspace/yangchen/models/Clef-27B",
+  "quantized_model": "/workspace/yangchen/models/Clef-27B-mlp-gateup-w8a8",
+  "summary_by_layer": {
+    "0": {
+      "input_relative_rmse_range": [
+        0.022714374461771644,
+        0.02986182378335798
+      ],
+      "token_max_over_rms_p95_range": [
+        13.736903990832229,
+        24.167690518921958
+      ],
+      "top1_argmax_channel_share_range": [
+        0.31921824104234525,
+        0.43202416918429004
+      ],
+      "gate_up_only_output_relative_rmse_range": [
+        0.003959070828927922,
+        0.010844746290070106
+      ]
+    },
+    "31": {
+      "input_relative_rmse_range": [
+        0.08844743575047742,
+        0.0964910126572793
+      ],
+      "token_max_over_rms_p95_range": [
+        47.85544483621972,
+        50.02756774055092
+      ],
+      "top1_argmax_channel_share_range": [
+        0.996742671009772,
+        0.9999028560326404
+      ],
+      "gate_up_only_output_relative_rmse_range": [
+        0.10902368899168634,
+        0.1250493788696899
+      ]
+    },
+    "63": {
+      "input_relative_rmse_range": [
+        0.03972079885794801,
+        0.04891365620784337
+      ],
+      "token_max_over_rms_p95_range": [
+        31.458233786430927,
+        40.341896145889116
+      ],
+      "top1_argmax_channel_share_range": [
+        0.7654723127035831,
+        0.9078369905956113
+      ],
+      "gate_up_only_output_relative_rmse_range": [
+        0.010182763392186699,
+        0.02424800472563787
+      ]
+    }
+  },
+  "activations": [
+    {
+      "request": "od-0105",
+      "layer": 0,
+      "rank": 0,
+      "tokens": 307,
+      "channels": 5120,
+      "capture_sha256": "deea1e81fe83f2e1ad9bbd30632d236e1889821b49bbc49bbe55390b46eebe0d",
+      "capture_hash_matches": true,
+      "input_max_absolute": 3.203125,
+      "input_rms": 0.09065916763250942,
+      "per_token_max_absolute": {
+        "p50": 1.109375,
+        "p95": 1.62265625
+      },
+      "per_token_rms": {
+        "p50": 0.08990269718949245,
+        "p95": 0.12145560502153205
+      },
+      "per_token_max_over_rms": {
+        "p50": 12.295386696598774,
+        "p95": 23.774327900980378
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.02986182378335798,
+        "rmse": 0.0027072480881879077,
+        "max_absolute": 0.012601114809513092,
+        "per_token_relative_rmse": {
+          "p50": 0.028155609208612105,
+          "p95": 0.05434686962214366
+        },
+        "zero_fraction": 0.05842261298859935
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 40,
+        "top1_token_share": 0.31921824104234525,
+        "top8_token_share": 0.7785016286644951,
+        "top32_token_share": 0.9739413680781759,
+        "top_argmax_channels": [
+          {
+            "channel": 310,
+            "tokens": 98,
+            "token_share": 0.31921824104234525,
+            "max_absolute": 3.203125
+          },
+          {
+            "channel": 3842,
+            "tokens": 67,
+            "token_share": 0.2182410423452769,
+            "max_absolute": 1.6171875
+          },
+          {
+            "channel": 4772,
+            "tokens": 19,
+            "token_share": 0.06188925081433225,
+            "max_absolute": 1.2109375
+          },
+          {
+            "channel": 1119,
+            "tokens": 13,
+            "token_share": 0.04234527687296417,
+            "max_absolute": 1.546875
+          },
+          {
+            "channel": 4078,
+            "tokens": 13,
+            "token_share": 0.04234527687296417,
+            "max_absolute": 1.359375
+          },
+          {
+            "channel": 3313,
+            "tokens": 12,
+            "token_share": 0.03908794788273615,
+            "max_absolute": 1.421875
+          },
+          {
+            "channel": 56,
+            "tokens": 10,
+            "token_share": 0.03257328990228013,
+            "max_absolute": 1.21875
+          },
+          {
+            "channel": 933,
+            "tokens": 7,
+            "token_share": 0.02280130293159609,
+            "max_absolute": 1.203125
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0105-l00-r0.json",
+        "relative_rmse": 0.010844746290070106
+      }
+    },
+    {
+      "request": "od-0105",
+      "layer": 31,
+      "rank": 0,
+      "tokens": 307,
+      "channels": 5120,
+      "capture_sha256": "5a5b6117e34f692a0d429f3ad28579963e488880fcf7d3a2fb0e18852421e76e",
+      "capture_hash_matches": true,
+      "input_max_absolute": 32.0,
+      "input_rms": 0.6305691541717361,
+      "per_token_max_absolute": {
+        "p50": 25.875,
+        "p95": 28.0
+      },
+      "per_token_rms": {
+        "p50": 0.6242732160352924,
+        "p95": 0.6885284016495612
+      },
+      "per_token_max_over_rms": {
+        "p50": 41.28090484221046,
+        "p95": 47.85544483621972
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.09243097843879697,
+        "rmse": 0.05828412389341819,
+        "max_absolute": 0.1259765625,
+        "per_token_relative_rmse": {
+          "p50": 0.09369664912086602,
+          "p95": 0.1084685725216341
+        },
+        "zero_fraction": 0.17062868994299674
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 2,
+        "top1_token_share": 0.996742671009772,
+        "top8_token_share": 1.0,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 306,
+            "token_share": 0.996742671009772,
+            "max_absolute": 28.75
+          },
+          {
+            "channel": 3456,
+            "tokens": 1,
+            "token_share": 0.003257328990228013,
+            "max_absolute": 32.0
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0105-l31-r0.json",
+        "relative_rmse": 0.11808452424329943
+      }
+    },
+    {
+      "request": "od-0105",
+      "layer": 63,
+      "rank": 0,
+      "tokens": 307,
+      "channels": 5120,
+      "capture_sha256": "828b4f9ccf9d7af05962f44fe4a7e01dd8f38035f4d5b5d96a91d27761c523f8",
+      "capture_hash_matches": true,
+      "input_max_absolute": 55.0,
+      "input_rms": 1.1853776028033227,
+      "per_token_max_absolute": {
+        "p50": 16.25,
+        "p95": 45.425
+      },
+      "per_token_rms": {
+        "p50": 1.1927781494968868,
+        "p95": 1.2175680099309587
+      },
+      "per_token_max_over_rms": {
+        "p50": 13.590792977274786,
+        "p95": 40.341896145889116
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.045055412597512785,
+        "rmse": 0.053407676978154336,
+        "max_absolute": 0.21641242504119873,
+        "per_token_relative_rmse": {
+          "p50": 0.03117987957225383,
+          "p95": 0.0921808541618775
+        },
+        "zero_fraction": 0.06069001934039088
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 31,
+        "top1_token_share": 0.7654723127035831,
+        "top8_token_share": 0.9087947882736156,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 235,
+            "token_share": 0.7654723127035831,
+            "max_absolute": 55.0
+          },
+          {
+            "channel": 1089,
+            "tokens": 16,
+            "token_share": 0.05211726384364821,
+            "max_absolute": 17.75
+          },
+          {
+            "channel": 2805,
+            "tokens": 7,
+            "token_share": 0.02280130293159609,
+            "max_absolute": 10.375
+          },
+          {
+            "channel": 2379,
+            "tokens": 6,
+            "token_share": 0.019543973941368076,
+            "max_absolute": 6.40625
+          },
+          {
+            "channel": 4042,
+            "tokens": 5,
+            "token_share": 0.016286644951140065,
+            "max_absolute": 12.875
+          },
+          {
+            "channel": 505,
+            "tokens": 4,
+            "token_share": 0.013029315960912053,
+            "max_absolute": 13.125
+          },
+          {
+            "channel": 1504,
+            "tokens": 3,
+            "token_share": 0.009771986970684038,
+            "max_absolute": 7.40625
+          },
+          {
+            "channel": 2519,
+            "tokens": 3,
+            "token_share": 0.009771986970684038,
+            "max_absolute": 8.875
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0105-l63-r0.json",
+        "relative_rmse": 0.010182763392186699
+      }
+    },
+    {
+      "request": "od-0677",
+      "layer": 0,
+      "rank": 0,
+      "tokens": 1595,
+      "channels": 5120,
+      "capture_sha256": "cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa",
+      "capture_hash_matches": true,
+      "input_max_absolute": 3.203125,
+      "input_rms": 0.08478870988706129,
+      "per_token_max_absolute": {
+        "p50": 0.93359375,
+        "p95": 1.5859375
+      },
+      "per_token_rms": {
+        "p50": 0.0836806515879273,
+        "p95": 0.11181697268323341
+      },
+      "per_token_max_over_rms": {
+        "p50": 11.026983716764038,
+        "p95": 24.167690518921958
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.027895172151440873,
+        "rmse": 0.002365195658798152,
+        "max_absolute": 0.012601114809513092,
+        "per_token_relative_rmse": {
+          "p50": 0.025090517044932127,
+          "p95": 0.05486526133700342
+        },
+        "zero_fraction": 0.05307418201410658
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 93,
+        "top1_token_share": 0.34231974921630093,
+        "top8_token_share": 0.5849529780564263,
+        "top32_token_share": 0.8658307210031349,
+        "top_argmax_channels": [
+          {
+            "channel": 3842,
+            "tokens": 546,
+            "token_share": 0.34231974921630093,
+            "max_absolute": 1.796875
+          },
+          {
+            "channel": 310,
+            "tokens": 94,
+            "token_share": 0.05893416927899686,
+            "max_absolute": 3.203125
+          },
+          {
+            "channel": 344,
+            "tokens": 67,
+            "token_share": 0.04200626959247649,
+            "max_absolute": 1.140625
+          },
+          {
+            "channel": 1047,
+            "tokens": 58,
+            "token_share": 0.03636363636363636,
+            "max_absolute": 1.390625
+          },
+          {
+            "channel": 1625,
+            "tokens": 48,
+            "token_share": 0.030094043887147336,
+            "max_absolute": 1.09375
+          },
+          {
+            "channel": 3986,
+            "tokens": 42,
+            "token_share": 0.026332288401253918,
+            "max_absolute": 1.140625
+          },
+          {
+            "channel": 4078,
+            "tokens": 41,
+            "token_share": 0.025705329153605017,
+            "max_absolute": 1.546875
+          },
+          {
+            "channel": 3279,
+            "tokens": 37,
+            "token_share": 0.023197492163009405,
+            "max_absolute": 1.2109375
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0677-l00-r0.json",
+        "relative_rmse": 0.00991699141792092
+      }
+    },
+    {
+      "request": "od-0677",
+      "layer": 31,
+      "rank": 0,
+      "tokens": 1595,
+      "channels": 5120,
+      "capture_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+      "capture_hash_matches": true,
+      "input_max_absolute": 32.0,
+      "input_rms": 0.6210049612927604,
+      "per_token_max_absolute": {
+        "p50": 26.625,
+        "p95": 28.25
+      },
+      "per_token_rms": {
+        "p50": 0.6144299642159762,
+        "p95": 0.6782513358802933
+      },
+      "per_token_max_over_rms": {
+        "p50": 43.30137417331353,
+        "p95": 48.93038005204312
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.0964910126572793,
+        "rmse": 0.05992139758033298,
+        "max_absolute": 0.1259765625,
+        "per_token_relative_rmse": {
+          "p50": 0.09844952626225308,
+          "p95": 0.11104644171444235
+        },
+        "zero_fraction": 0.17817459345611286
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 2,
+        "top1_token_share": 0.9993730407523511,
+        "top8_token_share": 1.0,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 1594,
+            "token_share": 0.9993730407523511,
+            "max_absolute": 29.125
+          },
+          {
+            "channel": 3456,
+            "tokens": 1,
+            "token_share": 0.0006269592476489029,
+            "max_absolute": 32.0
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0677-l31-r0.json",
+        "relative_rmse": 0.1250493788696899
+      }
+    },
+    {
+      "request": "od-0677",
+      "layer": 63,
+      "rank": 0,
+      "tokens": 1595,
+      "channels": 5120,
+      "capture_sha256": "f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8",
+      "capture_hash_matches": true,
+      "input_max_absolute": 55.0,
+      "input_rms": 1.182264457665245,
+      "per_token_max_absolute": {
+        "p50": 23.25,
+        "p95": 40.25
+      },
+      "per_token_rms": {
+        "p50": 1.1849768258389093,
+        "p95": 1.2162769969808236
+      },
+      "per_token_max_over_rms": {
+        "p50": 19.62499999764652,
+        "p95": 35.34181767296945
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.04891365620784337,
+        "rmse": 0.05782887722899018,
+        "max_absolute": 0.21641242504119873,
+        "per_token_relative_rmse": {
+          "p50": 0.0444583220029368,
+          "p95": 0.08050657879127045
+        },
+        "zero_fraction": 0.06935283601097178
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 60,
+        "top1_token_share": 0.9078369905956113,
+        "top8_token_share": 0.9517241379310345,
+        "top32_token_share": 0.9824451410658307,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 1448,
+            "token_share": 0.9078369905956113,
+            "max_absolute": 55.0
+          },
+          {
+            "channel": 2805,
+            "tokens": 29,
+            "token_share": 0.01818181818181818,
+            "max_absolute": 10.6875
+          },
+          {
+            "channel": 2379,
+            "tokens": 9,
+            "token_share": 0.005642633228840125,
+            "max_absolute": 7.4375
+          },
+          {
+            "channel": 1089,
+            "tokens": 8,
+            "token_share": 0.005015673981191223,
+            "max_absolute": 17.75
+          },
+          {
+            "channel": 2067,
+            "tokens": 7,
+            "token_share": 0.00438871473354232,
+            "max_absolute": 10.5625
+          },
+          {
+            "channel": 4303,
+            "tokens": 7,
+            "token_share": 0.00438871473354232,
+            "max_absolute": 12.0
+          },
+          {
+            "channel": 261,
+            "tokens": 5,
+            "token_share": 0.003134796238244514,
+            "max_absolute": 10.6875
+          },
+          {
+            "channel": 505,
+            "tokens": 5,
+            "token_share": 0.003134796238244514,
+            "max_absolute": 15.75
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/od-0677-l63-r0.json",
+        "relative_rmse": 0.019042917953410177
+      }
+    },
+    {
+      "request": "erqa-0089",
+      "layer": 0,
+      "rank": 0,
+      "tokens": 662,
+      "channels": 5120,
+      "capture_sha256": "1769e55c9f773c87def249633cfdfd073087152897a01fbc25f271a6f9f0ec0a",
+      "capture_hash_matches": true,
+      "input_max_absolute": 4.3125,
+      "input_rms": 0.20141992530993905,
+      "per_token_max_absolute": {
+        "p50": 2.1171875,
+        "p95": 3.5625
+      },
+      "per_token_rms": {
+        "p50": 0.2179830277683566,
+        "p95": 0.2770286660842561
+      },
+      "per_token_max_over_rms": {
+        "p50": 11.255995946242818,
+        "p95": 18.165749983385933
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.025683331639512967,
+        "rmse": 0.005173134740541096,
+        "max_absolute": 0.0169677734375,
+        "per_token_relative_rmse": {
+          "p50": 0.025544895240634413,
+          "p95": 0.041309960784193404
+        },
+        "zero_fraction": 0.046411206570996975
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 45,
+        "top1_token_share": 0.43202416918429004,
+        "top8_token_share": 0.877643504531722,
+        "top32_token_share": 0.9803625377643505,
+        "top_argmax_channels": [
+          {
+            "channel": 3986,
+            "tokens": 286,
+            "token_share": 0.43202416918429004,
+            "max_absolute": 4.3125
+          },
+          {
+            "channel": 344,
+            "tokens": 107,
+            "token_share": 0.16163141993957703,
+            "max_absolute": 3.4375
+          },
+          {
+            "channel": 310,
+            "tokens": 87,
+            "token_share": 0.13141993957703926,
+            "max_absolute": 3.203125
+          },
+          {
+            "channel": 3842,
+            "tokens": 49,
+            "token_share": 0.07401812688821752,
+            "max_absolute": 2.921875
+          },
+          {
+            "channel": 4078,
+            "tokens": 16,
+            "token_share": 0.02416918429003021,
+            "max_absolute": 3.265625
+          },
+          {
+            "channel": 4772,
+            "tokens": 14,
+            "token_share": 0.021148036253776436,
+            "max_absolute": 1.15625
+          },
+          {
+            "channel": 3313,
+            "tokens": 11,
+            "token_share": 0.01661631419939577,
+            "max_absolute": 1.453125
+          },
+          {
+            "channel": 3586,
+            "tokens": 11,
+            "token_share": 0.01661631419939577,
+            "max_absolute": 1.6640625
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0089-l00-r0.json",
+        "relative_rmse": 0.00411529044632355
+      }
+    },
+    {
+      "request": "erqa-0089",
+      "layer": 31,
+      "rank": 0,
+      "tokens": 662,
+      "channels": 5120,
+      "capture_sha256": "dd0ea059274e94c92b9b7c140621e7aa410c67f696ae9d0904d757d1411cc0fb",
+      "capture_hash_matches": true,
+      "input_max_absolute": 32.0,
+      "input_rms": 0.6452330429550867,
+      "per_token_max_absolute": {
+        "p50": 25.25,
+        "p95": 28.0
+      },
+      "per_token_rms": {
+        "p50": 0.6404062109712791,
+        "p95": 0.7170937028817488
+      },
+      "per_token_max_over_rms": {
+        "p50": 39.50480538549762,
+        "p95": 48.20737820158509
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.08844743575047742,
+        "rmse": 0.05706920811085507,
+        "max_absolute": 0.1259765625,
+        "per_token_relative_rmse": {
+          "p50": 0.08967487168188779,
+          "p95": 0.10942816982665084
+        },
+        "zero_fraction": 0.15905164274924471
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 2,
+        "top1_token_share": 0.9984894259818731,
+        "top8_token_share": 1.0,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 661,
+            "token_share": 0.9984894259818731,
+            "max_absolute": 29.0
+          },
+          {
+            "channel": 3456,
+            "tokens": 1,
+            "token_share": 0.0015105740181268882,
+            "max_absolute": 32.0
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0089-l31-r0.json",
+        "relative_rmse": 0.10902368899168634
+      }
+    },
+    {
+      "request": "erqa-0089",
+      "layer": 63,
+      "rank": 0,
+      "tokens": 662,
+      "channels": 5120,
+      "capture_sha256": "8f8fbaec56865866c25521ea670a56db7414164752da97b86f8c7c64015b7161",
+      "capture_hash_matches": true,
+      "input_max_absolute": 56.0,
+      "input_rms": 1.1866249027481108,
+      "per_token_max_absolute": {
+        "p50": 17.75,
+        "p95": 42.25
+      },
+      "per_token_rms": {
+        "p50": 1.194405278017535,
+        "p95": 1.214129253361395
+      },
+      "per_token_max_over_rms": {
+        "p50": 14.85065840158153,
+        "p95": 37.251660250093046
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.04497284501912493,
+        "rmse": 0.053365897847124984,
+        "max_absolute": 0.22034931182861328,
+        "per_token_relative_rmse": {
+          "p50": 0.033541245083949296,
+          "p95": 0.08474983047831837
+        },
+        "zero_fraction": 0.06167360979984894
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 18,
+        "top1_token_share": 0.8912386706948641,
+        "top8_token_share": 0.9848942598187311,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 590,
+            "token_share": 0.8912386706948641,
+            "max_absolute": 56.0
+          },
+          {
+            "channel": 56,
+            "tokens": 32,
+            "token_share": 0.04833836858006042,
+            "max_absolute": 10.0
+          },
+          {
+            "channel": 1089,
+            "tokens": 12,
+            "token_share": 0.01812688821752266,
+            "max_absolute": 15.875
+          },
+          {
+            "channel": 2805,
+            "tokens": 6,
+            "token_share": 0.00906344410876133,
+            "max_absolute": 10.375
+          },
+          {
+            "channel": 505,
+            "tokens": 5,
+            "token_share": 0.0075528700906344415,
+            "max_absolute": 12.75
+          },
+          {
+            "channel": 1641,
+            "tokens": 3,
+            "token_share": 0.004531722054380665,
+            "max_absolute": 9.4375
+          },
+          {
+            "channel": 2379,
+            "tokens": 2,
+            "token_share": 0.0030211480362537764,
+            "max_absolute": 6.53125
+          },
+          {
+            "channel": 3009,
+            "tokens": 2,
+            "token_share": 0.0030211480362537764,
+            "max_absolute": 6.15625
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0089-l63-r0.json",
+        "relative_rmse": 0.01321783229343154
+      }
+    },
+    {
+      "request": "erqa-0167",
+      "layer": 0,
+      "rank": 0,
+      "tokens": 10294,
+      "channels": 5120,
+      "capture_sha256": "e98591c79399113d3cbc400cfe1a3790c282eb1d7813f88350921ed9ad5a44ce",
+      "capture_hash_matches": true,
+      "input_max_absolute": 4.875,
+      "input_rms": 0.21152660021435196,
+      "per_token_max_absolute": {
+        "p50": 1.890625,
+        "p95": 3.203125
+      },
+      "per_token_rms": {
+        "p50": 0.21227529104698697,
+        "p95": 0.28090980432971974
+      },
+      "per_token_max_over_rms": {
+        "p50": 9.886028631777297,
+        "p95": 13.736903990832229
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.022714374461771644,
+        "rmse": 0.0048046944058942566,
+        "max_absolute": 0.0191650390625,
+        "per_token_relative_rmse": {
+          "p50": 0.022462194425289378,
+          "p95": 0.03121528883672369
+        },
+        "zero_fraction": 0.03689006110962697
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 104,
+        "top1_token_share": 0.3931416359044103,
+        "top8_token_share": 0.9308334952399456,
+        "top32_token_share": 0.9827083738099864,
+        "top_argmax_channels": [
+          {
+            "channel": 344,
+            "tokens": 4047,
+            "token_share": 0.3931416359044103,
+            "max_absolute": 4.28125
+          },
+          {
+            "channel": 3986,
+            "tokens": 3350,
+            "token_share": 0.3254322906547503,
+            "max_absolute": 4.875
+          },
+          {
+            "channel": 253,
+            "tokens": 1130,
+            "token_share": 0.10977268311637847,
+            "max_absolute": 3.25
+          },
+          {
+            "channel": 4349,
+            "tokens": 453,
+            "token_share": 0.044006217213911014,
+            "max_absolute": 3.5
+          },
+          {
+            "channel": 3586,
+            "tokens": 272,
+            "token_share": 0.026423159121818536,
+            "max_absolute": 2.390625
+          },
+          {
+            "channel": 3842,
+            "tokens": 219,
+            "token_share": 0.021274528851758307,
+            "max_absolute": 3.71875
+          },
+          {
+            "channel": 310,
+            "tokens": 57,
+            "token_share": 0.0055372061394987375,
+            "max_absolute": 3.203125
+          },
+          {
+            "channel": 1903,
+            "tokens": 54,
+            "token_share": 0.005245774237419856,
+            "max_absolute": 2.65625
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0167-l00-r0.json",
+        "relative_rmse": 0.003959070828927922
+      }
+    },
+    {
+      "request": "erqa-0167",
+      "layer": 31,
+      "rank": 0,
+      "tokens": 10294,
+      "channels": 5120,
+      "capture_sha256": "ae8813db66b1ff2c37acd117459e238e25374a23a82cb5ee2cc1e6198d9c1505",
+      "capture_hash_matches": true,
+      "input_max_absolute": 32.0,
+      "input_rms": 0.624514389841369,
+      "per_token_max_absolute": {
+        "p50": 26.75,
+        "p95": 28.5
+      },
+      "per_token_rms": {
+        "p50": 0.6205116396990868,
+        "p95": 0.6866241754765873
+      },
+      "per_token_max_over_rms": {
+        "p50": 43.01458224251738,
+        "p95": 50.02756774055092
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.09629074210797181,
+        "rmse": 0.06013495405493263,
+        "max_absolute": 0.1259765625,
+        "per_token_relative_rmse": {
+          "p50": 0.09779825657104803,
+          "p95": 0.11372327778984374
+        },
+        "zero_fraction": 0.1790189901277443
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 2,
+        "top1_token_share": 0.9999028560326404,
+        "top8_token_share": 1.0,
+        "top32_token_share": 1.0,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 10293,
+            "token_share": 0.9999028560326404,
+            "max_absolute": 29.375
+          },
+          {
+            "channel": 3456,
+            "tokens": 1,
+            "token_share": 9.714396735962697e-05,
+            "max_absolute": 32.0
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0167-l31-r0.json",
+        "relative_rmse": 0.12000599894753473
+      }
+    },
+    {
+      "request": "erqa-0167",
+      "layer": 63,
+      "rank": 0,
+      "tokens": 10294,
+      "channels": 5120,
+      "capture_sha256": "822bd3204a793942ebf4235e6496ae632b3e79ea6c5eaa3c1eb8237adf338c83",
+      "capture_hash_matches": true,
+      "input_max_absolute": 60.25,
+      "input_rms": 1.1935795365167232,
+      "per_token_max_absolute": {
+        "p50": 16.75,
+        "p95": 36.25
+      },
+      "per_token_rms": {
+        "p50": 1.198509165009264,
+        "p95": 1.2161329080717282
+      },
+      "per_token_max_over_rms": {
+        "p50": 13.937700296352443,
+        "p95": 31.458233786430927
+      },
+      "cpu_approx_int8_input_error": {
+        "relative_rmse": 0.03972079885794801,
+        "rmse": 0.04740993269094358,
+        "max_absolute": 0.23710477352142334,
+        "per_token_relative_rmse": {
+          "p50": 0.03170548540110717,
+          "p95": 0.07140477006108889
+        },
+        "zero_fraction": 0.052947067162910436
+      },
+      "extreme_channel_concentration": {
+        "unique_argmax_channels": 142,
+        "top1_token_share": 0.8870215659607539,
+        "top8_token_share": 0.9647367398484554,
+        "top32_token_share": 0.9862055566349329,
+        "top_argmax_channels": [
+          {
+            "channel": 3994,
+            "tokens": 9131,
+            "token_share": 0.8870215659607539,
+            "max_absolute": 60.25
+          },
+          {
+            "channel": 1089,
+            "tokens": 351,
+            "token_share": 0.034097532543229066,
+            "max_absolute": 18.875
+          },
+          {
+            "channel": 56,
+            "tokens": 150,
+            "token_share": 0.014571595103944046,
+            "max_absolute": 9.0625
+          },
+          {
+            "channel": 4303,
+            "tokens": 90,
+            "token_share": 0.008742957062366427,
+            "max_absolute": 10.375
+          },
+          {
+            "channel": 3163,
+            "tokens": 68,
+            "token_share": 0.006605789780454634,
+            "max_absolute": 6.5625
+          },
+          {
+            "channel": 1641,
+            "tokens": 52,
+            "token_share": 0.005051486302700602,
+            "max_absolute": 12.8125
+          },
+          {
+            "channel": 3842,
+            "tokens": 47,
+            "token_share": 0.004565766465902467,
+            "max_absolute": 9.0625
+          },
+          {
+            "channel": 3009,
+            "tokens": 42,
+            "token_share": 0.004080046629104332,
+            "max_absolute": 7.9375
+          }
+        ]
+      },
+      "observed_gate_up_only_output": {
+        "report": "Clef-27B/logs/mlp-20261115/w8a8-partial-v1/erqa-0167-l63-r0.json",
+        "relative_rmse": 0.02424800472563787
+      }
+    }
+  ],
+  "weights": [
+    {
+      "layer": 0,
+      "projection": "gate",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.421875,
+      "weight_rms": 0.010320065539457772,
+      "reconstruction_relative_rmse": 0.00929282323050381,
+      "reconstruction_rmse": 9.5902544785395e-05,
+      "reconstruction_max_absolute": 0.0016632080078125
+    },
+    {
+      "layer": 0,
+      "projection": "up",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.1328125,
+      "weight_rms": 0.009927719394039941,
+      "reconstruction_relative_rmse": 0.009049884924570688,
+      "reconstruction_rmse": 8.984471807949012e-05,
+      "reconstruction_max_absolute": 0.000522613525390625
+    },
+    {
+      "layer": 31,
+      "projection": "gate",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.2353515625,
+      "weight_rms": 0.010927258991494727,
+      "reconstruction_relative_rmse": 0.009576514123664821,
+      "reconstruction_rmse": 0.00010464505006499266,
+      "reconstruction_max_absolute": 0.000926971435546875
+    },
+    {
+      "layer": 31,
+      "projection": "up",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.142578125,
+      "weight_rms": 0.011567429746462802,
+      "reconstruction_relative_rmse": 0.009445520919065406,
+      "reconstruction_rmse": 0.00010926039965003385,
+      "reconstruction_max_absolute": 0.000560760498046875
+    },
+    {
+      "layer": 63,
+      "projection": "gate",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.310546875,
+      "weight_rms": 0.013550036498828513,
+      "reconstruction_relative_rmse": 0.010630866249093061,
+      "reconstruction_rmse": 0.00014404862568937515,
+      "reconstruction_max_absolute": 0.001220703125
+    },
+    {
+      "layer": 63,
+      "projection": "up",
+      "rank": 0,
+      "shape": [
+        8704,
+        5120
+      ],
+      "weight_max_absolute": 0.2890625,
+      "weight_rms": 0.012995918031285282,
+      "reconstruction_relative_rmse": 0.009724335324784849,
+      "reconstruction_rmse": 0.00012637666478963584,
+      "reconstruction_max_absolute": 0.001129150390625
+    }
+  ],
+  "wall_seconds": 1.3575167004019022
+}

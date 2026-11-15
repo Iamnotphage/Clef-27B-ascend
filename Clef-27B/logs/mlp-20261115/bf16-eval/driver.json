@@ -1,0 +1,282 @@
+{
+  "started_at": "2026-11-15T03:14:37.794277+00:00",
+  "status": "complete",
+  "steps": [
+    {
+      "name": "od-warmup",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/benchmark_systemone.py",
+        "--base-url",
+        "http://127.0.0.1:18143",
+        "--sample-file",
+        "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+        "--concurrency",
+        "1",
+        "--warmup",
+        "0",
+        "--requests",
+        "2352",
+        "--report",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-warmup.json"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:14:37.794638+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-warmup.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-warmup.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-warmup.json",
+          "sha256": "e7ebf90830aba5f00043a7e10a3fe039981758a5c762b3c14eaa02eb09141ae5"
+        },
+        "checks": {
+          "passed": true,
+          "complete": true,
+          "successful": true,
+          "zero_failures": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:21:28.226636+00:00",
+      "wall_seconds": 410.43181975977495
+    },
+    {
+      "name": "od-full",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/benchmark_systemone.py",
+        "--base-url",
+        "http://127.0.0.1:18143",
+        "--sample-file",
+        "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+        "--concurrency",
+        "1",
+        "--warmup",
+        "0",
+        "--requests",
+        "2352",
+        "--report",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-full.json"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:21:28.227148+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-full.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-full.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-full.json",
+          "sha256": "e2fb47dcd21770423892ecc89c1b9b778af411b854c80f106cf862a44c885d19"
+        },
+        "checks": {
+          "passed": true,
+          "complete": true,
+          "successful": true,
+          "zero_failures": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:28:17.536981+00:00",
+      "wall_seconds": 409.3096206099726
+    },
+    {
+      "name": "od-score",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/runtime/od_raw_acceptance.py",
+        "--data",
+        "/workspace/yangchen/datasets/clef-full-20261112/full-data/open-decisions2352.jsonl",
+        "--scorer",
+        "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.py",
+        "--template",
+        "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl",
+        "--run",
+        "baseline=/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s1-final-full.json",
+        "--run",
+        "candidate=/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-full.json",
+        "--reference",
+        "baseline",
+        "--output",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-quality-and-diff.json"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:28:17.537555+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-score.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-quality-and-diff.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/od-quality-and-diff.json",
+          "sha256": "74465821ffea9c9caa621e662e7b258468cc3b79744f6da738300a11ad510f3e"
+        },
+        "checks": {
+          "protocol": true,
+          "request_alignment": true,
+          "complete": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:28:18.154049+00:00",
+      "wall_seconds": 0.6162468898110092
+    },
+    {
+      "name": "erqa-full",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_baseline.py",
+        "--data-dir",
+        "/workspace/yangchen/datasets/erqa-official-20261114",
+        "--output-dir",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa",
+        "--api-url",
+        "http://127.0.0.1:18143/v1",
+        "--scope",
+        "full"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:28:18.154503+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa-full.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/summary.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/summary.json",
+          "sha256": "c8aa434a6bc4ce9142dfdffc3009a9d40268ed2d9b893b1b1ec26ed62e9d7de1"
+        },
+        "checks": {
+          "complete": true,
+          "successful": true,
+          "zero_failures": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:30:11.588997+00:00",
+      "wall_seconds": 113.43422320997342
+    },
+    {
+      "name": "erqa-score",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_score.py",
+        "--run-dir",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa",
+        "--data-dir",
+        "/workspace/yangchen/datasets/erqa-official-20261114",
+        "--output",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/offline-score.json",
+        "--verify-requests"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:30:11.589511+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa-score.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/offline-score.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/offline-score.json",
+          "sha256": "003370d9e52495daaec40262b033bdde1a14dc56aeecc53b6dc0242d7010ab02"
+        },
+        "checks": {
+          "complete": true,
+          "successful": true,
+          "zero_failures": true,
+          "requests_verified": true,
+          "request_alignment": true,
+          "summary_equal": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:30:11.868890+00:00",
+      "wall_seconds": 0.27908445009961724
+    },
+    {
+      "name": "erqa-diff",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+        "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_compare.py",
+        "--reference",
+        "/workspace/yangchen/logs/erqa-baseline-20261114/full/predictions.jsonl",
+        "--candidate",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/predictions.jsonl",
+        "--data-dir",
+        "/workspace/yangchen/datasets/erqa-official-20261114",
+        "--output",
+        "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/diff.json"
+      ],
+      "cwd": "/workspace/yangchen/Clef-27B-ascend",
+      "started_at": "2026-11-15T03:30:11.869397+00:00",
+      "log": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa-diff.log",
+      "report": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/diff.json",
+      "status": "complete",
+      "returncode": 0,
+      "verification": {
+        "report": {
+          "path": "/workspace/yangchen/logs/mlp-20261115-1027/bf16-eval-v2/erqa/diff.json",
+          "sha256": "5ec0d7a9bab439c2fd74e5286557dd207982ea02da5b24d5ee0f74434d07d951"
+        },
+        "checks": {
+          "complete": true,
+          "zero_failures": true,
+          "alignment": true
+        },
+        "passed": true
+      },
+      "finished_at": "2026-11-15T03:30:11.951364+00:00",
+      "wall_seconds": 0.08164706965908408
+    }
+  ],
+  "sources": {
+    "od_sample_file": {
+      "path": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+      "sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141"
+    },
+    "od_data": {
+      "path": "/workspace/yangchen/datasets/clef-full-20261112/full-data/open-decisions2352.jsonl",
+      "sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6"
+    },
+    "od_reference": {
+      "path": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s1-final-full.json",
+      "sha256": "dae6550127957e7ec50ca84bc717d44c22a0cc9e1fe98a29250b03a52dcf929b"
+    },
+    "od_scorer": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.py",
+      "sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377"
+    },
+    "od_template": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl",
+      "sha256": "29fe80b8062b9966277f0d34b1aed76d8ef80ac260eed3c53f2bd0a83f25e915"
+    },
+    "erqa_manifest": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/manifest.json",
+      "sha256": "a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb"
+    },
+    "erqa_samples": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/samples.jsonl",
+      "sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af"
+    },
+    "erqa_reference": {
+      "path": "/workspace/yangchen/logs/erqa-baseline-20261114/full/predictions.jsonl",
+      "sha256": "e086980af28c954b2c1270d808d6434e721f2629051ec5cbc6e1979ce4ab5047"
+    }
+  },
+  "configuration": {
+    "base_url": "http://127.0.0.1:18143",
+    "python": "/workspace/yangchen/venvs/clef-eval-py312/bin/python",
+    "od_items": 2352,
+    "od_concurrency": 1,
+    "od_warmup_total_requests": 2352,
+    "run_erqa": true
+  },
+  "performance_scope": "Single full-dataset run at client concurrency 1; OD warmup is a separate window; ERQA runner timings include its recorded retry policy",
+  "script": {
+    "path": "/workspace/yangchen/Clef-27B-ascend/runtime/run_mlp_dataset_eval.py",
+    "sha256": "d1353c17f67076e0140e4db94cb2b3cc45466fc548f77bd27b962e695b67ed00"
+  },
+  "finished_at": "2026-11-15T03:30:11.951779+00:00"
+}
