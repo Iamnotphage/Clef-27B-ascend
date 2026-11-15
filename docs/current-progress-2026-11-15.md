@@ -275,6 +275,7 @@
 - 每请求每 rank 要流约 **17.1 GB** MLP 权重（up/gate 11.4 + down 5.7），实测有效带宽约 **0.53 TB/s**。
 - 2026-11-15 纯 HBM 微基准：`copy` 1.26–1.27 TB/s、AI Core `sum` 读 1.30–1.32 TB/s；MLP 仅约 40–42%，**不是 HBM 上限**。
 - 2026-11-15 BF16 NZ 局部实验：`F.linear` 接受 FRACTAL_NZ29，全部输出与 ND **逐位一致**；cold 307 token **1.26–1.32×**（名义 509–532→671–677 GB/s）、969 **1.06×**、1595/10294 约 **1.00–1.03×**。S1 P95（969 token）的 MLP 已约 256–299 TFLOPS、转为 **compute-bound**，NZ 对 P95 约 **1.9%**，是质量中性候选而非主杠杆。[报告](mlp-bf16-nz-2026-11-15.md)
+- 2026-11-15 纯 BF16 matmul 上限：Cube 约 **300–320 TFLOPS**（10294/4096 方阵）；969 的 gate/up 282、down 258，MLP 链 0.954 ms/层 ≈ 纯 matmul 之和 0.948，链开销 <1%。BF16 tiling 的理论上限约 **3–4% 端到端**，M padding 仅 969→1024 约 2%；长序列大杠杆是 **INT8 gate/up**（约 10%，质量门槛）与 **MC2 down+allreduce**（约 10%，质量中性）。[报告](mlp-cube-ceiling-2026-11-15.md)
 - 问题：
   1. BF16 NZ 预打包、更大 tile、双缓冲、L2 预取能把 MLP 有效带宽从 0.53 提到多少？
   2. 纯 HBM 1.27 TB/s 对应的 gate/up 理论上限约 9.0 ms（当前 21.34）、MLP 合计约 13.5 ms（当前 32.07）；matmul 实际能兑现多少？
