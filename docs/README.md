@@ -1,6 +1,6 @@
 # Clef-27B baseline 调查与执行计划
 
-更新：2026-11-14（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching。比赛质量交付已完成 OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题，最终性能配置为 seqs1/B1。CPU 独立参考完成两套数据的全量输入等价验收与部分逐题对照（OpenDecisions 154/2352），按用户要求终止。2026-11-15 完成 GDN 决策专用 prefill 路径并接入 S1 默认启用：全量 2,352 题逐位不变，同进程交错 A/B 6/6 对更快（p95 中位 −3.80%），正常入口 S1 P95 213.56 ms；ERQA 400 ON/OFF 逐题一致。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) · [ERQA 全量](erqa-baseline-2026-11-14.md) · [CPU 参考对照](cpu-npu-reference-2026-11-14.md) · [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md)
+更新：2026-11-14（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching。比赛质量交付已完成 OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题，最终性能配置为 seqs1/B1。CPU 独立参考完成两套数据的全量输入等价验收与部分逐题对照（OpenDecisions 154/2352），按用户要求终止。2026-11-15 完成 GDN 决策专用 prefill 路径并接入 S1 默认启用：全量 2,352 题逐位不变，同进程交错 A/B 6/6 对更快（p95 中位 −3.80%），正常入口 S1 P95 213.56 ms；ERQA 400 ON/OFF 逐题一致。提交入口 profile 显示 MLP 占 31.6%、TP2 allreduce 20.1%、GDN 主核 10.4%、布局 6.6%。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) · [ERQA 全量](erqa-baseline-2026-11-14.md) · [CPU 参考对照](cpu-npu-reference-2026-11-14.md) · [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md)
 
 比赛质量验收采用 **OpenDecisions + ERQA**，性能验收采用 **S1 单并发 P95 / S2 最大有效 decisions/s**；Decision Index 与 Typesafe WorkflowEvals 保留为发布方对照记录。[比赛提交规范](submission-rules-2026-11-13.md)
 
@@ -28,6 +28,7 @@
 | [ERQA 全量](erqa-baseline-2026-11-14.md) | 官方 400 题数据清单、图文协议、图像预算、8 类分项、离线复核与适配补丁 |
 | [CPU 参考对照](cpu-npu-reference-2026-11-14.md) | 发布方参考实现的 CPU BF16 独立前向、全量输入等价、逐题概率差与终止范围 |
 | [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md) | 纯 prefill 特化：状态与反向中间量裁剪、guard 设计、6 对 A/B 与服务恢复 |
+| [提交入口 profile](profile-entry-2026-11-15.md) | 优化后设备预算：MLP、TP2 allreduce、GDN 主核与布局、attention |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
