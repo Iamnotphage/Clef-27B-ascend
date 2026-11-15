@@ -22,6 +22,8 @@ import time
 DEFAULT_MODEL_DIR = "/workspace/yangchen/models/Clef-27B"
 SERVED_MODEL_NAME = "clef"
 PROTOCOL_VERSION = "2026-11-13"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
 MM_PROCESSOR_KWARGS = (
     '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
@@ -154,6 +156,74 @@ def software_provenance():
             entry["error"] = repr(exc)
         provenance[name] = entry
     return provenance
+
+
+def gdn_decision_prefill(config, apply=True):
+    """Install and verify the decision-only GDN prefill patch.
+
+    Enabled by default for the submission config ``s1``; set
+    ``CLEF_GDN_DECISION_PREFILL=0`` to turn it off.  The installer refuses a
+    tree whose preimage does not match, which is how the existing BSND patch
+    dependency is enforced: the BSND patch must be applied first.
+    """
+    requested_value = os.environ.get("CLEF_GDN_DECISION_PREFILL")
+    if requested_value is not None:
+        requested = requested_value.strip().lower() not in ("", "0", "false", "no", "off")
+        source = "env"
+    else:
+        requested = config == "s1"
+        source = f"config:{config}" if requested else "config"
+    record = {
+        "enabled": False,
+        "requested": requested,
+        "source": source,
+        "installer": str(GDN_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(GDN_INSTALLER.read_bytes()) if GDN_INSTALLER.is_file() else None),
+    }
+    if not requested:
+        return record
+    if not GDN_INSTALLER.is_file():
+        raise SystemExit(f"GDN decision patch installer missing: {GDN_INSTALLER}")
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(GDN_INSTALLER), flag],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise SystemExit(
+                f"GDN decision patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return json.loads(result.stdout)
+
+    report = run("--check")
+    statuses = {path: item["status_before"] for path, item in report["files"].items()}
+    if any(state == "preimage" for state in statuses.values()):
+        if not apply:
+            record.update(pending_install=True, patch_state=statuses)
+            return record
+        report = run("--apply")
+        statuses = {
+            path: item.get("status_after", item["status_before"])
+            for path, item in report["files"].items()
+        }
+    unknown = {
+        path: state for path, state in statuses.items()
+        if state not in ("patched", "preimage")
+    }
+    if unknown:
+        raise SystemExit(
+            "GDN decision patch cannot be applied: the source tree does not match "
+            f"the expected preimage (BSND patch missing or tree changed): {unknown}")
+    if any(state != "patched" for state in statuses.values()):
+        raise SystemExit(f"GDN decision patch incomplete: {statuses}")
+    record.update(
+        enabled=True,
+        patch_state=statuses,
+        files={path: item.get("sha256") for path, item in report["files"].items()},
+        flag_module_sha256=report.get("flag_module", {}).get("sha256"),
+    )
+    return record
 
 
 def schema_cache_version(path):
@@ -376,6 +446,8 @@ def build_launch(args):
         command += ["--mm-processor-kwargs", CONFIGS[config]["mm_processor_kwargs"]]
     command += passthrough
 
+    gdn_decision = gdn_decision_prefill(config, apply=not getattr(args, "dry_run", False))
+
     environment = {
         "CLEF_MODEL_NAME": SERVED_MODEL_NAME,
         "CLEF_MODEL_DIR": str(model_dir),
@@ -388,6 +460,12 @@ def build_launch(args):
         "CLEF_SCHEMA_TOKEN_CACHE": "1" if schema_enabled else "0",
         "CLEF_SCHEMA_TOKEN_CACHE_VERSION": str(schema_version if schema_enabled else 0),
     }
+    if gdn_decision["enabled"]:
+        environment["CLEF_GDN_DECISION_PREFILL"] = "1"
+    if os.environ.get("CLEF_GDN_FLAG_FILE"):
+        # Experiment-only override, recorded so the manifest shows it.
+        gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]
+        environment["CLEF_GDN_FLAG_FILE"] = gdn_decision["flag_file"]
     return {
         "python": sys.executable,
         "model_dir": str(model_dir),
@@ -399,6 +477,7 @@ def build_launch(args):
         "sources": sources,
         "environment": effective_environment(),
         "service_environment": environment,
+        "gdn_decision_prefill": gdn_decision,
         "software": software_provenance(),
         "schema_cache": {
             "enabled": schema_enabled,

@@ -32,22 +32,26 @@ class FlagTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.flag_file = Path(self.temporary.name) / "flags.json"
-        self._original_file = flags.FLAG_FILE
-        flags.FLAG_FILE = self.flag_file
-        for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE"):
+        for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE",
+                    "CLEF_GDN_FLAG_FILE"):
             os.environ.pop(key, None)
         flags.reset_cache()
 
     def tearDown(self):
-        flags.FLAG_FILE = self._original_file
-        for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE"):
+        for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE",
+                    "CLEF_GDN_FLAG_FILE"):
             os.environ.pop(key, None)
         flags.reset_cache()
         self.temporary.cleanup()
 
+    def opt_in(self):
+        os.environ["CLEF_GDN_FLAG_FILE"] = str(self.flag_file)
+        flags.reset_cache()
+
     def test_env_defaults(self):
         self.assertFalse(flags.decision_prefill_enabled())
         self.assertFalse(flags.no_recompute_enabled())
+        self.assertFalse(flags.runtime_override_enabled())
         os.environ["CLEF_GDN_DECISION_PREFILL"] = "1"
         flags.reset_cache()
         self.assertTrue(flags.decision_prefill_enabled())
@@ -59,16 +63,25 @@ class FlagTests(unittest.TestCase):
             flags.reset_cache()
             self.assertFalse(flags.decision_prefill_enabled(), value)
 
-    def test_file_override(self):
+    def test_file_is_ignored_without_optin(self):
         self.flag_file.write_text(json.dumps({"decision_prefill": True}))
-        flags.reset_cache()
-        self.assertTrue(flags.decision_prefill_enabled())
-        self.flag_file.write_text(json.dumps({"decision_prefill": False}))
         flags.reset_cache()
         self.assertFalse(flags.decision_prefill_enabled())
         self.assertFalse(flags.no_recompute_enabled())
 
+    def test_file_override_with_optin(self):
+        self.opt_in()
+        self.flag_file.write_text(json.dumps({"decision_prefill": True}))
+        flags.reset_cache()
+        self.assertTrue(flags.decision_prefill_enabled())
+        self.flag_file.write_text(json.dumps({"decision_prefill": False}))
+        os.utime(self.flag_file, (time.time() + 5, time.time() + 5))
+        time.sleep(1.1)
+        self.assertFalse(flags.decision_prefill_enabled())
+        self.assertFalse(flags.no_recompute_enabled())
+
     def test_no_recompute_independent(self):
+        self.opt_in()
         self.flag_file.write_text(
             json.dumps({"decision_prefill": True, "no_recompute": False})
         )
@@ -76,18 +89,19 @@ class FlagTests(unittest.TestCase):
         self.assertTrue(flags.decision_prefill_enabled())
         self.assertFalse(flags.no_recompute_enabled())
 
-    def test_file_wins_over_env(self):
+    def test_file_wins_over_env_when_opted_in(self):
         os.environ["CLEF_GDN_DECISION_PREFILL"] = "0"
+        self.opt_in()
         self.flag_file.write_text(json.dumps({"decision_prefill": True}))
         flags.reset_cache()
         self.assertTrue(flags.decision_prefill_enabled())
 
     def test_mtime_cache(self):
+        self.opt_in()
         self.flag_file.write_text(json.dumps({"decision_prefill": True}))
         flags.reset_cache()
         self.assertTrue(flags.decision_prefill_enabled())
         self.flag_file.write_text(json.dumps({"decision_prefill": False}))
-        # Some filesystems have one-second mtime granularity; force a change.
         os.utime(self.flag_file, (time.time() + 5, time.time() + 5))
         time.sleep(1.1)
         self.assertFalse(flags.decision_prefill_enabled())
@@ -218,6 +232,7 @@ class PatcherTests(unittest.TestCase):
         self.assertIn("_decision_safe_config", patched)
         self.assertIn("enable_chunked_prefill", patched)
         self.assertIn("enable_prefix_caching", patched)
+        self.assertIn('runner_type == "pooling"', patched)
 
     def test_patch_is_idempotent_signal(self):
         # A patched file must be recognised by the marker check.

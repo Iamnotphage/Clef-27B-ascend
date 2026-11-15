@@ -243,6 +243,7 @@ INIT_PATCHED = (
     + "            vllm_config = args[1]\n"
     + "        self._decision_safe_config = bool(\n"
     + "            vllm_config is not None\n"
+    + "            and vllm_config.model_config.runner_type == \"pooling\"\n"
     + "            and not vllm_config.scheduler_config.enable_chunked_prefill\n"
     + "            and not vllm_config.cache_config.enable_prefix_caching\n"
     + "            and not vllm_config.speculative_config\n"

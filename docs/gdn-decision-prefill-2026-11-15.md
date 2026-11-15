@@ -7,24 +7,26 @@
 - 数值完全不变：8 例冻结回归 OFF/ON 均 8/8；OpenDecisions 全量 2,352 题在 OFF 与 ON 下**逐位一致**（最大概率差 0.0），也与冻结 baseline 逐位一致。
 - 同进程交错 A/B（588 题分层子集，6 对，交替顺序）：**6/6 对 ON 更快**，p95 中位 **−3.80%（−7.68 ms）**，均值 −4.13%，吞吐中位 +0.17 decisions/s。
 - 全量 2,352 单次：wall 413.65→408.30 s（−1.29%），p50 195.26→191.03 ms（−2.17%），p99 216.66→211.32 ms（−2.47%），p95 204.65→204.86 ms（单次噪声内，不作结论）。
-- 开关默认关闭；是否写入 `--config s1` 由用户决定（本文第 6 节给出确切命令）。
+- **S1 默认启用**：`inference.py` 在启动时安装并校验补丁，manifest 记录实际状态；`CLEF_GDN_DECISION_PREFILL=0` 可关闭。
 
 ## 1. 改了什么
 
 服务配置为 seqs1、无 prefix caching、无 chunked prefill、无 speculative decoding，模型一次 pooling 前向直接出决策（`output_tokens=0`），因此**从来不会有 decode 步**。但固定 vLLM-Ascend 的 GDN prefill 分支仍无条件：
 
-1. `gather_ssm_states` 取出初始状态（无历史时为全零）；
+1. `gather_ssm_states` 取出初始状态（无历史时为全零），并对输入状态做 `transpose(-1,-2).contiguous()`；
 2. `output_final_state=True` 计算并返回 final state；
 3. `final_state.transpose(-1,-2).contiguous()` 转置后 `scatter_ssm_states_` 写回 `ssm_state`；
 4. fused kernel 的 `disable_recompute=True` 每层分配并写出 `g_cumsum [B,T,Hv] fp32` 与 `A [B,Hv,T,64]`，这两个张量只供反向重算使用。
 
-本轮的决策专用路径在满足 guard 时跳过 1–4。按 446 tokens、48 层估算，第 4 项的 `A` 约 2.7 MB/层、约 130 MB/请求。
+本轮的决策专用路径**保留第 1 项**（初始状态 gather 与输入状态转置仍在执行），在满足 guard 时消除第 **2、3、4** 项：最终状态导出、其转置与 scatter 写回，以及反向中间量输出。按 446 tokens、48 层估算，第 4 项的 `A` 约 2.7 MB/层、约 130 MB/请求。
+
+因此收益来自“无读者的输出”，而不是初始状态读取；若后续要再省第 1 项，需要让 kernel 接受 `initial_state=None` 并单独验证。
 
 ### 1.1 代码落点
 
 | 文件 | 改动 |
 | --- | --- |
-| `vllm_ascend/ops/gdn_decision_flags.py`（新增） | 进程默认开关 + `/dev/shm/clef-gdn-flags.json` 运行时覆盖（1 秒 mtime 缓存），用于同进程 A/B |
+| `vllm_ascend/ops/gdn_decision_flags.py`（新增） | 进程默认开关 + 显式 opt-in 的 `CLEF_GDN_FLAG_FILE` 运行时覆盖（1 秒 mtime 缓存），用于同进程 A/B |
 | `vllm_ascend/device/device_op.py` | A3 `fla_gdn_prefill` 两处调用：`output_final_state=not decision_only`、`disable_recompute=not skip_recompute`；`decision_only` 时返回 `(output, None)` |
 | `vllm_ascend/ops/gdn.py` | prefill 分支：宿主侧 guard；`last_recurrent_state is None` 时跳过状态转置与 scatter |
 | `vllm_ascend/patch/worker/patch_qwen3_5.py` | 在实际执行的 `QwenGatedDeltaNetAttention.__init__` 包装器里记录 `_decision_safe_config` |
@@ -46,7 +48,7 @@ and num_spec_decode_tokens == 0
 ### 1.3 开关
 
 - `CLEF_GDN_DECISION_PREFILL=1` 进程默认开启；`CLEF_GDN_NO_RECOMPUTE` 可单独控制第 4 项。
-- `/dev/shm/clef-gdn-flags.json`：`{"decision_prefill": true, "no_recompute": true}`，用于不重启服务切换。
+- 实验覆盖：服务以 `CLEF_GDN_FLAG_FILE=<路径>` 启动时才读取该 JSON（`{"decision_prefill": true}`），用于不重启服务切换；提交入口不设置该变量。
 - 默认值均为关；关闭时行为与原始代码逐字节等价。
 
 ## 2. 正确性
@@ -66,7 +68,7 @@ and num_spec_decode_tokens == 0
 
 ### 3.1 同进程交错 A/B（判定依据）
 
-588 题按 index 每 4 题取 1（覆盖三类与不同长度），同一服务进程内交替 OFF/ON，奇偶对交换顺序。
+588 题按**等距抽样**（每 4 题取 1，覆盖三类与不同长度），同一服务进程内交替 OFF/ON，奇偶对交换顺序。
 
 | 对 | 顺序 | p95 OFF (ms) | p95 ON (ms) | 变化 |
 | ---: | --- | ---: | ---: | ---: |
@@ -130,21 +132,23 @@ CLEF_GDN_DECISION_PREFILL=0 bash Clef-27B/start.sh \
   --output-dir /workspace/yangchen/logs/gdn-decision-20261115/service \
   --config s1 --port 18143
 
-# 同进程交错 A/B
+# 同进程交错 A/B（服务须以同一 CLEF_GDN_FLAG_FILE 启动）
 python runtime/gdn_decision_ab.py \
   --sample-file /workspace/yangchen/logs/gdn-decision-20261115/ab/ab-subset-stride4.json \
   --url http://127.0.0.1:18143/v1/systemone --limit 10000 --pairs 6 \
+  --flag-file /dev/shm/clef-gdn-ab.json --service-pid <service-pid> \
   --output-dir /workspace/yangchen/logs/gdn-decision-20261115/ab/pairs
 
 # 回退
 python runtime/apply_gdn_decision_patch.py --revert
 ```
 
-## 6. 采用建议
+## 6. 采用决定
 
-- 补丁默认关闭。若要把收益带进提交配置，在 `--config s1` 启动时设置 `CLEF_GDN_DECISION_PREFILL=1` 即可；数值已证明逐位不变。
-- 是否把该环境变量写进 `start.sh` 的 s1 默认路径，需要用户确认（会改变提交运行的启动清单）。
+- 用户已决定采纳并**推进 S1 默认启用**；集成方式见第 9 节。
+- 补丁仍保留 `CLEF_GDN_DECISION_PREFILL=0` 关闭路径，便于回退与对照。
 - 本轮 A/B 测的是 A+B 合并路径；A-only 与 B-only 的单独贡献未用最终代码重复测量，v1 的逐次数据受顺序混杂，不作归因。
+- S2 收益未测量：当前 A/B 是单并发顺序回放，+0.170 decisions/s 不能外推到并发场景。
 
 ## 7. 证据
 
@@ -162,7 +166,62 @@ python runtime/apply_gdn_decision_patch.py --revert
 
 ## 8. 服务恢复
 
-- 原始服务停止后，按 phase-0 快照恢复为 **PID 475769**；argv、cwd、环境白名单与 PID 432954 逐项一致。
+- 原始服务停止后，按 phase-0 快照恢复为 **PID 498272**；argv、cwd、环境白名单与 PID 432954 逐项一致。
 - `GET /health` **200**；8/8 冻结用例逐位一致。
 - 三个被补丁的源码文件 SHA-256 回到 preimage：`device_op.py a08d44b4…`、`gdn.py b235e34d…`、`patch_qwen3_5.py a9a71634…`；`gdn_decision_flags.py` 已移除。
-- 当前服务指针已更新为 475769。
+- 当前服务指针已更新为 498272。
+
+## 9. 启动入口集成（S1 默认启用）
+
+`Clef-27B/inference.py` 在构造启动参数时调用 `gdn_decision_prefill(config)`：
+
+- `--config s1` 默认请求启用；`CLEF_GDN_DECISION_PREFILL=0` 可显式关闭。
+- 先运行安装器 `--check`：源码处于 preimage 时按需 `--apply`，已 patched 时跳过；逻辑幂等。
+- 源码树与预期 preimage 不符（例如缺少既有 BSND 补丁）时**拒绝启动**并列出缺失项，避免“以为启用、实际没生效”。
+- 启用后把 `CLEF_GDN_DECISION_PREFILL=1` 写入服务环境。
+- `launch-manifest.json` 新增 `gdn_decision_prefill`：`enabled` / `requested` / `source` / `patch_state` / 每个文件的 SHA-256 / `flag_module_sha256` / `installer_sha256`。
+
+**BSND 依赖**：本补丁的 preimage SHA 对应“已应用 C1′ BSND 补丁”的源码树。全新部署须先应用 `runtime/gdn-bsnd.patch`；入口检查会把缺失暴露为启动失败，而不是静默降级。
+
+**实验开关隔离**：`/dev/shm` 文件覆盖改为显式 opt-in——服务必须以 `CLEF_GDN_FLAG_FILE=<路径>` 启动才会读取该文件；提交入口不设置该变量，散落的标志文件无法影响提交运行。A/B 驱动要求显式传入同一路径，并在 `finally` 中恢复原文件（含异常路径）。
+
+**Guard 增加 pooling 条件**：普通生成服务的首个 prefill 批也满足其余条件，随后 decode 需要被跳过的循环状态；`model_config.runner_type == "pooling"` 在构造期排除该场景，并配生成路径回退测试。
+
+## 10. 最终验收（正常入口）
+
+### 10.1 启动清单
+
+`bash Clef-27B/start.sh --model-dir ... --output-dir ... --config s1 --port 18143` 生成的 `launch-manifest.json` 记录：
+
+- `gdn_decision_prefill.enabled = true`，`source = config:s1`；
+- `patch_state`：`device_op.py`、`gdn.py`、`patch_qwen3_5.py` 均为 `patched`；
+- 三个文件的 SHA-256：`ad92a322…`、`509dafb0…`、`1b82b52e…`；
+- `flag_module_sha256`：`cf1ede3f…`；`installer_sha256` 一并记录；
+- 服务环境 `CLEF_GDN_DECISION_PREFILL=1`，进程 `/proc/<pid>/environ` 已核对。
+
+### 10.2 正确性
+
+| 检查 | 结果 |
+| --- | --- |
+| 8 例冻结回归（入口服务，ON） | 8/8 |
+| 全量 2,352 vs 冻结 baseline | **2,352/2,352 逐位，max 0.0** |
+| ERQA 400 ON vs OFF | **400/400 逐题一致，max 概率差 0.0** |
+| ERQA accuracy | 219/400 = 0.5475（两边相同） |
+
+### 10.3 S1（正常入口，全量 2,352）
+
+| 项 | 值 |
+| --- | ---: |
+| 成功 / 失败 | 2,352 / 0 |
+| wall | 408.33 s |
+| decisions/s | 5.760 |
+| mean / p50 / p95 / p99 | 173.60 / 195.57 / **213.56** / 223.56 ms |
+
+`results.csv` 的 S1 行更新为 213.5597 ms；S2 仍是优化前的 seqs1 扫描值（5.715 @ C16），本轮未做并发复测，需在后续并发测量中更新。
+
+### 10.4 服务恢复
+
+- 实验服务停止后，按 phase-0 快照恢复原服务为 **PID 498272**；argv、cwd、环境白名单与 phase-0 逐项一致。
+- `GET /health` 200；8/8 冻结用例逐位一致。
+- 源码树保留已应用的补丁（这是新的默认入口状态）；原 8000 服务进程未设置 `CLEF_GDN_DECISION_PREFILL`，运行的是 baseline 路径，输出与冻结结果一致。
+- 当前服务指针更新为 498272。
