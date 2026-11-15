@@ -330,6 +330,7 @@ def main() -> int:
         [203, 307, 401, 512],
         [307, 64, 129, 205],
         [662],
+        [10294],
     ]
     probe_conv(report, generator, lengths_cases)
     probe_initial_state(report, generator, lengths_cases)

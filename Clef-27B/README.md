@@ -12,6 +12,8 @@
 
 2026-11-15 完成 GDN 决策专用 prefill 路径，省去最终循环状态导出、写回和反向中间量输出。全量 2,352 题逐位不变，6 对交错 A/B 全部更快，p95 降幅中位数 3.80%。补丁已接入 `start.sh --config s1` 默认启用，启动时安装并校验，manifest 记录状态。正常入口 S1 P95 213.56 ms，ERQA 400 ON/OFF 逐题一致，原服务恢复至 PID 498272。[GDN 报告](../docs/gdn-decision-prefill-2026-11-15.md) · [证据](logs/gdn-decision-20261115/)
 
+2026-11-15 进一步完成 GDN 数据路径整理：`--config s1` 默认启用 **BIC**（BSND 布局、`initial_state=None`、`conv_states=None`）。全量 2,352 题与 baseline 逐位一致（Capability 74.425479、accuracy 1906、Score MAE 0.401389），6 对交错 A/B p95 中位 **−7.01%（−13.81 ms）**、6/6 更快；正常入口 S1 P95 **198.42 ms**（另一同进程窗口 BIC 185.62 / R 197.95），seqs4 C8 **14.652 decisions/s**、C16 14.689。ERQA 400 题 R/BIC 对比见报告。Ascend C 前处理融合原型短序列约 2×、长序列反而变慢且 Q/K 有 1 ulp 差异，**不接入**。[GDN 数据路径报告](../docs/gdn-data-path-2026-11-15.md) · [证据](logs/gdn-data-path-20261115/)
+
 Decision Index 和 Typesafe WorkflowEvals 保留发布方对照用途。Decision Index 本次运行已于 2026-11-13 15:55 按用户要求终止，部分结果按未完成记录保留；WorkflowEvals 已完成。[比赛交付规则](../docs/submission-rules-2026-11-13.md)
 
 ## 环境记录

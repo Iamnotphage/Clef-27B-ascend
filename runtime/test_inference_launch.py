@@ -47,6 +47,78 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(launch["effective"]["mm_processor_kwargs"], value)
         self.assertEqual(launch["sources"]["mm_processor_kwargs"], source)
 
+    def test_s1_data_path_defaults_follow_the_decision_patch(self):
+        disabled = self.launch("--config", "s1")
+        for key in ("bsnd", "skip_initial_state", "skip_conv_state",
+                    "preprocess_fusion"):
+            self.assertFalse(
+                disabled["gdn_decision_prefill"]["data_path"][key]["effective"])
+        enabled_patch = {
+            "enabled": True,
+            "requested": True,
+            "source": "config:s1",
+            "patch_version": 3,
+            "patch_state": {},
+            "files": {},
+            "flag_module_sha256": "x",
+            "installer_sha256": "x",
+        }
+        with mock.patch.object(launcher, "gdn_decision_prefill",
+                               return_value=dict(enabled_patch)):
+            launch = self.launch("--config", "s1")
+        record = launch["gdn_decision_prefill"]["data_path"]
+        for key in ("bsnd", "skip_initial_state", "skip_conv_state"):
+            self.assertTrue(record[key]["effective"])
+            self.assertEqual(record[key]["source"], "config:s1")
+        self.assertFalse(record["preprocess_fusion"]["effective"])
+        self.assertEqual(launch["service_environment"]["CLEF_GDN_BSND"], "1")
+        self.assertEqual(
+            launch["service_environment"]["CLEF_GDN_SKIP_INITIAL_STATE"], "1")
+        self.assertEqual(
+            launch["service_environment"]["CLEF_GDN_SKIP_CONV_STATE"], "1")
+        custom = self.launch("--config", "custom")
+        for key in ("bsnd", "skip_initial_state", "skip_conv_state"):
+            self.assertFalse(
+                custom["gdn_decision_prefill"]["data_path"][key]["effective"])
+
+    def test_flag_file_values_are_recorded_and_win(self):
+        flag = self.root / "flags.json"
+        flag.write_text(json.dumps({
+            "epoch": 9, "bsnd": False, "skip_conv_state": True,
+        }))
+        os.environ["CLEF_GDN_FLAG_FILE"] = str(flag)
+        self.addCleanup(os.environ.pop, "CLEF_GDN_FLAG_FILE", None)
+        enabled_patch = {"enabled": True, "requested": True,
+                         "source": "config:s1", "files": {},
+                         "patch_state": {}, "flag_module_sha256": "x",
+                         "installer_sha256": "x", "patch_version": 3}
+        with mock.patch.object(launcher, "gdn_decision_prefill",
+                               return_value=dict(enabled_patch)):
+            launch = self.launch("--config", "s1")
+        record = launch["gdn_decision_prefill"]["data_path"]
+        self.assertFalse(record["bsnd"]["effective"])
+        self.assertEqual(record["bsnd"]["source"], "flag_file")
+        self.assertTrue(record["skip_conv_state"]["effective"])
+        self.assertEqual(record["skip_conv_state"]["source"], "flag_file")
+        self.assertEqual(record["flag_file"]["epoch"], 9)
+        self.assertIsNotNone(record["flag_file"]["sha256"])
+        self.assertNotIn("CLEF_GDN_BSND", launch["service_environment"])
+
+    def test_explicit_data_path_env_wins_and_is_recorded(self):
+        enabled_patch = {"enabled": True, "requested": True,
+                         "source": "config:s1", "files": {},
+                         "patch_state": {}, "flag_module_sha256": "x",
+                         "installer_sha256": "x", "patch_version": 3}
+        os.environ["CLEF_GDN_BSND"] = "0"
+        self.addCleanup(os.environ.pop, "CLEF_GDN_BSND", None)
+        with mock.patch.object(launcher, "gdn_decision_prefill",
+                               return_value=dict(enabled_patch)):
+            launch = self.launch("--config", "s1")
+        record = launch["gdn_decision_prefill"]["data_path"]["bsnd"]
+        self.assertFalse(record["effective"])
+        self.assertEqual(record["source"], "env")
+        self.assertNotIn("CLEF_GDN_BSND", launch["service_environment"])
+
     def test_s1_and_s2_defaults_emit_one_mm_option(self):
         for config in ("s1", "s2"):
             launch = self.launch("--config", config)

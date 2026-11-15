@@ -40,6 +40,12 @@ CONFIGS = {
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "off",
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
+        "gdn_data_path": {
+            "bsnd": True,
+            "skip_initial_state": True,
+            "skip_conv_state": True,
+            "preprocess_fusion": False,
+        },
     },
     "s2": {
         "tensor_parallel_size": 2,
@@ -49,7 +55,20 @@ CONFIGS = {
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "on",
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
+        "gdn_data_path": {
+            "bsnd": True,
+            "skip_initial_state": True,
+            "skip_conv_state": True,
+            "preprocess_fusion": False,
+        },
     },
+}
+
+DATA_PATH_ENV = {
+    "bsnd": "CLEF_GDN_BSND",
+    "skip_initial_state": "CLEF_GDN_SKIP_INITIAL_STATE",
+    "skip_conv_state": "CLEF_GDN_SKIP_CONV_STATE",
+    "preprocess_fusion": "CLEF_GDN_PREPROCESS_FUSION",
 }
 
 # Launcher-owned value flags that a passthrough argument may override.
@@ -264,6 +283,60 @@ def gdn_decision_prefill(config, apply=True):
         flag_module_sha256=report.get("flag_module", {}).get("sha256"),
     )
     return record
+
+
+def gdn_data_path(config, enabled):
+    """Resolve the three data-path switches and their service environment.
+
+    ``s1``/``s2`` adopt the measured BIC combination (BSND operands, no
+    initial-state gather, no convolution cache) when the decision patch is
+    enabled.  An explicit ``CLEF_GDN_*`` value always wins, so an operator can
+    reproduce a single-switch arm without editing the launcher.  The fused
+    preprocessing prototype stays off until its operator is bundled.
+    """
+    defaults = CONFIGS[config].get("gdn_data_path", {})
+    flag_file = os.environ.get("CLEF_GDN_FLAG_FILE")
+    file_values = {}
+    if flag_file:
+        try:
+            raw = Path(flag_file).read_text(encoding="utf-8")
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                file_values = parsed
+        except (OSError, ValueError):
+            file_values = {}
+    record = {}
+    environment = {}
+    for key, env_name in DATA_PATH_ENV.items():
+        configured = bool(defaults.get(key))
+        file_value = file_values.get(key)
+        if isinstance(file_value, bool):
+            value = file_value
+            source = "flag_file"
+        elif env_name in os.environ:
+            value = os.environ[env_name].strip().lower() not in (
+                "", "0", "false", "no", "off")
+            source = "env"
+        elif enabled and configured:
+            value = True
+            source = f"config:{config}"
+        else:
+            value = False
+            source = "default"
+        record[key] = {
+            "configured": configured,
+            "effective": value,
+            "source": source,
+            "env": env_name,
+        }
+        if value and source != "flag_file":
+            environment[env_name] = "1"
+    record["flag_file"] = {
+        "path": flag_file,
+        "sha256": sha256_bytes(Path(flag_file).read_bytes()) if flag_file and Path(flag_file).is_file() else None,
+        "epoch": file_values.get("epoch"),
+    }
+    return record, environment
 
 
 def schema_cache_version(path):
@@ -508,6 +581,11 @@ def build_launch(args):
     }
     if gdn_decision["enabled"]:
         environment["CLEF_GDN_DECISION_PREFILL"] = "1"
+        environment["CLEF_GDN_NO_RECOMPUTE"] = os.environ.get(
+            "CLEF_GDN_NO_RECOMPUTE", "1")
+    data_path, data_env = gdn_data_path(config, gdn_decision["enabled"])
+    gdn_decision["data_path"] = data_path
+    environment.update(data_env)
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
         # Experiment-only override, recorded so the manifest shows it.
         gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]

@@ -86,3 +86,15 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **C1 计时**：wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。该窗口为 ERQA 质量运行，不与 OpenDecisions S1/S2 混用。
 - **适配**：EvalScope ERQAAdapter 修补 `visual_indices` 图文排列、2～4 候选解析与 SystemOne 图文转换；19 题原生路径与直接 `/v1/decide` 逐题一致。补丁与 SHA 见 [logs/erqa-baseline-20261114/adapter-patch/](logs/erqa-baseline-20261114/adapter-patch/)。
 - **边界**：Clef 原生协议将图片放在 `state` 前，未按官方字符索引交错插入；30 条交错样本单独统计。图像上限 1,048,576 像素为 16 图与 16,384 token 的联合约束。
+
+## GDN 决策 prefill 数据路径，2026-11-15
+
+完整报告见 [docs/gdn-data-path-2026-11-15.md](../docs/gdn-data-path-2026-11-15.md)。
+
+- **开关**：在已采用的 `decision_prefill`/`no_recompute` 之上新增 `bsnd`、`skip_initial_state`、`skip_conv_state`，八臂 R/B/I/C/BI/BC/IC/BIC；严格 `epoch`、逐 forward 快照、双 TP rank 日志校验。
+- **契约探针**：`conv_states=None`、`initial_state=None`、连续 BSND 与实际包装器八臂在真实 TP2 形状（含 10,294 token、空 segment）全部逐位一致；BSND 跨步视图被 aclnn 161002 拒绝，保留一次连续拷贝。
+- **筛选与 A/B**：49 条代表样本八臂筛选 BIC 最优（p95 195.72 ms，R 201.97）；588 题 6 对交错 A/B 中 BIC **6/6 更快**，p95 中位 **−7.01%（−13.81 ms）**，吞吐 +0.378 dec/s，响应逐位一致。
+- **质量**：OpenDecisions 全量 2,352 的 R 与 BIC 都 **2,352/2,352 与 baseline 逐位一致**（Capability 74.425479、accuracy 1906、Score MAE 0.401389）。ERQA 400 题 R/BIC 概率逐位一致，accuracy 219/400。
+- **性能**：正常入口 S1 P95 **198.42 ms**（较上一提交入口 213.56 −7.09%）；同进程全量窗口 R 197.95 → BIC **185.62 ms**（−6.23%）；seqs4 C8 14.201 → **14.652 dec/s**、p95 946.54 → **913.93 ms**；C16 14.689。C8 的跨臂响应差异与同臂重跑（85 题、max 0.0656）同量级，归因于既有合批调度，不是本轮开关。
+- **入口**：`--config s1/s2` 默认启用 BIC，manifest 记录配置/生效值/来源；`preprocess_fusion` 默认关闭。
+- **融合原型**：Ascend C `ClefGdnQkvNorm` 短序列 2.0×、Q/K 1 ulp、V 逐位；1595/10,294 token 反而慢 0.86×/0.13×，不接入。

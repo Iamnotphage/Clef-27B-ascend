@@ -8,8 +8,9 @@
 
 - **模型**：Clef-27B，Qwen3.5 主干（64 层：48 层 GDN 线性注意力 + 16 层 full attention），hidden 5120，intermediate 34816，BF16 权重约 51 GB，27.48B 参数。
 - **环境**：昇腾 A3 单物理卡内 **2 个逻辑 NPU**（`Ascend910_9382`，各 64 GiB HBM），容器 32 核等价 CPU、128 GiB 内存；CANN 9.2.1、PyTorch 2.10.0+cpu、torch_npu 2.10.0.post7、vLLM `24420b7a…`、vLLM-Ascend `89eb8a5e…`。
-- **当前提交配置**：TP2 / BF16 / eager / max_model_len 4096 / max_num_seqs 1 / prefix cache 关 / chunked prefill 关；GDN 决策专用 prefill 路径默认开启。
-- **S1（单并发端到端 P95，2,352 题）**：baseline **217.036 ms** → 当前 **213.560 ms**（跨运行 −1.6%；同进程受控 A/B p95 中位 **−3.80%**）。
+- **当前提交配置**：TP2 / BF16 / eager / max_model_len 4096 / max_num_seqs 1 / prefix cache 关 / chunked prefill 关；GDN 决策专用 prefill 路径默认开启，并在 2026-11-15 默认启用 **BIC** 数据路径（BSND、`initial_state=None`、`conv_states=None`）。
+- **S1（单并发端到端 P95，2,352 题）**：baseline **217.036 ms** → GDN 决策路径 **213.560 ms** → 2026-11-15 正常入口 BIC **198.420 ms**（同窗口受控 A/B BIC vs R p95 中位 **−7.01%**；另一 flag 文件窗口 BIC 185.62、同窗口 R 197.95）。跨运行绝对值受机器漂移影响，采用结论以同进程 A/B 为准。
+- **2026-11-15 数据路径**：BIC 全量 2,352 逐位一致（Capability 74.425479）；ERQA 400 题 R/BIC 概率逐位一致（219/400）；seqs4 C8 **14.652 dec/s**、p95 913.93 ms，C16 14.689；融合 Ascend C 原型短序列 2×、长序列变慢且 Q/K 1 ulp，不接入。[报告](gdn-data-path-2026-11-15.md)
 - **S2（最大有效吞吐）**：baseline **5.715 dec/s @ C16**（seqs1，实际 batch 恒为 1）→ seqs4 **14.125 dec/s @ C16**（推荐工作点 C8：14.049 dec/s、p95 950.7 ms），约 **2.47×**。
 - **质量**：C1 与 baseline **逐位一致**（Capability 74.425479、accuracy 1906/2352、Score MAE 0.401389@588）；合批后 C8 为 Capability 74.195104（−0.230）、accuracy 1903、max 概率差 0.097399、6 条 choice 翻转、2 条 noul 跨 0.5。
 - **主要瓶颈**：设备 kernel 约占客户端 80%；其中 MLP 32.07 ms（31.6%）、TP2 allreduce 20.40 ms（20.1%）、GDN 主核 10.52 ms + 布局 6.73 ms、其他 MatMul（attention 投影等）14.82 ms。MLP 的 kernel 是 **MTE2 权重搬运受限**（占用 0.994），有效带宽约 0.53 TB/s。

@@ -1,0 +1,55 @@
+{
+  "tree": "/workspace/yangchen/work/src/vllm-ascend",
+  "patch_version": 3,
+  "at": "2026-11-15T10:10:07Z",
+  "action": "apply",
+  "files": {
+    "vllm_ascend/device/device_op.py": {
+      "status_before": "v2",
+      "sha256": "6886fa3fe7855d4dc8c754a9564ed2fe3967efd0cc09c5edd487c57be371d3ce",
+      "preimage_sha256": "a08d44b41b337d839548c02b7457510968d5c5057ece01243b022a91348a0823",
+      "postimage_sha256": "6886fa3fe7855d4dc8c754a9564ed2fe3967efd0cc09c5edd487c57be371d3ce",
+      "v2_postimage_sha256": "ad92a322a69dbd023cd88603b5882d0c5f7f931dbf20692957efdddd6f7809d2",
+      "v1_postimage_sha256": null,
+      "backup": "/workspace/yangchen/logs/gdn-decision-20261115/phase0/device_op.py.preimage",
+      "action": "upgraded",
+      "status_after": "patched"
+    },
+    "vllm_ascend/ops/gdn.py": {
+      "status_before": "v2",
+      "sha256": "7bc9b8f19e1ab17f7b484121c4c88c7f365c5ddb3a9f7a0380592175c077c893",
+      "preimage_sha256": "b235e34d8a2427b167d4ce0e9068312904ecd1473fe288cefe1e9b6f95de030d",
+      "postimage_sha256": "7bc9b8f19e1ab17f7b484121c4c88c7f365c5ddb3a9f7a0380592175c077c893",
+      "v2_postimage_sha256": "509dafb03b12351ebb17854742681b4aede60958a820d7625af94467c3586f43",
+      "v1_postimage_sha256": null,
+      "backup": "/workspace/yangchen/logs/gdn-decision-20261115/phase0/gdn.py.preimage",
+      "action": "upgraded",
+      "status_after": "patched"
+    },
+    "vllm_ascend/patch/worker/patch_qwen3_5.py": {
+      "status_before": "patched",
+      "sha256": "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+      "preimage_sha256": "a9a71634ed138f590fbc3ad0de277a5f56a06451522fd091b2657d6daf6084b0",
+      "postimage_sha256": "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+      "v2_postimage_sha256": "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+      "v1_postimage_sha256": "d2666387506cb68d9238c6f06baa89253158ee0facc67ad1243cf41ad01edcad",
+      "backup": "/workspace/yangchen/logs/gdn-decision-20261115/phase0/patch_qwen3_5.py.preimage",
+      "action": "already-patched",
+      "status_after": "patched"
+    }
+  },
+  "recovery_commands": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/Clef-27B-ascend/runtime/apply_gdn_decision_patch.py --tree /workspace/yangchen/work/src/vllm-ascend --backup-dir /workspace/yangchen/logs/gdn-decision-20261115/phase0 --revert",
+    "/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/Clef-27B-ascend/runtime/apply_gdn_decision_patch.py --tree /workspace/yangchen/work/src/vllm-ascend --backup-dir /workspace/yangchen/logs/gdn-decision-20261115/phase0 --apply"
+  ],
+  "flag_module": {
+    "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn_decision_flags.py",
+    "present": true,
+    "status": "current",
+    "sha256": "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287",
+    "source_sha256": "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287",
+    "expected_sha256": "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287",
+    "action": "installed"
+  },
+  "ready": true
+}
