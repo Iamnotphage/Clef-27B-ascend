@@ -2,7 +2,7 @@
 """Install or revert the decision-only GDN prefill switches.
 
 The running service uses an editable install of the pinned vLLM-Ascend tree
-(``89eb8a5``).  This installer owns three artifacts:
+(``89eb8a5``).  This installer owns four artifacts:
 
 1. ``vllm_ascend/ops/gdn_decision_flags.py`` — new flag module, copied from
    ``runtime/gdn_decision_flags.py``.
@@ -11,6 +11,8 @@ The running service uses an editable install of the pinned vLLM-Ascend tree
    the switches are on.
 3. ``vllm_ascend/ops/gdn.py`` — the prefill branch skips the state write-back
    when the wrapper returns no final state.
+4. ``vllm_ascend/patch/worker/patch_qwen3_5.py`` — the construction-time
+   guard restricts the specialization to a compatible pooling runner.
 
 Every edit is anchored on an exact snippet and gated by the preimage SHA-256,
 so a changed upstream tree is refused instead of silently mis-patched.  The
@@ -25,9 +27,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
-import shutil
+import os
+import shlex
+import sys
 import time
 from pathlib import Path
 
@@ -35,6 +40,9 @@ DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm-ascend")
 DEFAULT_BACKUP = Path("/workspace/yangchen/logs/gdn-decision-20261115/phase0")
 FLAG_SOURCE = Path(__file__).with_name("gdn_decision_flags.py")
 FLAG_TARGET = "vllm_ascend/ops/gdn_decision_flags.py"
+PATCH_VERSION = 2
+FLAG_SHA256 = "cf1ede3f3e8a894d9f0896a35cd07254ffa756e18e699fa40636cea86043fc70"
+LEGACY_FLAG_SHA256 = "02987b37857ffad0ab259fc55fad6bb1f02d39c885664b36353572057b98c731"
 
 PREIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
@@ -44,10 +52,17 @@ PREIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "a9a71634ed138f590fbc3ad0de277a5f56a06451522fd091b2657d6daf6084b0",
 }
-PATCH_MARKER = {
-    "vllm_ascend/device/device_op.py": "decision_prefill_enabled",
-    "vllm_ascend/ops/gdn.py": "if last_recurrent_state is not None:",
-    "vllm_ascend/patch/worker/patch_qwen3_5.py": "_decision_safe_config",
+POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
+        "ad92a322a69dbd023cd88603b5882d0c5f7f931dbf20692957efdddd6f7809d2",
+    "vllm_ascend/ops/gdn.py":
+        "509dafb03b12351ebb17854742681b4aede60958a820d7625af94467c3586f43",
+    "vllm_ascend/patch/worker/patch_qwen3_5.py":
+        "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+}
+LEGACY_POSTIMAGE_SHA = {
+    "vllm_ascend/patch/worker/patch_qwen3_5.py":
+        "d2666387506cb68d9238c6f06baa89253158ee0facc67ad1243cf41ad01edcad",
 }
 
 DEF_MARKER = "    def fla_gdn_prefill("
@@ -187,11 +202,13 @@ def sha256_file(path: Path) -> str:
 def status(path: Path, relative: str) -> str:
     if not path.is_file():
         return "missing"
-    text = path.read_text(encoding="utf-8")
-    if sha256_file(path) == PREIMAGE_SHA[relative]:
+    digest = sha256_file(path)
+    if digest == PREIMAGE_SHA[relative]:
         return "preimage"
-    if PATCH_MARKER[relative] in text:
+    if digest == POSTIMAGE_SHA[relative]:
         return "patched"
+    if digest == LEGACY_POSTIMAGE_SHA.get(relative):
+        return "legacy"
     return "unknown"
 
 
@@ -277,11 +294,151 @@ def patch_gdn(text: str) -> str:
 
 def write_atomic(path: Path, data: bytes) -> None:
     temporary = path.with_name(f".{path.name}.tmp-{time.time_ns()}")
-    temporary.write_bytes(data)
-    temporary.replace(path)
+    try:
+        temporary.write_bytes(data)
+        if path.is_file():
+            temporary.chmod(path.stat().st_mode & 0o777)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
-def main() -> int:
+def flag_status(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if not path.is_file():
+        return "unknown"
+    digest = sha256_file(path)
+    if digest == FLAG_SHA256:
+        return "current"
+    if digest == LEGACY_FLAG_SHA256:
+        return "legacy"
+    return "unknown"
+
+
+def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
+    state_key = "status_after" if after else "status_before"
+    for relative in PREIMAGE_SHA:
+        path = tree / relative
+        item = report["files"].setdefault(relative, {})
+        item.update({
+            state_key: status(path, relative),
+            "sha256": sha256_file(path) if path.is_file() else None,
+            "preimage_sha256": PREIMAGE_SHA[relative],
+            "postimage_sha256": POSTIMAGE_SHA[relative],
+        })
+    flag_target = tree / FLAG_TARGET
+    report.setdefault("flag_module", {}).update({
+        "path": str(flag_target),
+        "present": flag_target.is_file(),
+        "status": flag_status(flag_target),
+        "sha256": sha256_file(flag_target) if flag_target.is_file() else None,
+        "source_sha256": sha256_file(FLAG_SOURCE) if FLAG_SOURCE.is_file() else None,
+        "expected_sha256": FLAG_SHA256,
+    })
+    report["ready"] = (
+        all(item[state_key] == "patched" for item in report["files"].values())
+        and report["flag_module"]["status"] == "current"
+        and report["flag_module"]["source_sha256"] == FLAG_SHA256
+    )
+
+
+def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) -> dict:
+    """Validate every artifact and produce all bytes before changing any file."""
+    writes = {}
+    source = report["flag_module"]
+    if source["status"] == "unknown":
+        raise ValueError("flag module has unknown content; preserve and inspect it before retrying")
+    if not revert and source["source_sha256"] != FLAG_SHA256:
+        raise ValueError("installer flag source SHA-256 does not match this patch version")
+    patchers = {
+        "device_op.py": patch_device_op,
+        "gdn.py": patch_gdn,
+        "patch_qwen3_5.py": patch_qwen3_5,
+    }
+    for relative, item in report["files"].items():
+        path = tree / relative
+        current = item["status_before"]
+        if current not in ("preimage", "patched", "legacy"):
+            raise ValueError(f"{relative}: refused {current} source content")
+        backup = backup_dir / f"{path.name}.preimage"
+        backup_data = None
+        if backup.exists():
+            if not backup.is_file() or sha256_file(backup) != PREIMAGE_SHA[relative]:
+                raise ValueError(f"{relative}: preimage backup SHA-256 mismatch: {backup}")
+            backup_data = backup.read_bytes()
+        item["backup"] = str(backup)
+        if revert:
+            if current == "preimage":
+                item["action"] = "already-preimage"
+                continue
+            if backup_data is None:
+                raise ValueError(f"{relative}: verified preimage backup required: {backup}")
+            writes[path] = backup_data
+            item["action"] = "reverted"
+        else:
+            if current == "patched":
+                item["action"] = "already-patched"
+                continue
+            if current == "legacy":
+                if backup_data is None:
+                    raise ValueError(
+                        f"{relative}: legacy upgrade requires a verified preimage backup: {backup}")
+                preimage = backup_data
+                item["action"] = "upgraded"
+            else:
+                preimage = path.read_bytes()
+                if backup_data is None:
+                    writes[backup] = preimage
+                item["action"] = "patched"
+            patched = patchers[path.name](preimage.decode("utf-8")).encode("utf-8")
+            if sha256_bytes(patched) != POSTIMAGE_SHA[relative]:
+                raise ValueError(f"{relative}: generated postimage SHA-256 mismatch")
+            writes[path] = patched
+    flag_target = tree / FLAG_TARGET
+    if revert:
+        if source["status"] != "missing":
+            writes[flag_target] = None
+            source["action"] = "removed"
+        else:
+            source["action"] = "already-absent"
+    elif source["status"] != "current":
+        writes[flag_target] = FLAG_SOURCE.read_bytes()
+        source["action"] = "installed"
+    else:
+        source["action"] = "already-current"
+    return writes
+
+
+def commit_changes(writes: dict) -> None:
+    """Roll back completed replacements if a filesystem operation fails."""
+    originals = {
+        path: path.read_bytes() if path.is_file() else None for path in writes
+    }
+    completed = []
+    try:
+        for path, data in writes.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if data is None:
+                path.unlink()
+            else:
+                write_atomic(path, data)
+            completed.append(path)
+    except OSError as exc:
+        rollback_errors = []
+        for path in reversed(completed):
+            try:
+                if originals[path] is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    write_atomic(path, originals[path])
+            except OSError as rollback_exc:
+                rollback_errors.append(f"{path}: {rollback_exc}")
+        detail = f"; rollback errors: {rollback_errors}" if rollback_errors else "; files restored"
+        raise OSError(f"installation write failed: {exc}{detail}") from exc
+
+
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tree", type=Path, default=DEFAULT_TREE)
     parser.add_argument("--backup-dir", type=Path, default=DEFAULT_BACKUP)
@@ -289,105 +446,54 @@ def main() -> int:
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--revert", action="store_true")
     parser.add_argument("--manifest", type=Path, default=None)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if sum((args.check, args.apply, args.revert)) != 1:
         parser.error("choose exactly one of --check, --apply, --revert")
     tree = args.tree.expanduser().resolve()
+    backup_dir = args.backup_dir.expanduser().resolve()
+    recovery = [
+        shlex.join([
+            sys.executable, str(Path(__file__).resolve()), "--tree", str(tree),
+            "--backup-dir", str(backup_dir), action,
+        ])
+        for action in ("--revert", "--apply")
+    ]
     report = {
         "tree": str(tree),
+        "patch_version": PATCH_VERSION,
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "action": "check" if args.check else "apply" if args.apply else "revert",
         "files": {},
+        "recovery_commands": recovery,
     }
-    targets = {
-        relative: tree / relative
-        for relative in PREIMAGE_SHA
-    }
-    for relative, path in targets.items():
-        report["files"][relative] = {
-            "status_before": status(path, relative),
-            "sha256": sha256_file(path) if path.is_file() else None,
-            "preimage_sha256": PREIMAGE_SHA[relative],
-        }
-    flag_target = tree / FLAG_TARGET
-    report["flag_module"] = {
-        "path": str(flag_target),
-        "present": flag_target.is_file(),
-        "sha256": sha256_file(flag_target) if flag_target.is_file() else None,
-        "source_sha256": sha256_file(FLAG_SOURCE),
-    }
-
-    if args.check:
-        print(json.dumps(report, ensure_ascii=False, indent=2))
-        return 0
-
-    if args.revert:
-        for relative, path in targets.items():
-            if status(path, relative) == "preimage":
-                report["files"][relative]["action"] = "already-preimage"
-                continue
-            if status(path, relative) != "patched":
-                report["files"][relative]["action"] = "refused-unknown-state"
-                print(json.dumps(report, ensure_ascii=False, indent=2))
-                return 1
-            backup = args.backup_dir / f"{Path(relative).name}.preimage"
-            if not backup.is_file() or sha256_file(backup) != PREIMAGE_SHA[relative]:
-                report["files"][relative]["action"] = "refused-missing-or-wrong-backup"
-                print(json.dumps(report, ensure_ascii=False, indent=2))
-                return 1
-            write_atomic(path, backup.read_bytes())
-            report["files"][relative]["action"] = "reverted"
-            report["files"][relative]["sha256"] = sha256_file(path)
-            report["files"][relative]["status_after"] = status(path, relative)
-        if flag_target.is_file():
-            if sha256_file(flag_target) == sha256_file(FLAG_SOURCE):
-                flag_target.unlink()
-                report["flag_module"]["action"] = "removed"
-            else:
-                report["flag_module"]["action"] = "refused-modified"
-                print(json.dumps(report, ensure_ascii=False, indent=2))
-                return 1
-        else:
-            report["flag_module"]["action"] = "already-absent"
-    else:
-        # apply
-        for relative, path in targets.items():
-            current = status(path, relative)
-            if current == "patched":
-                report["files"][relative]["action"] = "already-patched"
-                continue
-            if current != "preimage":
-                report["files"][relative]["action"] = "refused-unexpected-content"
-                print(json.dumps(report, ensure_ascii=False, indent=2))
-                return 1
-            backup = args.backup_dir / f"{Path(relative).name}.preimage"
-            backup.parent.mkdir(parents=True, exist_ok=True)
-            if not backup.is_file():
-                backup.write_bytes(path.read_bytes())
-            text = path.read_text(encoding="utf-8")
-            if relative.endswith("device_op.py"):
-                patched = patch_device_op(text)
-            elif relative.endswith("patch_qwen3_5.py"):
-                patched = patch_qwen3_5(text)
-            else:
-                patched = patch_gdn(text)
-            write_atomic(path, patched.encode("utf-8"))
-            report["files"][relative]["action"] = "patched"
-            report["files"][relative]["sha256"] = sha256_file(path)
-            report["files"][relative]["status_after"] = status(path, relative)
-            report["files"][relative]["backup"] = str(backup)
-        flag_target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(FLAG_SOURCE, flag_target)
-        report["flag_module"]["action"] = "installed"
-        report["flag_module"]["sha256"] = sha256_file(flag_target)
-
-    if args.manifest:
+    result = 0
+    # Lock the existing tree directory: check remains read-only and concurrent
+    # installer invocations cannot interleave their preflight and writes.
+    try:
+        tree_fd = os.open(tree, os.O_RDONLY)
+        try:
+            fcntl.flock(tree_fd, fcntl.LOCK_SH if args.check else fcntl.LOCK_EX)
+            refresh_report(report, tree)
+            if not args.check:
+                try:
+                    writes = plan_changes(report, tree, backup_dir, revert=args.revert)
+                    commit_changes(writes)
+                except (ValueError, OSError, SystemExit) as exc:
+                    report["error"] = str(exc)
+                    result = 1
+                refresh_report(report, tree, after=True)
+        finally:
+            os.close(tree_fd)
+    except OSError as exc:
+        report["error"] = str(exc)
+        result = 1
+    if args.manifest and not args.check:
         args.manifest.parent.mkdir(parents=True, exist_ok=True)
         args.manifest.write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0
+    return result
 
 
 if __name__ == "__main__":

@@ -185,6 +185,10 @@ def gdn_decision_prefill(config, apply=True):
         return record
     if not GDN_INSTALLER.is_file():
         raise SystemExit(f"GDN decision patch installer missing: {GDN_INSTALLER}")
+    spec = importlib.util.spec_from_file_location("clef_gdn_installer", GDN_INSTALLER)
+    contract = importlib.util.module_from_spec(spec)
+    # Load the version contract without producing __pycache__ during dry-run.
+    exec(compile(GDN_INSTALLER.read_bytes(), str(GDN_INSTALLER), "exec"), contract.__dict__)
 
     def run(flag):
         result = subprocess.run(
@@ -196,29 +200,61 @@ def gdn_decision_prefill(config, apply=True):
                 f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
         return json.loads(result.stdout)
 
-    report = run("--check")
-    statuses = {path: item["status_before"] for path, item in report["files"].items()}
-    if any(state == "preimage" for state in statuses.values()):
-        if not apply:
-            record.update(pending_install=True, patch_state=statuses)
-            return record
-        report = run("--apply")
-        statuses = {
-            path: item.get("status_after", item["status_before"])
-            for path, item in report["files"].items()
+    def verify(report):
+        files = report.get("files", {})
+        if (report.get("patch_version") != contract.PATCH_VERSION
+                or set(files) != set(contract.POSTIMAGE_SHA)):
+            raise SystemExit("GDN decision patch report has an unsupported version or file set")
+        statuses = {}
+        for path, expected in contract.POSTIMAGE_SHA.items():
+            item = files[path]
+            state = item.get("status_before")
+            allowed = {
+                "patched": expected,
+                "preimage": contract.PREIMAGE_SHA[path],
+            }
+            if path in contract.LEGACY_POSTIMAGE_SHA:
+                allowed["legacy"] = contract.LEGACY_POSTIMAGE_SHA[path]
+            if (state not in allowed or item.get("sha256") != allowed[state]
+                    or item.get("postimage_sha256") != expected):
+                raise SystemExit(
+                    f"GDN decision patch source SHA-256 mismatch: {path} ({state}); "
+                    "verify the pinned tree and BSND dependency before retrying")
+            statuses[path] = state
+        flag = report.get("flag_module", {})
+        expected_flag = contract.FLAG_SHA256
+        if (flag.get("source_sha256") != expected_flag
+                or flag.get("expected_sha256") != expected_flag):
+            raise SystemExit("GDN decision flag source SHA-256 mismatch")
+        flag_state = flag.get("status")
+        flag_hashes = {
+            "current": expected_flag,
+            "legacy": contract.LEGACY_FLAG_SHA256,
+            "missing": None,
         }
-    unknown = {
-        path: state for path, state in statuses.items()
-        if state not in ("patched", "preimage")
-    }
-    if unknown:
-        raise SystemExit(
-            "GDN decision patch cannot be applied: the source tree does not match "
-            f"the expected preimage (BSND patch missing or tree changed): {unknown}")
-    if any(state != "patched" for state in statuses.values()):
+        if (flag_state not in flag_hashes
+                or flag.get("sha256") != flag_hashes[flag_state]
+                or flag.get("present") != (flag_state != "missing")):
+            raise SystemExit("GDN decision flag module is missing version metadata or has unknown content")
+        complete = all(state == "patched" for state in statuses.values()) and flag_state == "current"
+        if report.get("ready") is not complete:
+            raise SystemExit("GDN decision patch readiness disagrees with the verified file hashes")
+        return statuses, flag_state, complete
+
+    report = run("--check")
+    statuses, flag_state, complete = verify(report)
+    if not complete:
+        if not apply:
+            record.update(pending_install=True, patch_state=statuses, flag_module_state=flag_state)
+            return record
+        run("--apply")
+        report = run("--check")
+        statuses, flag_state, complete = verify(report)
+    if not complete:
         raise SystemExit(f"GDN decision patch incomplete: {statuses}")
     record.update(
         enabled=True,
+        patch_version=report["patch_version"],
         patch_state=statuses,
         files={path: item.get("sha256") for path, item in report["files"].items()},
         flag_module_sha256=report.get("flag_module", {}).get("sha256"),

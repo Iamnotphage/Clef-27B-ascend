@@ -1,11 +1,11 @@
 # GDN 决策专用 prefill 路径（2026-11-15）
 
-本轮把 GDN 的“纯 prefill、无 decode”特化实现成可选路径：服务端不再为没有读者的循环状态和反向中间量付成本。改动以版本化补丁 + 安装器 + 默认关开关交付，源码在验证后已回退到原始哈希，原服务按 phase-0 快照恢复。
+本轮将 GDN 的纯 prefill 决策路径特化，省去最终循环状态导出、写回和反向中间量输出。补丁已集成到 S1 默认入口，正常入口完成 OpenDecisions 与 ERQA 验收。源码树保留已应用补丁，恢复的原服务通过关闭开关运行 baseline 路径。
 
 **结论**
 
 - 数值完全不变：8 例冻结回归 OFF/ON 均 8/8；OpenDecisions 全量 2,352 题在 OFF 与 ON 下**逐位一致**（最大概率差 0.0），也与冻结 baseline 逐位一致。
-- 同进程交错 A/B（588 题分层子集，6 对，交替顺序）：**6/6 对 ON 更快**，p95 中位 **−3.80%（−7.68 ms）**，均值 −4.13%，吞吐中位 +0.17 decisions/s。
+- 同进程交错 A/B 使用每四题取一的 588 题等距子集，6 对交替顺序。**6/6 对 ON 更快**，p95 降幅中位数 **3.80%（7.68 ms）**，六对 p95 降幅算术均值 4.13%，单并发吞吐增量中位数 +0.17 decisions/s。
 - 全量 2,352 单次：wall 413.65→408.30 s（−1.29%），p50 195.26→191.03 ms（−2.17%），p99 216.66→211.32 ms（−2.47%），p95 204.65→204.86 ms（单次噪声内，不作结论）。
 - **S1 默认启用**：`inference.py` 在启动时安装并校验补丁，manifest 记录实际状态；`CLEF_GDN_DECISION_PREFILL=0` 可关闭。
 
@@ -20,7 +20,7 @@
 
 本轮的决策专用路径**保留第 1 项**（初始状态 gather 与输入状态转置仍在执行），在满足 guard 时消除第 **2、3、4** 项：最终状态导出、其转置与 scatter 写回，以及反向中间量输出。按 446 tokens、48 层估算，第 4 项的 `A` 约 2.7 MB/层、约 130 MB/请求。
 
-因此收益来自“无读者的输出”，而不是初始状态读取；若后续要再省第 1 项，需要让 kernel 接受 `initial_state=None` 并单独验证。
+后续可继续验证 `initial_state=None`，进一步消除初始状态读取和输入状态转置。
 
 ### 1.1 代码落点
 
@@ -34,7 +34,7 @@
 ### 1.2 Guard
 
 ```text
-decision_safe_config                      # chunked prefill / prefix cache / spec decode 全部关闭
+decision_safe_config                      # runner=pooling，chunked prefill / prefix cache / spec decode 全部关闭
 and decision_prefill_enabled()            # 开关
 and num_prefills > 0
 and num_decodes == 0
@@ -164,19 +164,19 @@ python runtime/apply_gdn_decision_patch.py --revert
 
 远端原始目录：`/workspace/yangchen/logs/gdn-decision-20261115/`。
 
-## 8. 服务恢复
+## 8. 初次实验后的服务恢复
 
-- 原始服务停止后，按 phase-0 快照恢复为 **PID 498272**；argv、cwd、环境白名单与 PID 432954 逐项一致。
+- 初次实验完成后按 phase-0 快照恢复为 **PID 475769**，argv、cwd、环境白名单与 PID 432954 逐项一致。该历史快照见 `restore/snapshot.json`。
 - `GET /health` **200**；8/8 冻结用例逐位一致。
 - 三个被补丁的源码文件 SHA-256 回到 preimage：`device_op.py a08d44b4…`、`gdn.py b235e34d…`、`patch_qwen3_5.py a9a71634…`；`gdn_decision_flags.py` 已移除。
-- 当前服务指针已更新为 498272。
+- 后续默认入口验收及服务恢复记录见第 10 节。
 
 ## 9. 启动入口集成（S1 默认启用）
 
 `Clef-27B/inference.py` 在构造启动参数时调用 `gdn_decision_prefill(config)`：
 
 - `--config s1` 默认请求启用；`CLEF_GDN_DECISION_PREFILL=0` 可显式关闭。
-- 先运行安装器 `--check`：源码处于 preimage 时按需 `--apply`，已 patched 时跳过；逻辑幂等。
+- 先运行安装器 `--check`，逐一核对当前补丁完整 SHA-256 与开关模块 SHA-256。源码处于 preimage 时按需 `--apply`，当前版本完整时直接启动。已知旧 guard 配合可信 preimage 备份可自动升级，缺失或已知旧版开关模块可自动修复，修复后重新执行 `--check`。
 - 源码树与预期 preimage 不符（例如缺少既有 BSND 补丁）时**拒绝启动**并列出缺失项，避免“以为启用、实际没生效”。
 - 启用后把 `CLEF_GDN_DECISION_PREFILL=1` 写入服务环境。
 - `launch-manifest.json` 新增 `gdn_decision_prefill`：`enabled` / `requested` / `source` / `patch_state` / 每个文件的 SHA-256 / `flag_module_sha256` / `installer_sha256`。
@@ -217,7 +217,9 @@ python runtime/apply_gdn_decision_patch.py --revert
 | decisions/s | 5.760 |
 | mean / p50 / p95 / p99 | 173.60 / 195.57 / **213.56** / 223.56 ms |
 
-`results.csv` 的 S1 行更新为 213.5597 ms；S2 仍是优化前的 seqs1 扫描值（5.715 @ C16），本轮未做并发复测，需在后续并发测量中更新。
+`results.csv` 的 S1 更新为 213.5597 ms，S2 保留优化前的 seqs1 扫描值 5.715 @ C16。`s1_gdn_decision_prefill` 与 `s2_gdn_decision_prefill` 分别记录两项测量的开关，`s1_measurement_id` 与 `s2_measurement_id` 关联各自原始记录。优化后的 S2 等待并发复测。
+
+`runtime/build_stage5_results.py` 从本次入口的 `od-full.json.gz` 与启动清单生成 S1，并向 `measurements-v2.csv` 登记来源及 SHA-256。重建时保留 ERQA 质量行。`entry-s1/od-compare.json.gz` 的 OFF/ON 参数引用同一入口文件，其有效质量证据为该文件与冻结 baseline 的逐题比较。
 
 ### 10.4 服务恢复
 
@@ -225,3 +227,13 @@ python runtime/apply_gdn_decision_patch.py --revert
 - `GET /health` 200；8/8 冻结用例逐位一致。
 - 源码树保留已应用的补丁（这是新的默认入口状态）；原 8000 服务进程未设置 `CLEF_GDN_DECISION_PREFILL`，运行的是 baseline 路径，输出与冻结结果一致。
 - 当前服务指针更新为 498272。
+
+## 11. 安装版本与结果来源复核
+
+默认入口的性能和质量验收数据来自提交 `525a1dd`。后续安装器复核发现，原有文本 marker 能将缺少 pooling 限定的旧 guard 判定为已安装，开关模块缺失时入口也会报告 enabled。安装器与启动入口现按完整目标哈希识别版本，并要求开关模块与仓库固定版本匹配。
+
+安装与回退在落盘前验证全部源码、开关模块和备份。已知旧版本使用通过哈希校验的 preimage 生成当前补丁，未知修改保留并报告具体路径。文件写入异常时恢复已完成的替换。`--check` 与 `--dry-run` 执行只读检查。
+
+当前补丁目标源码和开关模块的 SHA-256 对应第 10.1 节的已验收版本。安装器升级逻辑使用本地临时源码树验证，覆盖旧 guard、缺失与旧版开关模块、未知内容、备份错误、回退及重复执行。CSV 重建已验证幂等，原有 56 条规范测量完整保留，并新增入口 S1 测量。
+
+本次 `runtime/test_gdn_decision_patch.py` 的 34 项回归、两份 CSV 校验、Python 语法、文档链接与 `git diff --check` 均通过。三个计算补丁生成函数与 `525a1dd` 的 AST 相同。SSH 后续连接返回 `Connection closed by UNKNOWN port 65535`，新增安装校验的远端复验待连接恢复后执行。

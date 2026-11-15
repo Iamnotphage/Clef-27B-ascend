@@ -10,7 +10,7 @@
 
 2026-11-14 另行完成 CPU BF16 独立参考链路：两套数据全量输入等价（OpenDecisions 2,352/2,352、ERQA 400/400 token 数等于 NPU 实测），NPU 复放 24/24 逐位一致；逐题前向按用户要求完成 OpenDecisions 154/2352 后终止，未生成完整 CPU 评分。[CPU 参考对照](../docs/cpu-npu-reference-2026-11-14.md) · [证据](logs/cpu-reference-20261114/)
 
-2026-11-15 完成 GDN 决策专用 prefill 路径：纯 prefill 场景跳过无人读取的循环状态读写与反向中间量，全量 2,352 题逐位不变，6 对交错 A/B 全部更快（p95 中位 −3.80%）。补丁已接入 `start.sh --config s1` 默认启用（启动时安装并校验、manifest 记录状态）；正常入口 S1 P95 213.56 ms，ERQA 400 ON/OFF 逐题一致；原服务恢复至 PID 498272。[GDN 报告](../docs/gdn-decision-prefill-2026-11-15.md) · [证据](logs/gdn-decision-20261115/)
+2026-11-15 完成 GDN 决策专用 prefill 路径，省去最终循环状态导出、写回和反向中间量输出。全量 2,352 题逐位不变，6 对交错 A/B 全部更快，p95 降幅中位数 3.80%。补丁已接入 `start.sh --config s1` 默认启用，启动时安装并校验，manifest 记录状态。正常入口 S1 P95 213.56 ms，ERQA 400 ON/OFF 逐题一致，原服务恢复至 PID 498272。[GDN 报告](../docs/gdn-decision-prefill-2026-11-15.md) · [证据](logs/gdn-decision-20261115/)
 
 Decision Index 和 Typesafe WorkflowEvals 保留发布方对照用途。Decision Index 本次运行已于 2026-11-13 15:55 按用户要求终止，部分结果按未完成记录保留；WorkflowEvals 已完成。[比赛交付规则](../docs/submission-rules-2026-11-13.md)
 
@@ -49,4 +49,6 @@ python scripts/verify_systemone.py \
 
 ## 结果记录
 
-`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值；OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位；ERQA 行 accuracy 记 0.5475，其余四项记 `NA`（不适用）。逐题原始概率、作者评分、EvalScope 报告、数据版本、运行命令和退出记录见 [logs/opendecisions-baseline-20261113/](logs/opendecisions-baseline-20261113/)；ERQA 的 `summary.json`、`predictions.jsonl`、离线复核与适配补丁见 [logs/erqa-baseline-20261114/](logs/erqa-baseline-20261114/)。`results.csv` 已按第四轮最终值重建：S1 seqs1/缓存关 P95 217.036 ms；S2 seqs1/B1 5.715 decisions/s @ C16；seqs4 13.764 dec/s 行标注 `throughput-candidate-quality-fail`。ERQA 的 C1 延迟（p95 323.476 ms）单独记录，不并入 S1/S2。原始请求、完整响应与 reviews 在远端本轮输出目录保留。[优化与兼容记录](optimization.md)
+`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5475，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
+
+`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化开启的 P95 **213.560 ms**。S2 **5.715 decisions/s @ C16** 来自优化前 GDN 关闭的扫描。两项各有 `gdn_decision_prefill` 与 `measurement_id` 列标明运行身份，优化后的并发扫描待完成。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定，ERQA 的历史 C1 P95 323.476 ms 保存在其独立报告中。[优化与兼容记录](optimization.md) · [当前 GDN 验收](../docs/gdn-decision-prefill-2026-11-15.md)

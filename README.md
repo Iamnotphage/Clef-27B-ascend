@@ -16,7 +16,7 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 
 2026-11-14 完成发布方参考实现的 **CPU BF16 独立前向**验收：OpenDecisions 2,352 条与 ERQA 400 条的编码 token 数与 NPU 实测 `usage.input_tokens` **逐题相等**（含 16 图 10,294 token 极值题），参考媒体布局与服务策略一致、无需补丁；8 条冻结请求在当前服务复放 24/24 次逐位一致。逐题前向按用户要求在完成 OpenDecisions 154/2352 后终止：该子集最大概率差 p50 0.00048、max 0.0385、1 次近边界翻转，非竞争候选最大差 p95 0.0016，未发现输入、候选映射或加载错误。[CPU 参考对照报告](docs/cpu-npu-reference-2026-11-14.md) · [证据目录](Clef-27B/logs/cpu-reference-20261114/)
 
-2026-11-15 完成 **GDN 决策专用 prefill 路径**：决策服务只有一次 full prefill、从不 decode，因此跳过无人读取的 GDN 循环状态读写与反向中间量（`A`、`g_cumsum`）。OpenDecisions 全量 2,352 题在开关 OFF/ON 下**逐位一致**（max 0.0），同进程交错 A/B 6/6 对更快、p95 中位 **−3.80%（−7.68 ms）**、吞吐 +0.17 decisions/s。补丁已接入 **S1 默认启用**：`inference.py` 在启动时安装并校验补丁、把开关写入服务环境并在 manifest 记录实际状态；正常入口全量 S1 P95 **213.56 ms**、5.760 decisions/s，ERQA 400 ON/OFF 逐题一致。原服务按 phase-0 快照恢复为 PID 498272（argv/cwd/env 一致、8/8 冻结回归）。[GDN 报告](docs/gdn-decision-prefill-2026-11-15.md) · [证据](Clef-27B/logs/gdn-decision-20261115/)
+2026-11-15 完成 **GDN 决策专用 prefill 路径**，省去最终循环状态导出、写回和反向中间量（`A`、`g_cumsum`）输出。OpenDecisions 全量 2,352 题在开关 OFF/ON 下**逐位一致**（max 0.0），同进程交错 A/B 6/6 对更快，p95 降幅中位数 **3.80%（7.68 ms）**，单并发吞吐增量中位数 +0.17 decisions/s。补丁已接入 **S1 默认启用**，启动时安装并校验，manifest 记录实际状态。正常入口全量 S1 P95 **213.56 ms**、5.760 decisions/s，ERQA 400 ON/OFF 逐题一致。S2 的 5.715 decisions/s 来自优化前扫描，CSV 分别记录 S1、S2 的 GDN 开关与测量来源。原服务按 phase-0 快照恢复为 PID 498272，argv/cwd/env 一致、8/8 冻结回归。[GDN 报告](docs/gdn-decision-prefill-2026-11-15.md) · [证据](Clef-27B/logs/gdn-decision-20261115/)
 
 ## 发布方对照评测与后台运行
 
