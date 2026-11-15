@@ -42,6 +42,7 @@ from safetensors import safe_open
 
 TP_SIZE = 2
 ACL_FORMAT_FRACTAL_NZ = 29
+ACL_FORMAT_ND = 2
 ASCEND_SOURCE = Path("/workspace/yangchen/work/src/vllm-ascend")
 PINNED_ASCEND_COMMIT = "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"
 SOURCE_FILES = (
@@ -82,7 +83,7 @@ def tensor_info(tensor: torch.Tensor) -> dict:
     }
 
 
-def source_provenance() -> dict:
+def source_provenance(weight_format: str = "nz") -> dict:
     result = subprocess.run(
         ["git", "-C", str(ASCEND_SOURCE), "rev-parse", "HEAD"],
         capture_output=True, text=True, check=False,
@@ -101,9 +102,14 @@ def source_provenance() -> dict:
         },
         "linear_contract": "npu_dynamic_quant(int8) + npu_quant_matmul(output_dtype=BF16)",
         "weight_scale_dtype": "torch.bfloat16, matching BF16 params_dtype",
-        "weight_layout": "W[N,K] -> W[K,N].contiguous() -> FRACTAL_NZ(29)",
-        "weight_nz_mode": 1,
-        "bf16_layout": "ND, matching weight_nz_mode=1 on A3",
+        "weight_layout": (
+            "W[N,K] -> W[K,N].contiguous() -> FRACTAL_NZ(29)"
+            if weight_format == "nz"
+            else "W[N,K] -> W[K,N].contiguous() -> ND(2)"
+        ),
+        "weight_nz_mode": 1 if weight_format == "nz" else 0,
+        "weight_format": weight_format,
+        "bf16_layout": "ND",
         "activation": "torch_npu.npu_swiglu, gate followed by up along the last axis",
     }
 
@@ -273,12 +279,14 @@ def load_input(args, hidden_size: int) -> tuple[torch.Tensor, dict]:
     return tensor, identity
 
 
-def to_device_weights(weights: dict, device: torch.device) -> dict:
+def to_device_weights(weights: dict, device: torch.device, weight_format: str = "nz") -> dict:
     prepared = {}
     for name, value in weights.items():
         if name.endswith("_int8"):
             value = value.transpose(0, 1).contiguous().to(device)
-            prepared[name] = torch_npu.npu_format_cast(value, ACL_FORMAT_FRACTAL_NZ)
+            if weight_format == "nz":
+                value = torch_npu.npu_format_cast(value, ACL_FORMAT_FRACTAL_NZ)
+            prepared[name] = value
         else:
             prepared[name] = value.to(device)
     return prepared
@@ -465,6 +473,8 @@ def main(benchmark_function=benchmark_shape, default_rounds=6) -> int:
     parser.add_argument("--rounds", type=int, default=default_rounds)
     parser.add_argument("--iterations", type=int, default=30)
     parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--weight-format", choices=("nz", "nd"), default="nz",
+                        help="INT8 weight layout: FRACTAL_NZ(29) or ND(2)")
     args = parser.parse_args()
     if args.tokens is None and args.input_file is None:
         args.tokens = [307, 1024]
@@ -482,6 +492,9 @@ def main(benchmark_function=benchmark_shape, default_rounds=6) -> int:
         "torch": torch.__version__,
         "torch_npu": torch_npu.__version__,
         "scope": "single-layer TP2 rank-local MLP partial output before all-reduce",
+        "weight_format": args.weight_format,
+        "expected_int8_format": (
+            ACL_FORMAT_FRACTAL_NZ if args.weight_format == "nz" else ACL_FORMAT_ND),
         "quality_scope": "local numerical comparison on the recorded input, full-model quality requires evaluation",
         "timing_scope": "both linears, BF16 SwiGLU and candidate activation quantization, preloaded weights/input",
         "timing": {
@@ -496,7 +509,7 @@ def main(benchmark_function=benchmark_shape, default_rounds=6) -> int:
     }
     try:
         torch.set_num_threads(4)
-        report["plugin"] = source_provenance()
+        report["plugin"] = source_provenance(args.weight_format)
         with torch.inference_mode():
             weights_cpu, report["weights"] = load_weights(args.model_dir.resolve(), args.layer, args.rank)
             input_cpu, report["input_source"] = load_input(args, report["weights"]["hidden_size"])
@@ -506,13 +519,16 @@ def main(benchmark_function=benchmark_shape, default_rounds=6) -> int:
                 torch_npu._C._npu_getOption("ALLOW_INTERNAL_FORMAT"))
             torch.npu.set_device(device)
             report["device_name"] = torch.npu.get_device_name(device)
-            weights = to_device_weights(weights_cpu, device)
+            weights = to_device_weights(weights_cpu, device, args.weight_format)
             del weights_cpu
             torch.npu.synchronize(device)
             report["device_weights"] = {name: tensor_info(value) for name, value in weights.items()}
+            expected_format = report["expected_int8_format"]
             for name in ("gate_up_int8", "down_int8"):
-                if report["device_weights"][name]["npu_format"] != ACL_FORMAT_FRACTAL_NZ:
-                    raise RuntimeError(f"{name} did not convert to FRACTAL_NZ")
+                actual = report["device_weights"][name]["npu_format"]
+                if actual != expected_format:
+                    raise RuntimeError(
+                        f"{name} expected format {expected_format}, got {actual}")
             report["resident_weight_logical_bytes"] = sum(
                 value.numel() * value.element_size() for value in weights.values()
             )
