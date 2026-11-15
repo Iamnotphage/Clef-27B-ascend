@@ -1,0 +1,167 @@
+{
+ "created_at": "2026-11-15T13:50:33Z",
+ "device": "npu:0",
+ "layer": 31,
+ "rank": 0,
+ "identity": {
+  "hidden_size": 5120,
+  "intermediate_size": 17408,
+  "layer": 31,
+  "tp_size": 2,
+  "tp_rank": 0,
+  "weights": {
+   "model.language_model.layers.31.mlp.gate_proj.weight": {
+    "source": "/workspace/yangchen/models/Clef-27B/model-00007-of-00012.safetensors",
+    "full_shape": [
+     17408,
+     5120
+    ],
+    "rank_shape": [
+     8704,
+     5120
+    ],
+    "tp_size": 2,
+    "tp_rank": 0,
+    "sha256_rank_tensor_bytes": "979ed356a510e7450d71eff85f63a68b4963cb40a1643bd179edff3c9ee81801"
+   },
+   "model.language_model.layers.31.mlp.up_proj.weight": {
+    "source": "/workspace/yangchen/models/Clef-27B/model-00007-of-00012.safetensors",
+    "full_shape": [
+     17408,
+     5120
+    ],
+    "rank_shape": [
+     8704,
+     5120
+    ],
+    "tp_size": 2,
+    "tp_rank": 0,
+    "sha256_rank_tensor_bytes": "398b9d0a1c7b951e7cca22d6a2f1dd524370da15c3c0944e464fceb793040406"
+   },
+   "model.language_model.layers.31.mlp.down_proj.weight": {
+    "source": "/workspace/yangchen/models/Clef-27B/model-00007-of-00012.safetensors",
+    "full_shape": [
+     5120,
+     17408
+    ],
+    "rank_shape": [
+     5120,
+     8704
+    ],
+    "tp_size": 2,
+    "tp_rank": 0,
+    "sha256_rank_tensor_bytes": "148c9ae2893ff9a0f2edb97f15ddb53cae174b327152ddad8b4c05ba65c1b7d3"
+   }
+  },
+  "index_sha256": "a600c6626eb1eb653a3f078ab3dd1c7a8fab2e71185c7ef3aa923a39aaa637be"
+ },
+ "allow_internal_format": {
+  "requested": true,
+  "option_before": "",
+  "option_after": "enable"
+ },
+ "formats": {
+  "packed_nd": 2,
+  "down_nd": 2,
+  "packed_nz": 29,
+  "down_nz": 29
+ },
+ "weight_bytes": {
+  "gate_up": 178257920,
+  "down": 89128960
+ },
+ "flush_mib": 256,
+ "cases": [
+  {
+   "tokens": 1595,
+   "case": "nd",
+   "warm_ms": 1.5278400421142577,
+   "cold_ms": 1.5101699829101562,
+   "nominal_warm_gb_s": 175.0097344156423,
+   "nominal_cold_gb_s": 177.05747235469153,
+   "bit_equal": true,
+   "max_abs": 0.0,
+   "relative_rmse": 0.0
+  },
+  {
+   "tokens": 1595,
+   "case": "nz_both",
+   "warm_ms": 1.4930749893188477,
+   "cold_ms": 1.464709997177124,
+   "nominal_warm_gb_s": 179.0846956199996,
+   "nominal_cold_gb_s": 182.55277871750982,
+   "bit_equal": true,
+   "max_abs": 0.0,
+   "relative_rmse": 0.0
+  },
+  {
+   "tokens": 1595,
+   "case": "nz_gate_up",
+   "warm_ms": 1.5110600471496582,
+   "cold_ms": 1.500190019607544,
+   "nominal_warm_gb_s": 117.96878643985814,
+   "nominal_cold_gb_s": 118.8235607957404,
+   "bit_equal": true,
+   "max_abs": 0.0,
+   "relative_rmse": 0.0
+  },
+  {
+   "tokens": 1595,
+   "case": "nz_down",
+   "warm_ms": 1.5044619560241699,
+   "cold_ms": 1.4819000363349915,
+   "nominal_warm_gb_s": 59.243079988237405,
+   "nominal_cold_gb_s": 60.14505554668326,
+   "bit_equal": true,
+   "max_abs": 0.0,
+   "relative_rmse": 0.0
+  }
+ ],
+ "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank0.pt",
+ "input_metadata": {
+  "request_name": "od-0677",
+  "prefix": "language_model.model.layers.31.mlp",
+  "layer": 31,
+  "rank": 0,
+  "shape": [
+   1595,
+   5120
+  ],
+  "stride": [
+   5120,
+   1
+  ],
+  "dtype": "torch.bfloat16",
+  "device": "npu:0",
+  "token_count": 1595,
+  "input_token_count": 1595,
+  "time_ns": 1794710819850043990,
+  "time": "2026-11-15T02:46:59Z",
+  "pid": 503673
+ },
+ "summary": [
+  {
+   "tokens": 1595,
+   "nd": {
+    "warm_ms": 1.5278400421142577,
+    "cold_ms": 1.5101699829101562,
+    "nominal_cold_gb_s": 177.05747235469153
+   },
+   "nz_both": {
+    "warm_ms": 1.4930749893188477,
+    "cold_ms": 1.464709997177124,
+    "nominal_cold_gb_s": 182.55277871750982
+   },
+   "nz_gate_up": {
+    "warm_ms": 1.5110600471496582,
+    "cold_ms": 1.500190019607544,
+    "nominal_cold_gb_s": 118.8235607957404
+   },
+   "nz_down": {
+    "warm_ms": 1.5044619560241699,
+    "cold_ms": 1.4819000363349915,
+    "nominal_cold_gb_s": 60.14505554668326
+   }
+  }
+ ]
+}
