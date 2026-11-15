@@ -13,9 +13,9 @@
 - **2026-11-15 数据路径**：BIC 全量 2,352 逐位一致（Capability 74.425479）；ERQA 400 题 R/BIC 概率逐位一致（219/400）；seqs4 C8 **14.652 dec/s**、p95 913.93 ms，C16 14.689；融合 Ascend C 原型短序列 2×、长序列变慢且 Q/K 1 ulp，不接入。[报告](gdn-data-path-2026-11-15.md)
 - **S2（最大有效吞吐）**：baseline **5.715 dec/s @ C16**（seqs1，实际 batch 恒为 1）→ seqs4 **14.125 dec/s @ C16**（推荐工作点 C8：14.049 dec/s、p95 950.7 ms），约 **2.47×**。
 - **质量**：C1 与 baseline **逐位一致**（Capability 74.425479、accuracy 1906/2352、Score MAE 0.401389@588）；合批后 C8 为 Capability 74.195104（−0.230）、accuracy 1903、max 概率差 0.097399、6 条 choice 翻转、2 条 noul 跨 0.5。
-- **主要瓶颈**：设备 kernel 约占客户端 80%；其中 MLP 32.07 ms（31.6%）、TP2 allreduce 20.40 ms（20.1%）、GDN 主核 10.52 ms + 布局 6.73 ms、其他 MatMul（attention 投影等）14.82 ms。MLP 的 kernel 是 **MTE2 权重搬运受限**（占用 0.994），有效带宽约 0.53 TB/s。
+- **主要瓶颈**：设备 kernel 约占客户端 80%；其中 MLP 32.07 ms（31.6%）、TP2 allreduce 20.40 ms（20.1%）、GDN 主核 10.52 ms + 布局 6.73 ms、其他 MatMul（attention 投影等）14.82 ms。MLP 的 kernel 是 **MTE2 权重搬运受限**（占用 0.994），有效带宽约 0.53 TB/s；2026-11-15 微基准测得纯 HBM 读带宽 **1.26–1.32 TB/s**，即 MLP 只达到约 **40–42%**，瓶颈在 MTE2 访问效率/tiling/格式，而非 HBM 上限。[HBM 微基准](hbm-bandwidth-2026-11-15.md)
 - **已排除**：W8A16（局部 1.057×、质量 −0.182、全量无收益）、W8A8（C1 约 1%、NZ 格式反而更慢、合批下 +5% 但质量 −0.727）、TP1（S1 P95 264.3 ms，劣于 TP2）、seqs4+W8A8 叠加（质量不可接受）。
-- **待判断**：MLP 的 MTE2 效率能否通过格式/tiling/预取提升；allreduce 能否与计算重叠；GDN 剩余布局融合（含已存在但未做受控 A/B 的 BSND 候选）；batch-invariant GEMM 是否可行；`S1 ~213 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
+- **待判断**：MLP 的 MTE2 效率能否通过 BF16 NZ/tiling/预取从 0.53 提到 0.8+ TB/s（纯 HBM 已测 1.26–1.32 TB/s）；allreduce 能否与计算重叠；batch-invariant GEMM 是否可行；`S1 ~198 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
 
 ---
 
@@ -273,9 +273,10 @@
 
 - kernel 是 **MTE2 权重搬运受限**（`aic_mte2_ratio≈0.994`，cube 利用率约 98.8%）。
 - 每请求每 rank 要流约 **17.1 GB** MLP 权重（up/gate 11.4 + down 5.7），实测有效带宽约 **0.53 TB/s**。
+- 2026-11-15 纯 HBM 微基准：`copy` 1.26–1.27 TB/s、AI Core `sum` 读 1.30–1.32 TB/s；MLP 仅约 40–42%，**不是 HBM 上限**。
 - 问题：
-  1. A3 单逻辑 NPU 的 HBM 峰值带宽是多少？0.53 TB/s 是 HBM 限制、MTE2 指令/格式限制，还是 tiling 限制？
-  2. 在不改精度的前提下，ND/NZ 之外的 tiling、双缓冲、权重预取能把有效带宽提到多少？
+  1. BF16 NZ 预打包、更大 tile、双缓冲、L2 预取能把 MLP 有效带宽从 0.53 提到多少？
+  2. 纯 HBM 1.27 TB/s 对应的 gate/up 理论上限约 9.0 ms（当前 21.34）、MLP 合计约 13.5 ms（当前 32.07）；matmul 实际能兑现多少？
   3. 若必须量化，W8A8+smoothing+ND 的路线是否值得（预计 C8 +5%、质量目标 −0.1 以内）？
 
 ### 7.2 TP2 allreduce（20.40 ms，20.1%）
