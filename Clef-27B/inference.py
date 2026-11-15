@@ -62,6 +62,7 @@ OVERRIDABLE = {
     "--max-num-batched-tokens": "max_num_batched_tokens",
     "--gpu-memory-utilization": "gpu_memory_utilization",
     "--limit-mm-per-prompt": "limit_mm_per_prompt",
+    "--mm-processor-kwargs": "mm_processor_kwargs",
     "--distributed-executor-backend": "distributed_executor_backend",
 }
 # Fixed flags: passing the same flag through is harmless only with the same
@@ -376,7 +377,12 @@ def apply_passthrough(parsed, effective, sources, passthrough):
                 raise ValueError(f"{flag} 的值无效：{value!r}") from exc
             sources[key] = "passthrough"
             continue
-        passthrough.append(original)
+        if value is None or original.startswith(flag + "="):
+            passthrough.append(original)
+        else:
+            # Keep a separate argv element for the value, including JSON and
+            # strings containing spaces. The display string is diagnostic-only.
+            passthrough.extend([flag, value])
 
 
 def choose(config, explicit, key, cast):
@@ -403,6 +409,7 @@ def build_launch(args):
         ("max_num_batched_tokens", args.max_num_batched_tokens, int),
         ("gpu_memory_utilization", args.gpu_memory_utilization, float),
         ("limit_mm_per_prompt", args.limit_mm_per_prompt, str),
+        ("mm_processor_kwargs", getattr(args, "mm_processor_kwargs", None), str),
         ("distributed_executor_backend", args.distributed_executor_backend, str),
     ):
         value, source = choose(config, explicit_value, key, cast)
@@ -478,8 +485,8 @@ def build_launch(args):
     ]
     if effective.get("distributed_executor_backend"):
         command += ["--distributed-executor-backend", effective["distributed_executor_backend"]]
-    if config in ("s1", "s2") and "mm_processor_kwargs" in CONFIGS[config]:
-        command += ["--mm-processor-kwargs", CONFIGS[config]["mm_processor_kwargs"]]
+    if effective["mm_processor_kwargs"] is not None:
+        command += ["--mm-processor-kwargs", effective["mm_processor_kwargs"]]
     command += passthrough
 
     gdn_decision = gdn_decision_prefill(config, apply=not getattr(args, "dry_run", False))
@@ -554,6 +561,8 @@ def main():
     parser.add_argument("--gpu-memory-utilization", type=float, default=None)
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')
+    parser.add_argument("--mm-processor-kwargs", default=None,
+                        help="多模态处理器参数 JSON，可覆盖 s1/s2 默认值。")
     parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
                         help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
     parser.add_argument("--distributed-executor-backend", default=None)

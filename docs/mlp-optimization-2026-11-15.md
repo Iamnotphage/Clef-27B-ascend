@@ -227,5 +227,11 @@ python runtime/run_mlp_microbench.py \
 | [capture-requests.json](../Clef-27B/logs/mlp-20261115/capture-requests.json) | `dee7b915dccbd55b920fbad6dd00c6028e394c8a835908b35ee9de793e82b02c` |
 | [probe_mlp_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-nz-v2/probe_mlp_w8a8.py) | `b6372bf9d7a503893157874ce62e854abf20b443f858882d7e250468c7c2cddf` |
 | [probe_mlp_ffn.py](../Clef-27B/logs/mlp-20261115/ffn-v1/probe_mlp_ffn.py) | `659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e` |
+
+## 6. 混合模型转换与正常入口
+
+全 64 层 gate/up 转换已完成，128 份原始权重转为 INT8，增加逐输出通道 BF16 scale 与零 offset。主干索引共 1440 个张量、43,313,863,136 字节，目录为 `/workspace/yangchen/models/Clef-27B-mlp-gateup-w8a8`。CPU 独立复核确认 layers 0/31/63 的两 rank 共 12 个分片与重新量化结果一致，rank0 的权重及 scale 哈希与微基准一致。1056 个保留主干张量逐项字节 SHA 一致，覆盖全部 down、attention、vision，联合头整文件 SHA 一致。[转换清单](../Clef-27B/logs/mlp-20261115/conversion-manifest.json) · [独立核验](../Clef-27B/logs/mlp-20261115/model-conversion-check.json)
+
+正常启动测试发现 `inference.py` 将未知的双 token 透传参数拼成了一个 argv 元素，导致图像处理器覆盖参数被 CLI 拒绝。修复保留参数与值的 token 边界，将 `mm_processor_kwargs` 纳入有效配置和来源记录，并在最终 argv 输出一次。10 项新增启动器回归与 34 项原有 GDN 检查通过。正常 `start.sh` 入口已启动 BF16 对照服务，TP2、seqs1、16384、16 图、像素 65,536～1,048,576，GDN 决策 prefill 开启，冻结回放 8/8 逐位一致。[入口验证](../Clef-27B/logs/mlp-20261115/launch-validation.json) · [实际 manifest](../Clef-27B/logs/mlp-20261115/bf16-entry-manifest.json) · [冻结回放](../Clef-27B/logs/mlp-20261115/bf16-entry-frozen8.json)
 | [partial/probe_mlp_partial_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_partial_w8a8.py) | `7458b57d3b0b7adef4430830d230590e8720bfd3d6952876db0cd4fcee13a581` |
 | [partial/probe_mlp_w8a8.py](../Clef-27B/logs/mlp-20261115/w8a8-partial-v1/probe_mlp_w8a8.py) | `8b2224bc91cf6e63206ec36f31ba7966a0f670f9029fc5d7ab343519b92dc17e` |
