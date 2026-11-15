@@ -31,6 +31,7 @@
 | [提交入口 profile](profile-entry-2026-11-15.md) | 优化后设备预算：MLP、TP2 allreduce、GDN 主核与布局、attention |
 | [MLP W8A16 与平滑](mlp-w8a16-2026-11-15.md) | W8A16 候选全量结果、激活平滑仿真与 MLP 量化收益上限 |
 | [seqs4 批处理](batching-seqs4-2026-11-15.md) | C1–C16 吞吐/质量扫描、S1 不变性与合批质量边界 |
+| [当前进展总览](current-progress-2026-11-15.md) | 供外部专家评审的自包含状态：结果、预算、已排除方向与开放问题 |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
