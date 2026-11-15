@@ -40,9 +40,10 @@ DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm-ascend")
 DEFAULT_BACKUP = Path("/workspace/yangchen/logs/gdn-decision-20261115/phase0")
 FLAG_SOURCE = Path(__file__).with_name("gdn_decision_flags.py")
 FLAG_TARGET = "vllm_ascend/ops/gdn_decision_flags.py"
-PATCH_VERSION = 2
-FLAG_SHA256 = "cf1ede3f3e8a894d9f0896a35cd07254ffa756e18e699fa40636cea86043fc70"
-LEGACY_FLAG_SHA256 = "02987b37857ffad0ab259fc55fad6bb1f02d39c885664b36353572057b98c731"
+PATCH_VERSION = 3
+FLAG_SHA256 = "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287"
+LEGACY_FLAG_SHA256 = "cf1ede3f3e8a894d9f0896a35cd07254ffa756e18e699fa40636cea86043fc70"
+LEGACY_FLAG_SHA256_V1 = "02987b37857ffad0ab259fc55fad6bb1f02d39c885664b36353572057b98c731"
 
 PREIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
@@ -54,16 +55,25 @@ PREIMAGE_SHA = {
 }
 POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
+        "6886fa3fe7855d4dc8c754a9564ed2fe3967efd0cc09c5edd487c57be371d3ce",
+    "vllm_ascend/ops/gdn.py":
+        "7bc9b8f19e1ab17f7b484121c4c88c7f365c5ddb3a9f7a0380592175c077c893",
+    "vllm_ascend/patch/worker/patch_qwen3_5.py":
+        "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+}
+V2_POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
         "ad92a322a69dbd023cd88603b5882d0c5f7f931dbf20692957efdddd6f7809d2",
     "vllm_ascend/ops/gdn.py":
         "509dafb03b12351ebb17854742681b4aede60958a820d7625af94467c3586f43",
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
 }
-LEGACY_POSTIMAGE_SHA = {
+V1_POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "d2666387506cb68d9238c6f06baa89253158ee0facc67ad1243cf41ad01edcad",
 }
+LEGACY_POSTIMAGE_SHA = V1_POSTIMAGE_SHA
 
 DEF_MARKER = "    def fla_gdn_prefill("
 IMPORT_ANCHOR = (
@@ -207,40 +217,219 @@ def status(path: Path, relative: str) -> str:
         return "preimage"
     if digest == POSTIMAGE_SHA[relative]:
         return "patched"
-    if digest == LEGACY_POSTIMAGE_SHA.get(relative):
+    if digest == V2_POSTIMAGE_SHA.get(relative):
+        return "v2"
+    if digest == V1_POSTIMAGE_SHA.get(relative):
         return "legacy"
     return "unknown"
 
 
+A3_FUNCTION = '''
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        g: torch.Tensor,
+        beta: torch.Tensor,
+        initial_state: torch.Tensor | None,
+        scale: float,
+        prebuilt_meta,
+        fused_fwd,
+        *,
+        decision_only: bool | None = None,
+        runtime=None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Run the A2/A3 Phase6 FLA NPU GDN prefill kernel.
+
+        ``runtime`` is one forward's host-side switch snapshot; the caller
+        passes the same object to every GDN layer so the data path cannot
+        change between layers.  The decision path skips the final state and
+        the backward-only intermediates.  Its data-path switches additionally
+        drop the initial-state gather and transposes, the convolution state
+        cache, and the Q/K/V copies that only exist to feed the BNSD layout.
+
+        ``initial_state`` is optional.  A fresh full prefill has no history,
+        so ``None`` tells the kernel to start from zero and skips the gather,
+        the transposes, and the write-back.
+        """
+        from vllm.third_party.flash_linear_attention.ops.l2norm import l2norm_fwd
+        from vllm_ascend.ops.gdn_decision_flags import read_flags
+
+        if runtime is None:
+            runtime = read_flags()
+        if decision_only is None:
+            decision_only = runtime.decision_prefill
+        if not decision_only:
+            # The extra skips are only defined for a batch that cannot carry a
+            # state; keep the accepted v2 behaviour for every other caller.
+            runtime = runtime.state_free()
+        if initial_state is None and not decision_only:
+            raise RuntimeError(
+                "fla_gdn_prefill: initial_state=None requires decision_only"
+            )
+        skip_recompute = runtime.no_recompute
+
+        if runtime.bsnd and q.dim() == 4 and q.dtype == torch.bfloat16 and v.dtype == torch.bfloat16:
+            # The prefill convolution returns [H, T, D].  Normalizing that
+            # head-first storage removes the pre-norm contiguous copy; only
+            # the sequence-major operand of the BSND call needs a layout
+            # change.  The l2norm math is unchanged: each row is one head's
+            # token vector either way.
+            q_head = q.transpose(1, 2)
+            k_head = k.transpose(1, 2)
+            v_head = v.transpose(1, 2)
+            if not (
+                q_head.is_contiguous()
+                and k_head.is_contiguous()
+                and v_head.is_contiguous()
+            ):
+                q_head = q_head.contiguous()
+                k_head = k_head.contiguous()
+                v_head = v_head.contiguous()
+            q = l2norm_fwd(q_head).transpose(1, 2)
+            k = l2norm_fwd(k_head).transpose(1, 2)
+            v = v_head.transpose(1, 2)
+            if os.environ.get("CLEF_GDN_BSND_STRIDED", "0") != "1":
+                # The stable ABI is documented for contiguous operand; the
+                # experiment switch measures the strided view for the report.
+                q = q.contiguous()
+                k = k.contiguous()
+                v = v.contiguous()
+            g = g.to(torch.float32).contiguous()
+            beta = beta.to(v.dtype).contiguous()
+            cu_seqlens = prebuilt_meta.cu_seqlens_host
+            chunk_indices = prebuilt_meta.chunk_indices_chunk64_host
+            keep_meta = prebuilt_meta.keep_meta
+            if keep_meta is not None:
+                cu_seqlens = prebuilt_meta.cu_seqlens_kern
+            initial_state_kern = None
+            if initial_state is not None:
+                initial_state = initial_state.contiguous()
+                if keep_meta is not None:
+                    initial_state_kern = (
+                        initial_state[keep_meta].transpose(-1, -2).contiguous()
+                    )
+                else:
+                    initial_state_kern = (
+                        initial_state.transpose(-1, -2).contiguous()
+                    )
+            output, final_state, *_ = fused_fwd(
+                q,
+                k,
+                v,
+                g,
+                beta,
+                initial_state=initial_state_kern,
+                output_final_state=not decision_only,
+                chunk_size=64,
+                cu_seqlens=cu_seqlens,
+                chunk_indices=chunk_indices,
+                scale=scale,
+                layout="BSND",
+                use_exp2=False,
+                use_qk_l2norm_in_kernel=False,
+                allow_neg_eigval=False,
+                disable_recompute=not skip_recompute,
+                state_v_first=False,
+            )
+            if decision_only:
+                return output, None
+            if keep_meta is not None:
+                # Scatter in the kernel layout so empty segments keep their
+                # initial state, then flip back to the caller's [.., Dv, Dk].
+                full_final_state = initial_state.transpose(-1, -2).contiguous()
+                full_final_state[keep_meta] = final_state
+                final_state = full_final_state
+            return output, final_state.transpose(-1, -2).contiguous()
+
+        q = l2norm_fwd(q.contiguous()).contiguous()
+        k = l2norm_fwd(k.contiguous()).contiguous()
+        v = v.contiguous()
+        g = g.to(torch.float32).contiguous()
+        beta = beta.to(v.dtype).contiguous()
+        cu_seqlens = prebuilt_meta.cu_seqlens_host
+        chunk_indices = prebuilt_meta.chunk_indices_chunk64_host
+        keep_meta = prebuilt_meta.keep_meta
+        if keep_meta is not None:
+            cu_seqlens = prebuilt_meta.cu_seqlens_kern
+        initial_state_kern = None
+        if initial_state is not None:
+            initial_state = initial_state.contiguous()
+            # stateVFirst=false takes [N, Hv, K, V], i.e. the transpose of
+            # ssm_state.
+            if keep_meta is not None:
+                initial_state_kern = (
+                    initial_state[keep_meta].transpose(-1, -2).contiguous()
+                )
+            else:
+                initial_state_kern = initial_state.transpose(-1, -2).contiguous()
+
+        # BNSD/NTD take [B, H, T, D]; q/k/v arrive sequence-major. The output
+        # is still returned sequence-major, so only the inputs are permuted.
+        q = q.transpose(1, 2).contiguous()
+        k = k.transpose(1, 2).contiguous()
+        v = v.transpose(1, 2).contiguous()
+
+        output, final_state, *_ = fused_fwd(
+            q,
+            k,
+            v,
+            g,
+            beta,
+            initial_state=initial_state_kern,
+            output_final_state=not decision_only,
+            chunk_size=64,
+            cu_seqlens=cu_seqlens,
+            chunk_indices=chunk_indices,
+            scale=scale,
+            layout="BNSD",
+            use_exp2=False,
+            use_qk_l2norm_in_kernel=False,
+            allow_neg_eigval=False,
+            disable_recompute=not skip_recompute,
+            state_v_first=False,
+        )
+        if decision_only:
+            return output, None
+        if keep_meta is not None:
+            # Scatter in the kernel layout so empty segments keep their initial state,
+            # then flip back to the caller's [.., Dv, Dk].
+            full_final_state = initial_state.transpose(-1, -2).contiguous()
+            full_final_state[keep_meta] = final_state
+            final_state = full_final_state
+        return output, final_state.transpose(-1, -2).contiguous()
+'''
+
+
+SIGNATURE_ANCHOR_V3 = (
+    "        prebuilt_meta,\n"
+    "        fused_fwd,\n"
+    "    ) -> tuple[torch.Tensor, torch.Tensor]:\n"
+)
+SIGNATURE_PATCHED_V3 = (
+    "        prebuilt_meta,\n"
+    "        fused_fwd,\n"
+    "        *,\n"
+    "        decision_only: bool | None = None,\n"
+    "        runtime=None,\n"
+    "    ) -> tuple[torch.Tensor, torch.Tensor]:\n"
+)
+
+
 def patch_device_op(text: str) -> str:
+    """Replace the A3 wrapper and let the A5 signature accept the new kwargs."""
     parts = text.split(DEF_MARKER, 2)
     if len(parts) != 3:
         raise SystemExit("device_op.py: expected two fla_gdn_prefill definitions")
     head, a3, tail = parts
-    if a3.count("output_final_state=True,") != 2:
-        raise SystemExit("device_op.py: expected two output_final_state=True in the A3 wrapper")
-    if a3.count("disable_recompute=True,") != 2:
-        raise SystemExit("device_op.py: expected two disable_recompute=True in the A3 wrapper")
-    if a3.count(IMPORT_ANCHOR) != 1 or a3.count(BSND_ANCHOR) != 1 or a3.count(BNSD_ANCHOR) != 1:
-        raise SystemExit("device_op.py: anchors are not unique; refusing to patch")
-    if a3.count(SIGNATURE_ANCHOR) != 1:
-        raise SystemExit("device_op.py: A3 signature anchor is not unique")
-    a3 = a3.replace(SIGNATURE_ANCHOR, SIGNATURE_PATCHED, 1)
-    a3 = a3.replace(IMPORT_ANCHOR, IMPORT_ADDED, 1)
-    if a3.count(DECISION_INIT_ANCHOR) != 1:
-        raise SystemExit("device_op.py: decision init anchor is not unique")
-    a3 = a3.replace(DECISION_INIT_ANCHOR, DECISION_INIT_PATCHED, 1)
-    a3 = a3.replace(
-        "output_final_state=True,", "output_final_state=not decision_only,", 2
-    )
-    a3 = a3.replace(
-        "disable_recompute=True,", "disable_recompute=not skip_recompute,", 2
-    )
-    a3 = a3.replace(BSND_ANCHOR, BSND_PATCHED, 1)
-    a3 = a3.replace(BNSD_ANCHOR, BNSD_PATCHED, 1)
-    if tail.count(SIGNATURE_ANCHOR) != 1:
+    end = a3.find("\n    @staticmethod\n", len(DEF_MARKER))
+    if end < 0:
+        raise SystemExit("device_op.py: A3 function end anchor is missing")
+    if a3[:end].count("layout=\"BSND\"") < 1 or a3[:end].count("layout=\"BNSD\"") < 1:
+        raise SystemExit("device_op.py: A3 body does not look like the accepted preimage")
+    a3 = A3_FUNCTION + a3[end:]
+    if tail.count(SIGNATURE_ANCHOR_V3) != 1:
         raise SystemExit("device_op.py: A5 signature anchor is not unique")
-    tail = tail.replace(SIGNATURE_ANCHOR, SIGNATURE_PATCHED, 1)
+    tail = tail.replace(SIGNATURE_ANCHOR_V3, SIGNATURE_PATCHED_V3, 1)
     return head + DEF_MARKER + a3 + DEF_MARKER + tail
 
 
@@ -274,21 +463,180 @@ def patch_qwen3_5(text: str) -> str:
     return text.replace(INIT_ANCHOR, INIT_PATCHED, 1)
 
 
+RUNTIME_HELPER = '''
+
+_PATH_LOG = {"epoch": None}
+
+
+def _decision_prefill_guard(decision_safe_config, attn_metadata, flags) -> bool:
+    """True only for a batch that cannot consume a recurrent state.
+
+    The engine recorded at construction time that chunked prefill, prefix
+    caching and speculative decoding are off, so a prefill batch with no
+    decode token cannot carry a state a later step reads.  The check is
+    host-side: reading ``prefill_has_initial_state`` would sync the device
+    once per layer and cost more than the state write it saves.
+    """
+    return bool(
+        decision_safe_config
+        and flags.decision_prefill
+        and attn_metadata.num_prefills > 0
+        and attn_metadata.num_decodes == 0
+        and attn_metadata.num_decode_tokens == 0
+        and attn_metadata.num_spec_decodes == 0
+        and attn_metadata.num_spec_decode_tokens == 0
+        and get_pcp_group().world_size == 1
+    )
+
+
+def _gdn_runtime_flags(decision_safe_config, attn_metadata):
+    """One forward's host-side switch snapshot, or None when unsafe.
+
+    The snapshot is keyed by the vLLM forward context, so every GDN layer of
+    one request reads the same values.  A new experiment epoch is logged once
+    per worker process; the driver counts those lines to prove both TP ranks
+    adopted the switch before a measurement starts.
+    """
+    import os
+
+    from vllm_ascend.ops.gdn_decision_flags import snapshot_for
+
+    flags = snapshot_for(get_forward_context())
+    if not _decision_prefill_guard(decision_safe_config, attn_metadata, flags):
+        return None
+    if _PATH_LOG["epoch"] != flags.epoch:
+        from vllm.logger import init_logger
+
+        init_logger(__name__).info(
+            "clef-gdn-path epoch=%d pid=%d bsnd=%d skip_initial_state=%d "
+            "skip_conv_state=%d preprocess_fusion=%d",
+            flags.epoch,
+            os.getpid(),
+            int(flags.bsnd),
+            int(flags.skip_initial_state),
+            int(flags.skip_conv_state),
+            int(flags.preprocess_fusion),
+        )
+        _PATH_LOG["epoch"] = flags.epoch
+    return flags
+'''
+
+RUNTIME_INSERT_ANCHOR = "    return chunk_gated_delta_rule_fwd\n"
+
+RUNTIME_CALL_ANCHOR = "        num_actual_tokens = attn_metadata.num_actual_tokens\n"
+RUNTIME_CALL_PATCHED = (
+    RUNTIME_CALL_ANCHOR
+    + "\n"
+    + "        runtime = _gdn_runtime_flags(\n"
+    + "            getattr(self, \"_decision_safe_config\", False), attn_metadata\n"
+    + "        )\n"
+)
+
+CONV_CALL_V3 = (
+    "                    mixed_qkv_non_spec_output = causal_conv1d_fn(\n"
+    "                        mixed_qkv_non_spec,\n"
+    "                        conv_weights_T,\n"
+    "                        self.conv1d.bias,\n"
+    "                        conv_states=self_kv_cache[0],\n"
+    "                        query_start_loc=query_start_loc_opt,\n"
+    "                        cache_indices=_normalize_causal_cache_indices(cache_indices_opt),\n"
+    "                        has_initial_state=initial_state_mode_opt,\n"
+    "                        activation=\"silu\" if self.activation else None,\n"
+    "                        pad_slot_id=PAD_SLOT_ID,\n"
+    "                        null_block_id=0,\n"
+    "                        head_num=conv_head_num,\n"
+    "                    )\n"
+)
+CONV_TAIL_V3 = (
+    "                    mixed_qkv_non_spec = mixed_qkv_non_spec_output\n"
+    "        elif attn_metadata.num_decodes > 0:\n"
+)
+CONV_ANCHOR_V3 = CONV_CALL_V3 + CONV_TAIL_V3
+CONV_PATCHED_V3 = (
+    "                    if runtime is not None and runtime.skip_conv_state:\n"
+    "                        # No decode step will read the convolution cache,\n"
+    "                        # so the prefill starts from left zero padding and\n"
+    "                        # skips both the cache read and the tail write.\n"
+    "                        mixed_qkv_non_spec_output = causal_conv1d_fn(\n"
+    "                            mixed_qkv_non_spec,\n"
+    "                            conv_weights_T,\n"
+    "                            self.conv1d.bias,\n"
+    "                            conv_states=None,\n"
+    "                            query_start_loc=query_start_loc_opt,\n"
+    "                            cache_indices=None,\n"
+    "                            has_initial_state=None,\n"
+    "                            activation=\"silu\" if self.activation else None,\n"
+    "                            pad_slot_id=PAD_SLOT_ID,\n"
+    "                            null_block_id=0,\n"
+    "                            head_num=conv_head_num,\n"
+    "                        )\n"
+    "                    else:\n"
+    + "".join("    " + line + "\n" for line in CONV_CALL_V3.splitlines())
+    + CONV_TAIL_V3
+)
+
+FUSED_ANCHOR_V3 = (
+    "            if fla_gdn_prefill_op is not None:\n"
+    "                initial_state = gather_ssm_states(\n"
+    "                    ssm_state,\n"
+    "                    prefill_state_indices,\n"
+    "                    prefill_has_initial_state,\n"
+    "                )\n"
+)
+FUSED_PATCHED_V3 = (
+    "            if fla_gdn_prefill_op is not None:\n"
+    "                if runtime is not None and runtime.skip_initial_state:\n"
+    "                    # A fresh full prefill carries no history: the kernel\n"
+    "                    # starts from zero, so the gather and its transposes\n"
+    "                    # are dead work.\n"
+    "                    initial_state = None\n"
+    "                else:\n"
+    "                    initial_state = gather_ssm_states(\n"
+    "                        ssm_state,\n"
+    "                        prefill_state_indices,\n"
+    "                        prefill_has_initial_state,\n"
+    "                    )\n"
+)
+
+SCATTER_ANCHOR_V3 = (
+    "                    fused_fwd=fla_gdn_prefill_op,\n"
+    "                )\n"
+    "                scatter_ssm_states_(\n"
+    "                    ssm_state,\n"
+    "                    prefill_state_indices,\n"
+    "                    last_recurrent_state.to(ssm_state.dtype).contiguous(),\n"
+    "                )\n"
+)
+SCATTER_PATCHED_V3 = (
+    "                    fused_fwd=fla_gdn_prefill_op,\n"
+    "                    decision_only=runtime is not None,\n"
+    "                    runtime=runtime,\n"
+    "                )\n"
+    "                if last_recurrent_state is not None:\n"
+    "                    scatter_ssm_states_(\n"
+    "                        ssm_state,\n"
+    "                        prefill_state_indices,\n"
+    "                        last_recurrent_state.to(ssm_state.dtype).contiguous(),\n"
+    "                    )\n"
+)
+
+
 def patch_gdn(text: str) -> str:
-    if text.count(SCATTER_LATE) != 1 or text.count(SCATTER_FUSED) != 1:
-        raise SystemExit("gdn.py: scatter anchors are not unique; refusing to patch")
-    if text.count(GUARD_ANCHOR) != 1 or text.count(KWARG_ANCHOR) != 1:
-        raise SystemExit("gdn.py: guard anchors are not unique; refusing to patch")
+    if text.count(RUNTIME_INSERT_ANCHOR) != 1:
+        raise SystemExit("gdn.py: helper insertion point is not unique")
+    if text.count(RUNTIME_CALL_ANCHOR) != 1:
+        raise SystemExit("gdn.py: runtime call anchor is not unique")
+    if text.count(CONV_ANCHOR_V3) != 1:
+        raise SystemExit("gdn.py: prefill convolution anchor is not unique")
+    if text.count(FUSED_ANCHOR_V3) != 1 or text.count(SCATTER_ANCHOR_V3) != 1:
+        raise SystemExit("gdn.py: fused prefill anchors are not unique")
     if text.count("def _get_fla_gdn_prefill_op():") != 1:
         raise SystemExit("gdn.py: helper anchor is not unique; refusing to patch")
-    text = text.replace(SCATTER_LATE, SCATTER_LATE_PATCHED, 1)
-    text = text.replace(SCATTER_FUSED, SCATTER_FUSED_PATCHED, 1)
-    text = text.replace(GUARD_ANCHOR, GUARD_PATCHED, 1)
-    text = text.replace(KWARG_ANCHOR, KWARG_PATCHED, 1)
-    marker = "    return chunk_gated_delta_rule_fwd\n"
-    if text.count(marker) != 1:
-        raise SystemExit("gdn.py: helper insertion point is not unique")
-    text = text.replace(marker, marker + GUARD_HELPER, 1)
+    text = text.replace(RUNTIME_INSERT_ANCHOR, RUNTIME_INSERT_ANCHOR + RUNTIME_HELPER, 1)
+    text = text.replace(RUNTIME_CALL_ANCHOR, RUNTIME_CALL_PATCHED, 1)
+    text = text.replace(CONV_ANCHOR_V3, CONV_PATCHED_V3, 1)
+    text = text.replace(FUSED_ANCHOR_V3, FUSED_PATCHED_V3, 1)
+    text = text.replace(SCATTER_ANCHOR_V3, SCATTER_PATCHED_V3, 1)
     return text
 
 
@@ -313,6 +661,8 @@ def flag_status(path: Path) -> str:
         return "current"
     if digest == LEGACY_FLAG_SHA256:
         return "legacy"
+    if digest == LEGACY_FLAG_SHA256_V1:
+        return "legacy-v1"
     return "unknown"
 
 
@@ -326,6 +676,8 @@ def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
             "sha256": sha256_file(path) if path.is_file() else None,
             "preimage_sha256": PREIMAGE_SHA[relative],
             "postimage_sha256": POSTIMAGE_SHA[relative],
+            "v2_postimage_sha256": V2_POSTIMAGE_SHA.get(relative),
+            "v1_postimage_sha256": V1_POSTIMAGE_SHA.get(relative),
         })
     flag_target = tree / FLAG_TARGET
     report.setdefault("flag_module", {}).update({
@@ -359,7 +711,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
     for relative, item in report["files"].items():
         path = tree / relative
         current = item["status_before"]
-        if current not in ("preimage", "patched", "legacy"):
+        if current not in ("preimage", "patched", "v2", "legacy"):
             raise ValueError(f"{relative}: refused {current} source content")
         backup = backup_dir / f"{path.name}.preimage"
         backup_data = None
@@ -380,10 +732,11 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
             if current == "patched":
                 item["action"] = "already-patched"
                 continue
-            if current == "legacy":
+            if current in ("v2", "legacy"):
                 if backup_data is None:
                     raise ValueError(
-                        f"{relative}: legacy upgrade requires a verified preimage backup: {backup}")
+                        f"{relative}: {current} upgrade requires a verified "
+                        f"preimage backup: {backup}")
                 preimage = backup_data
                 item["action"] = "upgraded"
             else:

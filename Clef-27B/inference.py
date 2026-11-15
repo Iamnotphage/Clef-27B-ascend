@@ -214,6 +214,8 @@ def gdn_decision_prefill(config, apply=True):
                 "patched": expected,
                 "preimage": contract.PREIMAGE_SHA[path],
             }
+            if path in contract.V2_POSTIMAGE_SHA:
+                allowed["v2"] = contract.V2_POSTIMAGE_SHA[path]
             if path in contract.LEGACY_POSTIMAGE_SHA:
                 allowed["legacy"] = contract.LEGACY_POSTIMAGE_SHA[path]
             if (state not in allowed or item.get("sha256") != allowed[state]
@@ -231,6 +233,7 @@ def gdn_decision_prefill(config, apply=True):
         flag_hashes = {
             "current": expected_flag,
             "legacy": contract.LEGACY_FLAG_SHA256,
+            "legacy-v1": contract.LEGACY_FLAG_SHA256_V1,
             "missing": None,
         }
         if (flag_state not in flag_hashes

@@ -14,6 +14,7 @@ import functools
 import io
 import json
 import os
+import sys
 import tempfile
 import time
 import types
@@ -25,6 +26,7 @@ from unittest import mock
 def load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -40,13 +42,17 @@ class FlagTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.flag_file = Path(self.temporary.name) / "flags.json"
         for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE",
-                    "CLEF_GDN_FLAG_FILE"):
+                    "CLEF_GDN_FLAG_FILE", "CLEF_GDN_BSND",
+                    "CLEF_GDN_SKIP_INITIAL_STATE", "CLEF_GDN_SKIP_CONV_STATE",
+                    "CLEF_GDN_PREPROCESS_FUSION"):
             os.environ.pop(key, None)
         flags.reset_cache()
 
     def tearDown(self):
         for key in ("CLEF_GDN_DECISION_PREFILL", "CLEF_GDN_NO_RECOMPUTE",
-                    "CLEF_GDN_FLAG_FILE"):
+                    "CLEF_GDN_FLAG_FILE", "CLEF_GDN_BSND",
+                    "CLEF_GDN_SKIP_INITIAL_STATE", "CLEF_GDN_SKIP_CONV_STATE",
+                    "CLEF_GDN_PREPROCESS_FUSION"):
             os.environ.pop(key, None)
         flags.reset_cache()
         self.temporary.cleanup()
@@ -113,8 +119,82 @@ class FlagTests(unittest.TestCase):
         time.sleep(1.1)
         self.assertFalse(flags.decision_prefill_enabled())
 
+    def test_data_path_keys_and_epoch(self):
+        self.opt_in()
+        self.flag_file.write_text(json.dumps({
+            "epoch": 17,
+            "decision_prefill": True,
+            "no_recompute": True,
+            "bsnd": True,
+            "skip_initial_state": True,
+            "skip_conv_state": True,
+            "preprocess_fusion": True,
+        }))
+        flags.reset_cache()
+        snapshot = flags.read_flags()
+        self.assertEqual(snapshot.epoch, 17)
+        for key in ("decision_prefill", "no_recompute", "bsnd",
+                    "skip_initial_state", "skip_conv_state", "preprocess_fusion"):
+            self.assertTrue(getattr(snapshot, key), key)
+        self.assertTrue(flags.bsnd_enabled())
+        self.assertTrue(flags.skip_initial_state_enabled())
+        self.assertTrue(flags.skip_conv_state_enabled())
+        self.assertTrue(flags.preprocess_fusion_enabled())
 
-SYNTHETIC_DEVICE_OP = '''import torch
+    def test_non_boolean_values_are_ignored(self):
+        self.opt_in()
+        self.flag_file.write_text(json.dumps({
+            "decision_prefill": 1,
+            "bsnd": "false",
+            "skip_conv_state": True,
+        }))
+        flags.reset_cache()
+        snapshot = flags.read_flags()
+        self.assertFalse(snapshot.decision_prefill)
+        self.assertFalse(snapshot.no_recompute)
+        self.assertFalse(snapshot.bsnd)
+        self.assertTrue(snapshot.skip_conv_state)
+        self.assertEqual(snapshot.epoch, 0)
+
+    def test_invalid_epoch_falls_back_to_zero(self):
+        self.opt_in()
+        for value in (-1, True, "3", 1.5):
+            self.flag_file.write_text(json.dumps({"epoch": value, "bsnd": True}))
+            flags.reset_cache()
+            self.assertEqual(flags.read_flags().epoch, 0, value)
+            self.assertTrue(flags.bsnd_enabled(), value)
+
+    def test_snapshot_is_per_forward_key(self):
+        self.opt_in()
+        self.flag_file.write_text(json.dumps({"epoch": 1, "bsnd": True}))
+        flags.reset_cache()
+        first = object()
+        second = object()
+        self.assertTrue(flags.snapshot_for(first).bsnd)
+        # A rewrite between layers of one forward must not change the values.
+        self.flag_file.write_text(json.dumps({"epoch": 2, "bsnd": False}))
+        os.utime(self.flag_file, (time.time() + 5, time.time() + 5))
+        time.sleep(1.1)
+        self.assertTrue(flags.snapshot_for(first).bsnd)
+        self.assertEqual(flags.snapshot_for(first).epoch, 1)
+        # The next forward adopts the new file.
+        self.assertFalse(flags.snapshot_for(second).bsnd)
+        self.assertEqual(flags.snapshot_for(second).epoch, 2)
+
+    def test_env_defaults_for_new_keys(self):
+        os.environ["CLEF_GDN_BSND"] = "1"
+        os.environ["CLEF_GDN_SKIP_INITIAL_STATE"] = "true"
+        os.environ["CLEF_GDN_SKIP_CONV_STATE"] = "0"
+        flags.reset_cache()
+        self.assertTrue(flags.bsnd_enabled())
+        self.assertTrue(flags.skip_initial_state_enabled())
+        self.assertFalse(flags.skip_conv_state_enabled())
+        for key in ("CLEF_GDN_BSND", "CLEF_GDN_SKIP_INITIAL_STATE",
+                    "CLEF_GDN_SKIP_CONV_STATE"):
+            os.environ.pop(key, None)
+
+
+SYNTHETIC_DEVICE_OP = '''import os
 
 
 class DeviceOperator:
@@ -124,32 +204,13 @@ class DeviceOperator:
         fused_fwd,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         from vllm.third_party.flash_linear_attention.ops.l2norm import l2norm_fwd
-        candidate = True
-        if candidate:
-            output, final_state, *_ = fused_fwd(
-                q,
-                initial_state=initial_state_kern,
-                output_final_state=True,
-                layout="BSND",
-                disable_recompute=True,
-            )
-            if keep_meta is not None:
-                # Scatter in the kernel layout so empty segments keep their
-                full_final_state = initial_state
-                final_state = full_final_state
-            return output, final_state
-        output, final_state, *_ = fused_fwd(
-            q,
-            initial_state=initial_state_kern,
-            output_final_state=True,
-            layout="BNSD",
-            disable_recompute=True,
-        )
-        if keep_meta is not None:
-            # Scatter in the kernel layout so empty segments keep their initial state,
-            full_final_state = initial_state
-            final_state = full_final_state
+        output, final_state, *_ = fused_fwd(q, layout="BSND")
+        output, final_state, *_ = fused_fwd(q, layout="BNSD")
         return output, final_state
+
+    @staticmethod
+    def fused_gdn_gating(A_log, a, b, dt_bias):
+        return None
 
 
 class Arch35Operator:
@@ -158,9 +219,7 @@ class Arch35Operator:
         prebuilt_meta,
         fused_fwd,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        output, final_state, *_ = fused_fwd(
-            q, output_final_state=True, disable_recompute=True,
-        )
+        output, final_state, *_ = fused_fwd(q)
         return output, final_state
 '''
 
@@ -179,8 +238,31 @@ def _get_fla_gdn_prefill_op():
 
 
 class Attention:
-    def forward(self):
+    def _forward_core(self):
+        attn_metadata = get_attn_metadata()
+        num_actual_tokens = attn_metadata.num_actual_tokens
         if prefill:
+            if num_decodes == 0:
+                if split_conv:
+                    pass
+                else:
+                    mixed_qkv_non_spec_output = causal_conv1d_fn(
+                        mixed_qkv_non_spec,
+                        conv_weights_T,
+                        self.conv1d.bias,
+                        conv_states=self_kv_cache[0],
+                        query_start_loc=query_start_loc_opt,
+                        cache_indices=_normalize_causal_cache_indices(cache_indices_opt),
+                        has_initial_state=initial_state_mode_opt,
+                        activation="silu" if self.activation else None,
+                        pad_slot_id=PAD_SLOT_ID,
+                        null_block_id=0,
+                        head_num=conv_head_num,
+                    )
+                    mixed_qkv_non_spec = mixed_qkv_non_spec_output
+        elif attn_metadata.num_decodes > 0:
+            pass
+        if attn_metadata.num_prefills > 0:
             if fla_gdn_prefill_op is not None:
                 initial_state = gather_ssm_states(
                     ssm_state,
@@ -215,24 +297,29 @@ SYNTHETIC_QWEN_INIT = '''    @wraps(_GDN_ORIGINAL_INIT)
 class PatcherTests(unittest.TestCase):
     def test_device_op_patch(self):
         patched = installer.patch_device_op(SYNTHETIC_DEVICE_OP)
-        self.assertEqual(patched.count("output_final_state=not decision_only,"), 2)
-        self.assertEqual(patched.count("disable_recompute=not skip_recompute,"), 2)
-        self.assertEqual(patched.count("if decision_only:"), 2)
-        self.assertEqual(patched.count("decision_only: bool | None = None,"), 2)
-        self.assertEqual(patched.count("if decision_only is None:"), 1)
-        self.assertIn("from vllm_ascend.ops.gdn_decision_flags import (", patched)
-        # The second definition must be untouched.
+        self.assertEqual(patched.count("layout=\"BSND\""), 1)
+        self.assertEqual(patched.count("layout=\"BNSD\""), 1)
+        self.assertEqual(patched.count("if initial_state is None"), 1)
+        self.assertEqual(patched.count("runtime=None,"), 2)
+        self.assertIn("from vllm_ascend.ops.gdn_decision_flags import read_flags", patched)
+        self.assertIn("runtime.state_free()", patched)
+        # The second (A5) definition keeps its body.
         tail = patched.split(installer.DEF_MARKER, 2)[2]
-        self.assertIn("output_final_state=True", tail)
-        self.assertIn("disable_recompute=True", tail)
+        self.assertIn("fused_fwd(q)", tail)
+        self.assertIn("runtime=None,", tail)
 
     def test_gdn_patch(self):
         patched = installer.patch_gdn(SYNTHETIC_GDN)
+        self.assertEqual(patched.count("_gdn_runtime_flags("), 2)
         self.assertEqual(patched.count("_decision_prefill_guard("), 2)
-        self.assertIn("decision_only=decision_only,", patched)
+        self.assertIn("skip_conv_state", patched)
+        self.assertIn("skip_initial_state", patched)
+        self.assertIn("decision_only=runtime is not None,", patched)
+        self.assertIn("runtime=runtime,", patched)
         self.assertIn("num_decodes == 0", patched)
         self.assertIn("num_spec_decodes == 0", patched)
         self.assertIn("decision_safe_config", patched)
+        self.assertIn("get_pcp_group().world_size == 1", patched)
 
     def test_qwen_init_patch(self):
         patched = installer.patch_qwen3_5(SYNTHETIC_QWEN_INIT)
@@ -278,13 +365,16 @@ class PatcherTests(unittest.TestCase):
         evidence = HERE.parent / "Clef-27B/logs/gdn-decision-20261115"
         accepted = json.loads((evidence / "entry-s1/launch-manifest.json").read_text())
         record = accepted["gdn_decision_prefill"]
-        self.assertEqual(installer.POSTIMAGE_SHA, record["files"])
-        self.assertEqual(installer.FLAG_SHA256, record["flag_module_sha256"])
+        # The historical entry is the v2 contract; v3 must still recognise it
+        # as an upgrade, not as unknown content.
+        self.assertEqual(installer.V2_POSTIMAGE_SHA, record["files"])
+        self.assertEqual(installer.LEGACY_FLAG_SHA256, record["flag_module_sha256"])
         self.assertEqual(installer.sha256_file(installer.FLAG_SOURCE), installer.FLAG_SHA256)
         legacy = json.loads((evidence / "phase0/patch-apply-v5.json").read_text())
-        for relative, digest in installer.LEGACY_POSTIMAGE_SHA.items():
+        for relative, digest in installer.V1_POSTIMAGE_SHA.items():
             self.assertEqual(digest, legacy["files"][relative]["sha256"])
-        self.assertEqual(installer.LEGACY_FLAG_SHA256, legacy["flag_module"]["sha256"])
+        self.assertEqual(installer.LEGACY_FLAG_SHA256_V1, legacy["flag_module"]["sha256"])
+
 
 
 class InstallerTests(unittest.TestCase):
@@ -306,11 +396,21 @@ class InstallerTests(unittest.TestCase):
         self.legacy_guard = self.postimages[self.guard_path].replace(
             b'            and vllm_config.model_config.runner_type == "pooling"\n', b'')
         self.legacy_flag = b"# known legacy global flag implementation\n"
+        self.v2_images = {
+            key: (data.replace(b"runtime=None,", b"")
+                  if b"runtime=None," in data
+                  else data.replace(b"runtime=runtime,", b""))
+            if key != self.guard_path else data
+            for key, data in self.postimages.items()
+        }
         constants = {
             "PREIMAGE_SHA": {key: installer.sha256_bytes(data) for key, data in self.preimages.items()},
             "POSTIMAGE_SHA": {key: installer.sha256_bytes(data) for key, data in self.postimages.items()},
+            "V2_POSTIMAGE_SHA": {key: installer.sha256_bytes(data) for key, data in self.v2_images.items()},
+            "V1_POSTIMAGE_SHA": {self.guard_path: installer.sha256_bytes(self.legacy_guard)},
             "LEGACY_POSTIMAGE_SHA": {self.guard_path: installer.sha256_bytes(self.legacy_guard)},
             "LEGACY_FLAG_SHA256": installer.sha256_bytes(self.legacy_flag),
+            "LEGACY_FLAG_SHA256_V1": installer.sha256_bytes(self.legacy_flag + b"v1"),
         }
         patcher = mock.patch.multiple(installer, **constants)
         patcher.start()
@@ -347,6 +447,11 @@ class InstallerTests(unittest.TestCase):
         (self.tree / self.guard_path).write_bytes(self.legacy_guard)
         (self.tree / installer.FLAG_TARGET).write_bytes(self.legacy_flag)
 
+    def set_v2(self):
+        self.install()
+        for relative, data in self.v2_images.items():
+            (self.tree / relative).write_bytes(data)
+
     def test_apply_idempotent_check_and_revert(self):
         self.install()
         before = self.snapshot(timestamps=True)
@@ -376,6 +481,29 @@ class InstallerTests(unittest.TestCase):
         self.install()
         (self.tree / installer.FLAG_TARGET).write_bytes(self.legacy_flag)
         self.install()
+
+    def test_v2_tree_upgrades_from_verified_backup(self):
+        self.set_v2()
+        _, report = self.call("--check")
+        self.assertEqual(
+            report["files"]["vllm_ascend/device/device_op.py"]["status_before"], "v2")
+        report = self.install()
+        self.assertEqual(
+            report["files"]["vllm_ascend/device/device_op.py"]["action"], "upgraded")
+        self.assertEqual(
+            report["files"]["vllm_ascend/ops/gdn.py"]["action"], "upgraded")
+        for relative, data in self.postimages.items():
+            self.assertEqual((self.tree / relative).read_bytes(), data)
+
+    def test_v2_tree_without_backup_refuses_before_writing(self):
+        self.set_v2()
+        for relative in self.preimages:
+            (self.backup / f"{Path(relative).name}.preimage").unlink()
+        before = self.snapshot(timestamps=True)
+        code, report = self.call("--apply")
+        self.assertEqual(code, 1)
+        self.assertIn("requires a verified preimage backup", report["error"])
+        self.assertEqual(before, self.snapshot(timestamps=True))
 
     def test_known_legacy_guard_upgrades_from_verified_backup(self):
         self.set_legacy()
@@ -495,6 +623,7 @@ class LauncherTests(unittest.TestCase):
                 "sha256": {
                     "current": installer.FLAG_SHA256,
                     "legacy": installer.LEGACY_FLAG_SHA256,
+                    "legacy-v1": installer.LEGACY_FLAG_SHA256_V1,
                     "missing": None,
                 }[flag_state],
                 "source_sha256": installer.FLAG_SHA256,
@@ -506,11 +635,14 @@ class LauncherTests(unittest.TestCase):
             state = source_state
             if state == "legacy" and path not in installer.LEGACY_POSTIMAGE_SHA:
                 state = "patched"
+            if state == "v2" and path not in installer.V2_POSTIMAGE_SHA:
+                state = "patched"
             report["files"][path] = {
                 "status_before": state,
                 "sha256": {
                     "patched": digest,
                     "preimage": installer.PREIMAGE_SHA[path],
+                    "v2": installer.V2_POSTIMAGE_SHA.get(path),
                     "legacy": installer.LEGACY_POSTIMAGE_SHA.get(path),
                 }[state],
                 "postimage_sha256": digest,
@@ -539,6 +671,11 @@ class LauncherTests(unittest.TestCase):
 
     def test_legacy_guard_upgrades_then_rechecks(self):
         record, calls = self.run_launcher([self.report("legacy", "legacy"), {}, self.report()])
+        self.assertTrue(record["enabled"])
+        self.assertEqual(calls, ["--check", "--apply", "--check"])
+
+    def test_v2_tree_upgrades_then_rechecks(self):
+        record, calls = self.run_launcher([self.report("v2", "legacy"), {}, self.report()])
         self.assertTrue(record["enabled"])
         self.assertEqual(calls, ["--check", "--apply", "--check"])
 
