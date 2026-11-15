@@ -236,4 +236,6 @@ python runtime/apply_gdn_decision_patch.py --revert
 
 当前补丁目标源码和开关模块的 SHA-256 对应第 10.1 节的已验收版本。安装器升级逻辑使用本地临时源码树验证，覆盖旧 guard、缺失与旧版开关模块、未知内容、备份错误、回退及重复执行。CSV 重建已验证幂等，原有 56 条规范测量完整保留，并新增入口 S1 测量。
 
-本次 `runtime/test_gdn_decision_patch.py` 的 34 项回归、两份 CSV 校验、Python 语法、文档链接与 `git diff --check` 均通过。三个计算补丁生成函数与 `525a1dd` 的 AST 相同。SSH 后续连接返回 `Connection closed by UNKNOWN port 65535`，新增安装校验的远端复验待连接恢复后执行。
+本次 `runtime/test_gdn_decision_patch.py` 的 34 项回归、两份 CSV 校验、Python 语法、文档链接与 `git diff --check` 均通过。三个计算补丁生成函数与 `525a1dd` 的 AST 相同。
+
+2026-11-15 SSH 恢复后，`b06fd34` 的安装器、入口和测试已同步至服务器并完成复验。远端 34 项测试通过，`--check` 返回 `patch_version=2`、`ready=true`，幂等 `--apply` 前后四个目标文件的 SHA-256 与 mtime 均相同。正常入口 `--dry-run` 返回 GDN enabled、当前完整补丁身份，指定输出目录未创建。原服务 PID 498272 的健康检查为 200，冻结回放 8/8 通过。[远端验证记录](../Clef-27B/logs/gdn-decision-20261115/b06fd34-remote/)
