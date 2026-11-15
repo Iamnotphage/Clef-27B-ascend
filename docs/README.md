@@ -29,6 +29,7 @@
 | [CPU 参考对照](cpu-npu-reference-2026-11-14.md) | 发布方参考实现的 CPU BF16 独立前向、全量输入等价、逐题概率差与终止范围 |
 | [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md) | 纯 prefill 特化：状态与反向中间量裁剪、guard 设计、6 对 A/B 与服务恢复 |
 | [提交入口 profile](profile-entry-2026-11-15.md) | 优化后设备预算：MLP、TP2 allreduce、GDN 主核与布局、attention |
+| [MLP W8A16 与平滑](mlp-w8a16-2026-11-15.md) | W8A16 候选全量结果、激活平滑仿真与 MLP 量化收益上限 |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |

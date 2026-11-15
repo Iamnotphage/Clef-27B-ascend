@@ -1,0 +1,21 @@
+Traceback (most recent call last):
+  File "/workspace/yangchen/Clef-27B-ascend/runtime/simulate_w8a8_smoothing.py", line 178, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/workspace/yangchen/Clef-27B-ascend/runtime/simulate_w8a8_smoothing.py", line 126, in main
+    activation, metadata = load_capture(args.input)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/Clef-27B-ascend/runtime/simulate_w8a8_smoothing.py", line 40, in load_capture
+    document = torch.load(path, map_location="cpu", weights_only=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/utils/serialization.py", line 246, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/serialization.py", line 768, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/serialization.py", line 749, in __init__
+    super().__init__(open(name, mode))  # noqa: SIM115
+                     ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-6d04c9c2b0dfb9b4.layer31.rank0.pt'
+[ERROR] 2026-11-15-06:06:24 (PID:536516, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
