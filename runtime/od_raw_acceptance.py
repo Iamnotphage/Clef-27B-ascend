@@ -71,6 +71,11 @@ def load_run(path, tasks, template_rows):
     requests = data["requests"]
     if len(requests) != len(tasks):
         raise SystemExit(f"{path}: {len(requests)} requests, expected {len(tasks)}")
+    indices = [request["index"] for request in requests]
+    if (any(type(index) is not int for index in indices)
+            or set(indices) != set(range(len(tasks)))):
+        raise SystemExit(f"{path}: request indices must cover each dataset index exactly once")
+    requests = sorted(requests, key=lambda request: request["index"])
     rows, records, order_mismatch = [], [], 0
     for request in requests:
         index = request["index"]
@@ -109,6 +114,7 @@ def load_run(path, tasks, template_rows):
         "p95_ms": (summary.get("successful_request_latency_ms") or {}).get("p95"),
         "p99_ms": (summary.get("successful_request_latency_ms") or {}).get("p99"),
         "order_mismatch": order_mismatch,
+        "index_order_normalized": indices != list(range(len(tasks))),
     }
     return rows, records, source
 

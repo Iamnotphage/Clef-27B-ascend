@@ -1,0 +1,76 @@
+{
+  "created_at": "2026-11-15T02:47:22.877383+00:00",
+  "phase": "interface",
+  "device": 0,
+  "completed": true,
+  "documented_constraint": "SwiGLU npu_ffn supports ungrouped FP16 with inner_precise=1; BF16 support is probed",
+  "numerical_tolerance_scope": "Local tensor diagnostic; end-to-end decision quality requires separate evaluation",
+  "interface": {
+    "bfloat16": {
+      "dtype": "bfloat16",
+      "status": "error",
+      "shape": [
+        4,
+        64,
+        128,
+        64
+      ],
+      "error_type": "RuntimeError",
+      "error": "npu_ffn:../third_party/op-plugin/op_plugin/ops/opapi/FFNKernelNpuOpApi.cpp:86 NPU function error: call aclnnFFNV2 failed, error code is 161002\n[ERROR] 2026-11-15-02:47:26 (PID:505214, Device:0, RankID:-1) ERR00100 PTA call acl api failed.\nEZ9999: Internal error!\nEZ9999[PID: 505214] 2026-11-15-02:47:26.175.173 AclNN_Inner_Error(EZ9999):  x only support dtype float16 without expert tokens, but found DT_BFLOAT16.\nTraceBack (most recent call last):\n",
+      "traceback": "Traceback (most recent call last):\n  File \"/workspace/yangchen/Clef-27B-ascend/runtime/probe_mlp_ffn.py\", line 106, in interface_worker\n    actual = torch_npu.npu_ffn(\n             ^^^^^^^^^^^^^^^^^^\n  File \"/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py\", line 1209, in __call__\n    return self._op(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: npu_ffn:../third_party/op-plugin/op_plugin/ops/opapi/FFNKernelNpuOpApi.cpp:86 NPU function error: call aclnnFFNV2 failed, error code is 161002\n[ERROR] 2026-11-15-02:47:26 (PID:505214, Device:0, RankID:-1) ERR00100 PTA call acl api failed.\nEZ9999: Internal error!\nEZ9999[PID: 505214] 2026-11-15-02:47:26.175.173 AclNN_Inner_Error(EZ9999):  x only support dtype float16 without expert tokens, but found DT_BFLOAT16.\nTraceBack (most recent call last):\n\n",
+      "exit_code": 0,
+      "stderr_tail": "[W1115 02:47:26.159168150 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())\n"
+    },
+    "float16": {
+      "dtype": "float16",
+      "status": "supported",
+      "shape": [
+        4,
+        64,
+        128,
+        64
+      ],
+      "silu_first_half_times_second_half": {
+        "actual_finite": true,
+        "reference_finite": true,
+        "atol": 0.001,
+        "rtol": 0.01,
+        "within_tolerance": false,
+        "max_absolute_difference": 29.367084503173828,
+        "rmse": 9.31098461151123,
+        "relative_rmse": 0.8208285839050162,
+        "reference_max_absolute": 33.11299133300781,
+        "normalized_max_error": 0.886875009504201
+      },
+      "first_half_times_silu_second_half": {
+        "actual_finite": true,
+        "reference_finite": true,
+        "atol": 0.001,
+        "rtol": 0.01,
+        "within_tolerance": true,
+        "max_absolute_difference": 0.014859199523925781,
+        "rmse": 0.0038475117180496454,
+        "relative_rmse": 0.00041198803081138156,
+        "reference_max_absolute": 27.65735626220703,
+        "normalized_max_error": 0.0005372603000464814
+      },
+      "gate_order": "second_half",
+      "gate_order_criteria": {
+        "max_relative_rmse": 0.01,
+        "max_normalized_error": 0.02,
+        "minimum_alternative_rmse_ratio": 10.0,
+        "probe_input_and_weight_std": 0.5
+      },
+      "output_shape": [
+        4,
+        64
+      ],
+      "output_dtype": "torch.float16",
+      "torch": "2.10.0+cpu",
+      "torch_npu": "2.10.0.post7",
+      "exit_code": 0,
+      "stderr_tail": "[W1115 02:47:32.176788930 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())\n"
+    }
+  },
+  "wall_seconds": 12.235205159988254
+}

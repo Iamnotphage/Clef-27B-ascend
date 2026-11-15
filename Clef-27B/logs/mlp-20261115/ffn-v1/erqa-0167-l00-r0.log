@@ -1,0 +1,719 @@
+[W1115 02:57:07.029801030 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())
+{
+  "created_at": "2026-11-15T02:56:51.691908+00:00",
+  "phase": "benchmark",
+  "device": 0,
+  "completed": true,
+  "documented_constraint": "SwiGLU npu_ffn supports ungrouped FP16 with inner_precise=1; BF16 support is probed",
+  "numerical_tolerance_scope": "Local tensor diagnostic; end-to-end decision quality requires separate evaluation",
+  "interface": {
+    "bfloat16": {
+      "dtype": "bfloat16",
+      "status": "error",
+      "shape": [
+        4,
+        64,
+        128,
+        64
+      ],
+      "allow_internal_format": {
+        "requested": true,
+        "option_before": "",
+        "option_after": "enable"
+      },
+      "npu_formats": {
+        "input": 2,
+        "weight1": 2,
+        "weight2": 2
+      },
+      "error_type": "RuntimeError",
+      "error": "npu_ffn:../third_party/op-plugin/op_plugin/ops/opapi/FFNKernelNpuOpApi.cpp:86 NPU function error: call aclnnFFNV2 failed, error code is 161002\n[ERROR] 2026-11-15-02:56:54 (PID:510638, Device:0, RankID:-1) ERR00100 PTA call acl api failed.\nEZ9999: Internal error!\nEZ9999[PID: 510638] 2026-11-15-02:56:54.945.684 AclNN_Inner_Error(EZ9999):  x only support dtype float16 without expert tokens, but found DT_BFLOAT16.\nTraceBack (most recent call last):\n",
+      "traceback": "Traceback (most recent call last):\n  File \"/workspace/yangchen/Clef-27B-ascend/runtime/probe_mlp_ffn.py\", line 128, in interface_worker\n    actual = torch_npu.npu_ffn(\n             ^^^^^^^^^^^^^^^^^^\n  File \"/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py\", line 1209, in __call__\n    return self._op(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: npu_ffn:../third_party/op-plugin/op_plugin/ops/opapi/FFNKernelNpuOpApi.cpp:86 NPU function error: call aclnnFFNV2 failed, error code is 161002\n[ERROR] 2026-11-15-02:56:54 (PID:510638, Device:0, RankID:-1) ERR00100 PTA call acl api failed.\nEZ9999: Internal error!\nEZ9999[PID: 510638] 2026-11-15-02:56:54.945.684 AclNN_Inner_Error(EZ9999):  x only support dtype float16 without expert tokens, but found DT_BFLOAT16.\nTraceBack (most recent call last):\n\n",
+      "exit_code": 0,
+      "stderr_tail": "[W1115 02:56:54.929176890 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())\n"
+    },
+    "float16": {
+      "dtype": "float16",
+      "status": "supported",
+      "shape": [
+        4,
+        64,
+        128,
+        64
+      ],
+      "allow_internal_format": {
+        "requested": true,
+        "option_before": "",
+        "option_after": "enable"
+      },
+      "npu_formats": {
+        "input": 2,
+        "weight1": 2,
+        "weight2": 2
+      },
+      "silu_first_half_times_second_half": {
+        "actual_finite": true,
+        "reference_finite": true,
+        "atol": 0.001,
+        "rtol": 0.01,
+        "within_tolerance": false,
+        "max_absolute_difference": 29.367084503173828,
+        "rmse": 9.31098461151123,
+        "relative_rmse": 0.8208285839050162,
+        "reference_max_absolute": 33.11299133300781,
+        "normalized_max_error": 0.886875009504201
+      },
+      "first_half_times_silu_second_half": {
+        "actual_finite": true,
+        "reference_finite": true,
+        "atol": 0.001,
+        "rtol": 0.01,
+        "within_tolerance": true,
+        "max_absolute_difference": 0.014859199523925781,
+        "rmse": 0.0038475117180496454,
+        "relative_rmse": 0.00041198803081138156,
+        "reference_max_absolute": 27.65735626220703,
+        "normalized_max_error": 0.0005372603000464814
+      },
+      "gate_order": "second_half",
+      "gate_order_criteria": {
+        "max_relative_rmse": 0.01,
+        "max_normalized_error": 0.02,
+        "minimum_alternative_rmse_ratio": 10.0,
+        "probe_input_and_weight_std": 0.5
+      },
+      "output_shape": [
+        4,
+        64
+      ],
+      "output_dtype": "torch.float16",
+      "torch": "2.10.0+cpu",
+      "torch_npu": "2.10.0.post7",
+      "exit_code": 0,
+      "stderr_tail": "[W1115 02:57:00.272466830 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())\n"
+    }
+  },
+  "benchmark": {
+    "model": {
+      "hidden_size": 5120,
+      "intermediate_size": 17408,
+      "layer": 0,
+      "tp_size": 2,
+      "tp_rank": 0,
+      "weights": {
+        "model.language_model.layers.0.mlp.gate_proj.weight": {
+          "source": "/workspace/yangchen/models/Clef-27B/model-00002-of-00012.safetensors",
+          "full_shape": [
+            17408,
+            5120
+          ],
+          "rank_shape": [
+            8704,
+            5120
+          ],
+          "tp_size": 2,
+          "tp_rank": 0,
+          "sha256_rank_tensor_bytes": "6e7c770817d107e7ed2c1a2be6dab2d14f762a0d28b8dafca7d01c237ba42f72"
+        },
+        "model.language_model.layers.0.mlp.up_proj.weight": {
+          "source": "/workspace/yangchen/models/Clef-27B/model-00002-of-00012.safetensors",
+          "full_shape": [
+            17408,
+            5120
+          ],
+          "rank_shape": [
+            8704,
+            5120
+          ],
+          "tp_size": 2,
+          "tp_rank": 0,
+          "sha256_rank_tensor_bytes": "916baf7563ce39c5f7c58601b448295042a2b2ab0e70deb346855af9315cd724"
+        },
+        "model.language_model.layers.0.mlp.down_proj.weight": {
+          "source": "/workspace/yangchen/models/Clef-27B/model-00002-of-00012.safetensors",
+          "full_shape": [
+            5120,
+            17408
+          ],
+          "rank_shape": [
+            5120,
+            8704
+          ],
+          "tp_size": 2,
+          "tp_rank": 0,
+          "sha256_rank_tensor_bytes": "1f976958023a9694f0231b76a2fe21459e8a5a3b9012cb50700e5965fe885dfd"
+        }
+      },
+      "index_sha256": "a600c6626eb1eb653a3f078ab3dd1c7a8fab2e71185c7ef3aa923a39aaa637be"
+    },
+    "allow_internal_format": {
+      "requested": true,
+      "option_before": "",
+      "option_after": "enable"
+    },
+    "input_source": "/workspace/yangchen/logs/mlp-20261115-1027/capture/erqa-0167-1f3ed385669c2c03.layer00.rank0.pt",
+    "input_metadata": {
+      "request_name": "erqa-0167",
+      "prefix": "language_model.model.layers.0.mlp",
+      "layer": 0,
+      "rank": 0,
+      "shape": [
+        10294,
+        5120
+      ],
+      "stride": [
+        5120,
+        1
+      ],
+      "dtype": "torch.bfloat16",
+      "device": "npu:0",
+      "token_count": 10294,
+      "input_token_count": 10294,
+      "time_ns": 1794710821181971990,
+      "time": "2026-11-15T02:47:01Z",
+      "pid": 503673
+    },
+    "captured_tokens": 10294,
+    "tokens_to_run": [
+      10294
+    ],
+    "synthetic_input_std": null,
+    "preparation_seconds_including_weight_copies_and_casts": 0.2179330699145794,
+    "resident_weight_tensor_bytes": 802160640,
+    "weight_layout": {
+      "decomposed": "contiguous [out,in] ND",
+      "fused": "contiguous [in,out] ND"
+    },
+    "packed_weight_order": {
+      "decomposed": [
+        "gate",
+        "up"
+      ],
+      "fused": [
+        "up",
+        "gate"
+      ]
+    },
+    "numerical_diagnostics": {
+      "max_relative_rmse": 0.01,
+      "max_normalized_error": 0.02,
+      "require_all_outputs_finite": true,
+      "timing_policy": "Finite outputs are timed; end-to-end evaluation determines adoption"
+    },
+    "weight_npu_formats": {
+      "packed_bf16": 2,
+      "down_bf16": 2,
+      "packed_fp16": 2,
+      "down_fp16": 2,
+      "packed_kn_fp16": 2,
+      "down_kn_fp16": 2
+    },
+    "cases": [
+      {
+        "tokens": 10294,
+        "status": "completed",
+        "input_shape": [
+          10294,
+          5120
+        ],
+        "input_selection": "full_capture",
+        "input_sha256": "e98591c79399113d3cbc400cfe1a3790c282eb1d7813f88350921ed9ad5a44ce",
+        "input_stride": [
+          5120,
+          1
+        ],
+        "input_npu_format": 2,
+        "quality": {
+          "fp16_fused_vs_fp16_decomposed": {
+            "actual_finite": true,
+            "reference_finite": true,
+            "atol": 0.001,
+            "rtol": 0.01,
+            "within_tolerance": true,
+            "max_absolute_difference": 0.0,
+            "rmse": 0.0,
+            "relative_rmse": 0.0,
+            "reference_max_absolute": 87.125,
+            "normalized_max_error": 0.0
+          },
+          "converted_decomposed_vs_bf16": {
+            "actual_finite": true,
+            "reference_finite": true,
+            "atol": 0.001,
+            "rtol": 0.01,
+            "within_tolerance": false,
+            "max_absolute_difference": 0.25,
+            "rmse": 0.0004058011109009385,
+            "relative_rmse": 0.0016072590905683896,
+            "reference_max_absolute": 87.0,
+            "normalized_max_error": 0.0028735632183908046
+          },
+          "converted_fused_vs_bf16": {
+            "actual_finite": true,
+            "reference_finite": true,
+            "atol": 0.001,
+            "rtol": 0.01,
+            "within_tolerance": false,
+            "max_absolute_difference": 0.25,
+            "rmse": 0.0004058011109009385,
+            "relative_rmse": 0.0016072590905683896,
+            "reference_max_absolute": 87.0,
+            "normalized_max_error": 0.0028735632183908046
+          }
+        },
+        "all_outputs_finite": true,
+        "performance_interpretation_valid": true,
+        "fp16_fused_numerical_diagnostic_passed": true,
+        "bf16_replacement_quality_passed": true,
+        "torch_peak_allocated_bytes": 1780493312,
+        "torch_peak_reserved_bytes": 2195718144,
+        "timings": {
+          "bf16_decomposed": [
+            {
+              "device_event_mean_ms": 9.169573974609374,
+              "synchronized_wall_mean_ms": 9.302470988283554,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 0,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.169753011067709,
+              "synchronized_wall_mean_ms": 9.174781323721012,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 1,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.164835611979166,
+              "synchronized_wall_mean_ms": 9.16955266147852,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 2,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.168008422851562,
+              "synchronized_wall_mean_ms": 9.183277996877829,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 3,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.164044189453126,
+              "synchronized_wall_mean_ms": 9.175029334922632,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 4,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.167204793294271,
+              "synchronized_wall_mean_ms": 9.170972012604276,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 5,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            }
+          ],
+          "fp16_decomposed": [
+            {
+              "device_event_mean_ms": 9.178931681315104,
+              "synchronized_wall_mean_ms": 9.185090335085988,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 0,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.188158162434895,
+              "synchronized_wall_mean_ms": 9.19313533231616,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 1,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.182579549153646,
+              "synchronized_wall_mean_ms": 9.187620008985201,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 2,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.18263651529948,
+              "synchronized_wall_mean_ms": 9.19513232074678,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 3,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.184114583333333,
+              "synchronized_wall_mean_ms": 9.195173004021248,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 4,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.182174682617188,
+              "synchronized_wall_mean_ms": 9.185833670198917,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 5,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            }
+          ],
+          "fp16_fused": [
+            {
+              "device_event_mean_ms": 23.198305257161458,
+              "synchronized_wall_mean_ms": 23.203236671785515,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 0,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.19713134765625,
+              "synchronized_wall_mean_ms": 23.20143032508592,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 1,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.19887491861979,
+              "synchronized_wall_mean_ms": 23.203436673308413,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 2,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.20345662434896,
+              "synchronized_wall_mean_ms": 23.21541567022602,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 3,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.193074544270832,
+              "synchronized_wall_mean_ms": 23.20130233032008,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 4,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.19793701171875,
+              "synchronized_wall_mean_ms": 23.20232366522153,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 5,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            }
+          ],
+          "bf16_fp16_bf16_decomposed": [
+            {
+              "device_event_mean_ms": 9.48441874186198,
+              "synchronized_wall_mean_ms": 9.490316345666846,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 0,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.476148478190105,
+              "synchronized_wall_mean_ms": 9.48356866526107,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 1,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.480751546223958,
+              "synchronized_wall_mean_ms": 9.484566329047084,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 2,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.47796630859375,
+              "synchronized_wall_mean_ms": 9.49087698633472,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 3,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.476608276367188,
+              "synchronized_wall_mean_ms": 9.481275655950109,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 4,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 9.476971435546876,
+              "synchronized_wall_mean_ms": 9.480957997341951,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 5,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            }
+          ],
+          "bf16_fp16_bf16_fused": [
+            {
+              "device_event_mean_ms": 23.589803059895832,
+              "synchronized_wall_mean_ms": 23.59514799900353,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 0,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.58797403971354,
+              "synchronized_wall_mean_ms": 23.59420065768063,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 1,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.584718831380208,
+              "synchronized_wall_mean_ms": 23.58880800505479,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 2,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.587508138020834,
+              "synchronized_wall_mean_ms": 23.593808012083173,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 3,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.593902587890625,
+              "synchronized_wall_mean_ms": 23.598513674611848,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 4,
+              "order": [
+                "bf16_decomposed",
+                "fp16_decomposed",
+                "fp16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "bf16_fp16_bf16_fused"
+              ]
+            },
+            {
+              "device_event_mean_ms": 23.58906453450521,
+              "synchronized_wall_mean_ms": 23.593030000726383,
+              "warmup": 10,
+              "iterations": 30,
+              "repeat": 5,
+              "order": [
+                "bf16_fp16_bf16_fused",
+                "bf16_fp16_bf16_decomposed",
+                "fp16_fused",
+                "fp16_decomposed",
+                "bf16_decomposed"
+              ]
+            }
+          ]
+        },
+        "device_median_ms": {
+          "bf16_decomposed": 9.167606608072916,
+          "fp16_decomposed": 9.182608032226563,
+          "fp16_fused": 23.198121134440104,
+          "bf16_fp16_bf16_decomposed": 9.477468872070313,
+          "bf16_fp16_bf16_fused": 23.588519287109374
+        },
+        "fp16_fused_speedup": 0.395834127212742,
+        "converted_fused_vs_bf16_speedup": 0.388646972558503,
+        "fused_io_cast_overhead_ms": 0.39039815266927036
+      }
+    ],
+    "scope": "Local TP2 rank0 output before all-reduce; warmed repeated layer0 weights",
+    "completed_cases": 1,
+    "numerical_checks_passed": true
+  },
+  "wall_seconds": 36.43192651029676
+}

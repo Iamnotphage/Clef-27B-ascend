@@ -1,0 +1,51 @@
+{
+  "status": "passed",
+  "groups": 12,
+  "checks": [
+    "full conversion, BF16-scale numeric oracle, zero rows, dtype/index/manifest and source preservation",
+    "completed retry is read-only and hash-verified",
+    "different existing plan rejected",
+    "layer list, gate_up-only and unchanged-shard hardlinks",
+    "down-only and copy mode",
+    "resume before_journal",
+    "resume after_publish",
+    "resume journaled file before rename",
+    "resume complete manifest before directory publication",
+    "resume interrupted initial state creation",
+    "tampered completed artifact rejected",
+    "non-finite weight rejected"
+  ],
+  "validated_at_utc": "2026-11-15T03:03:27.852591+00:00",
+  "scope": "CPU-only synthetic checkpoint conversion in an automatically cleaned temporary directory",
+  "converter": "runtime/convert_mlp_w8a8.py",
+  "converter_sha256": "e8efe532c3388ef9b7f678209ddfc70ed901d1dbff2f489df1213f824fd3f700",
+  "test_harness_local_path": "/tmp/clef_w8a8_converter_cpu_check.py",
+  "test_harness_sha256": "f67779a497b59515ed7a61c724066a71e255523996f23e48e41f83d28004607f",
+  "execution_command_argv": [
+    "ssh",
+    "clef",
+    "cd /workspace/yangchen/Clef-27B-ascend && source scripts/activate_env.sh && TORCH_DEVICE_BACKEND_AUTOLOAD=0 PYTHONDONTWRITEBYTECODE=1 /workspace/yangchen/venvs/clef-py312/bin/python -"
+  ],
+  "stdin_preparation": "CONVERTER_SOURCE = repr(converter_text), followed by the CPU regression harness",
+  "repeat_command": "TORCH_DEVICE_BACKEND_AUTOLOAD=0 PYTHONDONTWRITEBYTECODE=1 python /tmp/clef_w8a8_converter_cpu_check.py runtime/convert_mlp_w8a8.py",
+  "fixture": {
+    "layers": 2,
+    "projections": [
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "shards": 2,
+    "dtype": "BF16",
+    "includes": [
+      "zero rows",
+      "signed weights",
+      "unselected attention weights",
+      "separate joint head",
+      "tokenizer metadata"
+    ]
+  },
+  "device_operations": 0,
+  "exit_code": 0,
+  "stderr": ""
+}
