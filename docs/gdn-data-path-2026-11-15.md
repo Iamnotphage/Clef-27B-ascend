@@ -216,7 +216,9 @@ baseline 服务：
 - 新 PID **587932**，监听 `127.0.0.1:8000`；`argv`、`cwd` 与 phase-0
   （PID 551494）**逐项相等**，白名单环境变量**逐项相等**（无任何 `CLEF_GDN_*`，
   因此走原始 GDN 路径）；
-- `GET /health` **200**；冻结 8 例 **8/8** 逐位一致；
+- `GET /health` **200**（原服务未设置 `CLEF_HEALTH_JSON`，body 为空，与
+  phase-0 一致）；`GET /v1/decide/info` 返回原服务的默认
+  `revision=unknown/config=custom`；冻结 8 例 **8/8** 逐位一致；
 - 源码树保留本轮采用的 v3 补丁（`device_op.py 6886fa3f…`、`gdn.py
   7bc9b8f1…`、`patch_qwen3_5.py 1b82b52e…`、`gdn_decision_flags.py
   3c9cb53a…`）；恢复服务不加载决策路径；
