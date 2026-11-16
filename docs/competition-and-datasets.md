@@ -17,7 +17,7 @@
 | 提交形式 | 平台拉取代码并自动校验，赛题页另要求向 `Ascend/model-agent` 提交 PR | 最终按赛题页规定的入口、目录和仓库提交 |
 | 调优产物 | 性能、精度、原始日志、复现说明和截图 | 现有 CSV 表头须填入实测结果，截图须来自真实运行 |
 
-上述要求可在[官方正文 API](https://web-api.gitcode.com/aihub/api/v1/activity/2119684851993116674/content)及本地[脱敏证据摘要](evidence/competition-2026-11-12.json)复核。介绍正文最后更新时间为 2026-11-12 12:03:33（北京时间）。公开规则给出了 2PP 门槛，精度指标名称、性能加权公式、基准硬件和具体 workload 尚待赛题细则确认。
+上述要求可在[官方正文 API](https://web-api.gitcode.com/aihub/api/v1/activity/2119684851993116674/content)及本地[脱敏证据摘要](evidence/competition-2026-11-12.json)复核。介绍正文最后更新时间为 2026-11-12 12:03:33（北京时间）。公开规则给出了 2PP 门槛；2026-11-16 用户补充其口径为 **OpenDecisions Intelligence、Calibration、Capability 与 ERQA 总体准确率的绝对波动均不超过 2 个百分点，且不需要温度校准**。性能加权公式、基准硬件和具体 workload 仍待赛题细则确认。
 
 调优赛道目录如下，现有仓库采用这一结构。
 
@@ -139,7 +139,7 @@ evalscope perf \
 
 - 正式评测数据集的 ID、下载地址、访问条件、revision、split 和样本数，以及多模态占比。
 - 官方 baseline 的代码提交、完整依赖、设备型号与设备数，以及真实精度和性能结果。
-- 2PP 门槛对应哪个指标、如何汇总多数据集、如何处理失败或超时样本。
+- 2PP 门槛的指标口径已由用户 2026-11-16 补充：OpenDecisions Intelligence、Calibration、Capability 与 ERQA 总体准确率，绝对波动均不超过 2 个百分点，不做温度校准；主办方正式 baseline 的汇总方式、失败/超时处理仍待细则确认。
 - 性能评分的吞吐与延迟定义、权重、并发、输入长度、预热、重复次数和时间窗口。
 - `results.csv`、`metrics.csv` 的正式列名和导出规范，以及提交 PR 的目标分支与目录。
 

@@ -5,6 +5,7 @@
 - 使用中文直接陈述结论、证据和下一步，遵循用户关于肯定表达的要求。
 - 当前任务为在现有昇腾 A3 环境建立可复现的 Clef-27B 比赛提交版本，包含完整主干、联合决策头、文本与图文接口、质量及性能评测证据。
 - 2026-11-13 用户补充的比赛交付规则见 `docs/submission-rules-2026-11-13.md`。当前按该版本准备验收；后续以主办方最终协议与模板更新，规则来源和版本均需保留。
+- 2026-11-16 用户明确 **2PP 精度口径**：比赛**不需要温度校准**，使用原始服务输出；“baseline 精度范围不超过 2PP”指 **OpenDecisions Intelligence、Calibration、Capability 与 ERQA 总体准确率**相对 baseline 的**绝对波动均不超过 2 个百分点**（ERQA 2PP = 0.02）。该口径已写入 `docs/submission-rules-2026-11-13.md` 第 4.3 节；主办方最终细则更新时保留本条来源与日期。
 - 2026-11-14 第四轮复核：seqs4 合批全量质量未通过 0.03/0.05 工程门槛（Capability 74.200178；4 条 choice 变化；最大概率差 0.097399），最终提交配置改为 **seqs1/B1**；全量质量 74.425479 与 baseline 逐位一致，S1 P95 217.036 ms，S2 5.715 decisions/s @ C16。根因、GDN 覆盖、启动/补丁修复见 `docs/tuning4-2026-11-14.md`。
 - 2026-11-14 ERQA 官方 400 题全量图文 baseline 完成：400/400 成功、0 失败、0 重试，accuracy **219/400 = 0.5475**；单图 0.5923、多图 0.4336，8 类分项见 `docs/erqa-baseline-2026-11-14.md`。服务为 TP2/BF16/eager/16384/seqs1/缓存关、`image` 上限 16、图像像素 65,536～1,048,576；C1 wall 101.099 s、p95 323.476 ms。数据固定官方 commit `5bba488`、TFRecord SHA-256 `1974f5e5…b4c93e2`。EvalScope ERQAAdapter 图文补丁在 19 题交叉验证中与直接 `/v1/decide` 逐题一致。原服务已恢复为 PID 432954、原 argv/cwd/4096 配置，8/8 冻结用例通过。
 - 2026-11-14 CPU 独立参考：发布方 `joint_schema_model.py` 以 CPU BF16（eager、`use_kernels=False`、batch1、32 线程）重建输入与逐题前向。两套数据全量编码 token 数与 NPU 实测逐题相等（OpenDecisions 2,352/2,352；ERQA 400/400，含 16 图 10,294 token）；参考媒体布局与 `ClefFlashStrategy` 一致、无需补丁；8 条冻结请求在当前服务复放 24/24 逐位一致。逐题前向在 OpenDecisions 154/2352 时按用户要求终止，未生成完整 CPU 评分。证据见 `Clef-27B/logs/cpu-reference-20261114/`，结论与终止范围见 `docs/cpu-npu-reference-2026-11-14.md`。

@@ -96,6 +96,19 @@ model,dataset,accuracy,score_mae,calibration,intelligence,capability
 
 执行正确率的分子、分母、超时/拒绝处理及其与答案准确率的关系，按最终协议明确。指标记录保留原始单位；0～1 的概率/准确率与 0～100 的质量分分别标注。
 
+### 4.3 “baseline 精度波动不超过 2PP”的口径（2026-11-16 用户补充）
+
+用户于 2026-11-16 明确本工程的验收口径：
+
+- **不需要温度校准**：提交与对照使用服务原始输出概率，不做额外温度缩放；论文中的 with-temperatures 结果只作背景参考。
+- **“baseline 精度范围不超过 2PP”** 指以下四项相对主办方 baseline 的**绝对百分点波动**均不超过 **2 个百分点**：
+  - OpenDecisions **Intelligence**（0～100 分）
+  - OpenDecisions **Calibration**（0～100 分）
+  - OpenDecisions **Capability**（0～100 分）
+  - ERQA **总体准确率**（0～1；2PP 即 **0.02**）
+
+该口径来自用户补充，用于本轮准备与回归检查；主办方最终协议、baseline 和模板如有更新，以主办方版本为准，并保留本条来源与日期。项目早期自设的 0.03（概率差）/0.05（score 期望差）工程门槛仍然单独保留，不与 2PP 口径混用。
+
 ## 5. 性能结果：`results.csv`
 
 ### 5.1 汇总字段
@@ -193,6 +206,8 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 ### 10.1 原始服务输出与论文温度校准结果
 
 联网核查日期为 2026-11-13。OpenDecisions 数据集作者在 **v1.0.1、test 2,352 条、2026-10-15 榜单**和论文中公布了 `Cloudflare/clef` 的两种结果，分数为 0～100：
+
+> 2026-11-16 用户补充：**比赛提交不需要温度校准**；本工程以原始服务输出（as served）为提交与对照口径，下表的 with-temperatures 仅用于解释论文/榜单差异，不参与比赛验收。
 
 | 评测条件 | Calibration | Intelligence | Capability | 依据 |
 | --- | ---: | ---: | ---: | --- |

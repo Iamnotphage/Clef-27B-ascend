@@ -29,7 +29,7 @@
 - 文本质量：**OpenDecisions 1.0.1**，完整 2,352 题，作者评分器给出 Calibration / Intelligence / Capability（0–100），另记 accuracy（0–1）、Score MAE（等级单位，588 条）与校准 TVD（129 条）。
 - 图文质量：**ERQA** 官方 400 题，accuracy 与 8 类分项。
 - 性能：**S1 = 单并发端到端 P95（ms）**；**S2 = 最大有效吞吐（decisions/s）及对应并发**。
-- 质量门槛：主办方**尚未给出正式定义**。项目早期自设 0.03（概率差）/ 0.05（score 期望值）作为工程门槛；用户近期表示 **max 0.097 在可接受范围内**，但尚未最终拍板。
+- 质量门槛：2026-11-16 用户明确 **2PP 口径**：比赛**不需要温度校准**；OpenDecisions **Intelligence、Calibration、Capability** 与 **ERQA 总体准确率**相对 baseline 的**绝对波动均不超过 2 个百分点**（ERQA 2PP = 0.02）。项目早期自设的 0.03（概率差）/ 0.05（score 期望值）工程门槛仍单独保留，不与 2PP 混用；主办方正式 baseline 与模板仍待确认。
 
 ### 1.2 资源与软件
 
