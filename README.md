@@ -33,7 +33,7 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 | OpenDecisions | Score MAE | 未公布 | 0.401389（588） | 0.401512（588） | — |
 | ERQA | 总体 accuracy | 未找到 | 0.5475（219/400） | 0.5425（217/400） | N/A |
 
-- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.413 pp**，满足 2PP；相对适配 baseline 4 条 choice 变化、max 概率差 0.0851，三项与 accuracy 均在 2PP 内；论文温度校准值已忽略。
+- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.410 pp**，满足 2PP；相对适配 baseline 4 条 choice 变化、max 概率差 0.0851，三项与 accuracy 均在 2PP 内；论文温度校准值已忽略。
 - ERQA 当前 217/400，相对适配 baseline **−0.50 pp**，在 2PP 内；官方没有公开 Clef 的 ERQA 分数，官方列只能记 N/A。
 - 官方公开 OpenDecisions 值是数据卡榜单的 `Cloudflare/clef` as-served 参考，不是主办方正式 baseline。
 
@@ -42,10 +42,10 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 | 版本 | S1 P95 | S1 mean | S2 decisions/s | ERQA P95 |
 | --- | ---: | ---: | ---: | ---: |
 | 适配后 baseline | 217.036 ms | 180.069 ms | 5.715 @ C16 | 325.84 ms |
-| 当前优化（BIC+GDN 融合） | **197.083 ms** | **157.699 ms** | **14.652 @ C8 / 14.689 @ C16** | **310.949 ms** |
-| 变化 | −19.95 ms（−9.19%） | −22.37 ms（−12.42%） | 约 2.56×（C8） | −14.89 ms（−4.57%） |
+| 当前优化（BIC+GDN 融合 v2） | **196.193 ms** | **160.547 ms** | **14.652 @ C8 / 14.689 @ C16** | **311.349 ms** |
+| 变化 | −20.84 ms（−9.60%） | −19.52 ms（−10.84%） | 约 2.56×（C8） | −14.49 ms（−4.45%） |
 
-- S1 为 seqs1 单并发全量 2,352 题；同窗口 no-fusion control p95 203.091 ms，融合相对 control −2.96%；S2 仍为 seqs4 未融合数据，C8 是推荐工作点。
+- S1 为 seqs1 单并发全量 2,352 题；v2 同窗口 v1 control p95 209.616 ms、v2 204.430（−2.48%）；S2 仍为 seqs4 未融合数据，C8 是推荐工作点。
 - ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不同。
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照。
 - **BF16 B8/B16 S2 候选（未替换当前 S2）**：B8 C16 **16.464 dec/s**、p95 1804 ms；B16 C64 **17.110 dec/s**、p95 6088 ms；OD 三项与 ERQA 合批均在 2PP 内（B8 C16 ERQA 218/400；B16 C32 216/400）。

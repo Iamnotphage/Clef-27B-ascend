@@ -30,6 +30,7 @@ public:
         pipe_.InitBuffer(fp32Buf_, tileTokens_ * kDim * sizeof(float) + 512);
         pipe_.InitBuffer(sqBuf_, tileTokens_ * kDim * sizeof(float) + 512);
         pipe_.InitBuffer(sumBuf_, tileTokens_ * 2 * sizeof(float) + 512);
+        pipe_.InitBuffer(scaleBuf_, tileTokens_ * kDim * sizeof(float) + 512);
         pipe_.InitBuffer(tmpBuf_, 16 * 1024 + 512);
     }
 
@@ -89,27 +90,22 @@ private:
             LocalTensor<float> workRaw = tmpBuf_.Get<float>();
             LocalTensor<float> work =
                 workRaw[static_cast<uint32_t>((512 - (workRaw.GetPhyAddr() & 511)) & 511) / sizeof(float)];
-            LocalTensor<float> sums2 =
-                sumsRaw[static_cast<uint32_t>((512 - (sumsRaw.GetPhyAddr() & 511)) & 511) / sizeof(float) + 128];
             for (uint32_t row = 0; row < rows; ++row) {
-                ReduceSum(sums[row], sq[row * kDim], work, 64);
-                ReduceSum(sums2[row], sq[row * kDim + 64], work, 64);
+                ReduceSum(sums[row], sq[row * kDim], work, kDim);
             }
-            PipeBarrier<PIPE_V>();
-            Add(sums, sums, sums2, rows);
             PipeBarrier<PIPE_V>();
             Adds(sums, sums, eps_, rows);
             PipeBarrier<PIPE_V>();
             Rsqrt(sums, sums, rows);
             PipeBarrier<PIPE_V>();
-            event_t eventVS = static_cast<event_t>(
-                GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventVS);
-            WaitFlag<HardEvent::V_S>(eventVS);
-            for (uint32_t row = 0; row < rows; ++row) {
-                float scale = sums.GetValue(row);
-                Muls(xf[row * kDim], xf[row * kDim], scale, kDim);
-            }
+            LocalTensor<float> scaleRaw = scaleBuf_.Get<float>();
+            LocalTensor<float> scales =
+                scaleRaw[static_cast<uint32_t>((512 - (scaleRaw.GetPhyAddr() & 511)) & 511) / sizeof(float)];
+            uint32_t dstShape[2] = {rows, kDim};
+            uint32_t srcShape[2] = {rows, 1};
+            Broadcast<float, 2, 1>(scales, sums, dstShape, srcShape);
+            PipeBarrier<PIPE_V>();
+            Mul(xf, xf, scales, rows * kDim);
             PipeBarrier<PIPE_V>();
         }
 
@@ -134,6 +130,7 @@ private:
     TBuf<TPosition::VECCALC> fp32Buf_;
     TBuf<TPosition::VECCALC> sqBuf_;
     TBuf<TPosition::VECCALC> sumBuf_;
+    TBuf<TPosition::VECCALC> scaleBuf_;
     TBuf<TPosition::VECCALC> tmpBuf_;
     GlobalTensor<bfloat16_t> xGm_;
     GlobalTensor<bfloat16_t> qGm_;

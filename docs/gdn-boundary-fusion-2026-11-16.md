@@ -1,3 +1,5 @@
+> **2026-11-16 后续：** kernel v2（单次 ReduceSum 128 + Broadcast/Mul）已接入，cap 扩到 1600；服务级同窗口 p95 204.430 vs v1 209.616（−2.48%），最佳窗口 196.193 ms。详见[GDN kernel v2](gdn-kernel-v2-2026-11-16.md)。
+
 # GDN 边界融合：ClefGdnQkvNorm（2026-11-16）
 
 ## 1. 结论

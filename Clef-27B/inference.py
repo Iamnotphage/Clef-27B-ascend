@@ -463,7 +463,7 @@ def qkv_norm_environment():
     return {
         "CLEF_QKV_NORM_VENDOR": str(vendor),
         "CLEF_GDN_QKV_NORM_MAX_TOKENS": os.environ.get(
-            "CLEF_GDN_QKV_NORM_MAX_TOKENS", "1200"),
+            "CLEF_GDN_QKV_NORM_MAX_TOKENS", "1600"),
         "ASCEND_CUSTOM_OPP_PATH": os.pathsep.join(str(part) for part in parts),
         "LD_LIBRARY_PATH": os.pathsep.join(ld_parts),
     }

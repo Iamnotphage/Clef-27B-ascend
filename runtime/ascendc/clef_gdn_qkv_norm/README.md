@@ -81,3 +81,13 @@ BIC 是更优的提交路径。
 - 长序列 10,294 token 覆盖 16 图 ERQA 的 token 上限。
 - 构建身份：`libcust_opapi.so` SHA-256 `4d2440a3…`；kernel 对象
   `d1687581…`；`custom_opp_compiler_version=9.2.1`。
+
+## v2（2026-11-16，已接入）
+
+v1 的逐行两次 `ReduceSum(64)` 和逐行标量 `Muls` 改为：
+
+- 每行一次 `ReduceSum(128)`；
+- `Broadcast<float,2,1>` 生成 `[rows,128]` 的缩放向量；
+- 一次 `Mul(xf, xf, scales, rows*128)`。
+
+单算子：307 2.00×、969 2.01×、1024 2.01×、1595 **1.65×**；969 p95 0.2098 ms vs baseline 0.3244 ms（1.55×）。服务端同窗口 v2 vs v1 p95 **−2.48%**，cap 扩到 **1600**（覆盖 OD 1595 和 ERQA 1200–1595）。Q/K 仍 1 ulp、V 逐位；质量 2PP。详见 `docs/gdn-kernel-v2-2026-11-16.md`。
