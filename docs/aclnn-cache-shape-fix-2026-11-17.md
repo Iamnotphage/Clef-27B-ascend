@@ -2,7 +2,8 @@
 
 ## 0. 结论
 
-- 单行服务环境 `ACLNN_CACHE_LIMIT=1000000`（已写入提交入口 `Clef-27B/inference.py` 的 service environment，默认值，可由外部覆盖）把 S1 从 **mean 153.76 / p50 168.49 / p95 190.40 ms** 降到 **mean 128.99 / p50 120.96 / p95 169.02 ms**，吞吐 **6.503 → 7.748 decisions/s（+19.2%）**，2,352/2,352 成功。
+- 单行服务环境 `ACLNN_CACHE_LIMIT=1000000`（已写入提交入口 `Clef-27B/inference.py` 的 service environment，默认值，可由外部覆盖）把 S1 从 **mean 153.76 / p50 168.49 / p95 190.40 ms** 降到（**官方 `bash Clef-27B/start.sh --config s1` 入口实测**）**mean 125.55 / p50 118.17 / p95 168.63 ms**，吞吐 **6.503 → 7.960 decisions/s（+22.4%）**，2,352/2,352 成功。
+- 另外三组全量复测（首轮 + 两组 repeat）p95 为 **167.28 / 169.01 / 169.02 ms**，mean 123.67–128.99 ms，吞吐 7.75–8.08 dec/s，结论稳定。
 - 质量逐位不变：OpenDecisions 全量 2,352 条相对提交版 **max 概率差 0.0、0 个 choice 翻转、noul/score 差 0.0**；ERQA **217/400 = 0.5425** 不变，400/400 成功、0 重试。
 - S2 B8 C16 **16.319 dec/s**、p95 1807 ms（提交版 16.398 / 1803，噪声内）；该修复只影响 C1 的按长度 executor 选择，不改变批处理吞吐。
 - 规则合规：只调整 CANN aclnn executor 缓存容量，无量化、无温度校准、无数值变化。
@@ -30,14 +31,26 @@ profile 中的 307 样本就是 `od-0105`：生产 **114.38 ms**，profile 窗�
 
 ### 3.1 S1（seqs1，全量 2,352，C1）
 
-| 指标 | 提交版 | `ACLNN_CACHE_LIMIT=1000000` | 变化 |
+**提交入口实测**（`bash Clef-27B/start.sh --config s1`，launch-manifest 记录 `ACLNN_CACHE_LIMIT=1000000`）：
+
+| 指标 | 提交版 | 本次 | 变化 |
 | --- | ---: | ---: | ---: |
-| mean | 153.76 ms | **128.99 ms** | **−16.11%** |
-| p50 | 168.49 ms | **120.96 ms** | **−28.21%** |
-| p95 | 190.40 ms | **169.02 ms** | **−11.23%** |
-| p99 | 203.20 ms | 205.91 ms | +1.33% |
-| 吞吐 | 6.503 dec/s | **7.748 dec/s** | **+19.16%** |
+| mean | 153.76 ms | **125.55 ms** | **−18.35%** |
+| p50 | 168.49 ms | **118.17 ms** | **−29.86%** |
+| p95 | 190.40 ms | **168.63 ms** | **−11.44%** |
+| p99 | 203.20 ms | 203.45 ms | +0.12% |
+| 吞吐 | 6.503 dec/s | **7.960 dec/s** | **+22.41%** |
 | 成功 | 2,352/2,352 | 2,352/2,352 | — |
+
+稳定性（四组独立全量）：
+
+| 运行 | mean | p50 | p95 | p99 | dec/s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 提交版 head-entry | 153.76 | 168.49 | 190.40 | 203.20 | 6.503 |
+| 首轮 full-aclnn | 128.99 | 120.96 | 169.02 | 205.91 | 7.748 |
+| repeat run1 | 123.71 | 115.02 | 169.01 | 204.51 | 8.075 |
+| repeat run2 | 123.67 | 114.89 | 167.28 | 202.84 | 8.08 |
+| **官方入口** | **125.55** | **118.17** | **168.63** | **203.45** | **7.960** |
 
 - 分长度：140–307 p50 117.4；308–500 p50 119.5；501–700 p50 125.4；701–1000 p50 156.4；1001–1600 p50 192.8 ms。
 - 首个请求仍有约 617 ms 冷启动（max），不影响 p95；p99 由长序列设备计算主导。
@@ -63,6 +76,7 @@ profile 中的 307 样本就是 `od-0105`：生产 **114.38 ms**，profile 窗�
 | ERQA accuracy | 217/400 = 0.5425 | 217/400 = 0.5425 | 0 |
 
 - 2,352 条逐样本比较：0 missing、0 choice flips、max abs probability diff **0.0**、noul/score 差 0.0；证据 `Clef-27B/logs/tuning5-20261117/quality-compare.json`。
+- 官方入口复测同样逐位一致：2,352/2,352、max 0.0、0 flips。
 - ERQA 400/400 成功、0 重试；mean 223.1 ms、p95 312.1 ms。
 
 ## 4. 提交入口改动
@@ -100,8 +114,8 @@ ERQA 服务需使用 `--max-model-len 16384 --max-num-batched-tokens 16384 --lim
 
 ## 6. 证据
 
-- S1 报告：`Clef-27B/logs/tuning5-20261117/s1-aclnn-cache-full.json.gz`（2,352 条逐题响应、概率、耗时）。
-- 启动记录：`Clef-27B/logs/tuning5-20261117/s1-aclnn-launch.json`（env 含 `ACLNN_CACHE_LIMIT`）。
+- S1 报告：`Clef-27B/logs/tuning5-20261117/s1-aclnn-cache-full.json.gz`（首轮 2,352 条逐题响应、概率、耗时）、`s1-official-entry-full.json.gz`（官方 `start.sh` 入口）、`s1-aclnn-repeat-run1.json.gz`、`s1-aclnn-repeat-run2.json.gz`。
+- 启动记录：`Clef-27B/logs/tuning5-20261117/s1-aclnn-launch.json`、`s1-official-entry-launch.json`（env 含 `ACLNN_CACHE_LIMIT`）。
 - 质量比对：`Clef-27B/logs/tuning5-20261117/quality-compare.json`。
 - ERQA：`Clef-27B/logs/tuning5-20261117/erqa/summary.json`、`offline-score.json`。
 - 算子探针：`Clef-27B/logs/tuning5-20261117/shape-probe/matmul-sweep.json`、`gdn-shapes.json`、`all-matmul-shapes.json`。

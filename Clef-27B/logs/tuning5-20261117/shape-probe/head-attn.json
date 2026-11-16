@@ -1,0 +1,42 @@
+{
+ "args": {
+  "device": 0,
+  "memory": 967,
+  "query": 4,
+  "width": 1024,
+  "heads": 16,
+  "iters": 30,
+  "warmup": 5,
+  "chain": 6,
+  "output": "/workspace/yangchen/logs/tuning5-20261117/shape-probe/head-attn.json"
+ },
+ "rows": {
+  "mha": {
+   "one_ms": 0.3554748836904764,
+   "six_ms": 1.7128200270235538,
+   "equality": {
+    "reference": true
+   }
+  },
+  "manual_sdpa": {
+   "one_ms": 0.25383010506629944,
+   "six_ms": 1.1950396001338959,
+   "equality": {
+    "bit_equal": false,
+    "max_abs": 0.00026376545429229736,
+    "mean_abs": 5.54311482119374e-05,
+    "elements": 4096
+   }
+  },
+  "manual_math": {
+   "one_ms": 0.27529988437891006,
+   "six_ms": 1.3417396694421768,
+   "equality": {
+    "bit_equal": false,
+    "max_abs": 0.00026143714785575867,
+    "mean_abs": 5.744113150285557e-05,
+    "elements": 4096
+   }
+  }
+ }
+}
