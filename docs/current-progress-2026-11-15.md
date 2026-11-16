@@ -17,8 +17,8 @@
 - **18.8 ms 非 kernel 残余（2026-11-16）**：307 token 时 CPU 每层约 2.0 ms ×64≈129 ms，高于设备 compute 77.3 ms，CPU dispatch 是临界路径；967 token 时设备 compute 144.5 ms、CPU backbone 128.5 ms，非 kernel 约 12.5 ms。joint pooler（含 head）CPU 10.9/9.4 ms，head 设备计算仅约 2 ms；scheduler 仅 0.13–0.17 ms。残余主要在 vLLM eager 逐层 dispatch 与模型侧 joint head/pooler/schema，不在 vLLM-Ascend kernel。[Profile 定位](profile-residual-2026-11-16.md)
 - **Graph/ACL graph（2026-11-16，显式尺寸复核）**：默认 `max_num_seqs=1` 只捕获 `[1]`，307/967 实际未 replay；显式捕获 `[307,967]` 后，307 mean/p95 **94.34/96.38 ms**（邻近 eager 109.95–119.90 / 123.36–130.84），967 基本持平（169.23/170.07）。但粗桶全量 S1 p95 **244.53 ms**、密桶 265.80 ms（eager 198.42），质量 2PP 通过（Capability 74.2822、Δ−0.1433）。Graph 只对 <384 短请求有效，**S1 P95 保持 eager，不采用**。[Graph 复核](graph-acl-2026-11-16.md)
 - **Host 微优化复测（2026-11-16）**：schema cache v2 在 s1/307 反而慢约 5%（126.23/137.61 vs eager 119.90/130.84），969 持平；BF16 NZ 服务化（真实的 `Qwen2MoeMLP.forward` hook）307 mean −1.6% 但 p95 +1.4%，969 mean/p95 −0.7%/−0.8%；均逐位一致但**不采用**。第一版 NZ hook 放在未使用的 `AscendQwen3_5DecoderLayer` 上，是死代码；修正后才得到真实数据。[Host 复测](host-opt-2026-11-16.md)
-- **已排除**：W8A16（局部 1.057×、质量 −0.182、全量无收益）、W8A8（C1 约 1%、NZ 格式反而更慢、合批下 +5% 但质量 −0.727）、TP1（S1 P95 264.3 ms，劣于 TP2）、seqs4+W8A8 叠加（质量不可接受）。
-- **待判断**：MLP 的 MTE2 效率能否通过 BF16 NZ/tiling/预取从 0.53 提到 0.8+ TB/s（纯 HBM 已测 1.26–1.32 TB/s）；allreduce 能否与计算重叠；batch-invariant GEMM 是否可行；`S1 ~198 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
+- **已排除且不可提交（赛方不允许量化）**：W8A16、W8A8、W8A8+SmoothQuant、seqs4+W8A8 叠加等量化方案，即使质量落在 2PP 内也不得提交；历史数据仅作负结果。非量化方向中 TP1（S1 P95 264.3 ms，劣于 TP2）已排除。
+- **待判断（禁止量化前提下）**：MLP 的 MTE2 效率能否通过 BF16 NZ/tiling/预取从 0.53 提到 0.8+ TB/s（纯 HBM 已测 1.26–1.32 TB/s）；allreduce 能否与计算重叠；batch-invariant GEMM 是否可行；`S1 ~198 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
 
 ---
 
@@ -193,6 +193,8 @@
 - **S1 不受影响**（C1 下 batch 恒为 1），S2 提升约 2.47×。
 - 建议：提交服务配置改为 `--max-num-seqs 4`；S2 报 C8（或按规则报 C16=14.125），质量报 C1（逐位）与 C8（合批边界）两组。
 
+> 2026-11-16 赛方不允许量化；以下 W8A16/W8A8/W8A8-ND/W8A8-NZ/SmoothQuant 仅作为历史负结果，不再作为提交候选。
+
 ### 5.3 W8A16（拒绝）
 
 - 复用 W8A8 候选的 INT8 权重，只把 128 个 gate/up 的 `quant_model_description.json` 条目改为 `W8A16`；服务以 `--quantization ascend` 正常加载。
@@ -205,7 +207,7 @@
 - gate/up 选择性 W8A8_DYNAMIC（NZ 格式）：局部 MLP 链 1.20–1.38×，layer31 局部 relative RMSE 10.9–12.5%。
 - 全量（另一会话）：Capability **74.0716（−0.354）**、accuracy 1902；ND 格式候选 +0.28% 吞吐、P95 −0.94%（−1.95 ms）、p50 −3.02 ms；ERQA 219/400。
 - 本轮在 NZ 候选上测 C1：4.961 dec/s（比 BF16 C1 6.000 慢）、Capability 74.0881、max 0.3969——**NZ 的格式/调度在单请求下反而拖累**，与 ND 候选的 +0.28% 相反。
-- 结论：W8A8 在 batch 1 的端到端收益约 1%，与 1.35× 的局部收益不匹配；NZ 不可用，ND 可作性能候选但质量代价 −0.35。
+- 结论：W8A8 在 batch 1 的端到端收益约 1%，与 1.35× 的局部收益不匹配；NZ 不可用；ND 质量代价 −0.35，且现因赛方量化限制不可提交。
 
 ### 5.5 激活平滑（仿真，未实现）
 
@@ -282,7 +284,7 @@
 - 问题：
   1. BF16 NZ 预打包、更大 tile、双缓冲、L2 预取能把 MLP 有效带宽从 0.53 提到多少？
   2. 纯 HBM 1.27 TB/s 对应的 gate/up 理论上限约 9.0 ms（当前 21.34）、MLP 合计约 13.5 ms（当前 32.07）；matmul 实际能兑现多少？
-  3. 若必须量化，W8A8+smoothing+ND 的路线是否值得（预计 C8 +5%、质量目标 −0.1 以内）？
+  3. 量化已被赛方禁止，W8A8/SmoothQuant 不再考虑；BF16 下剩余空间主要来自 tiling/预取、NZ 布局和融合算子，是否值得继续？
 
 ### 7.2 TP2 allreduce（20.40 ms，20.1%）
 
