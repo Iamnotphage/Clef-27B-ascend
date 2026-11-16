@@ -25,6 +25,7 @@ PROTOCOL_VERSION = "2026-11-13"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
+JOINT_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_single_field_patch.py"
 MM_PROCESSOR_KWARGS = (
     '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
@@ -40,6 +41,7 @@ CONFIGS = {
         "max_num_batched_tokens": 4096,
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "off",
+        "joint_single_field": True,
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
         "gdn_data_path": {
             "bsnd": True,
@@ -55,6 +57,7 @@ CONFIGS = {
         "max_num_batched_tokens": 4096,
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "on",
+        "joint_single_field": True,
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
         "gdn_data_path": {
             "bsnd": True,
@@ -348,6 +351,50 @@ def qkv_norm_patch(config, apply=True):
         report = run("--check")
         statuses = verify(report)
     record.update(enabled=True, patch_state=statuses)
+    return record
+
+
+def joint_single_field_patch(config, apply=True):
+    """Install/verify the Q=1 joint-head postimage."""
+    requested = bool(CONFIGS[config].get("joint_single_field", False))
+    record = {
+        "enabled": False,
+        "requested": requested,
+        "installer": str(JOINT_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(JOINT_INSTALLER.read_bytes()) if JOINT_INSTALLER.is_file() else None
+        ),
+    }
+    if not requested:
+        return record
+    if not JOINT_INSTALLER.is_file():
+        raise SystemExit(f"joint single-field installer missing: {JOINT_INSTALLER}")
+    if not apply:
+        record.update(pending_install=True)
+        return record
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(JOINT_INSTALLER), flag],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise SystemExit(
+                f"joint single-field patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return json.loads(result.stdout)
+
+    def verify(report):
+        if report.get("status_after") != "single-field":
+            raise SystemExit(f"joint single-field patch incomplete: {report}")
+        return report["status_after"]
+
+    report = run("--check")
+    complete = bool(report.get("ready")) and report.get("status_after") == "single-field"
+    if not complete:
+        run("--apply")
+        report = run("--check")
+        verify(report)
+    record.update(enabled=True, patch_state=report.get("status_after"))
     return record
 
 
@@ -686,6 +733,11 @@ def build_launch(args):
     environment.update(data_env)
     qkv_patch = qkv_norm_patch(config, apply=not getattr(args, "dry_run", False))
     gdn_decision["qkv_norm_patch"] = qkv_patch
+    joint_patch = joint_single_field_patch(
+        config, apply=not getattr(args, "dry_run", False))
+    gdn_decision["joint_single_field_patch"] = joint_patch
+    if joint_patch["enabled"]:
+        environment["CLEF_JOINT_SINGLE_FIELD"] = "1"
     qkv_env = qkv_norm_environment()
     if qkv_env:
         environment.update(qkv_env)

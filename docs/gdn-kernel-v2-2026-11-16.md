@@ -1,3 +1,5 @@
+> **2026-11-16 后续：** 在 v2 之上接入单字段 joint head 后，正常入口最终 S1 p95 **190.405 ms**、mean 153.761、6.503 dec/s；head 同窗口 head-off 为 203.102，head-on 197.184（−2.91%）。详见[单字段 head](joint-single-field-2026-11-16.md)。
+
 # GDN QKV Norm kernel v2（2026-11-16）
 
 ## 1. 改了什么
