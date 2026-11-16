@@ -1,0 +1,117 @@
+{
+ "captured_at": "2026-11-16T02:01:51.262526+00:00",
+ "host": "25e6d0590726",
+ "pid": 645877,
+ "process": {
+  "pid": 645877,
+  "ppid": 635611,
+  "state": "S",
+  "argv": [
+   "bash",
+   "-c",
+   "chmod +x /tmp/start_schema_cache.sh && /tmp/start_schema_cache.sh; for i in $(seq 1 90); do code=$(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:18143/health 2>/dev/null); [ \"$code\" = \"200\" ] && { echo READY; break; }; sleep 2; done; cd /workspace/yangchen/Clef-27B-ascend && /workspace/yangchen/venvs/clef-py312/bin/python scripts/official_eval/erqa_phase0_snapshot.py --pid $(pgrep -f \"vllm.entrypoints.cli.main serve\" | head -1) --output /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/frozen8.json --url http://127.0.0.1:18143/v1 --baseline /workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json 2>&1 | tail -1; for spec in 307 969; do /workspace/yangchen/venvs/clef-py312/bin/python scripts/benchmark_systemone.py --base-url http://127.0.0.1:18143 --sample-file /workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-$spec.json --warmup 10 --requests 30 --concurrency 1 --report /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.json > /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.log 2>&1; done; python3 - <<\"PY\"\nimport json\nfor s in (307,969):\n d=json.load(open(f\"/workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-{s}.json\")); q=d[\"summary\"][\"successful_request_latency_ms\"]\n print(\"cache\",s,{k:round(q[k],3) for k in (\"mean\",\"p50\",\"p95\",\"p99\",\"min\",\"max\")},\"rps\",round(d[\"summary\"][\"decisions_per_second\"],3))\nPY"
+  ],
+  "environment": {
+   "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+  },
+  "cwd": "/workspace/yangchen/Clef-27B-ascend",
+  "ps": {
+   "command": [
+    "ps",
+    "-o",
+    "pid,ppid,lstart,etime,args",
+    "-p",
+    "645877"
+   ],
+   "returncode": 0,
+   "stdout": "    PID    PPID                  STARTED     ELAPSED COMMAND\n 645877  635611 Mon Nov 16 02:00:32 2026       01:19 bash -c chmod +x /tmp/start_schema_cache.sh && /tmp/start_schema_cache.sh; for i in $(seq 1 90); do code=$(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:18143/health 2>/dev/null); [ \"$code\" = \"200\" ] && { echo READY; break; }; sleep 2; done; cd /workspace/yangchen/Clef-27B-ascend && /workspace/yangchen/venvs/clef-py312/bin/python scripts/official_eval/erqa_phase0_snapshot.py --pid $(pgrep -f \"vllm.entrypoints.cli.main serve\" | head -1) --output /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/frozen8.json --url http://127.0.0.1:18143/v1 --baseline /workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json 2>&1 | tail -1; for spec in 307 969; do /workspace/yangchen/venvs/clef-py312/bin/python scripts/benchmark_systemone.py --base-url http://127.0.0.1:18143 --sample-file /workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-$spec.json --warmup 10 --requests 30 --concurrency 1 --report /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.json > /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.log 2>&1; done; python3 - <<\"PY\" import json for s in (307,969):  d=json.load(open(f\"/workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-{s}.json\")); q=d[\"summary\"][\"successful_request_latency_ms\"]  print(\"cache\",s,{k:round(q[k],3) for k in (\"mean\",\"p50\",\"p95\",\"p99\",\"min\",\"max\")},\"rps\",round(d[\"summary\"][\"decisions_per_second\"],3)) PY\n",
+   "stderr": ""
+  }
+ },
+ "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 155.8                39                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59468/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    40                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59131/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 646042        | VLLMWorker_TP      | 56302                 | 646042                  |\n| 7       0                 | 645920        | python             | 106                   | 645920                  |\n| 7       1                 | 646043        | VLLMWorker_TP      | 56302                 | 646043                  |\n+===========================+===============+======================================================================+\n",
+ "source": {},
+ "file_sha256": {},
+ "process_tree": [
+  " 645877  635611 Ss   Mon Nov 16 02:00:32 2026       01:19 bash -c chmod +x /tmp/start_schema_cache.sh && /tmp/start_schema_cache.sh; for i in $(seq 1 90); do code=$(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:18143/health 2>/dev/null); [ \"$code\" = \"200\" ] && { echo READY; break; }; sleep 2; done; cd /workspace/yangchen/Clef-27B-ascend && /workspace/yangchen/venvs/clef-py312/bin/python scripts/official_eval/erqa_phase0_snapshot.py --pid $(pgrep -f \"vllm.entrypoints.cli.main serve\" | head -1) --output /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/frozen8.json --url http://127.0.0.1:18143/v1 --baseline /workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json 2>&1 | tail -1; for spec in 307 969; do /workspace/yangchen/venvs/clef-py312/bin/python scripts/benchmark_systemone.py --base-url http://127.0.0.1:18143 --sample-file /workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-$spec.json --warmup 10 --requests 30 --concurrency 1 --report /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.json > /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-$spec.log 2>&1; done; python3 - <<\"PY\" import json for s in (307,969):  d=json.load(open(f\"/workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/cache-{s}.json\")); q=d[\"summary\"][\"successful_request_latency_ms\"]  print(\"cache\",s,{k:round(q[k],3) for k in (\"mean\",\"p50\",\"p95\",\"p99\",\"min\",\"max\")},\"rps\",round(d[\"summary\"][\"decisions_per_second\"],3)) PY",
+  " 647101  645877 S    Mon Nov 16 02:01:51 2026       00:00 /workspace/yangchen/venvs/clef-py312/bin/python scripts/official_eval/erqa_phase0_snapshot.py --pid 645877 --output /workspace/yangchen/logs/gdn-data-path-20261115/schema-cache-test/frozen8.json --url http://127.0.0.1:18143/v1 --baseline /workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json",
+  " 647102  645877 S    Mon Nov 16 02:01:51 2026       00:00 tail -1"
+ ],
+ "process_tree_command": [
+  "ps",
+  "-eo",
+  "pid,ppid,stat,lstart,etime,args",
+  "--sort=pid"
+ ],
+ "health": {
+  "url": "http://127.0.0.1:18143/health",
+  "status_code": 200,
+  "body": "{\"status\":\"ready\",\"model\":\"clef\",\"revision\":\"local-schema-cache-test\"}",
+  "headers": {
+   "date": "Mon, 16 Nov 2026 02:01:50 GMT",
+   "server": "uvicorn",
+   "content-length": "70",
+   "content-type": "application/json",
+   "vary": "Origin",
+   "connection": "close"
+  }
+ },
+ "frozen_replay": {
+  "url": "http://127.0.0.1:18143/v1/systemone",
+  "baseline": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json",
+  "cases": {
+   "verify_choice": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_choice_reordered": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_mixed": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_noul": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_score": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_fields-1": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_fields-8": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_mm-red-png": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   }
+  },
+  "passed": true,
+  "summary": {
+   "cases": 8,
+   "passed": 8
+  }
+ }
+}
