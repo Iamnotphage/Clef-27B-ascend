@@ -177,3 +177,14 @@ S1 170–180 ms 的目标在当前证据下**没有可靠路径**；通信全重
 - 失败原因：HCCL 小 AllReduce 固定开销重复、流/事件同步开销，同层没有足够计算可重叠。
 
 结论：**同层 GEMM+AllReduce 分块也不成立**；这进一步支持“只有 Full Dense SP 的跨层重叠才可能兑现通信收益”。详见[分块重叠探针](npu-gemm-overlap-probe-2026-11-16.md)。
+
+## 10. Full attention prefill cache skip 补充（2026-11-16）
+
+在 `PrefillNoCache` 下跳过 `reshape_and_cache`（pooling、无 decode、无 KV sharing/producer）：
+
+- 冻结 8/8 逐位一致；
+- 307 token：skip mean 129.09 vs control 125.06（+3.2%，更慢）；
+- 969 token：skip 170.85 vs control 172.51（−1.0% mean、−0.6% p95，噪声内）；
+- 未达到 ≥3% 决策门，**不采用**，源码已恢复。
+
+结论：cache 写入是语义死代码但不是性能瓶颈；full attention 的剩余空间不在这个单点。详见[Preprint cache skip 报告](attn-prefill-cache-skip-2026-11-16.md)。
