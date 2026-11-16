@@ -50,3 +50,13 @@ python -m torch.distributed.run --standalone --nproc_per_node=2 \
 
 - 探针：`Clef-27B/logs/gdn-data-path-20261115/mc2-rs/probe.json`、`probe.log`
 - 服务恢复：`.../restore-mc2-rs/`，baseline **PID 678485**，argv/cwd/env 与 phase-0 一致，`/health` 200，冻结 8 例 **8/8**
+
+## 6. MLP-only Dense SP 后续探针
+
+在 RS 探针之后又验证了 MLP-only SP：
+
+- `npu_all_gather_base_mm`（gate/up）+ `npu_mm_reduce_scatter_base`（down）在 A3/TP2/BF16 可用；
+- 数值与基线一致到 `max_abs=0.015625`、`mean_abs≈2e-5`；
+- 但端到端 0.88–0.98×，1596 token 只有 0.878×，比当前 AllReduce 慢。
+
+因此单层 MLP 的 SP 不成立，完整 Dense SP 不再作为当前优先方向。详见[Dense SP MLP 探针](dense-sp-mlp-probe-2026-11-16.md)。
