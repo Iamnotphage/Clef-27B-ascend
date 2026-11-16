@@ -49,7 +49,7 @@ OD 全部 2,352 条都是 **单字段**，且 `JointSchemaHead` 的 decoder 有 
 
 ## 5. 状态
 
-- `results.csv` S1 **190.40488475002348 ms**，`s1_gdn_data_path=BIC+QKV-v2+SF`；
+- `results.csv` S1 **190.40488475002348 ms**、S2 **16.398504578805127 dec/s @ C16**，`s1_gdn_data_path=BIC+QKV-v2+SF`；
 - `metrics.csv` 为 v2+head 质量；
-- baseline 服务恢复 **PID 755361**，`/health` 200，冻结 8/8；
-- 证据：`head-entry/`、`head-control/`、`single-field-test3/`、`single-field-erqa/`、`restore-head-final/`。
+- baseline 服务恢复 **PID 756758**，`/health` 200，冻结 8/8；
+- 证据：`head-entry/`、`head-control/`、`single-field-test3/`、`single-field-erqa/`、`restore-head-final/`、`restore-final/`。

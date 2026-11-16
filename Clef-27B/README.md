@@ -39,11 +39,11 @@
 | 版本 | 主要配置 | S1 P95 | S1 mean | S1 p50 | S2 decisions/s | S2 并发 | ERQA P95 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 适配后 baseline | TP2/BF16/eager/4096/seqs1 | 217.036 ms | 180.069 ms | 205.034 ms | 5.715 | C16 | 325.84 ms |
-| 当前优化（BIC + GDN v2 + 单字段 head） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs4 | **190.405 ms** | **153.761 ms** | **168.485 ms** | **14.652（C8）/ 14.689（C16）** | C8 / C16 | **311.349 ms** |
-| 变化 | — | **−26.63 ms（−12.27%）** | −26.31 ms | −36.55 ms | **约 2.56×（C8）** | — | **−14.49 ms（−4.45%）** |
+| 当前优化（BIC + GDN v2 + 单字段 head） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | **190.405 ms** | **153.761 ms** | **168.485 ms** | **16.398 @ C16** | C16 | **311.349 ms** |
+| 变化 | — | **−26.63 ms（−12.27%）** | −26.31 ms | −36.55 ms | **约 2.87×** | — | **−14.49 ms（−4.45%）** |
 
 - S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；GDN v2 同窗口 v1 control p95 209.616→204.430（−2.48%）；单字段 head 同窗口 head-off 203.102→197.184（−2.91%）；最终 head-entry 190.405 ms；跨运行有 ±3–5% 机器漂移；
-- S2 仍采用未融合的 seqs4 数据；B8/B16 候选尚未与 GDN 融合组合复测；
+- S2 采用 B8 C16（v2+head）16.398 dec/s、p95 1803 ms；seqs4 14.652/14.689 作为历史行保留；
 - GDN 融合 v2 对总 token ≤1600 的 prefill 生效，长 ERQA/长请求自动回退 BIC；
 - ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不是同一服务配置；
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照；
@@ -102,4 +102,4 @@ python scripts/verify_systemone.py \
 
 `metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5425，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
-`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC 与 GDN 边界融合开启的 P95 **190.405 ms**。S2 当前仍为 seqs4/BIC 的 **14.652 decisions/s @ C8**（C16 14.689 见 GDN 数据路径报告），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；S2 尚未与 GDN 融合组合复测。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
+`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC 与 GDN 边界融合开启的 P95 **190.405 ms**。S2 当前为 B8 C16 的 **16.398 decisions/s**（C16 14.689 见 GDN 数据路径报告），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；S2 尚未与 GDN 融合组合复测。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
