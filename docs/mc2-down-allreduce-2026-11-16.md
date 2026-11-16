@@ -45,3 +45,21 @@ CANN 9.2.1 为 `ascend910_93` 提供了 `aclnnGroupedMatMulAllReduce`，尝试�
 - 远端原始：`/workspace/yangchen/logs/gdn-data-path-20261115/mc2/`
 
 服务已按 phase-0 快照恢复为 **PID 612539**：`argv`、`cwd`、白名单 env 与 phase-0 逐项一致，`/health` 200，冻结 8 例 **8/8**；`current-service.json` 已更新。恢复证据：`mc2/restore/`。
+
+## 2026-11-16 补充：MatMulReduceScatter V2 可用
+
+此前结论只覆盖 `npu_mm_all_reduce_base` / `aclnnGroupedMatMulAllReduce`。后续探针验证了另一条接口：
+
+- `torch_npu.npu_mm_reduce_scatter_base(x, W.T, hcom, 2, comm_mode="aiv")` 在 A3、TP2、BF16、真实 down_proj `K=8704, N=5120` 上执行成功；
+- 输出为本地 `[M/2, 5120]`，`all_gather_into_tensor` 可还原完整 `[M,5120]`；
+- `fused+AllGather` 在 308/970 token 约 **1.04–1.06×**，1596 token **0.97×**；仅 reduce-scatter 有 **1.10–1.23×**，但下游必须保持 sequence-sharded；
+- `comm_mode=None` 反而慢 0.68–0.69×，`aiv` 是关键；
+- 输出与基线 `max_abs=0.03125`、`mean_abs≈7e-7`，不是逐位一致。
+
+因此：
+
+1. **“A3 没有 MC2”需要修正为**：A3 缺 `MatmulAllReduce`，但 `MatmulReduceScatterV2`（aiv）可用；
+2. **RS+Gather 还不足以接入**：完整输出还原只有约 1.05×，长序列退化；要兑现单算子收益，需要跨层 Dense SP；
+3. **当前不接入提交**，保留为后续 Dense SP 的接口证据。量化已被赛方禁止，本路线与量化无关。
+
+详见[MatMulReduceScatter 探针](mc2-reduce-scatter-2026-11-16.md)。

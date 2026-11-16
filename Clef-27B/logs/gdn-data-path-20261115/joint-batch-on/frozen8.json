@@ -1,0 +1,104 @@
+{
+ "captured_at": "2026-11-16T06:23:26.476076+00:00",
+ "host": "25e6d0590726",
+ "pid": 680278,
+ "process": {
+  "pid": 680278,
+  "stat_error": "FileNotFoundError(2, 'No such file or directory')",
+  "cwd_error": "FileNotFoundError(2, 'No such file or directory')",
+  "ps": {
+   "command": [
+    "ps",
+    "-o",
+    "pid,ppid,lstart,etime,args",
+    "-p",
+    "680278"
+   ],
+   "returncode": 1,
+   "stdout": "    PID    PPID                  STARTED     ELAPSED COMMAND\n",
+   "stderr": ""
+  }
+ },
+ "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 155.4                38                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                59109/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    37                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                58775/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 680295        | VLLMWorker_TP      | 55944                 | 680295                  |\n| 7       0                 | 680181        | python             | 106                   | 680181                  |\n| 7       1                 | 680296        | VLLMWorker_TP      | 55944                 | 680296                  |\n+===========================+===============+======================================================================+\n",
+ "source": {},
+ "file_sha256": {},
+ "process_tree": [],
+ "process_tree_command": [
+  "ps",
+  "-eo",
+  "pid,ppid,stat,lstart,etime,args",
+  "--sort=pid"
+ ],
+ "health": {
+  "url": "http://127.0.0.1:18143/health",
+  "status_code": 200,
+  "body": "{\"status\":\"ready\",\"model\":\"clef\",\"revision\":\"local-joint-batch-on\"}",
+  "headers": {
+   "date": "Mon, 16 Nov 2026 06:23:25 GMT",
+   "server": "uvicorn",
+   "content-length": "67",
+   "content-type": "application/json",
+   "vary": "Origin",
+   "connection": "close"
+  }
+ },
+ "frozen_replay": {
+  "url": "http://127.0.0.1:18143/v1/systemone",
+  "baseline": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json",
+  "cases": {
+   "verify_choice": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_choice_reordered": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_mixed": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_noul": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_score": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_fields-1": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_fields-8": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_mm-red-png": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   }
+  },
+  "passed": true,
+  "summary": {
+   "cases": 8,
+   "passed": 8
+  }
+ }
+}

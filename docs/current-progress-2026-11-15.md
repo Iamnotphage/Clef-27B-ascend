@@ -17,6 +17,7 @@
 - **18.8 ms 非 kernel 残余（2026-11-16）**：307 token 时 CPU 每层约 2.0 ms ×64≈129 ms，高于设备 compute 77.3 ms，CPU dispatch 是临界路径；967 token 时设备 compute 144.5 ms、CPU backbone 128.5 ms，非 kernel 约 12.5 ms。joint pooler（含 head）CPU 10.9/9.4 ms，head 设备计算仅约 2 ms；scheduler 仅 0.13–0.17 ms。残余主要在 vLLM eager 逐层 dispatch 与模型侧 joint head/pooler/schema，不在 vLLM-Ascend kernel。[Profile 定位](profile-residual-2026-11-16.md)
 - **Graph/ACL graph（2026-11-16，显式尺寸复核）**：默认 `max_num_seqs=1` 只捕获 `[1]`，307/967 实际未 replay；显式捕获 `[307,967]` 后，307 mean/p95 **94.34/96.38 ms**（邻近 eager 109.95–119.90 / 123.36–130.84），967 基本持平（169.23/170.07）。但粗桶全量 S1 p95 **244.53 ms**、密桶 265.80 ms（eager 198.42），质量 2PP 通过（Capability 74.2822、Δ−0.1433）。Graph 只对 <384 短请求有效，**S1 P95 保持 eager，不采用**。[Graph 复核](graph-acl-2026-11-16.md)
 - **Host 微优化复测（2026-11-16）**：schema cache v2 在 s1/307 反而慢约 5%（126.23/137.61 vs eager 119.90/130.84），969 持平；BF16 NZ 服务化（真实的 `Qwen2MoeMLP.forward` hook）307 mean −1.6% 但 p95 +1.4%，969 mean/p95 −0.7%/−0.8%；均逐位一致但**不采用**。第一版 NZ hook 放在未使用的 `AscendQwen3_5DecoderLayer` 上，是死代码；修正后才得到真实数据。[Host 复测](host-opt-2026-11-16.md)
+- **Joint head 跨请求批处理（2026-11-16）**：实现 padding/mask 的 `forward_batch` 与批量 lexical embedding；B4 C4 **13.442 vs off 13.637 dec/s**（变慢），B8 小样本 18.614 vs 18.158（+2.5%），但全量 OD C16 **16.4685 vs 16.4638**（+0.03%）无实际收益；质量 2PP（Capability 74.2174，Δ−0.208）。**不采用**，源码已恢复。[报告](joint-head-batch-2026-11-16.md)
 - **BF16 B8/B16 合批（2026-11-16）**：B8 C16 **16.464 dec/s**、p95 1804 ms，Capability 74.2676（−0.158）；B16 C64 **17.110 dec/s**、p95 6088，Capability 74.2241（−0.201）；OD 三项均在 2PP 内。ERQA 合批已补：B8 C16 **218/400=0.5450**（−0.25 pp）、B16 C32 216/400（−0.75 pp），均在 2PP 内。S2 推荐 B8 C16，B16 只在只看最大吞吐时使用。[B8/B16 报告](batching-seqs8-16-2026-11-16.md)
 - **已排除且不可提交（赛方不允许量化）**：W8A16、W8A8、W8A8+SmoothQuant、seqs4+W8A8 叠加等量化方案，即使质量落在 2PP 内也不得提交；历史数据仅作负结果。非量化方向中 TP1（S1 P95 264.3 ms，劣于 TP2）已排除。
 - **待判断（禁止量化前提下）**：MLP 的 MTE2 效率能否通过 BF16 NZ/tiling/预取从 0.53 提到 0.8+ TB/s（纯 HBM 已测 1.26–1.32 TB/s）；allreduce 能否与计算重叠；batch-invariant GEMM 是否可行；`S1 ~198 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
@@ -291,7 +292,7 @@
 
 - 与 MLP 同量级；是否在关键路径取决于重叠。
 - 2026-11-16 MC2 原型：`npu_mm_all_reduce_base` 在 `ascend910_93` 上缺 `MatmulAllReduce` 内核（161001）；`aclnnGroupedMatMulAllReduce` 单组调用分别 SIGSEGV / 挂起；`MLPRowParallelOp` 的 reduce_scatter 仅在 graph mode 的 `mlp_tensor_parallel_size>1` 下可用，当前 eager 服务无法使用。**MC2 down+allreduce 在当前 A3 栈不可用**，保留为负结果。[报告](mc2-down-allreduce-2026-11-16.md)
-- 结论：长序列通信优化暂时只能依赖调度/合批，或等待支持 A3 MatmulAllReduce 的 CANN/torch_npu。
+- 2026-11-16 补充：`npu_mm_reduce_scatter_base(..., comm_mode="aiv")` 的 MatMulReduceScatter V2 在 A3/TP2/BF16 真实 down_proj 上可用；RS+AllGather 308/970 token 约 1.04–1.06×、1596 0.97×；仅本地 RS 1.10–1.23×，但需要跨层 Dense SP。输出 max_abs 0.03125，不逐位；当前不接入。[RS 探针](mc2-reduce-scatter-2026-11-16.md)
 
 ### 7.3 GDN 剩余布局（6.73 ms，6.6%）
 
