@@ -70,7 +70,7 @@
 ## 4. 当前瓶颈与后续
 
 - S1 p95（168.63 ms）由 1,000–1,300 token 的长请求主导，设备 compute 约 150–170 ms；BF16 不量化条件下的剩余杠杆是 MLP tiling（上限 3–4%）、GDN 主核、通信重叠（Dense SP/MC2 已实测不可用/退化）。
-- 中短请求约 118–125 ms，已接近 CPU/设备平衡；head/pooler 与前端仍有约 6–8 ms host 成本，但单字段 head 的 attention 优化实测仅约 0.5 ms 且非逐位，未采用。
+- 中短请求约 118–125 ms，已接近 CPU/设备平衡；head/pooler 与前端仍有约 6–8 ms host 成本，但单字段 head 的 attention 优化实测仅约 0.5 ms 且非逐位，未采用；967 前端打点显示 encode 2.35 ms、`tolist()`/构建 <0.02 ms，其余约 5.8 ms 在 vLLM engine client 内部（`docs/frontend-timing-2026-11-17.md`）。
 - 不建议：量化（赛方禁止）、完整 graph（P95 变差）、Dense SP（退化）、MC2（A3 不可用）、joint head 跨请求批处理（无收益）。
 - 开放项：主办方正式 baseline、ERQA 公开值、S2 有效性规则（B8 vs B16）。
 
