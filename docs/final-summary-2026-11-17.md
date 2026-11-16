@@ -53,8 +53,10 @@
 | baseline（seqs1） | C16 | 5.715 dec/s | 3292.7 ms | — |
 | **final B8 C16（`--config s1 --max-num-seqs 8 --max-num-batched-tokens 8192`）** | C16 | **16.398 dec/s** | 1802.9 ms | 971.6 ms |
 | final + cache B8 C16（复测） | C16 | 16.319 dec/s | 1807.2 ms | 976.6 ms |
+| final + cache B16 C64（复测） | C64 | 16.928 dec/s | 6120.2 ms | 3743.0 ms |
 
-- 最终 S2 相对 baseline **2.87×**；`ACLNN_CACHE_LIMIT` 对批处理形状无收益（噪声内），S2 报告沿用提交版 16.398 dec/s。
+- 最终 S2 相对 baseline **2.87×**；`ACLNN_CACHE_LIMIT` 对批处理形状无收益（B8 16.319、B16 16.928，均与 pre-cache 16.398/17.110 在噪声内），S2 报告沿用提交版 16.398 dec/s。
+- S2 B8 cache 复测质量：Capability **74.1516**（提交 B8 74.2510，Δ−0.099）、accuracy 1908/2352（−1）、2 条 choice 翻转、max 概率差 0.1002；与既有合批波动同量级，2PP 通过。
 - 若规则只看最大吞吐，B16 C64 为 17.110 dec/s；若看 p95/有效延迟，B8 C16 是推荐点。`results.csv` 按 B8 C16 记录。
 
 ## 3. 本轮新增：aclnn executor cache 修复
