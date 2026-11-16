@@ -70,12 +70,14 @@ class LaunchTests(unittest.TestCase):
         for key in ("bsnd", "skip_initial_state", "skip_conv_state"):
             self.assertTrue(record[key]["effective"])
             self.assertEqual(record[key]["source"], "config:s1")
-        self.assertFalse(record["preprocess_fusion"]["effective"])
+        self.assertTrue(record["preprocess_fusion"]["effective"])
         self.assertEqual(launch["service_environment"]["CLEF_GDN_BSND"], "1")
         self.assertEqual(
             launch["service_environment"]["CLEF_GDN_SKIP_INITIAL_STATE"], "1")
         self.assertEqual(
             launch["service_environment"]["CLEF_GDN_SKIP_CONV_STATE"], "1")
+        self.assertEqual(
+            launch["service_environment"]["CLEF_GDN_PREPROCESS_FUSION"], "1")
         custom = self.launch("--config", "custom")
         for key in ("bsnd", "skip_initial_state", "skip_conv_state"):
             self.assertFalse(

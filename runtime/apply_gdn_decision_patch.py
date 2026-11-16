@@ -61,6 +61,12 @@ POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
 }
+QKV_POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
+        "19cf5d0f34015cc1e4f5f7639a084d3ad64ed24e0a7a1a3b1946b475eec14383",
+    "vllm_ascend/ops/gdn.py":
+        "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e",
+}
 V2_POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
         "ad92a322a69dbd023cd88603b5882d0c5f7f931dbf20692957efdddd6f7809d2",
@@ -217,6 +223,8 @@ def status(path: Path, relative: str) -> str:
         return "preimage"
     if digest == POSTIMAGE_SHA[relative]:
         return "patched"
+    if digest == QKV_POSTIMAGE_SHA.get(relative):
+        return "qkv"
     if digest == V2_POSTIMAGE_SHA.get(relative):
         return "v2"
     if digest == V1_POSTIMAGE_SHA.get(relative):
@@ -689,7 +697,7 @@ def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
         "expected_sha256": FLAG_SHA256,
     })
     report["ready"] = (
-        all(item[state_key] == "patched" for item in report["files"].values())
+        all(item[state_key] in ("patched", "qkv") for item in report["files"].values())
         and report["flag_module"]["status"] == "current"
         and report["flag_module"]["source_sha256"] == FLAG_SHA256
     )
@@ -711,7 +719,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
     for relative, item in report["files"].items():
         path = tree / relative
         current = item["status_before"]
-        if current not in ("preimage", "patched", "v2", "legacy"):
+        if current not in ("preimage", "patched", "qkv", "v2", "legacy"):
             raise ValueError(f"{relative}: refused {current} source content")
         backup = backup_dir / f"{path.name}.preimage"
         backup_data = None
@@ -729,7 +737,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
             writes[path] = backup_data
             item["action"] = "reverted"
         else:
-            if current == "patched":
+            if current in ("patched", "qkv"):
                 item["action"] = "already-patched"
                 continue
             if current in ("v2", "legacy"):

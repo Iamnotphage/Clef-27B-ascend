@@ -10,12 +10,13 @@
 | --- | ---: | ---: | ---: | ---: | ---: |
 | 官方公开 as-served（不做温度校准） | 82.3 | 65.8 | 74.1 | 未公布 | 未公布 |
 | 我们适配后 baseline（2026-11-13） | 82.7941 | 66.0568 | 74.4255 | 0.8104（1906/2352） | 0.401389（588） |
-| 当前优化版本（BIC，2026-11-15） | **82.7941** | **66.0568** | **74.4255** | **0.8104**（1906/2352） | **0.401389** |
-| 当前 − 官方 | +0.4941 | +0.2568 | +0.3255 | — | — |
-| 当前 − 适配 baseline | 0 | 0 | 0 | 0 | 0 |
+| 当前优化版本（BIC + GDN 边界融合，2026-11-16） | **82.7134** | **65.9135** | **74.3135** | **0.8087**（1902/2352） | **0.401512** |
+| 当前 − 官方 | +0.4134 | +0.1135 | +0.2135 | — | — |
+| 当前 − 适配 baseline | −0.0807 | −0.1433 | −0.1120 | −4 题 | +0.000122 |
 
-- 当前优化与适配 baseline **2,352/2,352 逐位一致**；
-- 相对官方公开 as-served 的三项最大偏差 **0.494 pp**，按 2PP 口径**通过**；
+- 当前与适配 baseline 不再逐位一致：冻结 8 例 2/8 逐位，其余最大概率差 0.0019，choice 不变；
+- 相对官方公开 as-served 的三项最大偏差 **0.413 pp**，按 2PP 口径**通过**；
+- 全量 OD 相对 baseline：4 条 choice 变化、max 概率差 0.0851，三项与 accuracy 均在 2PP 内；
 - 论文的 with-temperatures 结果（83.4 / 65.4 / 74.4）**已忽略**，官方列全部为 as-served；
 - 官方未公布 accuracy、Score MAE，不能做这两项的官方对照；
 - 官方公开值来自 OpenDecisions 数据卡榜单的 `Cloudflare/clef` 参考，**不是主办方正式 baseline**；其硬件与服务配置与 A3 不同。
@@ -26,24 +27,24 @@
 | --- | ---: | ---: | ---: |
 | 官方公开 Clef 分数 | 未找到 | — | — |
 | 我们适配后 baseline（2026-11-14） | **219/400 = 0.5475** | 170/287 = 0.5923 | 49/113 = 0.4336 |
-| 当前优化版本（BIC，2026-11-15） | **219/400 = 0.5475** | 同上 | 同上 |
-| 当前 − 适配 baseline | **0（400/400 概率逐位一致）** | 0 | 0 |
+| 当前优化版本（BIC + GDN 边界融合，2026-11-16） | **217/400 = 0.5425** | 168/287 = 0.5854 | 49/113 = 0.4336 |
+| 当前 − 适配 baseline | **−2 题（−0.50 pp）** | −2 题（−0.69 pp） | 0 |
 | 当前 − 官方 | **N/A** | — | — |
 
-- R/BIC 400 题概率逐位一致，预测变化 0、最大概率差 0.0；
-- 官方模型卡、论文与 ERQA 仓库未提供 Clef 的公开 ERQA accuracy，**官方基线暂缺**，因此暂不能对该项做 2PP 判定；
-- 单图/多图为适配 baseline 的同一组预测，BIC 不改变预测。
+- 当前相对适配 baseline 少 2 题，总体 −0.50 pp，在 2PP 内；
+- 官方模型卡、论文与 ERQA 仓库未提供 Clef 的公开 ERQA accuracy，**官方基线暂缺**，因此暂不能对该项做 2PP 判定。
 
 ### 性能指标
 
 | 版本 | 主要配置 | S1 P95 | S1 mean | S1 p50 | S2 decisions/s | S2 并发 | ERQA P95 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 适配后 baseline | TP2/BF16/eager/4096/seqs1 | 217.036 ms | 180.069 ms | 205.034 ms | 5.715 | C16 | 325.84 ms |
-| 当前优化（BIC） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs4 | **198.42 ms** | **160.59 ms** | **179.86 ms** | **14.652（C8）/ 14.689（C16）** | C8 / C16 | **309.84 ms** |
-| 变化 | — | **−18.62 ms（−8.58%）** | −19.48 ms | −25.17 ms | **约 2.56×（C8）** | — | **−16.00 ms（−4.91%）** |
+| 当前优化（BIC + GDN 边界融合） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs4 | **197.083 ms** | **157.699 ms** | **174.169 ms** | **14.652（C8）/ 14.689（C16）** | C8 / C16 | **310.949 ms** |
+| 变化 | — | **−19.95 ms（−9.19%）** | −22.37 ms | −30.87 ms | **约 2.56×（C8）** | — | **−14.89 ms（−4.57%）** |
 
-- S1 为单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；
-- S2 为 seqs4 并发扫描；C8 是推荐工作点，C16 只多约 0.25% 吞吐但 p95 接近翻倍；
+- S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；同窗口 no-fusion control p95 203.091 ms，融合相对 control **−2.96%**；另一直接服务窗口融合为 190.98 ms；
+- S2 仍采用未融合的 seqs4 数据；B8/B16 候选尚未与 GDN 融合组合复测；
+- GDN 融合只对总 token ≤1200 的 prefill 生效，长 ERQA/长请求自动回退 BIC；
 - ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不是同一服务配置；
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照；
 - **BF16 B8/B16 S2 候选（未替换当前 S2）**：B8 C16 **16.464 dec/s**、p95 1804 ms；B16 C64 **17.110 dec/s**、p95 6088 ms；OD 三项与 ERQA 合批均在 2PP 内（B8 C16 ERQA 218/400；B16 C32 216/400）。
@@ -52,7 +53,7 @@
 
 完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[首轮工程 baseline 记录](../docs/baseline-2026-11-12.md)
 
-比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；原始概率 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 0.810374，Score MAE 0.401389（588 条）。作者固定版评分脚本与 EvalScope 未舍入指标完全一致。2026-11-14 完成 ERQA 官方 400 题全量图文评测，400/400 成功、0 重试，accuracy **219/400 = 0.5475**；单图 0.5923、多图 0.4336，8 类分项见报告。[本轮复现说明](../docs/opendecisions-baseline-2026-11-13.md) · [结果汇总](logs/opendecisions-baseline-20261113/summary.json) · [ERQA 报告](../docs/erqa-baseline-2026-11-14.md)
+比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；当时 baseline 为 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 1906/2352，Score MAE 0.401389。2026-11-16 接入 GDN 边界融合后，当前提交值为 Calibration **82.7134**、Intelligence **65.9135**、Capability **74.3135**、accuracy **1902/2352**、Score MAE **0.401512**；相对 baseline 三项均在 2PP 内，4 条 choice 变化。ERQA 官方 400 题由 219/400 变为 **217/400 = 0.5425**（−0.50 pp），仍在 2PP 内。[OpenDecisions 记录](../docs/opendecisions-baseline-2026-11-13.md) · [ERQA 报告](../docs/erqa-baseline-2026-11-14.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
 
 2026-11-14 第四轮复核确认：seqs4 合批配置（13.764 decisions/s @ C8）的全量质量未通过 0.03/0.05 工程门槛（Capability 74.200，4 条 choice 变化，最大概率差 0.097399）；该轮将质量配置定为 **seqs1/B1**，当时 S1 P95 **217.036 ms**、S2 **5.715 decisions/s @ C16**。后续 GDN 决策路径与 BIC 在不改变质量的前提下将 S1 降至 **198.42 ms**，S2 改用 seqs4 达到 **14.689 @ C16（C8 14.652）**。完整根因、GDN 覆盖和接口验收见 [第四轮报告](../docs/tuning4-2026-11-14.md)。
 
@@ -99,6 +100,6 @@ python scripts/verify_systemone.py \
 
 ## 结果记录
 
-`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5475，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
+`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5425，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
-`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化与 BIC 开启的 P95 **198.420 ms**。S2 当前为 seqs4/BIC 的 **14.652 decisions/s @ C8**（C16 14.689 见 GDN 数据路径报告），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [当前 GDN 数据路径验收](../docs/gdn-data-path-2026-11-15.md)
+`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC 与 GDN 边界融合开启的 P95 **197.083 ms**。S2 当前仍为 seqs4/BIC 的 **14.652 decisions/s @ C8**（C16 14.689 见 GDN 数据路径报告），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；S2 尚未与 GDN 融合组合复测。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 P95 310.949 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)

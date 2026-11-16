@@ -24,6 +24,7 @@ SERVED_MODEL_NAME = "clef"
 PROTOCOL_VERSION = "2026-11-13"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
+QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
 MM_PROCESSOR_KWARGS = (
     '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
@@ -44,7 +45,7 @@ CONFIGS = {
             "bsnd": True,
             "skip_initial_state": True,
             "skip_conv_state": True,
-            "preprocess_fusion": False,
+            "preprocess_fusion": True,
         },
     },
     "s2": {
@@ -233,6 +234,8 @@ def gdn_decision_prefill(config, apply=True):
                 "patched": expected,
                 "preimage": contract.PREIMAGE_SHA[path],
             }
+            if path in contract.QKV_POSTIMAGE_SHA:
+                allowed["qkv"] = contract.QKV_POSTIMAGE_SHA[path]
             if path in contract.V2_POSTIMAGE_SHA:
                 allowed["v2"] = contract.V2_POSTIMAGE_SHA[path]
             if path in contract.LEGACY_POSTIMAGE_SHA:
@@ -259,7 +262,9 @@ def gdn_decision_prefill(config, apply=True):
                 or flag.get("sha256") != flag_hashes[flag_state]
                 or flag.get("present") != (flag_state != "missing")):
             raise SystemExit("GDN decision flag module is missing version metadata or has unknown content")
-        complete = all(state == "patched" for state in statuses.values()) and flag_state == "current"
+        complete = all(
+            state in ("patched", "qkv") for state in statuses.values()
+        ) and flag_state == "current"
         if report.get("ready") is not complete:
             raise SystemExit("GDN decision patch readiness disagrees with the verified file hashes")
         return statuses, flag_state, complete
@@ -282,6 +287,67 @@ def gdn_decision_prefill(config, apply=True):
         files={path: item.get("sha256") for path, item in report["files"].items()},
         flag_module_sha256=report.get("flag_module", {}).get("sha256"),
     )
+    return record
+
+
+def qkv_norm_patch(config, apply=True):
+    """Install/verify the checked-in GDN QKV fusion postimage."""
+    requested = bool(
+        CONFIGS[config].get("gdn_data_path", {}).get("preprocess_fusion", False)
+    )
+    record = {
+        "enabled": False,
+        "requested": requested,
+        "installer": str(QKV_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(QKV_INSTALLER.read_bytes()) if QKV_INSTALLER.is_file() else None
+        ),
+    }
+    if not requested:
+        return record
+    if not QKV_INSTALLER.is_file():
+        raise SystemExit(f"QKV norm patch installer missing: {QKV_INSTALLER}")
+    if not apply:
+        # Dry-run must not touch the source tree (and unit tests do not have
+        # the pinned vLLM-Ascend tree on the host).
+        record.update(pending_install=True)
+        return record
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(QKV_INSTALLER), flag],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise SystemExit(
+                f"QKV norm patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return json.loads(result.stdout)
+
+    def verify(report):
+        statuses = {
+            path: item.get("status_after") for path, item in report.get("files", {}).items()
+        }
+        if set(statuses) != {
+            "vllm_ascend/device/device_op.py", "vllm_ascend/ops/gdn.py"
+        } or not all(state == "qkv" for state in statuses.values()):
+            raise SystemExit(f"QKV norm patch incomplete: {statuses}")
+        return statuses
+
+    report = run("--check")
+    statuses = {
+        path: item.get("status_after") for path, item in report.get("files", {}).items()
+    }
+    complete = bool(report.get("ready")) and all(
+        state == "qkv" for state in statuses.values()
+    )
+    if not complete:
+        if not apply:
+            record.update(pending_install=True, patch_state=statuses)
+            return record
+        run("--apply")
+        report = run("--check")
+        statuses = verify(report)
+    record.update(enabled=True, patch_state=statuses)
     return record
 
 
@@ -369,6 +435,38 @@ def resolve_schema_cache(config, explicit):
             f"{version}（{strategies}）。先运行 runtime/apply_schema_cache_patch.py --apply。"
         )
     return enabled, version, strategies
+
+
+def qkv_norm_environment():
+    """Expose the bundled GDN preprocessing custom op to the vLLM workers.
+
+    The Ascend C vendor is optional: if it is missing, the data-path code
+    falls back to the accepted BIC path.
+    """
+    vendor = Path(__file__).resolve().parent / "src" / "ascendc" / "vendors" / "customize"
+    library = vendor / "op_api" / "lib" / "libcust_opapi.so"
+    if not library.is_file():
+        return {}
+    parts = [vendor, vendor / "op_api" / "lib", vendor.parent.parent]
+    spec = importlib.util.find_spec("fla_npu")
+    if spec and spec.submodule_search_locations:
+        fla = Path(list(spec.submodule_search_locations)[0]) / "opp" / "vendors" / "fla_npu_transformer"
+        if fla.is_dir():
+            parts.extend([fla, fla / "op_api" / "lib"])
+    existing_opp = os.environ.get("ASCEND_CUSTOM_OPP_PATH")
+    if existing_opp:
+        parts.append(Path(existing_opp))
+    existing_ld = os.environ.get("LD_LIBRARY_PATH")
+    ld_parts = [str(vendor / "op_api" / "lib")]
+    if existing_ld:
+        ld_parts.append(existing_ld)
+    return {
+        "CLEF_QKV_NORM_VENDOR": str(vendor),
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": os.environ.get(
+            "CLEF_GDN_QKV_NORM_MAX_TOKENS", "1200"),
+        "ASCEND_CUSTOM_OPP_PATH": os.pathsep.join(str(part) for part in parts),
+        "LD_LIBRARY_PATH": os.pathsep.join(ld_parts),
+    }
 
 
 def effective_environment():
@@ -586,6 +684,15 @@ def build_launch(args):
     data_path, data_env = gdn_data_path(config, gdn_decision["enabled"])
     gdn_decision["data_path"] = data_path
     environment.update(data_env)
+    qkv_patch = qkv_norm_patch(config, apply=not getattr(args, "dry_run", False))
+    gdn_decision["qkv_norm_patch"] = qkv_patch
+    qkv_env = qkv_norm_environment()
+    if qkv_env:
+        environment.update(qkv_env)
+        os.environ.update(qkv_env)
+        gdn_decision["qkv_norm_vendor"] = qkv_env["CLEF_QKV_NORM_VENDOR"]
+    else:
+        gdn_decision["qkv_norm_vendor"] = None
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
         # Experiment-only override, recorded so the manifest shows it.
         gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]

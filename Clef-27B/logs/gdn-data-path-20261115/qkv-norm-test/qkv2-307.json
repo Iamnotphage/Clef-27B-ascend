@@ -1,0 +1,3746 @@
+{
+  "schema_version": 2,
+  "started_at": "2026-11-16T10:10:38.471049+00:00",
+  "passed": true,
+  "run_id": "1794823838471045760",
+  "base_url": "http://127.0.0.1:18143",
+  "model": "clef",
+  "configuration": {
+    "warmup": 10,
+    "requests": 30,
+    "concurrency": 1,
+    "timeout_seconds": 300,
+    "minimum_measurement_seconds": 0,
+    "validation_atol": 1e-05,
+    "warmup_policy": "Sequential per sample; each sample receives the requested warmup count and all must pass",
+    "latency_scope": "HTTP transfer, decoding and protocol validation; excludes client queue time",
+    "http_scope": "Client urlopen through full response-body read; includes network, server queue, processing and serialization",
+    "json_decode_scope": "UTF-8 response text conversion and JSON parsing",
+    "client_queue_scope": "executor.submit timestamp through worker function entry; separately reported from elapsed_ms",
+    "server_queue_scope": "Unavailable in client-only timing; correlate client_request_id with server telemetry",
+    "concurrency_scope": "ThreadPoolExecutor max workers bounds active HTTP requests; observed peak excludes queued futures",
+    "throughput_window": "First submission through completion of all measured requests; excludes warmup",
+    "sample_selection": "Measured requests round-robin in sample-file order; each sample prewarmed separately"
+  },
+  "request_template": {
+    "model": "clef",
+    "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+    "questions": {
+      "answer": {
+        "type": "choice",
+        "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+        "criteria": {
+          "coding": "Write, fix, explain or review code, queries or scripts.",
+          "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+          "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+          "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+          "knowledge_qa": "Explain or answer a question from general knowledge.",
+          "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+        }
+      }
+    }
+  },
+  "request_template_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+  "template_hash_scope": "Exact compact UTF-8 JSON POST body; preserves question and candidate order",
+  "fields_per_request": 1,
+  "candidate_counts": {
+    "answer": 6
+  },
+  "sample_source": {
+    "kind": "sample_file",
+    "path": "/workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-307.json",
+    "sha256": "237e3e097edbe2de03d84ea736a1e72cb305f27fc93a0ea3beca6aa479eecbc1"
+  },
+  "samples": [
+    {
+      "name": "fixed307",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      }
+    }
+  ],
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "warmup": [
+    {
+      "index": 0,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:38.474749+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-0",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740818.46139143,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740818.46144511,
+      "http_started_monotonic_seconds": 3740818.46152411,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740818.58886982,
+      "http_ms": 127.34571006149054,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-0\",\"object\":\"structured_decision\",\"created\":1794823838,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-0",
+        "object": "structured_decision",
+        "created": 1794823838,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.049170106649398804,
+      "errors": [],
+      "protocol_validation_ms": 0.0376896932721138,
+      "elapsed_ms": 127.51616025343537,
+      "client_total_ms": 127.56984028965235,
+      "finished_at": "2026-11-16T10:10:38.602314+00:00"
+    },
+    {
+      "index": 1,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:38.602332+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-1",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740818.58898087,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740818.58899961,
+      "http_started_monotonic_seconds": 3740818.58902618,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740818.70840483,
+      "http_ms": 119.37865009531379,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-1\",\"object\":\"structured_decision\",\"created\":1794823838,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-1",
+        "object": "structured_decision",
+        "created": 1794823838,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03217998892068863,
+      "errors": [],
+      "protocol_validation_ms": 0.02669030800461769,
+      "elapsed_ms": 119.46695996448398,
+      "client_total_ms": 119.48570003733039,
+      "finished_at": "2026-11-16T10:10:38.721819+00:00"
+    },
+    {
+      "index": 2,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:38.721833+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-2",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740818.7084825,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740818.70849823,
+      "http_started_monotonic_seconds": 3740818.70852151,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740818.82289081,
+      "http_ms": 114.36930019408464,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-2\",\"object\":\"structured_decision\",\"created\":1794823838,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-2",
+        "object": "structured_decision",
+        "created": 1794823838,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03409991040825844,
+      "errors": [],
+      "protocol_validation_ms": 0.024490058422088623,
+      "elapsed_ms": 114.4537697546184,
+      "client_total_ms": 114.46949979290366,
+      "finished_at": "2026-11-16T10:10:38.836305+00:00"
+    },
+    {
+      "index": 3,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:38.836324+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-3",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740818.82297278,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740818.82299258,
+      "http_started_monotonic_seconds": 3740818.82302239,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740818.93464889,
+      "http_ms": 111.62650026381016,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-3\",\"object\":\"structured_decision\",\"created\":1794823838,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-3",
+        "object": "structured_decision",
+        "created": 1794823838,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.036430079489946365,
+      "errors": [],
+      "protocol_validation_ms": 0.027480069547891617,
+      "elapsed_ms": 111.72342021018267,
+      "client_total_ms": 111.74322012811899,
+      "finished_at": "2026-11-16T10:10:38.948069+00:00"
+    },
+    {
+      "index": 4,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:38.948089+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-4",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740818.93473765,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740818.93475902,
+      "http_started_monotonic_seconds": 3740818.93479222,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.04555546,
+      "http_ms": 110.76323967427015,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-4\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-4",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03727991133928299,
+      "errors": [],
+      "protocol_validation_ms": 0.027330126613378525,
+      "elapsed_ms": 110.8638602308929,
+      "client_total_ms": 110.88522989302874,
+      "finished_at": "2026-11-16T10:10:39.058975+00:00"
+    },
+    {
+      "index": 5,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:39.058997+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-5",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740819.04564571,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.04566732,
+      "http_started_monotonic_seconds": 3740819.04569924,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.16181368,
+      "http_ms": 116.11443990841508,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-5\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-5",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.038010068237781525,
+      "errors": [],
+      "protocol_validation_ms": 0.024559907615184784,
+      "elapsed_ms": 116.21152982115746,
+      "client_total_ms": 116.23313976451755,
+      "finished_at": "2026-11-16T10:10:39.175231+00:00"
+    },
+    {
+      "index": 6,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:39.175247+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-6",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740819.16189638,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.16191456,
+      "http_started_monotonic_seconds": 3740819.16194386,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.27247587,
+      "http_ms": 110.53200997412205,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-6\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-6",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02859998494386673,
+      "errors": [],
+      "protocol_validation_ms": 0.021460000425577164,
+      "elapsed_ms": 110.61361990869045,
+      "client_total_ms": 110.63179979100823,
+      "finished_at": "2026-11-16T10:10:39.285879+00:00"
+    },
+    {
+      "index": 7,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:39.285894+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-7",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740819.27254301,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.27255793,
+      "http_started_monotonic_seconds": 3740819.2725807,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.38308798,
+      "http_ms": 110.507280100137,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-7\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-7",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.026840250939130783,
+      "errors": [],
+      "protocol_validation_ms": 0.020720064640045166,
+      "elapsed_ms": 110.5800699442625,
+      "client_total_ms": 110.59499019756913,
+      "finished_at": "2026-11-16T10:10:39.396489+00:00"
+    },
+    {
+      "index": 8,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:39.396501+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-8",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740819.38315067,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.38316447,
+      "http_started_monotonic_seconds": 3740819.38318626,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.49312603,
+      "http_ms": 109.93977030739188,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-8\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-8",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.025789719074964523,
+      "errors": [],
+      "protocol_validation_ms": 0.01910002902150154,
+      "elapsed_ms": 110.0083701312542,
+      "client_total_ms": 110.02217000350356,
+      "finished_at": "2026-11-16T10:10:39.506524+00:00"
+    },
+    {
+      "index": 9,
+      "phase": "warmup",
+      "started_at": "2026-11-16T10:10:39.506536+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-warmup-9",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.0,
+      "worker_started_monotonic_seconds": 3740819.49318496,
+      "submitted_monotonic_seconds": null,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.49319852,
+      "http_started_monotonic_seconds": 3740819.49321988,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.6034289,
+      "http_ms": 110.2090198546648,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-warmup-9\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-warmup-9",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.028579961508512497,
+      "errors": [],
+      "protocol_validation_ms": 0.023310072720050812,
+      "elapsed_ms": 110.28474988415837,
+      "client_total_ms": 110.29830994084477,
+      "finished_at": "2026-11-16T10:10:39.616835+00:00"
+    }
+  ],
+  "requests": [
+    {
+      "index": 0,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:39.617193+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-0",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 0.28935959562659264,
+      "worker_started_monotonic_seconds": 3740819.60384123,
+      "submitted_monotonic_seconds": 3740819.60355187,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.60387172,
+      "http_started_monotonic_seconds": 3740819.60390803,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.71227302,
+      "http_ms": 108.36498998105526,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-0\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-0",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03363005816936493,
+      "errors": [],
+      "protocol_validation_ms": 0.027520116418600082,
+      "elapsed_ms": 108.47018007189035,
+      "client_total_ms": 108.790029771626,
+      "finished_at": "2026-11-16T10:10:39.725694+00:00"
+    },
+    {
+      "index": 1,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:39.725743+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-1",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 108.36772015318274,
+      "worker_started_monotonic_seconds": 3740819.71239208,
+      "submitted_monotonic_seconds": 3740819.60402436,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.71241447,
+      "http_started_monotonic_seconds": 3740819.71244602,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.82086384,
+      "http_ms": 108.4178201854229,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-1\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-1",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03208965063095093,
+      "errors": [],
+      "protocol_validation_ms": 0.025469809770584106,
+      "elapsed_ms": 108.51327981799841,
+      "client_total_ms": 216.90338989719748,
+      "finished_at": "2026-11-16T10:10:39.834280+00:00"
+    },
+    {
+      "index": 2,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:39.834320+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-2",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 216.92603966221213,
+      "worker_started_monotonic_seconds": 3740819.82096884,
+      "submitted_monotonic_seconds": 3740819.6040428,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.8209895,
+      "http_started_monotonic_seconds": 3740819.82102072,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740819.93307196,
+      "http_ms": 112.05124016851187,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-2\",\"object\":\"structured_decision\",\"created\":1794823839,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-2",
+        "object": "structured_decision",
+        "created": 1794823839,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.034780241549015045,
+      "errors": [],
+      "protocol_validation_ms": 0.026209745556116104,
+      "elapsed_ms": 112.14923998340964,
+      "client_total_ms": 329.09593963995576,
+      "finished_at": "2026-11-16T10:10:39.946491+00:00"
+    },
+    {
+      "index": 3,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:39.946532+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-3",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 329.1302197612822,
+      "worker_started_monotonic_seconds": 3740819.93318079,
+      "submitted_monotonic_seconds": 3740819.60405057,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740819.93320114,
+      "http_started_monotonic_seconds": 3740819.93323691,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.04637619,
+      "http_ms": 113.13928011804819,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-3\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-3",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.033729709684848785,
+      "errors": [],
+      "protocol_validation_ms": 0.02455012872815132,
+      "elapsed_ms": 113.23865037411451,
+      "client_total_ms": 442.38921999931335,
+      "finished_at": "2026-11-16T10:10:40.059792+00:00"
+    },
+    {
+      "index": 4,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.059830+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-4",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 442.42139998823404,
+      "worker_started_monotonic_seconds": 3740820.04647869,
+      "submitted_monotonic_seconds": 3740819.60405729,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.04649774,
+      "http_started_monotonic_seconds": 3740820.04653128,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.16825802,
+      "http_ms": 121.72674015164375,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-4\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-4",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.030620023608207703,
+      "errors": [],
+      "protocol_validation_ms": 0.023319851607084274,
+      "elapsed_ms": 121.81856017559767,
+      "client_total_ms": 564.2590099014342,
+      "finished_at": "2026-11-16T10:10:40.181668+00:00"
+    },
+    {
+      "index": 5,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.181704+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-5",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 564.2901700921357,
+      "worker_started_monotonic_seconds": 3740820.16835366,
+      "submitted_monotonic_seconds": 3740819.60406349,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.16837167,
+      "http_started_monotonic_seconds": 3740820.1684014,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.28196478,
+      "http_ms": 113.56337973847985,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-5\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-5",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.036689918488264084,
+      "errors": [],
+      "protocol_validation_ms": 0.024339649826288223,
+      "elapsed_ms": 113.65883005782962,
+      "client_total_ms": 677.9670100659132,
+      "finished_at": "2026-11-16T10:10:40.295382+00:00"
+    },
+    {
+      "index": 6,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.295416+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-6",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 677.9933599755168,
+      "worker_started_monotonic_seconds": 3740820.28206504,
+      "submitted_monotonic_seconds": 3740819.60407168,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.28208311,
+      "http_started_monotonic_seconds": 3740820.28211205,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.39448816,
+      "http_ms": 112.37611016258597,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-6\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-6",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03240024670958519,
+      "errors": [],
+      "protocol_validation_ms": 0.02252962440252304,
+      "elapsed_ms": 112.46399022638798,
+      "client_total_ms": 790.4754201881588,
+      "finished_at": "2026-11-16T10:10:40.407899+00:00"
+    },
+    {
+      "index": 7,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.407930+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-7",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 790.5029398389161,
+      "worker_started_monotonic_seconds": 3740820.39457946,
+      "submitted_monotonic_seconds": 3740819.60407652,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.39459844,
+      "http_started_monotonic_seconds": 3740820.39462514,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.50398359,
+      "http_ms": 109.3584499321878,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-7\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-7",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.04199007526040077,
+      "errors": [],
+      "protocol_validation_ms": 0.020289793610572815,
+      "elapsed_ms": 109.45083014667034,
+      "client_total_ms": 899.9727498739958,
+      "finished_at": "2026-11-16T10:10:40.517401+00:00"
+    },
+    {
+      "index": 8,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.517429+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-8",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 899.9927402473986,
+      "worker_started_monotonic_seconds": 3740820.5040779,
+      "submitted_monotonic_seconds": 3740819.60408516,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.50409394,
+      "http_started_monotonic_seconds": 3740820.50411785,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.61341687,
+      "http_ms": 109.29901991039515,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-8\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-8",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02734968438744545,
+      "errors": [],
+      "protocol_validation_ms": 0.02169981598854065,
+      "elapsed_ms": 109.3761301599443,
+      "client_total_ms": 1009.3849101103842,
+      "finished_at": "2026-11-16T10:10:40.626825+00:00"
+    },
+    {
+      "index": 9,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.626853+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-9",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1009.4124800525606,
+      "worker_started_monotonic_seconds": 3740820.61350229,
+      "submitted_monotonic_seconds": 3740819.60408981,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.61351872,
+      "http_started_monotonic_seconds": 3740820.61354352,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.72210813,
+      "http_ms": 108.56460966169834,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-9\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-9",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02522999420762062,
+      "errors": [],
+      "protocol_validation_ms": 0.01985998824238777,
+      "elapsed_ms": 108.63801976665854,
+      "client_total_ms": 1118.0669297464192,
+      "finished_at": "2026-11-16T10:10:40.735508+00:00"
+    },
+    {
+      "index": 10,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.735533+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-10",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1118.0873797275126,
+      "worker_started_monotonic_seconds": 3740820.72218264,
+      "submitted_monotonic_seconds": 3740819.60409526,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.72219769,
+      "http_started_monotonic_seconds": 3740820.72221986,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.83513375,
+      "http_ms": 112.91388981044292,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-10\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-10",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.027189962565898895,
+      "errors": [],
+      "protocol_validation_ms": 0.020159874111413956,
+      "elapsed_ms": 112.98723006621003,
+      "client_total_ms": 1231.0896599665284,
+      "finished_at": "2026-11-16T10:10:40.848536+00:00"
+    },
+    {
+      "index": 11,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.848563+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-11",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1231.1118002980947,
+      "worker_started_monotonic_seconds": 3740820.83521204,
+      "submitted_monotonic_seconds": 3740819.60410024,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.83522844,
+      "http_started_monotonic_seconds": 3740820.83525319,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740820.94671734,
+      "http_ms": 111.46415024995804,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-11\",\"object\":\"structured_decision\",\"created\":1794823840,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-11",
+        "object": "structured_decision",
+        "created": 1794823840,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.026479829102754593,
+      "errors": [],
+      "protocol_validation_ms": 0.020630192011594772,
+      "elapsed_ms": 111.53953988105059,
+      "client_total_ms": 1342.6677398383617,
+      "finished_at": "2026-11-16T10:10:40.960119+00:00"
+    },
+    {
+      "index": 12,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:40.960148+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-12",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1342.6922499202192,
+      "worker_started_monotonic_seconds": 3740820.94679749,
+      "submitted_monotonic_seconds": 3740819.60410524,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740820.94681331,
+      "http_started_monotonic_seconds": 3740820.94683795,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.05524069,
+      "http_ms": 108.40273974463344,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-12\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-12",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02474989742040634,
+      "errors": [],
+      "protocol_validation_ms": 0.01894962042570114,
+      "elapsed_ms": 108.47443994134665,
+      "client_total_ms": 1451.1825097724795,
+      "finished_at": "2026-11-16T10:10:41.068639+00:00"
+    },
+    {
+      "index": 13,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.068664+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-13",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1451.2026798911393,
+      "worker_started_monotonic_seconds": 3740821.05531315,
+      "submitted_monotonic_seconds": 3740819.60411047,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.05532814,
+      "http_started_monotonic_seconds": 3740821.05535082,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.17375732,
+      "http_ms": 118.40649973601103,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-13\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-13",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.025469809770584106,
+      "errors": [],
+      "protocol_validation_ms": 0.01968955621123314,
+      "elapsed_ms": 118.47813986241817,
+      "client_total_ms": 1569.6958098560572,
+      "finished_at": "2026-11-16T10:10:41.187158+00:00"
+    },
+    {
+      "index": 14,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.187184+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-14",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1569.7172600775957,
+      "worker_started_monotonic_seconds": 3740821.17383344,
+      "submitted_monotonic_seconds": 3740819.60411618,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.17384921,
+      "http_started_monotonic_seconds": 3740821.17387284,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.28286096,
+      "http_ms": 108.98811975494027,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-14\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-14",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.025120098143815994,
+      "errors": [],
+      "protocol_validation_ms": 0.01874007284641266,
+      "elapsed_ms": 109.05897989869118,
+      "client_total_ms": 1678.7920100614429,
+      "finished_at": "2026-11-16T10:10:41.296259+00:00"
+    },
+    {
+      "index": 15,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.296284+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-15",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1678.8121503777802,
+      "worker_started_monotonic_seconds": 3740821.28293312,
+      "submitted_monotonic_seconds": 3740819.60412097,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.28294886,
+      "http_started_monotonic_seconds": 3740821.28297227,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.39127044,
+      "http_ms": 108.29816991463304,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-15\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-15",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03732042387127876,
+      "errors": [],
+      "protocol_validation_ms": 0.02011982724070549,
+      "elapsed_ms": 108.38251980021596,
+      "client_total_ms": 1787.2104099951684,
+      "finished_at": "2026-11-16T10:10:41.404683+00:00"
+    },
+    {
+      "index": 16,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.404710+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-16",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1787.232150323689,
+      "worker_started_monotonic_seconds": 3740821.39135939,
+      "submitted_monotonic_seconds": 3740819.60412724,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.39137519,
+      "http_started_monotonic_seconds": 3740821.39139968,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.49936414,
+      "http_ms": 107.96445980668068,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-16\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-16",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.025159679353237152,
+      "errors": [],
+      "protocol_validation_ms": 0.02310005947947502,
+      "elapsed_ms": 108.04070997983217,
+      "client_total_ms": 1895.2886601909995,
+      "finished_at": "2026-11-16T10:10:41.512767+00:00"
+    },
+    {
+      "index": 17,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.512793+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-17",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 1895.3096396289766,
+      "worker_started_monotonic_seconds": 3740821.4994423,
+      "submitted_monotonic_seconds": 3740819.60413266,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.49945758,
+      "http_started_monotonic_seconds": 3740821.49948056,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.60729933,
+      "http_ms": 107.81877022236586,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-17\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-17",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.023759901523590088,
+      "errors": [],
+      "protocol_validation_ms": 0.018990132957696915,
+      "elapsed_ms": 107.88764990866184,
+      "client_total_ms": 2003.2125697471201,
+      "finished_at": "2026-11-16T10:10:41.620696+00:00"
+    },
+    {
+      "index": 18,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.620720+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-18",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2003.2321298494935,
+      "worker_started_monotonic_seconds": 3740821.60736909,
+      "submitted_monotonic_seconds": 3740819.60413696,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.60738443,
+      "http_started_monotonic_seconds": 3740821.60740604,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.71586727,
+      "http_ms": 108.46122959628701,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-18\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-18",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.023319851607084274,
+      "errors": [],
+      "protocol_validation_ms": 0.01874985173344612,
+      "elapsed_ms": 108.52792020887136,
+      "client_total_ms": 2111.7753898724914,
+      "finished_at": "2026-11-16T10:10:41.729263+00:00"
+    },
+    {
+      "index": 19,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.729287+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-19",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2111.794489901513,
+      "worker_started_monotonic_seconds": 3740821.71593642,
+      "submitted_monotonic_seconds": 3740819.60414193,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.71595084,
+      "http_started_monotonic_seconds": 3740821.71597202,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.82504746,
+      "http_ms": 109.07544009387493,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-19\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-19",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.024510081857442856,
+      "errors": [],
+      "protocol_validation_ms": 0.020700041204690933,
+      "elapsed_ms": 109.14551001042128,
+      "client_total_ms": 2220.954420045018,
+      "finished_at": "2026-11-16T10:10:41.838448+00:00"
+    },
+    {
+      "index": 20,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.838477+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-20",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2220.9803899750113,
+      "worker_started_monotonic_seconds": 3740821.82512624,
+      "submitted_monotonic_seconds": 3740819.60414585,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.82514227,
+      "http_started_monotonic_seconds": 3740821.82516625,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740821.93454545,
+      "http_ms": 109.37919979915023,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-20\",\"object\":\"structured_decision\",\"created\":1794823841,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-20",
+        "object": "structured_decision",
+        "created": 1794823841,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.028990209102630615,
+      "errors": [],
+      "protocol_validation_ms": 0.02396991476416588,
+      "elapsed_ms": 109.46100018918514,
+      "client_total_ms": 2330.457420088351,
+      "finished_at": "2026-11-16T10:10:41.947955+00:00"
+    },
+    {
+      "index": 21,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:41.947987+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-21",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2330.4859600029886,
+      "worker_started_monotonic_seconds": 3740821.93463607,
+      "submitted_monotonic_seconds": 3740819.60415011,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740821.9346546,
+      "http_started_monotonic_seconds": 3740821.9346835,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.04447706,
+      "http_ms": 109.79356011375785,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-21\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-21",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02687005326151848,
+      "errors": [],
+      "protocol_validation_ms": 0.022309832274913788,
+      "elapsed_ms": 109.87548995763063,
+      "client_total_ms": 2440.379980020225,
+      "finished_at": "2026-11-16T10:10:42.057882+00:00"
+    },
+    {
+      "index": 22,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.057911+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-22",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2440.405989997089,
+      "worker_started_monotonic_seconds": 3740822.04456013,
+      "submitted_monotonic_seconds": 3740819.60415414,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.04457605,
+      "http_started_monotonic_seconds": 3740822.04460234,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.15936185,
+      "http_ms": 114.75950991734862,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-22\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-22",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.03234017640352249,
+      "errors": [],
+      "protocol_validation_ms": 0.02110004425048828,
+      "elapsed_ms": 114.84338017180562,
+      "client_total_ms": 2555.2652897313237,
+      "finished_at": "2026-11-16T10:10:42.172771+00:00"
+    },
+    {
+      "index": 23,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.172800+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-23",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2555.290979798883,
+      "worker_started_monotonic_seconds": 3740822.15944959,
+      "submitted_monotonic_seconds": 3740819.60415861,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.15946589,
+      "http_started_monotonic_seconds": 3740822.15949192,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.26934917,
+      "http_ms": 109.85725000500679,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-23\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-23",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02459995448589325,
+      "errors": [],
+      "protocol_validation_ms": 0.019870232790708542,
+      "elapsed_ms": 109.93131995201111,
+      "client_total_ms": 2665.2385997585952,
+      "finished_at": "2026-11-16T10:10:42.282748+00:00"
+    },
+    {
+      "index": 24,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.282775+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-24",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2665.2604998089373,
+      "worker_started_monotonic_seconds": 3740822.2694244,
+      "submitted_monotonic_seconds": 3740819.6041639,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.26943875,
+      "http_started_monotonic_seconds": 3740822.26946174,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.37752093,
+      "http_ms": 108.05919021368027,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-24\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-24",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.023870263248682022,
+      "errors": [],
+      "protocol_validation_ms": 0.01807045191526413,
+      "elapsed_ms": 108.12729969620705,
+      "client_total_ms": 2773.4021497890353,
+      "finished_at": "2026-11-16T10:10:42.390917+00:00"
+    },
+    {
+      "index": 25,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.390941+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-25",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2773.4226300381124,
+      "worker_started_monotonic_seconds": 3740822.3775905,
+      "submitted_monotonic_seconds": 3740819.60416787,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.37760352,
+      "http_started_monotonic_seconds": 3740822.37762565,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.48505414,
+      "http_ms": 107.4284901842475,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-25\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-25",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.023659784346818924,
+      "errors": [],
+      "protocol_validation_ms": 0.017700251191854477,
+      "elapsed_ms": 107.49494982883334,
+      "client_total_ms": 2880.9306002222,
+      "finished_at": "2026-11-16T10:10:42.498450+00:00"
+    },
+    {
+      "index": 26,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.498474+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-26",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2880.8305598795414,
+      "worker_started_monotonic_seconds": 3740822.48512328,
+      "submitted_monotonic_seconds": 3740819.60429272,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.48513606,
+      "http_started_monotonic_seconds": 3740822.4851571,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.59217811,
+      "http_ms": 107.02101001515985,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-26\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-26",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.022439751774072647,
+      "errors": [],
+      "protocol_validation_ms": 0.0177798792719841,
+      "elapsed_ms": 107.08520980551839,
+      "client_total_ms": 2987.92854975909,
+      "finished_at": "2026-11-16T10:10:42.605573+00:00"
+    },
+    {
+      "index": 27,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.605596+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-27",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 2987.9475701600313,
+      "worker_started_monotonic_seconds": 3740822.5922451,
+      "submitted_monotonic_seconds": 3740819.60429753,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.59225745,
+      "http_started_monotonic_seconds": 3740822.59227848,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.69916415,
+      "http_ms": 106.88566975295544,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-27\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-27",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02130027860403061,
+      "errors": [],
+      "protocol_validation_ms": 0.015819910913705826,
+      "elapsed_ms": 106.94700013846159,
+      "client_total_ms": 3094.9069201014936,
+      "finished_at": "2026-11-16T10:10:42.712556+00:00"
+    },
+    {
+      "index": 28,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.712579+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-28",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 3094.9270399287343,
+      "worker_started_monotonic_seconds": 3740822.69922838,
+      "submitted_monotonic_seconds": 3740819.60430134,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.69924186,
+      "http_started_monotonic_seconds": 3740822.69926265,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.80584527,
+      "http_ms": 106.582619715482,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-28\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-28",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.02158014103770256,
+      "errors": [],
+      "protocol_validation_ms": 0.016040168702602386,
+      "elapsed_ms": 106.64374008774757,
+      "client_total_ms": 3201.584259979427,
+      "finished_at": "2026-11-16T10:10:42.819236+00:00"
+    },
+    {
+      "index": 29,
+      "phase": "measured",
+      "started_at": "2026-11-16T10:10:42.819264+00:00",
+      "request": {
+        "model": "clef",
+        "state": "write me a curriculum vitae of a sound technician and all the softwares he has to know and learn, also the experience as a a beginner",
+        "questions": {
+          "answer": {
+            "type": "choice",
+            "instructions": "Classify the request's main task type so the router can pick a specialist model.",
+            "criteria": {
+              "coding": "Write, fix, explain or review code, queries or scripts.",
+              "math": "Solve a calculation, word problem, proof or quantitative puzzle.",
+              "creative_writing": "Stories, poems, jokes, lyrics, role-play or other creative text.",
+              "professional_writing": "Emails, cover letters, reports, rewrites and summaries of supplied text.",
+              "knowledge_qa": "Explain or answer a question from general knowledge.",
+              "advice": "Personal, health, legal, financial or career advice for the user's own situation."
+            }
+          }
+        }
+      },
+      "passed": true,
+      "client_request_id": "clef-bench-1794823838471045760-measured-29",
+      "request_sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+      "client_queue_ms": 3201.6026601195335,
+      "worker_started_monotonic_seconds": 3740822.80590803,
+      "submitted_monotonic_seconds": 3740819.60430537,
+      "server_queue_ms": null,
+      "server_queue_measurement": "Requires correlated server-side timing; HTTP latency includes server queueing",
+      "actual_input_tokens": 307,
+      "field_count": 1,
+      "candidate_counts": {
+        "answer": 6
+      },
+      "candidate_count": 6,
+      "sample_name": "fixed307",
+      "sample_metadata": {
+        "source": "entry-s1/od-full.json",
+        "input_tokens": 307,
+        "name": "od-0105"
+      },
+      "request_started_monotonic_seconds": 3740822.80592644,
+      "http_started_monotonic_seconds": 3740822.8059472,
+      "http_inflight_at_start": 1,
+      "http_status": 200,
+      "response_request_id": null,
+      "http_finished_monotonic_seconds": 3740822.91321667,
+      "http_ms": 107.26947011426091,
+      "response_text": "{\"id\":\"decision-clef-bench-1794823838471045760-measured-29\",\"object\":\"structured_decision\",\"created\":1794823842,\"model\":\"clef\",\"answers\":{\"answer\":{\"type\":\"choice\",\"choice\":\"professional_writing\",\"probabilities\":{\"coding\":0.029649440199136734,\"math\":0.007980038411915302,\"creative_writing\":0.10677174478769302,\"professional_writing\":0.6364141702651978,\"knowledge_qa\":0.13603071868419647,\"advice\":0.08315391838550568},\"confidence\":0.6364141702651978}},\"usage\":{\"input_tokens\":307,\"output_tokens\":0},\"diagnostics\":{\"answer\":{\"label_mass\":1.0,\"argmax_is_label\":true}},\"joint\":null}",
+      "response": {
+        "id": "decision-clef-bench-1794823838471045760-measured-29",
+        "object": "structured_decision",
+        "created": 1794823842,
+        "model": "clef",
+        "answers": {
+          "answer": {
+            "type": "choice",
+            "choice": "professional_writing",
+            "probabilities": {
+              "coding": 0.029649440199136734,
+              "math": 0.007980038411915302,
+              "creative_writing": 0.10677174478769302,
+              "professional_writing": 0.6364141702651978,
+              "knowledge_qa": 0.13603071868419647,
+              "advice": 0.08315391838550568
+            },
+            "confidence": 0.6364141702651978
+          }
+        },
+        "usage": {
+          "input_tokens": 307,
+          "output_tokens": 0
+        },
+        "diagnostics": {
+          "answer": {
+            "label_mass": 1.0,
+            "argmax_is_label": true
+          }
+        },
+        "joint": null
+      },
+      "json_decode_ms": 0.020990148186683655,
+      "errors": [],
+      "protocol_validation_ms": 0.016479752957820892,
+      "elapsed_ms": 107.33077023178339,
+      "client_total_ms": 3308.9518402703106,
+      "finished_at": "2026-11-16T10:10:42.926608+00:00"
+    }
+  ],
+  "hbm": {
+    "enabled": false
+  },
+  "summary": {
+    "requested_requests": 30,
+    "completed_requests": 30,
+    "successful_requests": 30,
+    "failed_requests": 0,
+    "success_rate": 1.0,
+    "measurement_wall_seconds": 3.3098838799633086,
+    "successful_requests_per_second": 9.063762079874707,
+    "successful_decisions": 30,
+    "decisions_per_second": 9.063762079874707,
+    "input_tokens_per_second": 2782.574958521535,
+    "successful_request_latency_ms": {
+      "sample_count": 30,
+      "p50": 109.10224495455623,
+      "p95": 116.84249800164251,
+      "p99": 120.84983828477561,
+      "min": 106.64374008774757,
+      "max": 121.81856017559767,
+      "mean": 110.26801701324682,
+      "sample_standard_deviation": 3.469787552178847,
+      "coefficient_of_variation": 0.03146685363682573,
+      "percentile_method": "linear interpolation at (n-1)*quantile"
+    },
+    "successful_stage_ms": {
+      "client_queue_ms": {
+        "sample_count": 30,
+        "p50": 1624.264705227688,
+        "p95": 3046.7862785328175,
+        "p99": 3170.6667302642018,
+        "min": 0.28935959562659264,
+        "max": 3201.6026601195335,
+        "mean": 1612.6557546357315,
+        "sample_standard_deviation": 973.641396547321,
+        "coefficient_of_variation": 0.6037503005514331,
+        "percentile_method": "linear interpolation at (n-1)*quantile"
+      },
+      "http_ms": {
+        "sample_count": 30,
+        "p50": 109.0317799244076,
+        "p95": 116.76535431761293,
+        "p99": 120.76387043111026,
+        "min": 106.582619715482,
+        "max": 121.72674015164375,
+        "mean": 110.18970262569685,
+        "sample_standard_deviation": 3.4644513405245942,
+        "coefficient_of_variation": 0.03144079036398693,
+        "percentile_method": "linear interpolation at (n-1)*quantile"
+      },
+      "json_decode_ms": {
+        "sample_count": 30,
+        "p50": 0.02597481943666935,
+        "p95": 0.03703669644892216,
+        "p99": 0.040635876357555396,
+        "min": 0.020990148186683655,
+        "max": 0.04199007526040077,
+        "mean": 0.02794099661211173,
+        "sample_standard_deviation": 0.005390306178892281,
+        "coefficient_of_variation": 0.19291746295676931,
+        "percentile_method": "linear interpolation at (n-1)*quantile"
+      },
+      "protocol_validation_ms": {
+        "sample_count": 30,
+        "p50": 0.020224833860993385,
+        "p95": 0.0258767744526267,
+        "p99": 0.02714010886847973,
+        "min": 0.015819910913705826,
+        "max": 0.027520116418600082,
+        "mean": 0.020825273046890896,
+        "sample_standard_deviation": 0.00300726415695623,
+        "coefficient_of_variation": 0.14440454875117226,
+        "percentile_method": "linear interpolation at (n-1)*quantile"
+      },
+      "client_total_ms": {
+        "sample_count": 30,
+        "p50": 1733.0012100283056,
+        "p95": 3153.5794570343564,
+        "p99": 3277.8152419859543,
+        "min": 108.790029771626,
+        "max": 3308.9518402703106,
+        "mean": 1722.9406466086705,
+        "sample_standard_deviation": 972.0786017094337,
+        "coefficient_of_variation": 0.5641973817396513,
+        "percentile_method": "linear interpolation at (n-1)*quantile"
+      }
+    },
+    "actual_input_tokens": {
+      "successful_total": 9210,
+      "per_request_histogram": {
+        "307": 30
+      },
+      "min": 307,
+      "max": 307
+    },
+    "observed_peak_http_concurrency": 1,
+    "minimum_measurement_duration_satisfied": true
+  },
+  "finished_at": "2026-11-16T10:10:42.927470+00:00"
+}
