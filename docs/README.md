@@ -36,6 +36,7 @@
 | [NPU GEMM 融合/重叠方案](npu-gemm-fusion-overlap-plan-2026-11-16.md) | MC2/Dense SP、GDN 边界融合、通信重叠的可行性、门槛与建议顺序 |
 | [GDN 边界融合](gdn-boundary-fusion-2026-11-16.md) | `ClefGdnQkvNorm` 的 S1 收益、2PP 质量、v4 打包与回退 |
 | [输入长度与特征分布](input-distribution-2026-11-16.md) | OD/ERQA 的 token 桶、延迟/时间占比、字段/候选/图片结构 |
+| [B10/B12 合批扫描](batching-b10-b12-2026-11-16.md) | B8/B10/B12/B16 吞吐、p95 与质量，S2 工作点结论 |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
