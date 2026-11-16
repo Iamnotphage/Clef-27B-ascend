@@ -166,3 +166,14 @@ S1 170–180 ms 的目标在当前证据下**没有可靠路径**；通信全重
 - MLP 上限：`docs/mlp-cube-ceiling-2026-11-15.md`
 - GDN 原型：`docs/gdn-data-path-2026-11-15.md`
 - 合批：`docs/batching-seqs8-16-2026-11-16.md`
+
+## 9. 同层分块 AllReduce 探针补充（2026-11-16）
+
+在计划之外又实现了“不改布局”的 down_proj 分块重叠：
+
+- 把 `[M,K]` 按 token 切成 2/4 块，compute stream 算下一块，comm stream 对上一块做 async AllReduce；
+- 结果：308 token 0.42×/0.29×，970 token 0.80×/0.46×，1596 token 0.79×/0.69×；
+- 正确性 `max_abs=0.03125`、`mean_abs≈7e-7`；
+- 失败原因：HCCL 小 AllReduce 固定开销重复、流/事件同步开销，同层没有足够计算可重叠。
+
+结论：**同层 GEMM+AllReduce 分块也不成立**；这进一步支持“只有 Full Dense SP 的跨层重叠才可能兑现通信收益”。详见[分块重叠探针](npu-gemm-overlap-probe-2026-11-16.md)。
