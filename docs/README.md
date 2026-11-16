@@ -38,6 +38,7 @@
 | [GDN kernel v2](gdn-kernel-v2-2026-11-16.md) | 单次 ReduceSum + Broadcast/Mul、cap 1600、服务级对照与质量 |
 | [单字段 joint head](joint-single-field-2026-11-16.md) | Q=1 self-attention/routing 特化、服务级 −2.91%、打包与质量 |
 | [最终版 profile](profile-final-2026-11-17.md) | 最终 v2+head 的 CPU scope、设备 compute/通信/非 kernel 与后续判断 |
+| [交接文档 11-17](handoff-11-17.md) | 当前状态、baseline 对比、已采用优化、负结果、profile、复现与开放问题 |
 | [输入长度与特征分布](input-distribution-2026-11-16.md) | OD/ERQA 的 token 桶、延迟/时间占比、字段/候选/图片结构 |
 | [B10/B12 合批扫描](batching-b10-b12-2026-11-16.md) | B8/B10/B12/B16 吞吐、p95 与质量，S2 工作点结论 |
 | [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
