@@ -188,3 +188,16 @@ S1 170–180 ms 的目标在当前证据下**没有可靠路径**；通信全重
 - 未达到 ≥3% 决策门，**不采用**，源码已恢复。
 
 结论：cache 写入是语义死代码但不是性能瓶颈；full attention 的剩余空间不在这个单点。详见[Preprint cache skip 报告](attn-prefill-cache-skip-2026-11-16.md)。
+
+## 11. 上游 Dense SP 实测补充（2026-11-16）
+
+已把上游 `b65e7c718`（Qwen3.5 dense SP，明确对接 vLLM `24420b7a`）移植到当前 vLLM-Ascend `89eb8a5`，保留 GDN/BIC，并通过 `--additional-config '{"enable_flashcomm1": true}'` 启用。
+
+结果：
+
+- 质量：Capability 74.4235（Δ−0.002）、Calibration +0.001、Intelligence −0.005、accuracy 不变、choice 0 变化，2PP 通过；
+- 性能：307 mean 133.90 vs 125.06（更慢），969 168.24 vs 172.51（−2.5%）；
+- **全量 S1 p95 212.96 vs 198.42（+7.3%）**、mean 174.86 vs 160.59、5.718 vs 6.226 dec/s；
+- 结论：A3 上完整 Dense SP 质量可用但性能退化，不采用；源码已恢复。
+
+详见[上游 Dense SP 移植报告](dense-sp-upstream-port-2026-11-16.md)。至此，GEMM/通信融合的“单层 SP、同层分块、完整 Dense SP”三条路径都已实测闭环。
