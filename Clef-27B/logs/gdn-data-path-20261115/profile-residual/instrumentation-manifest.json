@@ -1,0 +1,328 @@
+{
+  "created_at": "2026-11-16T01:07:18.123344+00:00",
+  "applied": true,
+  "roots": {
+    "vllm": "/workspace/yangchen/work/src/vllm",
+    "ascend": "/workspace/yangchen/work/src/vllm-ascend"
+  },
+  "scope": "CPU inclusive wall/enqueue scopes; device time requires trace linkage",
+  "synchronization_inserted": false,
+  "observation_overhead": "Inclusive parent scopes contain child logger overhead. Each own logger write is outside that scope's interval. Formal throughput must disable both observation environment variables.",
+  "scope_filter": "CLEF_PROFILE_SCOPE_FILTER is an optional comma-separated exact marker allowlist, read at module import; unset includes all scopes, empty includes none.",
+  "profiler_forwarded": [
+    "record_shapes",
+    "with_flops"
+  ],
+  "schedule_forwarded": false,
+  "encoding_audit_boundary": "Source SHA audit requires restoring observation patches; saved encoding evidence can be used during numerical comparison.",
+  "marker_coverage": {
+    "status": "static_targets_prepared_pending_runtime_trace_acceptance",
+    "acceptance": "Check each expected marker in actual worker trace; Ascend runtime class overrides can replace source methods.",
+    "targets": [
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/clef_joint_schema.py",
+        "class": "JointSchemaPooler",
+        "function": "forward",
+        "marker": "clef::joint_pooler"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/clef_joint_schema.py",
+        "class": "JointSchemaPooler",
+        "function": "_indices",
+        "marker": "clef::schema_indices_h2d"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/clef_joint_schema.py",
+        "class": "JointSchemaHead",
+        "function": "forward",
+        "marker": "clef::joint_head"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/clef_joint_schema.py",
+        "class": "EvidenceRoutingLayer",
+        "function": "forward",
+        "marker": "clef::joint_evidence_routing"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/clef_flash.py",
+        "class": "ClefFlashForJointSchema",
+        "function": "_embed_lexical",
+        "marker": "clef::candidate_embedding_tp"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/qwen3_5.py",
+        "class": "Qwen3_5ForConditionalGeneration",
+        "function": "forward",
+        "marker": "clef::backbone"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/qwen3_next.py",
+        "class": "Qwen3NextDecoderLayer",
+        "function": "forward",
+        "marker": "clef::backbone_decoder_layer"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/qwen3_next.py",
+        "class": "Qwen3NextModel",
+        "function": "forward",
+        "marker": "clef::language_backbone"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/model_executor/models/qwen3_vl.py",
+        "class": "Qwen3_VisionTransformer",
+        "function": "forward",
+        "marker": "clef::vision_encoder"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/generate/structured_decisions/serving.py",
+        "class": null,
+        "function": "parse_questions",
+        "marker": "clef::request_schema_parse"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/generate/structured_decisions/serving.py",
+        "class": "ServingStructuredDecisions",
+        "function": "create_decision",
+        "marker": "clef::frontend_request"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/generate/structured_decisions/api_router.py",
+        "class": null,
+        "function": "create_structured_decision",
+        "marker": "clef::api_handler_including_json"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/openai/decisions/strategies.py",
+        "class": "JointSchemaStrategy",
+        "function": "render_state",
+        "marker": "clef::state_render"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/openai/decisions/strategies.py",
+        "class": "JointSchemaStrategy",
+        "function": "_tokens",
+        "marker": "clef::tokenizer"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/openai/decisions/strategies.py",
+        "class": "JointSchemaStrategy",
+        "function": "encode",
+        "marker": "clef::schema_tokenize_encode"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/openai/decisions/strategies.py",
+        "class": "JointSchemaStrategy",
+        "function": "read",
+        "marker": "clef::frontend_read_including_engine"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/entrypoints/openai/decisions/strategies.py",
+        "class": "ClefFlashStrategy",
+        "function": "_render_media",
+        "marker": "clef::media_decode_process"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/v1/core/sched/scheduler.py",
+        "class": "Scheduler",
+        "function": "schedule",
+        "marker": "clef::scheduler"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/v1/core/sched/scheduler.py",
+        "class": "Scheduler",
+        "function": "add_request",
+        "marker": "clef::scheduler_add_request"
+      },
+      {
+        "source_tree": "vllm",
+        "file": "vllm/v1/metrics/stats.py",
+        "class": "IterationStats",
+        "function": "update_from_finished_request",
+        "marker": "clef::request_finished_metrics"
+      },
+      {
+        "source_tree": "ascend",
+        "file": "vllm_ascend/worker/worker.py",
+        "class": "NPUWorker",
+        "function": "execute_model",
+        "marker": "clef::worker_execute_model"
+      },
+      {
+        "source_tree": "ascend",
+        "file": "vllm_ascend/worker/worker.py",
+        "class": "NPUWorker",
+        "function": "initialize_from_config",
+        "marker": "clef::cache_initialize"
+      },
+      {
+        "source_tree": "ascend",
+        "file": "vllm_ascend/models/qwen3_5_vl.py",
+        "class": "_AscendVLPreprocessMixin",
+        "function": "_process_image_input",
+        "marker": "clef::image_device_process"
+      },
+      {
+        "source_tree": "ascend",
+        "file": "vllm_ascend/models/qwen3_5_vl.py",
+        "class": "_AscendVLPreprocessMixin",
+        "function": "_process_video_input",
+        "marker": "clef::video_device_process"
+      },
+      {
+        "source_tree": "ascend",
+        "file": "vllm_ascend/models/qwen3_5_vl.py",
+        "class": "_AscendVLPreprocessMixin",
+        "function": "_resize_and_patchify",
+        "marker": "clef::image_resize_patchify"
+      }
+    ],
+    "rank_mapping": "Prefer RANK env, then an already initialized torch.distributed rank; null requires PID-to-worker metadata mapping."
+  },
+  "files": [
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/profiler/clef_observe.py",
+      "relative": "vllm/profiler/clef_observe.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/profiler/clef_observe.py",
+      "existed": false,
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "after_sha256": "4c14e4b5261eb6d1d294680ac07650c13284a5f059a70dbdaf59727a186ab51a"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+      "relative": "vllm/model_executor/models/clef_joint_schema.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/model_executor/models/clef_joint_schema.py",
+      "existed": true,
+      "before_sha256": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+      "after_sha256": "e40dbb51fe805980904c631c623c2ebce00834c3732cd0dca7798b1794f58f57"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_flash.py",
+      "relative": "vllm/model_executor/models/clef_flash.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/model_executor/models/clef_flash.py",
+      "existed": true,
+      "before_sha256": "e51277a80e5e6790cd3d4ecb27e1f2a85c4f328425a8262f799a0fc43b1103d9",
+      "after_sha256": "753cd4b61b6582183c7107177c18221ea185ea2928ff7fc56c6d9a92008d2e43"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/qwen3_5.py",
+      "relative": "vllm/model_executor/models/qwen3_5.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/model_executor/models/qwen3_5.py",
+      "existed": true,
+      "before_sha256": "f9f370f7b4988bd917c1dad4a4d6939e74c5fe4f5b7cea9cedfcf4c2a5637afe",
+      "after_sha256": "d891ec28921f91119d8e45e0bf6ce22df74626bd4549422cb5b4848b19856ec2"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/qwen3_next.py",
+      "relative": "vllm/model_executor/models/qwen3_next.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/model_executor/models/qwen3_next.py",
+      "existed": true,
+      "before_sha256": "6439d8ed22f5c256baddc8074a20634c7cecf7a68b20c958201ec8a0346b8a60",
+      "after_sha256": "9c7bf3c2db767e77e6cbad714fa2d42a4511f1854509e83a7da8165e17f52a92"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/qwen3_vl.py",
+      "relative": "vllm/model_executor/models/qwen3_vl.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/model_executor/models/qwen3_vl.py",
+      "existed": true,
+      "before_sha256": "cac3013e717c8d6299893a4e18964ea7ec3abbbf7373eed58045fab50da9028b",
+      "after_sha256": "37ca15a7df76e46d6ab7b9c22be70cab14ec371cbbfb4ba7a12a22fc1f014b15"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/serving.py",
+      "relative": "vllm/entrypoints/generate/structured_decisions/serving.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/entrypoints/generate/structured_decisions/serving.py",
+      "existed": true,
+      "before_sha256": "5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a",
+      "after_sha256": "2d4e6422dc008360f76e685cd8ab30a094925f88212c421c85bb73cd86f8da24"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py",
+      "relative": "vllm/entrypoints/generate/structured_decisions/api_router.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py",
+      "existed": true,
+      "before_sha256": "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f",
+      "after_sha256": "183fb47131c57f8d0c97159fef0f734e910de6cb1964dda6b8114a4da9de8517"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+      "relative": "vllm/entrypoints/openai/decisions/strategies.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+      "existed": true,
+      "before_sha256": "0ddd92b44b38ae7a64d6057cacb205b5164b47dfeb330ea3fcab2bf2f2198a4c",
+      "after_sha256": "a498efccf02523c0f9a7699af9c1edd2dc682dc259daa92100508324ff4db3a6"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/v1/core/sched/scheduler.py",
+      "relative": "vllm/v1/core/sched/scheduler.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/v1/core/sched/scheduler.py",
+      "existed": true,
+      "before_sha256": "18199b804ce496d889852395a2b5e2e2acd776571cfcd0e15a7a611cd34e1c2a",
+      "after_sha256": "c428108aa504c4a18e7da607721dda540ef96b7147539ccee569953d6d895507"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/v1/metrics/stats.py",
+      "relative": "vllm/v1/metrics/stats.py",
+      "root": "vllm",
+      "backup": "source-before/vllm/vllm/v1/metrics/stats.py",
+      "existed": true,
+      "before_sha256": "5c925d3c9ba8b81c52eac9cff74a2fe468d14cf710b581ab7eb5ca848450e4a6",
+      "after_sha256": "39bb7b2a5c6367d56cc0d27ce3b7fe2f84c1d0570db5d870a2c86ca5debe0e19"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/worker/worker.py",
+      "relative": "vllm_ascend/worker/worker.py",
+      "root": "ascend",
+      "backup": "source-before/ascend/vllm_ascend/worker/worker.py",
+      "existed": true,
+      "before_sha256": "e9a352752e62e19b1084b69ce7c844c4f804cdc3d54b4ca54cc148309aee2299",
+      "after_sha256": "64a3bd0f1f457c1b75a62a2e3ba511c975ce466b6a1cebb212540c9e55cb9618"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/models/qwen3_5_vl.py",
+      "relative": "vllm_ascend/models/qwen3_5_vl.py",
+      "root": "ascend",
+      "backup": "source-before/ascend/vllm_ascend/models/qwen3_5_vl.py",
+      "existed": true,
+      "before_sha256": "50706a86aa2a4f3ac83766dfbb3eb4c392872b746f6c138de6d30c34bb203c25",
+      "after_sha256": "11fc47b28f23b50b9371bb7936528391919f5b305e2511d7b29cdea3b1e731cc"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/profiler/torch_npu_profiler.py",
+      "relative": "vllm_ascend/profiler/torch_npu_profiler.py",
+      "root": "ascend",
+      "backup": "source-before/ascend/vllm_ascend/profiler/torch_npu_profiler.py",
+      "existed": true,
+      "before_sha256": "5242ee153033afcf12dbfe022dbd807fa248d991ff5c53efbd1adb372d5575f4",
+      "after_sha256": "7894ea54b50376aef08628687274a76caee5cf728878c80c5f7caebd20bab71f"
+    }
+  ]
+}

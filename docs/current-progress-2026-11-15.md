@@ -14,6 +14,7 @@
 - **S2（最大有效吞吐）**：baseline **5.715 dec/s @ C16**（seqs1，实际 batch 恒为 1）→ seqs4 **14.125 dec/s @ C16**（推荐工作点 C8：14.049 dec/s、p95 950.7 ms），约 **2.47×**。
 - **质量**：C1 与 baseline **逐位一致**（Capability 74.425479、accuracy 1906/2352、Score MAE 0.401389@588）；合批后 C8 为 Capability 74.195104（−0.230）、accuracy 1903、max 概率差 0.097399、6 条 choice 翻转、2 条 noul 跨 0.5。
 - **主要瓶颈**：设备 kernel 约占客户端 80%；其中 MLP 32.07 ms（31.6%）、TP2 allreduce 20.40 ms（20.1%）、GDN 主核 10.52 ms + 布局 6.73 ms、其他 MatMul（attention 投影等）14.82 ms。MLP 的 kernel 是 **MTE2 权重搬运受限**（占用 0.994），有效带宽约 0.53 TB/s；2026-11-15 微基准测得纯 HBM 读带宽 **1.26–1.32 TB/s**，即 MLP 只达到约 **40–42%**，瓶颈在 MTE2 访问效率/tiling/格式，而非 HBM 上限。[HBM 微基准](hbm-bandwidth-2026-11-15.md)
+- **18.8 ms 非 kernel 残余（2026-11-16）**：307 token 时 CPU 每层约 2.0 ms ×64≈129 ms，高于设备 compute 77.3 ms，CPU dispatch 是临界路径；967 token 时设备 compute 144.5 ms、CPU backbone 128.5 ms，非 kernel 约 12.5 ms。joint pooler（含 head）CPU 10.9/9.4 ms，head 设备计算仅约 2 ms；scheduler 仅 0.13–0.17 ms。残余主要在 vLLM eager 逐层 dispatch 与模型侧 joint head/pooler/schema，不在 vLLM-Ascend kernel。[Profile 定位](profile-residual-2026-11-16.md)
 - **已排除**：W8A16（局部 1.057×、质量 −0.182、全量无收益）、W8A8（C1 约 1%、NZ 格式反而更慢、合批下 +5% 但质量 −0.727）、TP1（S1 P95 264.3 ms，劣于 TP2）、seqs4+W8A8 叠加（质量不可接受）。
 - **待判断**：MLP 的 MTE2 效率能否通过 BF16 NZ/tiling/预取从 0.53 提到 0.8+ TB/s（纯 HBM 已测 1.26–1.32 TB/s）；allreduce 能否与计算重叠；batch-invariant GEMM 是否可行；`S1 ~198 ms` 是否已接近该硬件上 27B 模型单请求的物理下限。
 
