@@ -43,8 +43,8 @@
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 适配后 baseline | TP2/BF16/eager/4096/seqs1 | 217.036 ms | 180.069 ms | 205.034 ms | 5.715 | C16 | 325.84 ms |
 | 上一版（BIC + GDN v2 + SF + aclnn cache + MLP NZ） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | 166.002 ms | 121.705 ms | 113.656 ms | 16.376 @ C16 | C16 | 313.506 ms |
-| **当前优化（conv+QKV 融合 + GDN chunk128）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | **157.745 ms** | **115.418 ms** | **107.147 ms** | **16.727 @ C16** | C16 | **309.926 ms** |
-| 变化 | — | **−59.29 ms（−27.32%）** | −64.65 ms（−35.91%） | −97.89 ms（−47.74%） | **约 2.93×** | — | **−15.91 ms（−4.88%）** |
+| **当前优化（conv+QKV 融合 + GDN chunk128）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | **157.745 ms** | **115.418 ms** | **107.147 ms** | **17.446 @ C64** | C64 | **309.926 ms** |
+| 变化 | — | **−59.29 ms（−27.32%）** | −64.65 ms（−35.91%） | −97.89 ms（−47.74%） | **约 3.05×** | — | **−15.91 ms（−4.88%）** |
 
 - S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms，**MLP BF16 NZ** 后 166.002 ms；同日再叠加 **conv+QKV 融合**（同窗口 p95 165.091→160.419）与 **GDN chunk128**（160.419→157.745），当前默认入口 **157.745 ms / 8.652 dec/s**（mean 115.418、p50 107.147）；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
 - S2 采用 B8 C16（conv+QKV 融合 + chunk128）**16.727 dec/s**、p95 1768.9 ms、Capability 73.8426/accuracy 1905；上一版 16.376 dec/s、p95 1803 ms；seqs4 14.652/14.689 作为历史行保留；
@@ -108,7 +108,7 @@ python scripts/verify_systemone.py \
 
 2026-11-17 继续完成 **MLP BF16 NZ 服务化**：`Qwen2MoeMLP` 的 gate_up/down 权重在首次前向时转为 FRACTAL_NZ，输出逐位不变；官方入口全量 S1 **166.002 ms / 8.213 dec/s**（mean 121.705、p50 113.656），相对 cache-only 再 −1.56% p95、−3.06% mean；ERQA 217/400、S2 16.376。安装器升级为 GDN v4（`apply_gdn_decision_patch.py`，`CLEF_MLP_BF16_NZ=1`）。[最终汇总](../docs/final-summary-2026-11-17.md)
 
-2026-11-17 晚完成 **conv+QKV 融合算子**与 **GDN chunk 128 默认启用**：`ClefGdnConvQkv` 一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，并直接读 packed QKVZ `[T,8192]`（省去逐层 5120 列连续化拷贝），vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，由 `inference.py` 自动注入；chunk 128 在 `inference.py` 中随决策 prefill 自动安装。同窗口全量 S1 从 165.091 降到 **157.745 ms**（mean 122.762→115.418、吞吐 8.137→8.652 dec/s），S2 B8 C16 从 16.376 升到 **16.727**，OpenDecisions Capability 74.2476、ERQA 216/400，三项均在 2PP 内；`CLEF_GDN_CONV_QKV=0` / `CLEF_GDN_CHUNK128=0` 可分别复现对照臂。[conv+QKV 报告](../docs/gdn-conv-qkv-2026-11-17.md) · [chunk128 报告](../docs/gdn-chunk128-2026-11-17.md)
+2026-11-17 晚完成 **conv+QKV 融合算子**与 **GDN chunk 128 默认启用**：`ClefGdnConvQkv` 一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，并直接读 packed QKVZ `[T,8192]`（省去逐层 5120 列连续化拷贝），vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，由 `inference.py` 自动注入；chunk 128 在 `inference.py` 中随决策 prefill 自动安装。同窗口全量 S1 从 165.091 降到 **157.745 ms**（mean 122.762→115.418、吞吐 8.137→8.652 dec/s），S2 从 B8 C16 16.376 升到 **B16 C64 17.446**（B8 C16 为 16.727、p95 1768.9），OpenDecisions Capability 74.2476、ERQA 216/400，三项均在 2PP 内；`CLEF_GDN_CONV_QKV=0` / `CLEF_GDN_CHUNK128=0` 可分别复现对照臂。[conv+QKV 报告](../docs/gdn-conv-qkv-2026-11-17.md) · [chunk128 报告](../docs/gdn-chunk128-2026-11-17.md)
 
 `metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5425，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 

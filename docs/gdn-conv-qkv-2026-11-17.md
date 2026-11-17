@@ -266,3 +266,14 @@ export CLEF_CONV_QKV_TILE=32
 | 服务安装记录 | `/workspace/yangchen/logs/perf-next-20261117/conv-install.json` |
 | 服务固定样本 | `/workspace/yangchen/logs/perf-next-20261117/conv-v2/fixed-*.json` |
 | eligibility 日志 | `/workspace/yangchen/logs/perf-next-20261117/conv-diag/service.log` |
+
+### 4.4 S2 最大吞吐（conv+QKV + chunk128）
+
+| 并发 | dec/s | mean | p95 | OD Capability | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| B8 C16 | 16.727 | 952.9 ms | 1768.9 ms | 73.8426 | 1905/2352 |
+| **B16 C64** | **17.446** | 3631.9 ms | 5950.1 ms | 74.1388 | 1902/2352 |
+
+- 上一版（B8 C16、无融合）为 16.376 dec/s；B16 C64 历史值 17.110。
+- 两组 OD 三项均在 2PP 内；B16 只按最大吞吐（p95 无约束），B8 是 p95 约束下的推荐工作点。
+- `results.csv` 记录 B16 C64 17.446 dec/s、并发 64；B8 数据保留在本表与 `s2-chunk128-conv.json.gz`。
