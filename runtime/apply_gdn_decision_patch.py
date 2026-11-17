@@ -40,7 +40,7 @@ DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm-ascend")
 DEFAULT_BACKUP = Path("/workspace/yangchen/logs/gdn-decision-20261115/phase0")
 FLAG_SOURCE = Path(__file__).with_name("gdn_decision_flags.py")
 FLAG_TARGET = "vllm_ascend/ops/gdn_decision_flags.py"
-PATCH_VERSION = 3
+PATCH_VERSION = 4
 FLAG_SHA256 = "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287"
 LEGACY_FLAG_SHA256 = "cf1ede3f3e8a894d9f0896a35cd07254ffa756e18e699fa40636cea86043fc70"
 LEGACY_FLAG_SHA256_V1 = "02987b37857ffad0ab259fc55fad6bb1f02d39c885664b36353572057b98c731"
@@ -59,7 +59,7 @@ POSTIMAGE_SHA = {
     "vllm_ascend/ops/gdn.py":
         "7bc9b8f19e1ab17f7b484121c4c88c7f365c5ddb3a9f7a0380592175c077c893",
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
-        "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+        "a4de9b4ecc576b83074b50f8c500b8f9419354081b8ce50193240522129155a4",
 }
 QKV_POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
@@ -75,6 +75,38 @@ V2_POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
 }
+V3_POSTIMAGE_SHA = {
+    "vllm_ascend/patch/worker/patch_qwen3_5.py":
+        "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
+}
+MLP_NZ_BLOCK = '''
+
+# --- Clef MLP BF16 NZ patch (enabled by CLEF_MLP_BF16_NZ=1) -----------------
+import os as _clef_os
+
+if _clef_os.environ.get("CLEF_MLP_BF16_NZ") == "1":
+    import torch_npu as _clef_torch_npu
+    from vllm.model_executor.models.qwen2_moe import Qwen2MoeMLP as _ClefMoeMLP
+
+    _clef_mlp_nz_seen = set()
+    _clef_mlp_nz_forward = _ClefMoeMLP.forward
+
+    def _clef_mlp_nz_wrapper(self, x):
+        if id(self) not in _clef_mlp_nz_seen:
+            self.gate_up_proj.weight.data = _clef_torch_npu.npu_format_cast(
+                self.gate_up_proj.weight.data, 29)
+            self.down_proj.weight.data = _clef_torch_npu.npu_format_cast(
+                self.down_proj.weight.data, 29)
+            _clef_mlp_nz_seen.add(id(self))
+            if len(_clef_mlp_nz_seen) == 1:
+                print("clef MLP BF16 NZ applied: gate_up=%s down=%s" % (
+                    _clef_torch_npu.get_npu_format(self.gate_up_proj.weight.data),
+                    _clef_torch_npu.get_npu_format(self.down_proj.weight.data)),
+                    flush=True)
+        return _clef_mlp_nz_forward(self, x)
+
+    _ClefMoeMLP.forward = _clef_mlp_nz_wrapper
+'''
 V1_POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "d2666387506cb68d9238c6f06baa89253158ee0facc67ad1243cf41ad01edcad",
@@ -225,6 +257,8 @@ def status(path: Path, relative: str) -> str:
         return "patched"
     if digest == QKV_POSTIMAGE_SHA.get(relative):
         return "qkv"
+    if digest == V3_POSTIMAGE_SHA.get(relative):
+        return "v3"
     if digest == V2_POSTIMAGE_SHA.get(relative):
         return "v2"
     if digest == V1_POSTIMAGE_SHA.get(relative):
@@ -468,7 +502,7 @@ INIT_PATCHED = (
 def patch_qwen3_5(text: str) -> str:
     if text.count(INIT_ANCHOR) != 1:
         raise SystemExit("patch_qwen3_5.py: init anchor is not unique; refusing to patch")
-    return text.replace(INIT_ANCHOR, INIT_PATCHED, 1)
+    return text.replace(INIT_ANCHOR, INIT_PATCHED, 1) + MLP_NZ_BLOCK
 
 
 RUNTIME_HELPER = '''
@@ -719,7 +753,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
     for relative, item in report["files"].items():
         path = tree / relative
         current = item["status_before"]
-        if current not in ("preimage", "patched", "qkv", "v2", "legacy"):
+        if current not in ("preimage", "patched", "qkv", "v2", "v3", "legacy"):
             raise ValueError(f"{relative}: refused {current} source content")
         backup = backup_dir / f"{path.name}.preimage"
         backup_data = None
@@ -739,6 +773,15 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
         else:
             if current in ("patched", "qkv"):
                 item["action"] = "already-patched"
+                continue
+            if current == "v3":
+                # The v3 postimage already contains the GDN decision patch;
+                # the v4 upgrade only appends the MLP NZ hook.
+                patched = (path.read_text() + MLP_NZ_BLOCK).encode("utf-8")
+                if sha256_bytes(patched) != POSTIMAGE_SHA[relative]:
+                    raise ValueError(f"{relative}: v3 upgrade SHA-256 mismatch")
+                writes[path] = patched
+                item["action"] = "upgraded"
                 continue
             if current in ("v2", "legacy"):
                 if backup_data is None:

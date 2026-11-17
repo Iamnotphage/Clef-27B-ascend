@@ -124,7 +124,11 @@ ERQA 服务需使用 `--max-model-len 16384 --max-num-batched-tokens 16384 --lim
 - 实验脚本：`runtime/launch_from_manifest.py`、`runtime/shape_history_probe.py`、`runtime/shape_gdn_probe.py`、`runtime/shape_matmul_sweep.py`。
 - 服务端日志与完整运行目录：`/workspace/yangchen/logs/tuning5-20261117/`。
 
-## 7. 注意事项
+## 7. 后续：MLP BF16 NZ（同日采用）
+
+在 cache 修复后的基线上，把 `Qwen2MoeMLP` 的 gate_up/down 权重在首次前向时转为 FRACTAL_NZ（GDN 安装器 v4，`CLEF_MLP_BF16_NZ=1`），官方入口全量 S1 进一步降到 **mean 121.705 / p50 113.656 / p95 166.002 ms、8.213 dec/s**；2,352 条响应逐位一致，ERQA 217/400，S2 B8 C16 16.376。详见 `docs/final-summary-2026-11-17.md`。
+
+## 8. 注意事项
 
 - 每次“全新服务”实验必须确认新 PID 存活且端口空闲；本轮曾因一个未退出的服务占用 18143，使后续启动器静默失败、请求全部打到污染服务，产生过一批错误结论。`runtime/launch_from_manifest.py` 现已内置端口占用与启动存活检查。
 - 约 145 个不同长度是实测预算；`ACLNN_CACHE_LIMIT` 的默认数值未在本机文档中给出。1,000,000 对 755 个 OD 长度足够，host 内存从 135 GB 到 136 GB，无明显增长。

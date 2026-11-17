@@ -3,6 +3,7 @@
 ## 沟通与目标
 
 - 使用中文直接陈述结论、证据和下一步，遵循用户关于肯定表达的要求。
+- 2026-11-17 最终两项非量化优化（已采用）：`ACLNN_CACHE_LIMIT=1000000` 修复 aclnn executor 缓存耗尽导致的 +55 ms 形状慢路径；MLP BF16 NZ（FRACTAL_NZ，GDN 安装器 v4，`CLEF_MLP_BF16_NZ=1`）再降 p95。官方 `start.sh --config s1` 全量 S1 **mean 121.705 / p50 113.656 / p95 166.002 ms、8.213 dec/s**；2,352 条响应逐位一致，OD Capability 74.3107、ERQA 217/400、S2 B8 C16 16.376。证据 `docs/final-summary-2026-11-17.md`、`docs/aclnn-cache-shape-fix-2026-11-17.md`、`Clef-27B/logs/tuning5-20261117/`。
 - 当前任务为在现有昇腾 A3 环境建立可复现的 Clef-27B 比赛提交版本，包含完整主干、联合决策头、文本与图文接口、质量及性能评测证据。
 - 2026-11-13 用户补充的比赛交付规则见 `docs/submission-rules-2026-11-13.md`。当前按该版本准备验收；后续以主办方最终协议与模板更新，规则来源和版本均需保留。
 - 2026-11-16 用户明确 **2PP 精度口径**：比赛**不需要温度校准**，使用原始服务输出；“baseline 精度范围不超过 2PP”指 **OpenDecisions Intelligence、Calibration、Capability 与 ERQA 总体准确率**相对 baseline 的**绝对波动均不超过 2 个百分点**（ERQA 2PP = 0.02）。该口径已写入 `docs/submission-rules-2026-11-13.md` 第 4.3 节；主办方最终细则更新时保留本条来源与日期。

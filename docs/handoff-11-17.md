@@ -1,6 +1,6 @@
 # Clef-27B Ascend 交接文档（2026-11-17）
 
-> **2026-11-17 调优后更新**：`ACLNN_CACHE_LIMIT=1000000` 把官方 `start.sh --config s1` 入口的全量 S1 降到 **mean 125.55 / p50 118.17 / p95 168.63 ms、7.960 dec/s**（原 153.76 / 168.49 / 190.40、6.503），2,352 条响应逐位一致，ERQA 217/400 不变；S2 B8 C16 16.398 dec/s 不变。本文的 S1/S2 是调优前快照；最新结论与表格见 `docs/final-summary-2026-11-17.md` 和 `docs/aclnn-cache-shape-fix-2026-11-17.md`。另：307 profile 的 CPU/设备绝对值受采集开销污染，不可用于生产结论（967 profile 仍有效）。
+> **2026-11-17 调优后更新**：`ACLNN_CACHE_LIMIT=1000000` 把官方 `start.sh --config s1` 入口的全量 S1 降到 **mean 125.55 / p50 118.17 / p95 168.63 ms、7.960 dec/s**（原 153.76 / 168.49 / 190.40、6.503），再叠加 **MLP BF16 NZ**（GDN 安装器 v4）后为 **mean 121.71 / p50 113.66 / p95 166.00 ms、8.213 dec/s**；2,352 条响应逐位一致，ERQA 217/400，S2 B8 C16 16.376 dec/s。本文的 S1/S2 是调优前快照；最新结论与表格见 `docs/final-summary-2026-11-17.md` 和 `docs/aclnn-cache-shape-fix-2026-11-17.md`。另：307 profile 的 CPU/设备绝对值受采集开销污染，不可用于生产结论（967 profile 仍有效）。
 
 ## 0. 交接摘要
 
