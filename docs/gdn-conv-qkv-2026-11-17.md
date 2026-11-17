@@ -243,44 +243,7 @@ export CLEF_CONV_QKV_VENDOR=<install-v3>/packages/vendors/clef_conv_qkv
 export CLEF_CONV_QKV_TILE=32
 ```
 
-## 7. 未完成与下一步
-
-1. ~~install-v3 服务级固定样本复核~~ —— 已完成，见第 4 节（融合生效，非逐位）。
-2. ~~全量 S1~~ —— 已完成同窗口 A/B 与默认入口复跑；尚缺 host load <10 的干净窗口用于对外报数。
-3. ~~OpenDecisions 2,352 与 ERQA 400~~ —— 已完成，2PP 通过（4.2、4.3）。
-4. 干净窗口下的 S1/S2 与 `results.csv` 更新仍待办；当前所有绝对耗时都在 load 18–28 下测得。
-4. 每 token ≤1200 的 cap 与 `CLEF_GDN_QKV_NORM_MAX_TOKENS` 一致，超过则回退 BIC + QKV v2，
-   长序列（1,595 / 10,294）仍走原路径。
-
-## 8. 证据索引
-
-| 内容 | 路径 |
-| --- | --- |
-| 全量 S1 A/B（off / on / 默认入口） | `Clef-27B/logs/perf-next-20261117/s1-conv-qkv-{off,on}.json.gz`、`s1-default-entry.json.gz` |
-| 全量质量评分 | `Clef-27B/logs/perf-next-20261117/conv-qkv-quality.json` |
-| ERQA 摘要与离线复核 | `Clef-27B/logs/perf-next-20261117/erqa-conv-qkv/` |
-| 探针 v1/v2/v3 | `Clef-27B/logs/perf-next-20261117/conv-qkv-probe-v{1,2,3}.json.gz` |
-| 通用 QKV 探针 | `Clef-27B/logs/perf-next-20261117/qkv-generic-probe.json.gz` |
-| chunk 扫描（未归一化修正后） | `Clef-27B/logs/perf-next-20261117/gdn-chunk-sweep.json.gz` |
-| eager 对照全量 S1 | `Clef-27B/logs/perf-next-20261117/eager-s1-full.json.gz` |
-| 服务安装记录 | `/workspace/yangchen/logs/perf-next-20261117/conv-install.json` |
-| 服务固定样本 | `/workspace/yangchen/logs/perf-next-20261117/conv-v2/fixed-*.json` |
-| eligibility 日志 | `/workspace/yangchen/logs/perf-next-20261117/conv-diag/service.log` |
-
-### 4.4 S2 最大吞吐（conv+QKV + chunk128）
-
-| 并发 | dec/s | mean | p95 | OD Capability | accuracy |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| B8 C16 | 16.727 | 952.9 ms | 1768.9 ms | 73.8426 | 1905/2352 |
-| **B16 C64** | **17.446** | 3631.9 ms | 5950.1 ms | 74.1388 | 1902/2352 |
-| B32 C128 | 17.364 | 7221.2 ms | 10510.6 ms | 未测 | 未测 |
-
-- 上一版（B8 C16、无融合）为 16.376 dec/s；B16 C64 历史值 17.110。
-- 两组 OD 三项均在 2PP 内；B16 只按最大吞吐（p95 无约束），B8 是 p95 约束下的推荐工作点。
-- B32 C128 为 17.364 dec/s，未超过 B16 C64，说明吞吐在 17.4 附近饱和；不再上调并发。
-- `results.csv` 记录 B16 C64 17.446 dec/s、并发 64；B8 数据保留在本表与 `s2-chunk128-conv.json.gz`。
-
-## 6. MLP matmul 上限复核（负结果，2026-11-17 晚）
+## 7. MLP matmul 上限复核（负结果，2026-11-17 晚）
 
 在采纳 conv+QKV 与 chunk128 后重新确认「MLP 自定义 tiling 还有多少空间」，
 用 `runtime/probe_matmul_ceiling.py` 在真实 TP2 权重上复测（第 31 层、rank 0）：
@@ -311,7 +274,7 @@ export CLEF_CONV_QKV_TILE=32
 - 证据：`Clef-27B/logs/perf-next-20261117/mlp-ceiling.json.gz`
   （远端 `/workspace/yangchen/logs/perf-next-20261117/mlp-ceiling.json`）。
 
-## 7. 通信与 AddRmsNorm 复核（负结果）
+## 8. 通信与 AddRmsNorm 复核（负结果）
 
 计算侧确认到顶后，检查两个剩余项：
 
@@ -338,3 +301,70 @@ export CLEF_CONV_QKV_TILE=32
   1595 token 0.0516 ms（**1266 GB/s**），已贴着 1.27 TB/s 的 HBM 上限。
 - profile 里的 5.96 ms（0.093 ms/层）是含间隙的聚合值，真实算子 0.0355×64 ≈ 2.3 ms，
   没有 5× 的优化空间；不投入自定义 RMSNorm。
+
+## 9. 当前状态与剩余工作
+
+**提交配置（默认，无需任何手工环境变量）**
+
+- TP2 / BF16 / eager / max_model_len 4096 / seqs1 / batch 4096，prefix cache 与 chunked prefill 关闭；
+- GDN 决策 prefill + BIC + QKV v2（cap 1600）+ 单字段 head；
+- **conv+QKV 融合**（vendor 内置 `src/ascendc/vendors/clef_conv_qkv`，`CLEF_GDN_CONV_QKV=1`，tile 32）；
+- **GDN chunk 128**（`CLEF_GDN_CHUNK128=1`）；
+- `ACLNN_CACHE_LIMIT=1000000`、MLP BF16 NZ。
+- 回退开关：`CLEF_GDN_CONV_QKV=0`、`CLEF_GDN_CHUNK128=0`。
+
+**指标**
+
+| 项 | 值 |
+| --- | --- |
+| S1（默认入口，load 20–24） | mean 115.418 / p50 107.147 / p95 **157.745** / p99 194.856 ms、8.652 dec/s |
+| S1（相邻窗口 AIV 对照 control） | mean 117.138 / p95 157.707、8.525 dec/s（用于界定窗口漂移 ±1.5%） |
+| S2 B8 C16 | 16.727 dec/s、p95 1768.9、Capability 73.8426 |
+| S2 B16 C64 | **17.446 dec/s**、p95 5950.1、Capability 74.1388 |
+| OpenDecisions | Cal 82.4112 / Int 66.0840 / **Cap 74.2476** / acc 1904/2352 / MAE 0.402615 |
+| ERQA | **216/400 = 0.5400**（400/400、0 重试，请求哈希校验通过） |
+
+**已关闭的杠杆（都有实测证据）**
+
+- MLP 自定义 tiling（第 7 节）：冷态已达 Cube 上限；
+- AddRmsNorm 自定义（8.2）：已贴 HBM 上限；
+- HCCL AIV（8.1）：隔离 +7.3%，端到端噪声内；
+- all-linear NZ、graph/ACL graph、Dense SP / MC2 / RS / 分块重叠（此前各轮）：全部退化或不支持；
+- 量化：赛方禁止。
+
+**剩余工作**
+
+1. host load 回落到个位数后重跑 S1（建议 3 轮平均）与 S2，用干净窗口替换当前 load 20–24 下的报数；
+2. 若主办方更新 S2 有效性规则（是否允许 B16 C64 这类 p95 近 6 s 的点），据此确认 `results.csv` 的 S2 取点；
+3. 长序列（ERQA >1600 token）仍走未融合的 conv + QKV v2；如需继续优化图文路径，可把 conv 融合的 cap 从 1600 提高并在长形状上验收。
+
+## 10. 证据索引
+
+| 内容 | 路径 |
+| --- | --- |
+| 全量 S1 A/B（off / on / 默认入口） | `Clef-27B/logs/perf-next-20261117/s1-conv-qkv-{off,on}.json.gz`、`s1-default-entry.json.gz` |
+| 全量质量评分 | `Clef-27B/logs/perf-next-20261117/conv-qkv-quality.json` |
+| ERQA 摘要与离线复核 | `Clef-27B/logs/perf-next-20261117/erqa-conv-qkv/` |
+| 探针 v1/v2/v3 | `Clef-27B/logs/perf-next-20261117/conv-qkv-probe-v{1,2,3}.json.gz` |
+| MLP / AddRmsNorm / allreduce 微基准 | `mlp-ceiling.json.gz`、`add-rmsnorm.json.gz`、`allreduce-967.json.gz` |
+| AIV 相邻窗口 A/B | `s1-aiv.json.gz`、`s1-aiv-control.json.gz` |
+| S2 B16 C64 | `s2-b16-c64.json.gz`、`s2-b16-quality.json` |
+| 通用 QKV 探针 | `Clef-27B/logs/perf-next-20261117/qkv-generic-probe.json.gz` |
+| chunk 扫描（未归一化修正后） | `Clef-27B/logs/perf-next-20261117/gdn-chunk-sweep.json.gz` |
+| eager 对照全量 S1 | `Clef-27B/logs/perf-next-20261117/eager-s1-full.json.gz` |
+| 服务安装记录 | `/workspace/yangchen/logs/perf-next-20261117/conv-install.json` |
+| 服务固定样本 | `/workspace/yangchen/logs/perf-next-20261117/conv-v2/fixed-*.json` |
+| eligibility 日志 | `/workspace/yangchen/logs/perf-next-20261117/conv-diag/service.log` |
+
+### 4.4 S2 最大吞吐（conv+QKV + chunk128）
+
+| 并发 | dec/s | mean | p95 | OD Capability | accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| B8 C16 | 16.727 | 952.9 ms | 1768.9 ms | 73.8426 | 1905/2352 |
+| **B16 C64** | **17.446** | 3631.9 ms | 5950.1 ms | 74.1388 | 1902/2352 |
+| B32 C128 | 17.364 | 7221.2 ms | 10510.6 ms | 未测 | 未测 |
+
+- 上一版（B8 C16、无融合）为 16.376 dec/s；B16 C64 历史值 17.110。
+- 两组 OD 三项均在 2PP 内；B16 只按最大吞吐（p95 无约束），B8 是 p95 约束下的推荐工作点。
+- B32 C128 为 17.364 dec/s，未超过 B16 C64，说明吞吐在 17.4 附近饱和；不再上调并发。
+- `results.csv` 记录 B16 C64 17.446 dec/s、并发 64；B8 数据保留在本表与 `s2-chunk128-conv.json.gz`。
