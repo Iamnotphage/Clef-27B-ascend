@@ -4,6 +4,10 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
+2026-11-17 完成 **aclnn executor cache 修复**：默认缓存只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 固定多约 55 ms；`ACLNN_CACHE_LIMIT=1000000` 后全部快档且输出逐位不变。官方 `start.sh --config s1` 全量 S1 **168.633 ms**（原 190.405）、7.960 dec/s，ERQA 217/400、S2 16.398 不变。[报告](docs/aclnn-cache-shape-fix-2026-11-17.md) · [最终汇总](docs/final-summary-2026-11-17.md)
+
+2026-11-17 继续完成 **MLP BF16 NZ 服务化**：`Qwen2MoeMLP` 的 gate_up/down 权重在首次前向时转为 FRACTAL_NZ，输出逐位不变；官方入口全量 S1 **166.002 ms / 8.213 dec/s**（mean 121.705、p50 113.656），ERQA 217/400、S2 16.376。[最终汇总](docs/final-summary-2026-11-17.md)
+
 2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果：OpenDecisions 全量 2,352 条与 ERQA 官方 400 题均已完成，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
 
 资源限制：**允许并行，限用 A3 单物理卡内两个逻辑 NPU，禁止跨物理卡**。TP1、TP2 与并发调优均遵循该限制；当前映射为 `npu-smi` 卡号 7、Chip 0 / 1、逻辑设备 0 / 1。
@@ -18,23 +22,23 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 
 2026-11-15 完成 **GDN 决策专用 prefill 路径**，省去最终循环状态导出、写回和反向中间量（`A`、`g_cumsum`）输出。OpenDecisions 全量 2,352 题在开关 OFF/ON 下**逐位一致**（max 0.0），同进程交错 A/B 6/6 对更快，p95 降幅中位数 **3.80%（7.68 ms）**，单并发吞吐增量中位数 +0.17 decisions/s。补丁已接入 **S1 默认启用**，启动时安装并校验，manifest 记录实际状态。正常入口全量 S1 P95 **213.56 ms**、5.760 decisions/s（后续 BIC 为 **198.42 ms**），ERQA 400 ON/OFF 逐题一致。S2 的 5.715 decisions/s 来自优化前扫描，CSV 分别记录 S1、S2 的 GDN 开关与测量来源。原服务按 phase-0 快照恢复为 PID 498272，argv/cwd/env 一致、8/8 冻结回归。[GDN 报告](docs/gdn-decision-prefill-2026-11-15.md) · [证据](Clef-27B/logs/gdn-decision-20261115/)
 
-## 当前提交指标（2026-11-16）
+## 当前提交指标（2026-11-17）
 
-详细对照、逐题证据与服务配置见 [Clef-27B/README.md](Clef-27B/README.md#当前提交指标2026-11-16)。
+详细对照、逐题证据与服务配置见 [Clef-27B/README.md](Clef-27B/README.md#当前提交指标2026-11-17)。
 
 ### 精度指标
 
-| 数据集 | 指标 | 官方公开 as-served | 适配后 baseline | 当前优化（BIC+GDN 融合） | 当前 − 官方 |
+| 数据集 | 指标 | 官方公开 as-served | 适配后 baseline | 当前优化（conv+QKV 融合 + chunk128） | 当前 − 官方 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| OpenDecisions | Calibration | 82.3 | 82.7941 | 82.7134 | +0.4134 |
-| OpenDecisions | Intelligence | 65.8 | 66.0568 | 65.9135 | +0.1135 |
-| OpenDecisions | Capability | 74.1 | 74.4255 | 74.3135 | +0.2135 |
-| OpenDecisions | Accuracy | 未公布 | 0.8104（1906/2352） | 0.8087（1902/2352） | — |
-| OpenDecisions | Score MAE | 未公布 | 0.401389（588） | 0.401512（588） | — |
-| ERQA | 总体 accuracy | 未找到 | 0.5475（219/400） | 0.5425（217/400） | N/A |
+| OpenDecisions | Calibration | 82.3 | 82.7941 | 82.4112 | +0.1112 |
+| OpenDecisions | Intelligence | 65.8 | 66.0568 | 66.0840 | +0.2840 |
+| OpenDecisions | Capability | 74.1 | 74.4255 | 74.2476 | +0.1476 |
+| OpenDecisions | Accuracy | 未公布 | 0.8104（1906/2352） | 0.8095（1904/2352） | — |
+| OpenDecisions | Score MAE | 未公布 | 0.401389（588） | 0.402615（588） | — |
+| ERQA | 总体 accuracy | 未找到 | 0.5475（219/400） | 0.5400（216/400） | N/A |
 
-- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.409 pp**，满足 2PP；相对适配 baseline 4 条 choice 变化、max 概率差 0.0851，三项与 accuracy 均在 2PP 内；论文温度校准值已忽略。
-- ERQA 当前 217/400，相对适配 baseline **−0.50 pp**，在 2PP 内；官方没有公开 Clef 的 ERQA 分数，官方列只能记 N/A。
+- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.284 pp**，满足 2PP；相对适配 baseline 2 条 choice 变化、accuracy +0.18 pp，三项均在 2PP 内；论文温度校准值已忽略。
+- ERQA 当前 216/400，相对适配 baseline **−0.75 pp**，在 2PP 内；官方没有公开 Clef 的 ERQA 分数，官方列只能记 N/A。
 - 官方公开 OpenDecisions 值是数据卡榜单的 `Cloudflare/clef` as-served 参考，不是主办方正式 baseline。
 
 ### 性能指标
@@ -42,13 +46,14 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 | 版本 | S1 P95 | S1 mean | S2 decisions/s | ERQA P95 |
 | --- | ---: | ---: | ---: | ---: |
 | 适配后 baseline | 217.036 ms | 180.069 ms | 5.715 @ C16 | 325.84 ms |
-| 当前优化（BIC+GDN v2+SF） | **190.405 ms** | **153.761 ms** | **16.398 @ C16** | **311.349 ms** |
-| 变化 | −26.63 ms（−12.27%） | −26.31 ms（−14.61%） | **约 2.87×** | −14.49 ms（−4.45%） |
+| 上一版（BIC+GDN v2+SF+aclnn cache+MLP NZ） | 166.002 ms | 121.705 ms | 16.376 @ C16 | 313.506 ms |
+| **当前优化（conv+QKV 融合 + chunk128）** | **157.745 ms** | **115.418 ms** | **16.727 @ C16** | **309.926 ms** |
+| 变化 | −59.29 ms（−27.32%） | −64.65 ms（−35.91%） | **约 2.93×** | −15.91 ms（−4.88%） |
 
-- S1 为 seqs1 单并发全量 2,352 题；GDN v2 同窗口 −2.48%；单字段 head 同窗口 −2.91%；S2 仍为 seqs4 未融合数据，C8 是推荐工作点。
+- S1 为 seqs1 单并发全量 2,352 题；2026-11-17 aclnn cache 后 168.633 ms、MLP NZ 后 166.002 ms，再叠加 conv+QKV 融合（同窗口 165.091→160.419）与 chunk128（160.419→**157.745**，8.652 dec/s）；S2 为 B8 C16 16.727 dec/s、p95 1768.9 ms。以上均在 host load 18–24 下测得。
 - ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不同。
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照。
-- **BF16 B8/B16 S2 候选（未替换当前 S2）**：B8 C16 v2+head **16.398 dec/s**、p95 1803 ms、Capability 74.2510/accuracy 1909（2PP）；B10 C20 16.670/2249；B12 C24 16.841/2598；B16 C64 17.110/6088；OD 三项与 ERQA 合批均在 2PP 内（B8 C16 ERQA 218/400；B16 C32 216/400）。
+- **BF16 B8/B16 S2 历史对照**：B8 C16 v2+head **16.398 dec/s**、p95 1803 ms、Capability 74.2510/accuracy 1909（2PP）；B10 C20 16.670/2249；B12 C24 16.841/2598；B16 C64 17.110/6088；OD 三项与 ERQA 合批均在 2PP 内（B8 C16 ERQA 218/400；B16 C32 216/400）。
 
 ## 发布方对照评测与后台运行
 

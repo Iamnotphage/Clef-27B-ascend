@@ -98,3 +98,41 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **性能**：正常入口 S1 P95 **198.42 ms**（较上一提交入口 213.56 −7.09%）；同进程全量窗口 R 197.95 → BIC **185.62 ms**（−6.23%）；seqs4 C8 14.201 → **14.652 dec/s**、p95 946.54 → **913.93 ms**；C16 14.689。C8 的跨臂响应差异与同臂重跑（85 题、max 0.0656）同量级，归因于既有合批调度，不是本轮开关。
 - **入口**：`--config s1/s2` 默认启用 BIC，manifest 记录配置/生效值/来源；`preprocess_fusion` 默认关闭。
 - **融合原型**：Ascend C `ClefGdnQkvNorm` 短序列 2.0×、Q/K 1 ulp、V 逐位；1595/10,294 token 反而慢 0.86×/0.13×，不接入。
+
+## 2026-11-17 aclnn executor cache（已采用）
+
+- **现象**：S1 按精确 input token 数分快/慢两档，慢档固定多约 55 ms；同长度请求 within-length sd 中位 4.7 ms，快/慢档输出逐位相同。
+- **根因**：CANN aclnn executor 缓存默认只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 走慢路径；MLP、GDN chunk、conv、QKV norm 的纯算子时间无跳变。
+- **修复**：`ACLNN_CACHE_LIMIT=1000000`，写入 `inference.py` 的 service environment，launch manifest 记录。
+- **结果**：官方 `start.sh --config s1` 全量 2,352 条 mean **125.552** / p50 **118.170** / p95 **168.633 ms**、7.960 dec/s；修复前 153.761 / 168.485 / 190.405、6.503。四组独立全量复测 p95 167.28–169.02 ms。
+- **质量**：2,352 条响应逐位一致（max 0.0、0 choice 翻转）；ERQA 217/400 不变；S2 B8 C16 16.398 dec/s 不变。
+- **证据**：`docs/aclnn-cache-shape-fix-2026-11-17.md`、`Clef-27B/logs/tuning5-20261117/`。
+
+## 2026-11-17 MLP BF16 NZ（已采用）
+
+- **改动**：`Qwen2MoeMLP.forward` 首次调用时把 `gate_up_proj` / `down_proj` 权重转为 FRACTAL_NZ（`torch_npu.npu_format_cast(..., 29)`），由 `CLEF_MLP_BF16_NZ=1` 控制；安装器升级为 GDN v4，`patch_qwen3_5.py` 追加该 hook。
+- **正确性**：官方入口全量 2,352 条响应与 cache-only **逐位一致**（max 0.0、0 choice 翻转）；ERQA 217/400、400/400 成功、0 重试。
+- **性能**：官方入口全量 S1 **mean 121.705 / p50 113.656 / p95 166.002 / p99 204.324 ms、8.213 dec/s**；cache-only 为 125.552 / 118.170 / 168.633 / 203.452、7.960。相对 cache-only p95 −1.56%、mean −3.06%、吞吐 +3.18%；三组 NZ 复测 p95 165.53–166.00。
+- **S2**：B8 C16 + NZ **16.376 dec/s**、p95 1803.2 ms、Capability 74.1572（Δ−0.094，2PP）；pre-NZ 16.398。
+- **证据**：`Clef-27B/logs/tuning5-20261117/s1-official-nz-full.json.gz`、`s2/s2-nz-c16-quality.json`、`erqa-nz/`；完整运行目录 `/workspace/yangchen/logs/tuning5-20261117/shape-ab/official-nz/`。
+
+## 2026-11-17 conv+QKV 融合算子（已采用）
+
+完整报告见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md)。
+
+- **改动**：新增 Ascend C 算子 `ClefGdnConvQkv`，一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，替代 conv（3.79 ms）+ `ClefGdnQkvNorm`（4.66 ms，均为 967 token 设备时间）两个 kernel。
+- **免拷贝**：Qwen3.5 把连续 `[T,8192]` 的 QKVZ 投影拆成 QKV `[T,5120]` 与 Z 两个视图；宿主用受存储边界检查的 `as_strided` 把整行 8192 暴露给算子，kernel 只读每行前 5120 通道，省掉逐层 5120 列连续化拷贝。
+- **正确性**：离线探针 v1/v2/v3 共 177 组（10 长度 × 3 seed × tile 32/64 × 输入 5120/8192）与部署版 conv + QKV v2 **逐位一致、0 失败**；单算子 967 token 0.2113 vs 0.3143 ms、1595 0.1296 vs 0.3357。
+- **服务级**：官方 `start.sh --config s1` 生效（两个 TP worker 打印 fused 标志）。与 eager 对照**不是逐位一致**：三个固定样本最大概率差 0.00095 / 0.00240 / 0.00029；把 `CLEF_GDN_CONV_QKV` 设为 0 后与对照逐位一致，差异确定来自融合算子（约 0.6 BF16 ulp）。
+- **性能**：同窗口全量 A/B，p95 **165.091 → 160.419 ms（−2.83%）**、mean 122.762 → 120.926、吞吐 8.137 → 8.259 dec/s；显式 env 组为 p95 160.150、mean 117.344、8.510 dec/s。
+- **质量**：OpenDecisions Capability **73.9636**（−0.347 pp）、accuracy 1902 不变、Score MAE 0.401545 → 0.401678；ERQA **218/400 = 0.5450**（+0.25 pp）。官方 2PP 通过；项目内部 0.03/0.05 逐题门槛不通过（max 0.1447、1 条 choice 变化）。
+- **开关**：vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，`inference.py` 自动注入 `ASCEND_CUSTOM_OPP_PATH` / `CLEF_CONV_QKV_VENDOR` / `CLEF_GDN_CONV_QKV=1`；`CLEF_GDN_CONV_QKV=0` 复现未融合对照臂。
+
+## 2026-11-17 GDN chunk 128（已改为默认）
+
+完整报告见 [docs/gdn-chunk128-2026-11-17.md](../docs/gdn-chunk128-2026-11-17.md)、叠加数据见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md) 第 4.3 节。
+
+- **改动**：`gdn_attn_builder.py` 的 `_GDN_CHUNK_SIZE=128` 与 `device_op.py` 决策分支 `chunk_size=128`，由独立安装器 `runtime/apply_gdn_chunk128_patch.py` 管理；`inference.py` 在决策 prefill 启用时自动 apply，`CLEF_GDN_CHUNK128=0` 回到 64。
+- **性能（叠加融合算子）**：mean 120.926 → **118.733**、p50 114.177 → 111.504、p95 160.419 → **158.301**、p99 197.454 → 194.491、吞吐 8.259 → **8.411 dec/s**；默认入口复跑 **157.745 ms / 8.652 dec/s**。
+- **质量**：OD Capability **74.2476**、accuracy 1904/2352、Score MAE 0.402615；ERQA **216/400 = 0.5400**；S2 B8 C16 **16.727 dec/s**、p95 1768.9、Capability 73.8426、accuracy 1905。全部在 2PP 内。
+- **逐题漂移**：3 条 choice 变化、`max_prob_diff` 0.360、46 条 >0.03、24 条 >0.05；项目内部 0.03/0.05 门槛不达标，用户确认按官方 2PP 口径采纳。
