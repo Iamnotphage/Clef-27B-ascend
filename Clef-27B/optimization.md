@@ -136,3 +136,14 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **性能（叠加融合算子）**：mean 120.926 → **118.733**、p50 114.177 → 111.504、p95 160.419 → **158.301**、p99 197.454 → 194.491、吞吐 8.259 → **8.411 dec/s**；默认入口复跑 **157.745 ms / 8.652 dec/s**。
 - **质量**：OD Capability **74.2476**、accuracy 1904/2352、Score MAE 0.402615；ERQA **216/400 = 0.5400**；S2 B8 C16 **16.727 dec/s**、p95 1768.9、Capability 73.8426、accuracy 1905。全部在 2PP 内。
 - **逐题漂移**：3 条 choice 变化、`max_prob_diff` 0.360、46 条 >0.03、24 条 >0.05；项目内部 0.03/0.05 门槛不达标，用户确认按官方 2PP 口径采纳。
+
+## 2026-11-18 Wave 2 复核（未新增默认改动）
+
+完整报告见 [docs/perf-wave2-20261118.md](../docs/perf-wave2-20261118.md)。
+
+- **重新 profile（967/1595 token，双 rank）**：设备 compute union **132.69 ms**（conv+QKV 融合与 chunk128 之前为 144.60）；MLP gate/up 41.50、MLP down 20.54（cube 94–97%）、GDN 17.97、QKV 5120→8192 14.88（MTE2 0.93）、`ClefGdnConvQkv` 4.17（原 conv+QKV norm 8.45）。通信非重叠 14.17 ms、无 device kernel 11.84 ms。
+- **S2**：B8 C16 **16.738**、B16 C64 **17.462 / 17.475**（两次独立复测）、B16 C64 把预算放大到 24576 仅 17.374 → 17.4–17.5 已饱和，维持 B16 C64 / 16384。
+- **GDN chunk**：96/160/192/256 均返回 `161002` 不支持；128 是唯一快于 64 的受支持取值（1595 token device 0.521 vs 0.608 ms），已默认。
+- **joint head**：门控打点显示 967 token 下 pooler 5.90–6.25 ms，head 4.78–5.05（decoder 2.23–2.33、routing 1.09–1.18、final 0.62–0.67），全部是小算子下发；CPU 卸载不划算（`memory_projection` 10.1 GFLOP 必须留 NPU），不采用。
+- **prefix caching**：Mamba 前缀缓存要求 chunked prefill（关闭态启动即断言失败），且 chunked prefill 会关闭决策快速路径；不启用。
+- **最终验证**：S1 三轮 **8.705 / 8.983 / 9.035 dec/s**、p95 **157.50 / 155.86 / 155.72 ms**（2352/2352）；全量 OpenDecisions 重评 Cap **74.2476**、Int 66.0840、Cal 82.4112、accuracy 1904/2352、MAE 0.40261，与既有证据逐位一致；ERQA 独立复跑 **216/400**（400/400、0 重试、请求哈希校验通过）。
