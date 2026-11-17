@@ -240,6 +240,8 @@ def gdn_decision_prefill(config, apply=True):
             }
             if path in contract.QKV_POSTIMAGE_SHA:
                 allowed["qkv"] = contract.QKV_POSTIMAGE_SHA[path]
+            if path in contract.CONV_QKV_POSTIMAGE_SHA:
+                allowed["conv"] = contract.CONV_QKV_POSTIMAGE_SHA[path]
             if path in contract.CHUNK128_POSTIMAGE_SHA:
                 allowed["chunk128"] = contract.CHUNK128_POSTIMAGE_SHA[path]
             if path in contract.V2_POSTIMAGE_SHA:
@@ -269,7 +271,8 @@ def gdn_decision_prefill(config, apply=True):
                 or flag.get("present") != (flag_state != "missing")):
             raise SystemExit("GDN decision flag module is missing version metadata or has unknown content")
         complete = all(
-            state in ("patched", "qkv", "chunk128") for state in statuses.values()
+            state in ("patched", "qkv", "conv", "chunk128")
+            for state in statuses.values()
         ) and flag_state == "current"
         if report.get("ready") is not complete:
             raise SystemExit("GDN decision patch readiness disagrees with the verified file hashes")
@@ -543,17 +546,26 @@ def resolve_schema_cache(config, explicit):
     return enabled, version, strategies
 
 
-def qkv_norm_environment():
-    """Expose the bundled GDN preprocessing custom op to the vLLM workers.
+def qkv_norm_environment(conv_qkv=False):
+    """Expose the bundled GDN preprocessing custom ops to the vLLM workers.
 
-    The Ascend C vendor is optional: if it is missing, the data-path code
-    falls back to the accepted BIC path.
+    The Ascend C vendors are optional: if one is missing, the data-path code
+    falls back to the accepted BIC path.  ``conv_qkv`` opts into the fused
+    convolution + QKV normalization kernel, which replaces both the conv and
+    the ``ClefGdnQkvNorm`` launch on the decision prefill path.
     """
     vendor = Path(__file__).resolve().parent / "src" / "ascendc" / "vendors" / "customize"
     library = vendor / "op_api" / "lib" / "libcust_opapi.so"
     if not library.is_file():
         return {}
+    conv_vendor = vendor.parent / "clef_conv_qkv"
+    conv_library = conv_vendor / "op_api" / "lib" / "libcust_opapi.so"
+    conv_active = bool(conv_qkv) and conv_library.is_file()
     parts = [vendor, vendor / "op_api" / "lib", vendor.parent.parent]
+    if conv_active:
+        # Distinct op names, so ordering only decides which vendor wins if a
+        # future build ever ships the same kernel name twice.
+        parts = [conv_vendor, conv_vendor / "op_api" / "lib"] + parts
     spec = importlib.util.find_spec("fla_npu")
     if spec and spec.submodule_search_locations:
         fla = Path(list(spec.submodule_search_locations)[0]) / "opp" / "vendors" / "fla_npu_transformer"
@@ -564,15 +576,22 @@ def qkv_norm_environment():
         parts.append(Path(existing_opp))
     existing_ld = os.environ.get("LD_LIBRARY_PATH")
     ld_parts = [str(vendor / "op_api" / "lib")]
+    if conv_active:
+        ld_parts.insert(0, str(conv_vendor / "op_api" / "lib"))
     if existing_ld:
         ld_parts.append(existing_ld)
-    return {
+    environment = {
         "CLEF_QKV_NORM_VENDOR": str(vendor),
         "CLEF_GDN_QKV_NORM_MAX_TOKENS": os.environ.get(
             "CLEF_GDN_QKV_NORM_MAX_TOKENS", "1600"),
         "ASCEND_CUSTOM_OPP_PATH": os.pathsep.join(str(part) for part in parts),
         "LD_LIBRARY_PATH": os.pathsep.join(ld_parts),
     }
+    if conv_active:
+        environment["CLEF_CONV_QKV_VENDOR"] = str(conv_vendor)
+        environment["CLEF_CONV_QKV_TILE"] = os.environ.get("CLEF_CONV_QKV_TILE", "32")
+        environment["CLEF_GDN_CONV_QKV"] = "1"
+    return environment
 
 
 def effective_environment():
@@ -805,13 +824,22 @@ def build_launch(args):
     gdn_decision["joint_single_field_patch"] = joint_patch
     if joint_patch["enabled"]:
         environment["CLEF_JOINT_SINGLE_FIELD"] = "1"
-    qkv_env = qkv_norm_environment()
+    # The fused conv + QKV normalization kernel is the measured default on the
+    # decision prefill path; CLEF_GDN_CONV_QKV=0 reproduces the unfused arm.
+    conv_qkv_requested = (
+        gdn_decision["enabled"]
+        and os.environ.get("CLEF_GDN_CONV_QKV", "").strip().lower()
+        not in ("0", "false", "no", "off")
+    )
+    qkv_env = qkv_norm_environment(conv_qkv=conv_qkv_requested)
     if qkv_env:
         environment.update(qkv_env)
         os.environ.update(qkv_env)
         gdn_decision["qkv_norm_vendor"] = qkv_env["CLEF_QKV_NORM_VENDOR"]
+        gdn_decision["conv_qkv_vendor"] = qkv_env.get("CLEF_CONV_QKV_VENDOR")
     else:
         gdn_decision["qkv_norm_vendor"] = None
+        gdn_decision["conv_qkv_vendor"] = None
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
         # Experiment-only override, recorded so the manifest shows it.
         gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]

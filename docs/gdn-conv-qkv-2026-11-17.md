@@ -11,11 +11,21 @@
   kernel 只读每行前 5120 通道，Z 保持原值，省掉逐层 5120×T×2 B 的 D2D 拷贝。
 - v3 把逐行 `ReduceSum` 换成 FLA `08d21f7` arch22 prepare-vector 的 tile 归约：
   先 `Add` 两个 64 列半行，再一条连续 mask `WholeReduceSum<float>` 归约整个 tile。
-- 服务级（install-v2）在 307/967/1595 三个长度各 50 次固定请求上，`answers` 与 eager 对照
-  **JSON 完全一致、数值最大差 0**，eligibility 日志确认真实走到 `x_stride=(8192,1)`、`x_contiguous=False` 的快路径。
+- 服务级首轮（conv-v2）的 gdn.py 仍是只接受连续输入的 v1 guard，那次的 eligibility 行只是入口快照，
+  融合路径实际没有生效；该结论作废。
+- 干净 v2 guard + install-v3 的服务级复核：两个 TP worker 都打印
+  `clef-conv-qkv ... tile=32 first_tokens=967 vendor=.../install-v3/...`，融合路径真实生效；
+  与 eager 对照相比 `answers` 概率**不是逐位相同**，307/967/1595 三个固定样本最大差
+  0.00095 / 0.00240 / 0.00029（约 0.6 个 BF16 ulp），而同一棵树上关闭融合（`CLEF_GDN_CONV_QKV=0`）
+  与对照**逐位一致**，因此差异确定来自融合算子本身。
 - 另建通用 QKV 归一化算子 `ClefGdnQkvGeneric`（独立 vendor），支持 TP1 H=80 / TP2 H=40 任意 token 数，
   36 组硬件检查通过：TP2 对部署 v2 逐位一致，TP1 对 FLA 最大绝对差 0.001953125。
-- **尚未完成**：install-v3（tile 归约）服务级复核、全量 S1 与全量质量；host load 长期 40+ 期间不测。
+- **已采纳为 `--config s1` 默认**：v3 kernel 内置于 `Clef-27B/src/ascendc/vendors/clef_conv_qkv`，
+  `inference.py` 自动注入 `ASCEND_CUSTOM_OPP_PATH` / `CLEF_CONV_QKV_VENDOR` / `CLEF_GDN_CONV_QKV=1`，
+  `CLEF_GDN_CONV_QKV=0` 可复现未融合的对照臂。
+- 同窗口全量 S1：p95 **165.09 → 160.15 ms（−2.99%）**、mean −4.41%、p50 −5.26%、吞吐 +4.59%；
+  全量 OpenDecisions Capability **74.3107 → 73.9636（−0.347 pp，2PP 内）**、accuracy 不变；
+  ERQA **217 → 218/400（+0.25 pp）**。项目内部 0.03/0.05 概率门槛不达标（见 4.2），按官方 2PP 口径采纳。
 
 ## 1. 背景：为什么值得融合
 
@@ -88,27 +98,76 @@ v3 单算子计时（NPU event 中位，ms，`--seed 20261117`）：
 按 profile 的 8.45 ms 上限折算，融合后预期省 **2–4 ms**（166 ms p95 上约 1.5–2.5%），
 最终以服务级 S1 为准。
 
-## 4. 服务级验证（install-v2）
+## 4. 服务级验证（install-v3）
 
 配置：TP2 / BF16 / eager / 4096 / seqs1，`CLEF_GDN_CONV_QKV=1`、
-`CLEF_CONV_QKV_VENDOR=<install-v2>`、`CLEF_CONV_QKV_TILE=32`，其余与最终提交一致
-（`ACLNN_CACHE_LIMIT`、MLP NZ、chunk 64）。
+`CLEF_CONV_QKV_VENDOR=<install-v3>`、`CLEF_CONV_QKV_TILE=32`，其余与最终提交一致
+（`ACLNN_CACHE_LIMIT`、MLP NZ、chunk 64），走官方 `start.sh --config s1` 入口。
 
-- eligibility 日志（`/workspace/yangchen/logs/perf-next-20261117/conv-diag/service.log`）：
+- 融合生效证据：该 patch 只在**全部 guard 通过后**才初始化 runtime 并打印一次，
+  重启后首个 967 token 请求在 service log 中留下（两个 TP worker 各一条）：
 
   ```
-  clef-conv-qkv eligibility {..., 'prefills': 1, 'decodes': 0, 'tp': 2, 'conv_heads': 40,
-    'k_heads': 16, 'v_heads': 48, 'dk': 128, 'dv': 128, 'bias_none': True, 'activation': 'silu',
-    'x_shape': (967, 5120), 'x_stride': (8192, 1), 'x_contiguous': False, ...}
+  clef-conv-qkv pid=890112 tile=32 first_tokens=967 vendor=.../install-v3/packages/vendors/clef_conv_qkv
+  clef-conv-qkv pid=890113 tile=32 first_tokens=967 vendor=.../install-v3/packages/vendors/clef_conv_qkv
   ```
 
-  即真实前向确实走 packed QKVZ 快路径，且 `as_strided` 展开没有回退。
-- 固定样本（`conv-v2/fixed-{307,967,1595}.json`）各 50 次 measured 请求，
-  与同日 eager 对照（`eager-control/fixed-*.json`）逐条比较 `answers`：
-  **3 × 50 条 JSON 完全一致，数值字段最大绝对差 0**。
+  即 packed QKVZ（`x_stride=(8192,1)`）→ `as_strided` 展开 → 融合 kernel 的真实路径，
+  没有回退到 `causal_conv1d_fn` + `ClefGdnQkvNorm`。
+- 固定样本（`conv-v3/fixed-*.json`，每个长度 50 次 measured）与同日 eager 对照
+  （`eager-control/fixed-*.json`）比较 `answers`：**不是逐位一致**，
+  最大概率差 307 / 967 / 1595 = 0.000953 / 0.002398 / 0.000285，choice 未变。
+- 差异归因：同一棵代码树上把 `CLEF_GDN_CONV_QKV` 设为 0 重启（`conv-v3-off/fixed-*.json`），
+  三个长度的 `answers` 与 eager 对照**最大差 0**；两次服务内 50 次重复各自唯一，
+  即服务是确定性的，差异只能来自融合算子。
+- 期望差异约 0.6 个 BF16 ulp：融合核在寄存器里保留 conv 的 FP32 中间量并直接做规范化，
+  与“conv 写 BF16 → norm 读 BF16”在最后一个求和树上不完全等价；探针用随机输入未复现，
+  真实输入会命中。是否可接受以全量 OpenDecisions 2PP 门槛判定，不以逐位为准。
 - eager 对照的全量 S1（12:20–12:24，host load 17.6）：
   mean **121.434** / p50 **113.735** / p95 **164.347** / p99 202.568 ms、**8.223 dec/s**，
   与官方入口历史值（121.705 / 113.656 / 166.002、8.213）一致，可作为同一台机器的对照基线。
+- 固定样本 p50（同一服务窗口，仅作方向参考，host load 21–28 未满足测量协议）：
+  967 token 融合 160.58 vs 对照 165.07 ms，1595 token 238.26 vs 244.34 ms，
+  307 token 112.68 vs 112.37 ms（持平）。
+
+### 4.1 全量 S1 同窗口 A/B（host load 19–23）
+
+同一棵代码树、同一天、相隔约 7 分钟，唯一变量是 `CLEF_GDN_CONV_QKV`：
+
+| 指标 | 融合关闭 | 融合开启 | 变化 |
+| --- | --- | --- | --- |
+| mean | 122.762 ms | **117.344 ms** | −4.41% |
+| p50 | 114.812 ms | **108.771 ms** | −5.26% |
+| p95 | 165.091 ms | **160.150 ms** | −2.99% |
+| p99 | 203.075 ms | **196.492 ms** | −3.24% |
+| 吞吐 | 8.137 dec/s | **8.510 dec/s** | +4.59% |
+
+关闭组与 12:20 的 eager 对照（mean 121.434 / p95 164.347 / 8.223）相差 0.4–1.1%，
+说明该窗口本身可用；融合在 mean/p50/吞吐上收益接近 5%，p95 收益 3.0%。
+p50 收益大于 p95，是因为 p95 主要由 1,200–1,600 token 的长请求主导，而融合的比例收益在那里更小。
+
+随后用**默认入口**（`--config s1`，vendor 内置、env 由 `inference.py` 注入、无任何手工环境变量）
+复跑一次：mean 120.926 / p50 114.177 / p95 **160.419** / p99 197.454、8.259 dec/s（host load 20–22）。
+其 2,352 条 `answers` 与显式 env 的 on 组**完全一致（0 差异）**，
+说明默认入口没有引入额外变量；mean/p50 略高于 on 组是窗口负载差异。
+
+### 4.2 全量质量（OpenDecisions 2,352）
+
+用同一份原始请求离线评分（`runtime/od_raw_acceptance.py`，作者 `score.py`）：
+
+| 指标 | 融合关闭 | 融合开启 | 变化 |
+| --- | --- | --- | --- |
+| Calibration | 82.7092 | 82.1731 | −0.536 pp |
+| Intelligence | 65.9122 | 65.7541 | −0.158 pp |
+| **Capability** | **74.3107** | **73.9636** | **−0.347 pp** |
+| accuracy | 0.8087 (1902/2352) | 0.8087 (1902/2352) | 0 |
+| Score MAE | 0.401545 | 0.401678 | +0.00013 |
+
+- 官方 2PP 门槛：三项绝对变化均 ≤0.54 pp，**通过**。
+- 项目内部更严的 0.03/0.05 概率门槛：`max_prob_diff` 0.1447、7 条 >0.03、2 条 >0.05、
+  1 条 choice 变化、1 条 noul 跨越 —— **不通过**。分布为 p50 0.00044、p90 0.0053、p99 0.0210，
+  即绝大多数题目差异在 1e-3 量级，尾部有少量放大的题目。
+- 采用与否按官方 2PP 口径判定，并在提交文档中如实记录该内部门槛不达标的事实。
 
 ## 5. 通用 QKV 归一化算子（独立 vendor）
 
@@ -160,10 +219,10 @@ export CLEF_CONV_QKV_TILE=32
 
 ## 7. 未完成与下一步
 
-1. install-v3（tile 归约）的服务级固定样本复核 —— 代码与 kernel 已就绪，
-   远端 `build_out/install-v3` 已产出，只差重启服务与比对。
-2. 全量 S1：host load 必须回到与 12:20 对照（17.6）可比或更低；当前 40+。
-3. 采纳后跑 OpenDecisions 2,352 全量与 ERQA 400 题，确认 2PP 且逐位一致。
+1. ~~install-v3 服务级固定样本复核~~ —— 已完成，见第 4 节（融合生效，非逐位）。
+2. ~~全量 S1~~ —— 已完成同窗口 A/B 与默认入口复跑；尚缺 host load <10 的干净窗口用于对外报数。
+3. ~~OpenDecisions 2,352 与 ERQA 400~~ —— 已完成，2PP 通过（4.2、4.3）。
+4. 干净窗口下的 S1/S2 与 `results.csv` 更新仍待办；当前所有绝对耗时都在 load 18–28 下测得。
 4. 每 token ≤1200 的 cap 与 `CLEF_GDN_QKV_NORM_MAX_TOKENS` 一致，超过则回退 BIC + QKV v2，
    长序列（1,595 / 10,294）仍走原路径。
 
@@ -171,6 +230,9 @@ export CLEF_CONV_QKV_TILE=32
 
 | 内容 | 路径 |
 | --- | --- |
+| 全量 S1 A/B（off / on / 默认入口） | `Clef-27B/logs/perf-next-20261117/s1-conv-qkv-{off,on}.json.gz`、`s1-default-entry.json.gz` |
+| 全量质量评分 | `Clef-27B/logs/perf-next-20261117/conv-qkv-quality.json` |
+| ERQA 摘要与离线复核 | `Clef-27B/logs/perf-next-20261117/erqa-conv-qkv/` |
 | 探针 v1/v2/v3 | `Clef-27B/logs/perf-next-20261117/conv-qkv-probe-v{1,2,3}.json.gz` |
 | 通用 QKV 探针 | `Clef-27B/logs/perf-next-20261117/qkv-generic-probe.json.gz` |
 | chunk 扫描（未归一化修正后） | `Clef-27B/logs/perf-next-20261117/gdn-chunk-sweep.json.gz` |

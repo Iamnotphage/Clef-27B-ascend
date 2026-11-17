@@ -75,6 +75,10 @@ V2_POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
 }
+CONV_QKV_POSTIMAGE_SHA = {
+    "vllm_ascend/ops/gdn.py":
+        "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
+}
 CHUNK128_POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
         "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226",
@@ -261,6 +265,8 @@ def status(path: Path, relative: str) -> str:
         return "patched"
     if digest == QKV_POSTIMAGE_SHA.get(relative):
         return "qkv"
+    if digest == CONV_QKV_POSTIMAGE_SHA.get(relative):
+        return "conv"
     if digest == CHUNK128_POSTIMAGE_SHA.get(relative):
         return "chunk128"
     if digest == V3_POSTIMAGE_SHA.get(relative):
@@ -737,7 +743,8 @@ def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
         "expected_sha256": FLAG_SHA256,
     })
     report["ready"] = (
-        all(item[state_key] in ("patched", "qkv", "chunk128") for item in report["files"].values())
+        all(item[state_key] in ("patched", "qkv", "conv", "chunk128")
+            for item in report["files"].values())
         and report["flag_module"]["status"] == "current"
         and report["flag_module"]["source_sha256"] == FLAG_SHA256
     )
@@ -759,7 +766,8 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
     for relative, item in report["files"].items():
         path = tree / relative
         current = item["status_before"]
-        if current not in ("preimage", "patched", "qkv", "chunk128", "v2", "v3", "legacy"):
+        if current not in ("preimage", "patched", "qkv", "conv", "chunk128",
+                           "v2", "v3", "legacy"):
             raise ValueError(f"{relative}: refused {current} source content")
         backup = backup_dir / f"{path.name}.preimage"
         backup_data = None
@@ -777,7 +785,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
             writes[path] = backup_data
             item["action"] = "reverted"
         else:
-            if current in ("patched", "qkv", "chunk128"):
+            if current in ("patched", "qkv", "conv", "chunk128"):
                 item["action"] = "already-patched"
                 continue
             if current == "v3":
