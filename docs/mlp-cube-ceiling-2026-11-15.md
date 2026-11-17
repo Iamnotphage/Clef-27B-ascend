@@ -6,8 +6,9 @@
 
 - 脚本：`runtime/probe_matmul_ceiling.py`
 - 权重：layer31、rank0 的真实 TP2 权重
-  - gate/up：`[M, 5120] × [5120, 34816]`
-  - down：`[M, 17408] × [17408, 5120]`
+  - gate/up 合并：`[M, 5120] × [5120, 17408]`（TP2 每 rank 的 gate、up 各 8704）
+  - down：`[M, 8704] × [8704, 5120]`
+- 完整 MLP intermediate 为 17408；完整 gate/up 合并宽度为 34816。以上按原始 `matmul-ceiling.json` 的 `identity.weights` 与 `shape` 核对，既有 TFLOPS 数值使用正确形状。
 - 输入：随机 BF16（纯 matmul 不需要真实激活）；M=307/401/512/969/1595/10294
 - 格式：ND 与 FRACTAL_NZ29；`F.linear`
 - 计时：warm（重复调用）与 cold（每次 256 MiB 读驱逐 L2）

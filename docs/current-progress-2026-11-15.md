@@ -6,7 +6,7 @@
 
 ## 0. 摘要
 
-- **模型**：Clef-27B，Qwen3.5 主干（64 层：48 层 GDN 线性注意力 + 16 层 full attention），hidden 5120，intermediate 34816，BF16 权重约 51 GB，27.48B 参数。
+- **模型**：Clef-27B，Qwen3.5 主干（64 层：48 层 GDN 线性注意力 + 16 层 full attention），hidden 5120，intermediate 17408（gate/up 合并宽度 34816），BF16 权重约 51 GB，27.48B 参数。
 - **环境**：昇腾 A3 单物理卡内 **2 个逻辑 NPU**（`Ascend910_9382`，各 64 GiB HBM），容器 32 核等价 CPU、128 GiB 内存；CANN 9.2.1、PyTorch 2.10.0+cpu、torch_npu 2.10.0.post7、vLLM `24420b7a…`、vLLM-Ascend `89eb8a5e…`。
 - **当前提交配置**：TP2 / BF16 / eager / max_model_len 4096 / max_num_seqs 1 / prefix cache 关 / chunked prefill 关；GDN 决策专用 prefill 路径默认开启，BIC 数据路径默认开启，并在 2026-11-16 默认启用 **GDN 边界融合**（`ClefGdnQkvNorm`，token ≤1200 生效，长序列回退 BIC）。
 - **2026-11-17 aclnn executor cache 修复（已采用）**：默认 aclnn executor 缓存只覆盖前约 145 个不同 token 长度，之后首次出现的新 shape 固定多约 55 ms；`ACLNN_CACHE_LIMIT=1000000` 后全部长度快档，且输出与修复前逐位相同。官方 `start.sh --config s1` 全量 S1 **mean 125.55 / p50 118.17 / p95 168.63 ms、7.960 dec/s**（原 153.76 / 168.49 / 190.40、6.503），2,352 条响应逐位一致，ERQA 217/400 不变；S2 B8 C16 16.398 dec/s 不变；打乱数据集顺序复测 p95 **168.33 ms**。[报告](aclnn-cache-shape-fix-2026-11-17.md)；最终汇总见 [final-summary-2026-11-17.md](final-summary-2026-11-17.md)。
@@ -63,7 +63,7 @@
 | --- | --- |
 | 架构 | Qwen3.5 + 独立联合决策头（`ClefFlashForJointSchema`） |
 | 层 | 64 层：48 `linear_attention`（GDN）+ 16 `full_attention`（每 4 层 1 层） |
-| hidden / intermediate | 5120 / 34816（TP2 每 rank 17408） |
+| hidden / intermediate | 5120 / 17408（TP2 每 rank 的 gate、up 各 8704，合并宽度 17408） |
 | GDN | 16 key heads、48 value heads、key/value head_dim 128、conv kernel 4、每序列状态约 1.5 MiB |
 | 参数 | 27,484,784,884（BF16 约 51.2 GiB；TP2 每 rank 约 25.7 GiB） |
 | 视觉 | Qwen3_VisionTransformer，约 4.6 亿参数 |
