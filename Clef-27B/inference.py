@@ -26,6 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
 JOINT_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_single_field_patch.py"
+CHUNK128_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_chunk128_patch.py"
 MM_PROCESSOR_KWARGS = (
     '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
@@ -239,6 +240,8 @@ def gdn_decision_prefill(config, apply=True):
             }
             if path in contract.QKV_POSTIMAGE_SHA:
                 allowed["qkv"] = contract.QKV_POSTIMAGE_SHA[path]
+            if path in contract.CHUNK128_POSTIMAGE_SHA:
+                allowed["chunk128"] = contract.CHUNK128_POSTIMAGE_SHA[path]
             if path in contract.V2_POSTIMAGE_SHA:
                 allowed["v2"] = contract.V2_POSTIMAGE_SHA[path]
             if path in contract.LEGACY_POSTIMAGE_SHA:
@@ -266,7 +269,7 @@ def gdn_decision_prefill(config, apply=True):
                 or flag.get("present") != (flag_state != "missing")):
             raise SystemExit("GDN decision flag module is missing version metadata or has unknown content")
         complete = all(
-            state in ("patched", "qkv") for state in statuses.values()
+            state in ("patched", "qkv", "chunk128") for state in statuses.values()
         ) and flag_state == "current"
         if report.get("ready") is not complete:
             raise SystemExit("GDN decision patch readiness disagrees with the verified file hashes")
@@ -350,6 +353,62 @@ def qkv_norm_patch(config, apply=True):
         run("--apply")
         report = run("--check")
         statuses = verify(report)
+    record.update(enabled=True, patch_state=statuses)
+    return record
+
+
+def gdn_chunk128_patch(config, apply=True):
+    """Install/verify the GDN chunk-128 decision-path patch."""
+    requested = config == "s1" and os.environ.get("CLEF_GDN_CHUNK128", "0") == "1"
+    record = {
+        "enabled": False,
+        "requested": requested,
+        "installer": str(CHUNK128_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(CHUNK128_INSTALLER.read_bytes())
+            if CHUNK128_INSTALLER.is_file() else None
+        ),
+    }
+    if not requested:
+        return record
+    if not CHUNK128_INSTALLER.is_file():
+        raise SystemExit(f"GDN chunk128 installer missing: {CHUNK128_INSTALLER}")
+    if not apply:
+        record.update(pending_install=True)
+        return record
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(CHUNK128_INSTALLER), flag],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise SystemExit(
+                f"GDN chunk128 patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return json.loads(result.stdout)
+
+    def verify(report):
+        statuses = {
+            path: item.get("status_after") for path, item in report.get("files", {}).items()
+        }
+        if set(statuses) != {
+            "vllm_ascend/device/device_op.py",
+            "vllm_ascend/ops/gdn_attn_builder.py",
+        } or not all(state == "patched" for state in statuses.values()):
+            raise SystemExit(f"GDN chunk128 patch incomplete: {statuses}")
+        return statuses
+
+    report = run("--check")
+    statuses = {
+        path: item.get("status_after") for path, item in report.get("files", {}).items()
+    }
+    complete = bool(report.get("ready")) and all(
+        state == "patched" for state in statuses.values()
+    )
+    if not complete:
+        run("--apply")
+        report = run("--check")
+    statuses = verify(report)
     record.update(enabled=True, patch_state=statuses)
     return record
 
@@ -723,16 +782,24 @@ def build_launch(args):
         "CLEF_HEALTH_JSON": "1",
         "CLEF_SCHEMA_TOKEN_CACHE": "1" if schema_enabled else "0",
         "CLEF_SCHEMA_TOKEN_CACHE_VERSION": str(schema_version if schema_enabled else 0),
+        # Aclnn executor cache: the default is exhausted after about 145
+        # distinct prompt lengths, after which new shapes take a ~55 ms slow
+        # path.  A large cache keeps every measured length on the fast path.
+        "ACLNN_CACHE_LIMIT": os.environ.get("ACLNN_CACHE_LIMIT", "1000000"),
     }
     if gdn_decision["enabled"]:
         environment["CLEF_GDN_DECISION_PREFILL"] = "1"
         environment["CLEF_GDN_NO_RECOMPUTE"] = os.environ.get(
             "CLEF_GDN_NO_RECOMPUTE", "1")
+        # MLP BF16 NZ is installed by the v4 GDN patch and gated by this var.
+        environment["CLEF_MLP_BF16_NZ"] = os.environ.get("CLEF_MLP_BF16_NZ", "1")
     data_path, data_env = gdn_data_path(config, gdn_decision["enabled"])
     gdn_decision["data_path"] = data_path
     environment.update(data_env)
     qkv_patch = qkv_norm_patch(config, apply=not getattr(args, "dry_run", False))
     gdn_decision["qkv_norm_patch"] = qkv_patch
+    chunk128_patch = gdn_chunk128_patch(config, apply=not getattr(args, "dry_run", False))
+    gdn_decision["gdn_chunk128_patch"] = chunk128_patch
     joint_patch = joint_single_field_patch(
         config, apply=not getattr(args, "dry_run", False))
     gdn_decision["joint_single_field_patch"] = joint_patch
