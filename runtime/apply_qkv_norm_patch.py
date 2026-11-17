@@ -39,6 +39,10 @@ POSTIMAGE_SHA = {
     "vllm_ascend/ops/gdn.py":
         "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e",
 }
+CHUNK128_POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
+        "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226",
+}
 SOURCE_FILES = {
     "vllm_ascend/device/device_op.py": SOURCE_DIR / "qkv_device_op.py",
     "vllm_ascend/ops/gdn.py": SOURCE_DIR / "qkv_gdn.py",
@@ -62,6 +66,8 @@ def status(path: Path, relative: str) -> str:
     if digest == PREIMAGE_SHA[relative]:
         return "preimage"
     if digest == POSTIMAGE_SHA[relative]:
+        return "qkv"
+    if digest == CHUNK128_POSTIMAGE_SHA.get(relative):
         return "qkv"
     return "unknown"
 
