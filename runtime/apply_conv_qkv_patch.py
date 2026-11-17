@@ -21,9 +21,9 @@ import tempfile
 DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm-ascend")
 DEFAULT_BACKUP = Path("/workspace/yangchen/logs/gdn-conv-qkv-20261117/phase0")
 TARGET = "vllm_ascend/ops/gdn.py"
-PATCH_VERSION = 1
+PATCH_VERSION = 2
 PREIMAGE_SHA = "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e"
-POSTIMAGE_SHA = "e90d4dff0e52a1af600aa92f366b0a5a3cb005bab366abf8c270abb042849e18"
+POSTIMAGE_SHA = "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
 
 HELPER = '''
 _CONV_QKV_RUNTIME = None
@@ -52,7 +52,7 @@ def _run_conv_qkv(x, weight, *, runtime, attn_metadata, conv_head_num,
             or head_k_dim != 128 or head_v_dim != 128
             or bias is not None or activation not in (True, "silu", "swish")):
         return None
-    if (x.dim() != 2 or x.shape[1] != 5120 or not x.is_contiguous()
+    if (x.dim() != 2 or x.shape[1] != 5120
             or x.dtype != torch.bfloat16 or x.device.type not in ("npu", "privateuseone")
             or weight.dim() != 2 or tuple(weight.shape) != (4, 5120)
             or not weight.is_contiguous() or weight.dtype != torch.bfloat16
@@ -61,6 +61,16 @@ def _run_conv_qkv(x, weight, *, runtime, attn_metadata, conv_head_num,
     tokens = x.shape[0]
     if tokens <= 0 or tokens > int(os.environ.get("CLEF_GDN_QKV_NORM_MAX_TOKENS", "1200")):
         return None
+    if not x.is_contiguous():
+        # Qwen3.5 splits a contiguous [T,8192] QKVZ projection into QKV
+        # [T,5120] and Z views. Expose the full packed rows without copying;
+        # the fused kernel reads their first 5120 channels and leaves Z alone.
+        if x.stride(1) != 1 or x.stride(0) != 8192:
+            return None
+        storage_end = x.storage_offset() + tokens * 8192
+        if storage_end * x.element_size() > x.untyped_storage().nbytes():
+            return None
+        x = x.as_strided((tokens, 8192), (8192, 1))
     vendor = os.environ.get("CLEF_CONV_QKV_VENDOR")
     if not vendor:
         raise RuntimeError("CLEF_GDN_CONV_QKV=1 requires CLEF_CONV_QKV_VENDOR")

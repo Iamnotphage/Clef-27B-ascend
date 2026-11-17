@@ -15,7 +15,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const auto& x = context->GetInputShape(0)->GetStorageShape();
     const auto& w = context->GetInputShape(1)->GetStorageShape();
     if (x.GetDimNum() != 2 || x.GetDim(0) <= 0 || x.GetDim(0) > 0x7fffffff ||
-        x.GetDim(1) != kChannels || w.GetDimNum() != 2 ||
+        (x.GetDim(1) != kChannels && x.GetDim(1) != 8192) || w.GetDimNum() != 2 ||
         w.GetDim(0) != 4 || w.GetDim(1) != kChannels) {
         return ge::GRAPH_FAILED;
     }
@@ -30,6 +30,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     t->totalTiles = kHeads * t->tilesPerHead;
     t->tilesPerCore = CeilDiv(t->totalTiles, kCores);
     t->coreNum = kCores;
+    t->inputChannels = static_cast<uint32_t>(x.GetDim(1));
     t->eps = eps == nullptr ? 1e-6f : *eps;
     context->SetBlockDim(kCores);
     context->GetWorkspaceSizes(1)[0] = 0;
@@ -40,7 +41,9 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
 namespace ge {
 static graphStatus InferShape(gert::InferShapeContext* context) {
     const auto* x = context->GetInputShape(0);
-    if (x->GetDimNum() != 2 || x->GetDim(1) != kChannels) { return GRAPH_FAILED; }
+    if (x->GetDimNum() != 2 || (x->GetDim(1) != kChannels && x->GetDim(1) != 8192)) {
+        return GRAPH_FAILED;
+    }
     gert::Shape q, v;
     q.AppendDim(1); q.AppendDim(x->GetDim(0)); q.AppendDim(8); q.AppendDim(kDim);
     v.AppendDim(1); v.AppendDim(x->GetDim(0)); v.AppendDim(24); v.AppendDim(kDim);

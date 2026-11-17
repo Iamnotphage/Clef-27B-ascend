@@ -16,7 +16,8 @@ public:
         tokens_ = t->totalTokens; tile_ = t->tileTokens;
         perHead_ = t->tilesPerHead; total_ = t->totalTiles;
         perCore_ = t->tilesPerCore; eps_ = t->eps;
-        x_.SetGlobalBuffer((__gm__ bfloat16_t*)x, static_cast<uint64_t>(tokens_) * kChannels);
+        inputChannels_ = t->inputChannels;
+        x_.SetGlobalBuffer((__gm__ bfloat16_t*)x, static_cast<uint64_t>(tokens_) * inputChannels_);
         weight_.SetGlobalBuffer((__gm__ bfloat16_t*)weight, 4 * kChannels);
         q_.SetGlobalBuffer((__gm__ bfloat16_t*)q, static_cast<uint64_t>(tokens_) * 8 * kDim);
         k_.SetGlobalBuffer((__gm__ bfloat16_t*)k, static_cast<uint64_t>(tokens_) * 8 * kDim);
@@ -57,9 +58,9 @@ private:
         // row are contiguous; adjacent rows start 5120 values apart.
         DataCopyExtParams xp{static_cast<uint16_t>(rows + history),
                              kDim * sizeof(bfloat16_t),
-                             (kChannels - kDim) * sizeof(bfloat16_t), 0, 0};
+                             static_cast<uint32_t>((inputChannels_ - kDim) * sizeof(bfloat16_t)), 0, 0};
         DataCopyPadExtParams<bfloat16_t> noPad{false, 0, 0, static_cast<bfloat16_t>(0)};
-        const uint64_t xoff = static_cast<uint64_t>(t0 - history) * kChannels + head * kDim;
+        const uint64_t xoff = static_cast<uint64_t>(t0 - history) * inputChannels_ + head * kDim;
         DataCopyPad(input[leading * kDim], x_[xoff], xp, noPad);
         DataCopyExtParams wp{4, kDim * sizeof(bfloat16_t),
                              (kChannels - kDim) * sizeof(bfloat16_t), 0, 0};
@@ -104,9 +105,18 @@ private:
             Mul(acc, xf, xf, rows * kDim);
             PipeBarrier<PIPE_V>();
             auto sums = Aligned(sums_); auto work = Aligned(work_);
-            for (uint32_t row = 0; row < rows; ++row) {
-                ReduceSum(sums[row], acc[row * kDim], work, kDim);
-            }
+            // FLA 08d21f7 arch22 prepare-vector norm: pair the two 64-column
+            // halves first, then reduce the packed [rows,64] tile. The
+            // independent work buffer avoids overlapping source rows.
+            // dst repeat stride=8 x32B=256B; src strides=16 x32B=512B.
+            SetMaskNorm();
+            Add(work, acc, acc[64], 64, static_cast<uint8_t>(rows),
+                {1, 1, 1, 8, 16, 16});
+            PipeBarrier<PIPE_V>();
+            // WholeReduceSum sets the vector mask; normal mask mode is
+            // explicit after count-mode arithmetic. dst stride=1 float.
+            SetMaskNorm();
+            WholeReduceSum<float>(sums, work, 64, rows, 1, 1, 8);
             PipeBarrier<PIPE_V>();
             Adds(sums, sums, eps_, rows);
             PipeBarrier<PIPE_V>();
@@ -138,7 +148,7 @@ private:
     TQue<TPosition::VECOUT, 1> out_;
     TBuf<TPosition::VECCALC> xf_, wf_, acc_, tmp_, sums_, work_;
     GlobalTensor<bfloat16_t> x_, weight_, q_, k_, v_;
-    uint32_t tokens_, tile_, perHead_, total_, perCore_;
+    uint32_t tokens_, tile_, perHead_, total_, perCore_, inputChannels_;
     float eps_;
 };
 }  // namespace

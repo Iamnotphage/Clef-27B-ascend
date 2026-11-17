@@ -134,17 +134,37 @@ class InstallTests(unittest.TestCase):
 
 
 class FakeTensor:
-    def __init__(self, shape, dtype="bf16", device=None, contiguous=True):
+    def __init__(self, shape, dtype="bf16", device=None, contiguous=True,
+                 strides=None, storage_elements=None):
         self.shape = tuple(shape)
         self.dtype = dtype
         self.device = device or types.SimpleNamespace(type="npu", index=0)
         self.contiguous = contiguous
+        self.strides = strides or (shape[-1], 1)
+        self.storage_elements = (storage_elements if storage_elements is not None
+                                 else shape[0] * self.strides[0])
 
     def dim(self):
         return len(self.shape)
 
     def is_contiguous(self):
         return self.contiguous
+
+    def stride(self, index):
+        return self.strides[index]
+
+    def storage_offset(self):
+        return 0
+
+    def element_size(self):
+        return 2
+
+    def untyped_storage(self):
+        return types.SimpleNamespace(nbytes=lambda: self.storage_elements * 2)
+
+    def as_strided(self, shape, strides):
+        self.expanded = FakeTensor(shape, self.dtype, self.device, strides=strides)
+        return self.expanded
 
 
 class GuardTests(unittest.TestCase):
@@ -216,6 +236,19 @@ class GuardTests(unittest.TestCase):
             self.assertIsNone(self.call(x=FakeTensor((tokens, 5120))))
         os.environ["CLEF_GDN_QKV_NORM_MAX_TOKENS"] = "306"
         self.assertIsNone(self.call())
+
+    def test_qkvz_view_is_expanded_without_copying(self):
+        x = FakeTensor((307, 5120), contiguous=False, strides=(8192, 1))
+        modules, _ = self.fake_runtime()
+        with mock.patch.dict("sys.modules", modules), mock.patch.object(ctypes, "CDLL"):
+            self.call(x=x)
+        self.assertEqual(self.calls[0][1][0], (x.expanded, "x"))
+        self.assertEqual(x.expanded.shape, (307, 8192))
+
+    def test_qkvz_view_requires_the_full_packed_storage(self):
+        x = FakeTensor((307, 5120), contiguous=False, strides=(8192, 1),
+                       storage_elements=307 * 8192 - 1)
+        self.assertIsNone(self.call(x=x))
 
     def test_eligible_request_requires_explicit_vendor(self):
         os.environ.pop("CLEF_CONV_QKV_VENDOR")

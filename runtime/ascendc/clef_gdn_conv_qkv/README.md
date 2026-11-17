@@ -2,7 +2,9 @@
 
 状态：新建候选，等待 A3/CANN 9.2.1 构建与实机验证。当前服务默认值保持现有配置。
 
-输入为连续 BF16 `x[T,5120]` 与 packed BF16 `weight[4,5120]`。
+输入为连续 BF16 `x[T,5120]` 或打包 QKVZ `x[T,8192]`，以及 packed BF16 `weight[4,5120]`。
+QKVZ 输入读取每行前 5120 通道，Z 分支保持原值。服务通过受存储边界检查的
+`as_strided` 暴露完整投影行，省去 QKV 连续化拷贝。
 输出为连续 BSND `q/k[1,T,8,128]`、`v[1,T,24,128]`。
 仅支持一个完整序列、零左历史、width=4、无 bias、SiLU、TP2 固定头数。
 服务接入时必须验证上述条件，其他请求走原始路径。
@@ -14,7 +16,9 @@ Q/K 重新转 FP32，计算 `rsqrt(sum(x*x)+eps)`，再写 BF16。
 保留卷积 BF16 舍入边界；V 写入 SiLU 后的 BF16 值。
 数据搬运使用 TQue 完成 MTE2/V/MTE3 依赖，每个输出单写者，无核间同步。
 
-首版沿用已部署 QKV v2 的逐行 ReduceSum。源与工作区 512B 对齐。
+首版沿用已部署 QKV v2 的逐行 ReduceSum，已完成 57 组硬件逐位一致性检查。
+当前候选把每行两段 64 列先相加，再用 WholeReduceSum 归约整个 tile；
+源与工作区 512B 对齐，归约版本及 QKVZ 路径继续按探针和全量服务验收。
 核内 half-row 算术每次处理 64 FP32，repeat stride=16 个 32B block；
 weight repeat stride=0，逐 token 复用同一 head 的 tap 权重。
 tile=32 的总 UB 预算 88.5 KiB；tile=64 约 152.8 KiB（包含对齐余量）。

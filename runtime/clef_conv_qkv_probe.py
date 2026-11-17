@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import ctypes
 import hashlib
+import itertools
 import json
 import math
 import os
@@ -36,6 +37,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--lengths", default="1,2,3,4,31,32,33,307,967,1595")
     p.add_argument("--seeds", default="20261117,101,2027")
     p.add_argument("--tiles", default="32", help="16,32,64 or a comma-separated sweep")
+    p.add_argument("--input-channels", default="5120,8192",
+                   help="Contiguous QKV or packed QKVZ input rows")
     p.add_argument("--device", type=int, default=0)
     p.add_argument("--warmup", type=int, default=5)
     p.add_argument("--iters", type=int, default=20)
@@ -219,11 +222,16 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with torch.inference_mode():
         for tokens in lengths:
-            for seed in seeds:
+            for seed, input_channels in itertools.product(
+                    seeds, [int(v) for v in args.input_channels.split(",")]):
+                if input_channels not in (5120, 8192):
+                    raise ValueError("input channels must be 5120 or 8192")
                 generator = torch.Generator().manual_seed(seed + tokens)
-                x_cpu = (torch.randn((tokens, CHANNELS), generator=generator) * .5).to(torch.bfloat16)
+                packed_cpu = (torch.randn((tokens, input_channels), generator=generator) * .5).to(torch.bfloat16)
+                x_cpu = packed_cpu[:, :CHANNELS].contiguous()
                 w_cpu = (torch.randn((4, CHANNELS), generator=generator) * .2).to(torch.bfloat16)
-                x, weight = x_cpu.to(device), w_cpu.to(device)
+                packed, weight = packed_cpu.to(device), w_cpu.to(device)
+                x = packed[:, :CHANNELS]
                 cu = torch.tensor([0, tokens], dtype=torch.int32, device=device)
                 refs = allocate(tokens, device)
                 def convolution():
@@ -246,12 +254,15 @@ def main() -> int:
                 for tile in tiles:
                     outputs = allocate(tokens, device)
                     def fused():
-                        return candidate(x, weight, outputs, args.eps, tile)
+                        return candidate(packed, weight, outputs, args.eps, tile)
+                    for tensor in outputs:
+                        tensor.fill_(float("nan"))
                     fused(); torch.npu.synchronize()
                     comparison = {name: diff(a, b) for name, a, b in zip(("q", "k", "v"), outputs, baseline)}
                     valid = all(d["finite_a"] and d["finite_b"] and d["max_abs"] <= args.max_abs
                                 for d in comparison.values())
                     row = {"tokens": tokens, "seed": seed, "tile_tokens": tile,
+                           "input_channels": input_channels,
                            "candidate_vs_reference": comparison, "local_screen_pass": valid}
                     if cpu_info is not None:
                         row["cpu_conv_reference"] = cpu_info
