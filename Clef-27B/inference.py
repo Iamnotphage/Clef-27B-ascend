@@ -360,9 +360,15 @@ def qkv_norm_patch(config, apply=True):
     return record
 
 
-def gdn_chunk128_patch(config, apply=True):
-    """Install/verify the GDN chunk-128 decision-path patch."""
-    requested = config == "s1" and os.environ.get("CLEF_GDN_CHUNK128", "0") == "1"
+def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
+    """Install/verify the GDN chunk-128 decision-path patch.
+
+    Measured default on the decision path: another 1.3-2.3% on S1 over the
+    fused conv+QKV kernel while every official 2PP gate stays satisfied.
+    ``CLEF_GDN_CHUNK128=0`` restores chunk 64.
+    """
+    requested = decision_enabled and os.environ.get(
+        "CLEF_GDN_CHUNK128", "").strip().lower() not in ("0", "false", "no", "off")
     record = {
         "enabled": False,
         "requested": requested,
@@ -817,7 +823,9 @@ def build_launch(args):
     environment.update(data_env)
     qkv_patch = qkv_norm_patch(config, apply=not getattr(args, "dry_run", False))
     gdn_decision["qkv_norm_patch"] = qkv_patch
-    chunk128_patch = gdn_chunk128_patch(config, apply=not getattr(args, "dry_run", False))
+    chunk128_patch = gdn_chunk128_patch(
+        config, apply=not getattr(args, "dry_run", False),
+        decision_enabled=gdn_decision["enabled"])
     gdn_decision["gdn_chunk128_patch"] = chunk128_patch
     joint_patch = joint_single_field_patch(
         config, apply=not getattr(args, "dry_run", False))
