@@ -310,3 +310,31 @@ export CLEF_CONV_QKV_TILE=32
   这类小算子，收益与风险比不划算。
 - 证据：`Clef-27B/logs/perf-next-20261117/mlp-ceiling.json.gz`
   （远端 `/workspace/yangchen/logs/perf-next-20261117/mlp-ceiling.json`）。
+
+## 7. 通信与 AddRmsNorm 复核（负结果）
+
+计算侧确认到顶后，检查两个剩余项：
+
+### 7.1 TP2 allreduce 带宽与 AIV 展开
+
+- 隔离微基准（`probe_allreduce.py`，2 rank HCCL，`[967,5120]` BF16 = 9.9 MB）：
+  默认 **0.1433 ms / 69.1 GB/s**；`HCCL_OP_EXPANSION_MODE=AIV` **0.1329 ms / 74.5 GB/s（+7.3%）**。
+- 但服务级相邻窗口 A/B（S1 全量 2,352）：
+
+  | 指标 | 默认 control | AIV | 变化 |
+  | --- | ---: | ---: | ---: |
+  | p95 | 157.707 ms | 157.323 ms | −0.24% |
+  | mean | 117.138 ms | 116.914 ms | −0.19% |
+  | p50 | 108.689 ms | 109.077 ms | +0.36% |
+  | 吞吐 | 8.525 dec/s | 8.540 dec/s | +0.18% |
+
+  全部在噪声内（同一天不同窗口的 control 之间本身就有约 1.5% 漂移），**不采纳**。
+- 说明 in-model 的 allreduce 已经是隔离水平（0.27 ms 含 launch 的 profile 值 vs 0.143 ms 纯通信），
+  没有隐藏的通信低效。
+
+### 7.2 AddRmsNorm
+
+- 隔离微基准：967 token `npu_add_rms_norm` **0.0355 ms**（37.9 MB 流量，**1117 GB/s**）、
+  1595 token 0.0516 ms（**1266 GB/s**），已贴着 1.27 TB/s 的 HBM 上限。
+- profile 里的 5.96 ms（0.093 ms/层）是含间隙的聚合值，真实算子 0.0355×64 ≈ 2.3 ms，
+  没有 5× 的优化空间；不投入自定义 RMSNorm。
