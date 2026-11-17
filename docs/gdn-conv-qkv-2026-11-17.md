@@ -332,6 +332,14 @@ export CLEF_CONV_QKV_TILE=32
 - all-linear NZ、graph/ACL graph、Dense SP / MC2 / RS / 分块重叠（此前各轮）：全部退化或不支持；
 - 量化：赛方禁止。
 
+**最终验收（2026-11-17 15:40）**
+
+- 在已打补丁的树上用官方入口再次启动，安装器全部直接放行（幂等）：
+  `device_op.py=chunk128`、`gdn.py=conv`、`patch_qwen3_5.py=patched`、
+  QKV 安装器 `qkv`、单字段 head `single-field`，`conv_qkv_vendor` 指向内置 vendor。
+- `/health` = ready；24 条混合长度抽样 24/24 成功，p50 119.0 / p95 153.2 ms；
+  两个 TP worker 都打印 `clef-conv-qkv` 融合标志。
+
 **剩余工作**
 
 1. host load 回落到个位数后重跑 S1（建议 3 轮平均）与 S2，用干净窗口替换当前 load 20–24 下的报数；
