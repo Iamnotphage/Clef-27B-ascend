@@ -140,4 +140,12 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 
 最终服务phase入口 [final_service_phase.py](../runtime/final_service_phase.py) 已完成CPU准备，尚未设备执行。默认plan-only；仅f810/原guard，固定28四phase覆盖参数与干净两键父环境。旧restore SHA、label/api.pid、PID/start/boot/PGID/完整final argv绑定后调用原d0_stop；停前strict旧PGID所有非Z成员须已归属树，停后整个旧PGID须空；未知端口或未清空卡7禁止launch。客户端前置为互斥必选：实际prior supervision记录，或显式first-phase-no-client且仅S1→S1；已观测client PID及PGID须全部退出。新服务完整argv/env/launch/info经cc7检查，再做原六d0四检与卡7双worker归属。
 
-v3 SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`，test `901d50e3226d418b91d4abe801ab5d6e254d24ee9775e1e07dbbda3c2ac22bd1`，17项CPU测试通过；所有停启/NPU命令均mock。包含停前PPID1同PGID orphan零stop/launch、停后同PGID残留零launch、缺失/非法/冲突客户端模式、query/port/source/stop失败、clean parent成功路径。23首次有限核要求的两项收口已落实，等待最终复核；此前phase草稿从未操作服务。
+v3 SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`，test `901d50e3226d418b91d4abe801ab5d6e254d24ee9775e1e07dbbda3c2ac22bd1`，17项CPU测试通过；所有停启/NPU命令均mock。包含停前PPID1同PGID orphan零stop/launch、停后同PGID残留零launch、缺失/非法/冲突客户端模式、query/port/source/stop失败、clean parent成功路径。23已有限核通过提交 `d4464ac2c32fc122a9c6a391a45806cdaac17916`；平铺独立stage为 `/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916`，本入口尚无实际服务切换证据。28后续文档元数据 `1e42a93610ad4338c3cdb67385a17b307bdf18c3` 经23核准，执行组合继续固定cc7/0338与监督器063109a/172c。
+
+## source-control传输中断：远端终态待核
+
+真f810/aa3eON窗口使用已核 `ebca7694ac8e956ec4781e2112c27aa9910ef6be`、runner `a1c502a3a709b836d31dc994a156f702d6a826ce5f2854beeec9ac50701f7299`，远端run为 `/workspace/yangchen/logs/joint-fused-source-control-27-ebca-first`。本地04:00保存的进度副本处于 `round-2-start`，已有两轮完整pair；该运行中快照的 `overall_rc=1` 保留原值，候选结束码未取得。23另报告最后一次远端观察为04:01:11 CST的 `round-3-start/error=null`，已完成三轮；该观察来源与本地快照分列。
+
+04:15 CST回收原外层SSH会话69391，得到传输退出码255；本地 `/tmp/clef27-handoff/source-control-ebca-outer.log` 为0字节，匹配的原SSH/ebca本地进程为空。唯一owner通过既有clef入口做一次20秒有界只读 `true` 探测，返回255及 `Connection closed by UNKNOWN port 65535`。本次未修改SSH配置或凭据，未重复候选命令、未发送设备或服务信号。该错误尚不足以定位凭据失效，远端实验完成情况、源/guard状态、客户端退出与恢复四检/env终态均待实读。
+
+原件：[owner连接探测](../Clef-27B/logs/overnight-20261119-owner27/source-control-transport-interruption/owner-probe.json)。完整ab/raw/stop/restore/envcompare尚无本地副本，无法据此判定winner或恢复完成。20已接手平台入口核验；27停止重连并暂停rstd8、A/D及S1。入口恢复后先只读同一run的完整记录与fresh进程身份，按真实退出/恢复证据决定后续处理，保持既定rstd8→A/D顺序。
