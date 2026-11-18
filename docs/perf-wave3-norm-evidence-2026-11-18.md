@@ -853,3 +853,33 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 - **未观测项 5 条**：MMFUN_END/quit 实发与 server 收到、消费点可见性、三个运行值、宏表、预算 2 的全部结论。
 
 **是否实现与执行由 20 决定。**
+
+## 32. D0 设计六条修订（22，2026-11-18 22:55 CST，commit `89084f6`）
+
+只改设计/文档；未改 kernel、未编译、未上板。
+
+### 32.1 槽公式（旧的已废弃）
+
+- **旧式 `domain*24 + block*2 + sub` 确有别名与越界**：AIC(12,0)=24 与 AIV(0,0)=24 **冲突**；AIV(12,0)=48 **越界** → **废弃**。
+- **新式**：`AIC slot = block`（0..AIC_CAP-1）；`AIV slot = AIC_CAP + block*SUB_CAP + sub`；`slots = AIC_CAP*(1+SUB_CAP)`。
+- 校验（AIC_CAP=24, SUB_CAP=2）：AIC(12,0)=**12**、AIV(0,0)=**24**、AIV(12,0)=**48** < 72 ⇒ **无别名、无越界**。
+- `AIC_CAP` 取 host 侧平台 AIC 数并写入 tiling；`SUB_CAP=2` 为**声明上界**。
+- **动态越界**只**关闭该 block 的 trace 写**，`REGIST_MATMUL_OBJ`／析构／屏障**原控制流不动**。
+- **不设共享 oob 字**（多写者竞态）⇒ **缺槽即证据**；host 按 `slots` 全量扫，缺哪槽报哪槽。
+- **host 无法预知 builtin 越界**：CAP 只是声明上界，真实超界只能由**缺槽**暴露。
+
+### 32.2 字段表（每参与者 × 每阶段独占，`uint32`）
+
+`fields=8`：`magic` / `id=(block<<8)|sub` / `domain` / `claim_start_m` / `claim_m` / `stage_bits`（bit0..7 = K1..K8）/ `reserved` / `seal=0xC0FFEE00^id`。
+容量 `slots*32 B`（72 槽 → 2304 B）；host 分配后**清零**（`magic==0` 即从未到达）；判读需 `magic` 与 `seal` 均正确才算完整，否则按 `stage_bits` 判读到过哪些阶段。
+
+### 32.3 其余四条
+
+3. **数据归属只选一种**：`trace` 为**第 5 个输出**（`uint32`、ND、host 声明 `trace[slots][fields]`、adapter 显式分配），**不占** workspace 的 `partial|reduced|flag`；"workspace 追加一段"的写法**已删除**。
+4. **`partial` 无 host 读取路径**：仍在 user workspace、非输出。首候选只判**认领覆盖**；**实际写入覆盖保留缺项**，除非另增 `partial` 输出/安全导出（新 ABI，未实现）。
+5. **超时/故障后**：trace 可能**无法 copy** ⇒ 标 `unavailable`，**不保证槽数可回收**；缺槽只报**未闭合集合**（插桩未到／丢写／提前失败三者不可区分），**不归因 `SyncAll`**。
+6. **行号按 `85b3028` 实测更正**：`WriteTilingDiag():151`、`REGIST:184`、worker 判定 `:221-222`、`IterateAll:249`、`End():255`、**无参屏障 `:295`**；此前 `:308` 来自后续仅改注释的提交，已更正。
+
+### 32.4 AUDIT 残留修复
+
+`:36` 改为「阶段 A 清理 / **阶段 B 已冻结**」；原"未来 dump_cce"改为**已完成**、仍缺的是**逐 pass argv/宏表**；`pyc` 行改为**未纳入**并指向 `EXCLUSIONS.txt`。
