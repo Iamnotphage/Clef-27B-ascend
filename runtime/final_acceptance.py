@@ -156,7 +156,7 @@ def frozen_check(m):
             found.add(name)
             p = Path(m['model_dir']) / name
             require(p.is_file() and p.stat().st_size == row['Size'], f'model size mismatch: {name}')
-            if p.suffix == '.json':
+            if p.suffix != '.safetensors':
                 require(sha(p) == row['Sha256'], f'model configuration hash mismatch: {name}')
     require(found == set(m['required_model_files']), 'model manifest lacks required files')
     # Frozen request/template alignment is checked before the first HTTP POST.
@@ -272,6 +272,10 @@ def main():
     write(state_path,state)
     try:
         frozen_check(m)
+        # Keep the fixed question/request denominator even after client interruption.
+        input_key = 'erqa_samples' if a.phase == 'erqa' else 'od_samples'
+        source = Path(m['data'][input_key]['path'])
+        (out / ('expected-inputs' + source.suffix)).write_bytes(source.read_bytes())
         write(out/'service-before.json',service_check(m,a.phase,a.identities,a.launch_manifest))
         for name,argv in steps:
             step={'name':name,'argv':argv,'started_utc':now(),'status':'running'}
