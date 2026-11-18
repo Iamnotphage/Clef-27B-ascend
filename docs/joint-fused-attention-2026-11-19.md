@@ -68,8 +68,9 @@ $PY runtime/joint_fused_attention_probe.py \
   `scale=1/sqrt(64)`、`keep_prob=1.0`、BF16、head_num/head_dim 与 finite。
 - 两臂共用权重/输入/`CLEF_JOINT_SINGLE_FIELD=1`，仅 `CLEF_JOINT_FUSED_ATTN=0/1`；每臂 5 warmup +
   50 次逐调用 NPU event，报告 mean/median/p95 device 与 wall、`bit_equal/finite/max_abs`。
-- 判读：4 轮 ABBA（A/B、B/A、B/A、A/B）逐调用 raw device/wall；先看 interface.ok、candidate_error 为空、
-  correctness finite；再看 per-round 配对中位与总中位是否 ≥0.3 ms 且同向。未过则关闭。
+- 判读：4 轮 ABBA（A/B、B/A、B/A、A/B）；JSON 的每 round 每 arm 保存 `device_samples`、`wall_samples`
+  与带 `index` 的 `samples` 数组，另有 stats。先看 interface.ok、candidate_error 为空、correctness finite；
+  再看 per-round 配对中位与总中位是否 ≥0.3 ms 且同向。未过则关闭。
 
 ## 7. 21 执行：服务 A/B（probe 通过后）
 

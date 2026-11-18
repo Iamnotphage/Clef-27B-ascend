@@ -154,12 +154,21 @@ def main() -> int:
                     raw[value].extend(devices[str(value)])
                     wall[value].extend(walls[str(value)])
                     last[value] = outs[-1].detach().to("cpu")
-                rounds.append({
-                    "round": index, "order": orders[index],
-                    "arms": {str(value): {"device_ms": stats(devices[str(value)]),
-                                          "wall_ms": stats(walls[str(value)])}
-                             for value in (0, 1)},
-                })
+                arms_report = {}
+                for value in (0, 1):
+                    dev = devices[str(value)]
+                    wall = walls[str(value)]
+                    arms_report[str(value)] = {
+                        "device_ms": stats(dev),
+                        "wall_ms": stats(wall),
+                        "device_samples": [round(item, 6) for item in dev],
+                        "wall_samples": [round(item, 6) for item in wall],
+                        "samples": [{"index": sample, "device_ms": round(dev[sample], 6),
+                                     "wall_ms": round(wall[sample], 6)}
+                                    for sample in range(len(dev))],
+                    }
+                rounds.append({"round": index, "order": orders[index],
+                               "raw_units": "ms", "arms": arms_report})
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
 
