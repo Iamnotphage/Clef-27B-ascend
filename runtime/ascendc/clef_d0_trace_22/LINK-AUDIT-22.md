@@ -35,7 +35,8 @@
 ## 3) 严格链接复核（**一次**）——结论已更正
 
 > 下方命令块为**路径缩写示意**（`<venv>`、`<包内>` 为占位），**不是逐字命令**；
-> 逐字命令见 `fixed_link_cmd.txt`（§6 有完整绝对路径）。
+> 本节是**首次失败（RC1）**的命令，逐字原文见 **`strict_link_cmd.txt`**；
+> 修正后的命令见 §6 与 `fixed_link_cmd.txt`。
 ```
 g++ -shared -z defs -o d0_strict.so d0_adapter.o \
   -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
@@ -103,7 +104,7 @@ SHA-256 `212da0dac0371ea3d1f87cd24b6750b6db12d145280d9b4480cac66b16c3c169`
 其余依赖按**原已核路径固定**：包内 `libcust_opapi.so` `33149226…48ec`、
 CANN `lib64/libnnopbase.so` `72cd43b4…477c`（**未混用 devlib 版**）。
 
-**命令（§6 的完整绝对路径版本已存 `fixed_link_cmd.txt`；下方为同一命令的可读排版）：**
+**命令（**路径缩写示意，`<venv>` / `<包内>` 为占位**；完整原文见 `fixed_link_cmd.txt`）：**
 ```
 g++ -shared -z defs -o d0_strict_fixed.so d0_adapter.o \
   -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
