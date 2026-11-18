@@ -65,6 +65,22 @@
 - 但用独立 `g++` 手动链接会失败：`Mc2CcTilingConfig` 构造函数未解析 + `TilingDefImpl::InitData` 为 hidden symbol 与 DSO 冲突。
 - **判定：该接口只能通过官方 `npu_op_package` CMake 流程（op_host）验证**，不能用独立小程序替代。smoke 的构建必须走 `runtime/ascendc/clef_ar_add_rms_norm/build.sh`，并把 tiling 头包含进 op_host。
 
+### 门 C：通信域注入 —— **未通过（新阻塞）**
+
+- `HcclGetRootInfoV2` / `HcclCommInitRootInfoV2` 确实由 `libhccl_v2.so` 导出（`nm -D` 可见），
+  但**整棵 CANN 9.2.1 目录里没有任何头文件声明它们**（`grep -rn --include=*.h HcclCommInitRootInfoV2` 为空）。
+- 公共头 `hccl_comm.h` 里的 `HcclGetRootInfo` / `HcclCommInitClusterInfo` 是 `HCOMM_WEAK_SYMBOL`，
+  `libhccl.so` 并未导出实体符号。
+- 按推测签名（`(uint32_t, const HcclRootInfo*, uint32_t, void**)`）写的 2-rank 小程序在 `aclInit`/`getRootInfo` 后
+  **段错误**，不能使用。
+- 另一套 `Mc2*` API（`asc/include/adv_api/hccl/hccl_mc2.h`，实现在 `libmc2_client.so`）与 `Hccl*` 行为一致：
+  `SetCommEngine` 同样只接受 **2/4**（`Mc2KfcOpArgsSetCommEngine` 实测 0/1/3 均 rc=5）。
+- 因此「自建 2-rank comm」这一步在当前 CANN 上没有可用公开 ABI；可选路径：
+  1. 从 Ascend 的 HCCL v2 接口文档/源码取得真实原型；
+  2. 由框架（vLLM/torch）注入既有 comm —— 但 torch_npu 没有公开的裸句柄 getter；
+  3. 反汇编 `libhccl_v2.so` 推断参数个数（风险高）。
+- **在拿到真实原型前，不应开始 op_host/kernel 投入**；这也是把 0.5–1 天评估上调的原因。
+
 ## 4. 构建与安装
 
 - 复用 `runtime/ascendc/clef_gdn_conv_qkv/` 的 `build.sh` + `CMakeLists.txt` + `op_host`/`op_kernel` 布局，新建 `runtime/ascendc/clef_ar_rms_smoke/`，**不覆盖**已验收的 `Clef-27B/src/ascendc/vendors/{clef_conv_qkv,customize}`。
@@ -75,7 +91,8 @@
 
 | 项 | 审计点 |
 | --- | --- |
-| 对齐 | M×N×2 字节是否 128 对齐；分核时每核 token 块是否按 128 字节对齐 |
+| 对齐 | 每行 5120×2 = 10240 B = 80×128 B，按行切天然 128B 对齐；分核按 `(M+blockNum-1)/blockNum` 上取整并裁尾 |
+| repeat | **967 是质数，repeat 只能为 1 或 967**；要流水必须 pad 到 Mpad（repeat=8 → Mpad=968，+0.10% 载荷；repeat=10 → 970，+0.31%） |
 | 通信域 | `Mc2CcTilingConfig` 的 group name 与训练/服务一致（TP2 组）；`SetStepSize`/`SetCommEngine` 明确选 AICPU KFC |
 | 算法 | 强制非 mesh（`Mc2KfcOpArgsSetAlgConfig` 指定 NHR/ring），并断言选中的不是 `mesh_1d` |
 | 生命周期 | `InitV2 → Prepare → Commit → Wait → Finalize` 每核每 tile 配对；不得跨迭代复用未 Finalize 的句柄 |
