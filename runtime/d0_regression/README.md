@@ -32,10 +32,13 @@ runs one case; `--keep-temp` preserves the temporary archive/run directory.
   run directory; writes to `/workspace` or `/proc` raise.
 - The six production modules are hashed against the requested commit, and
   `spec.origin`/`__file__`/`co_filename` are checked for every loaded module.
+- The suite passes only when every case has `case_ok=true` and `case_rc==0`;
+  `test_aggregation.py` covers the `case_ok=true`+rc1 counterexample.
 
 ## Evidence
 
 `evidence/run-5642732/`, `evidence/run-5e85681/` and `evidence/run-0bd6f6a/` hold the before/intermediate/final suites,
 per-case JSON and raw artefacts.  `evidence/MANIFEST.json` records the script SHA, three production SHAs, matrix,
 happy argv, loaded-module identity, frozen source hashes and failure-injection
-list; `evidence/SHA256SUMS` hashes every frozen file.
+list; `evidence/aggregation-self-test.json` records the five aggregation
+counterexamples; `evidence/SHA256SUMS` hashes every frozen file.

@@ -1,7 +1,15 @@
 {
- "schema": "d0-regression-manifest/2",
+ "schema": "d0-regression-manifest/3",
  "test_script": "runtime/d0_regression/d0_main_regression.py",
- "test_script_sha256": "209d8d95c1489179980a90ce5e5bf1dd039fcced09e99f0f5d3b4fd921aad2ae",
+ "test_script_sha256": "9dacd1f978605e36d725675971158c5a017aab6341903a966dad04e38ef66817",
+ "aggregation_test": "runtime/d0_regression/test_aggregation.py",
+ "aggregation_test_sha256": "99e4abcedda6e9ef312995f42e98117bbf2ce3b58152d2a233ccc4fbfe48a8af",
+ "aggregation_self_test": {
+  "schema": "d0-aggregation-self-test/1",
+  "checks": 5,
+  "failed": [],
+  "ok": true
+ },
  "production_before": "56427329248f49490a87877f6a47d04239418bfe",
  "production_intermediate": "5e85681ec09b37ec9ba951bde4ca4a38615ab34e",
  "production_after": "0bd6f6a4789970728c341c282a88f39ce990cf76",
@@ -15,6 +23,7 @@
   {
    "scenario": "happy",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -26,6 +35,7 @@
   {
    "scenario": "root_changed",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -47,6 +57,7 @@
   {
    "scenario": "boot_missing",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -68,6 +79,7 @@
   {
    "scenario": "boot_empty",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -89,6 +101,7 @@
   {
    "scenario": "timeout",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 2,
    "test_rc": 2,
    "wrapper_rc": 2,
@@ -100,6 +113,7 @@
   {
    "scenario": "child_nonzero",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -111,6 +125,7 @@
   {
    "scenario": "query_unavailable",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -132,6 +147,7 @@
   {
    "scenario": "cleanup_residue",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -153,6 +169,7 @@
   {
    "scenario": "verify_failure",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -174,6 +191,7 @@
   {
    "scenario": "parse_failure",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 5,
    "test_rc": 0,
    "wrapper_rc": 5,
@@ -185,6 +203,7 @@
   {
    "scenario": "restore_exception",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -206,6 +225,7 @@
   {
    "scenario": "child7_restore_exception",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -217,6 +237,7 @@
   {
    "scenario": "workers_unrelated",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -238,6 +259,7 @@
   {
    "scenario": "workers_duplicate",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -261,6 +283,7 @@
   {
    "scenario": "happy",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -272,6 +295,7 @@
   {
    "scenario": "root_changed",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -283,6 +307,7 @@
   {
    "scenario": "boot_missing",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -294,6 +319,7 @@
   {
    "scenario": "boot_empty",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -305,6 +331,7 @@
   {
    "scenario": "timeout",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 2,
    "test_rc": 2,
    "wrapper_rc": 2,
@@ -316,6 +343,7 @@
   {
    "scenario": "child_nonzero",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -327,6 +355,7 @@
   {
    "scenario": "query_unavailable",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -338,6 +367,7 @@
   {
    "scenario": "cleanup_residue",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -349,6 +379,7 @@
   {
    "scenario": "verify_failure",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -360,6 +391,7 @@
   {
    "scenario": "parse_failure",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 5,
    "test_rc": 0,
    "wrapper_rc": 5,
@@ -371,6 +403,7 @@
   {
    "scenario": "restore_exception",
    "case_ok": false,
+   "case_rc": 1,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -389,6 +422,7 @@
   {
    "scenario": "child7_restore_exception",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -400,6 +434,7 @@
   {
    "scenario": "workers_unrelated",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -411,6 +446,7 @@
   {
    "scenario": "workers_duplicate",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -424,6 +460,7 @@
   {
    "scenario": "happy",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 0,
    "test_rc": 0,
    "wrapper_rc": 0,
@@ -435,6 +472,7 @@
   {
    "scenario": "root_changed",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -446,6 +484,7 @@
   {
    "scenario": "boot_missing",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -457,6 +496,7 @@
   {
    "scenario": "boot_empty",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -468,6 +508,7 @@
   {
    "scenario": "timeout",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 2,
    "test_rc": 2,
    "wrapper_rc": 2,
@@ -479,6 +520,7 @@
   {
    "scenario": "child_nonzero",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -490,6 +532,7 @@
   {
    "scenario": "query_unavailable",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -501,6 +544,7 @@
   {
    "scenario": "cleanup_residue",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -512,6 +556,7 @@
   {
    "scenario": "verify_failure",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -523,6 +568,7 @@
   {
    "scenario": "parse_failure",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 5,
    "test_rc": 0,
    "wrapper_rc": 5,
@@ -534,6 +580,7 @@
   {
    "scenario": "restore_exception",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -545,6 +592,7 @@
   {
    "scenario": "child7_restore_exception",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 7,
    "test_rc": 7,
    "wrapper_rc": 7,
@@ -556,6 +604,7 @@
   {
    "scenario": "workers_unrelated",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -567,6 +616,7 @@
   {
    "scenario": "workers_duplicate",
    "case_ok": true,
+   "case_rc": 0,
    "main_return": 3,
    "test_rc": 0,
    "wrapper_rc": 3,
@@ -585,9 +635,9 @@
     "torch.distributed.run",
     "--standalone",
     "--nproc-per-node=2",
-    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_launch.py",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_launch.py",
     "--out-dir",
-    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/out",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/out",
     "--rows",
     "967",
     "--seed",
@@ -623,7 +673,7 @@
    "argv": [
     "bash",
     "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
-    "d0-restore-20261118T170646Z-05996737"
+    "d0-restore-20261118T171038Z-2eee865f"
    ]
   },
   {
@@ -691,26 +741,26 @@
  "happy_module_identity": {
   "d0_run": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_run.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_run.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_run.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_run.py",
    "sha256": "7cdd2cfee7ef73c1403b620fdedd6c78882e33eaac466bf4f44885a166e9d11e",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_run.py",
-    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_run.py",
-    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_run.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_run.py",
+    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_run.py",
+    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_run.py"
    }
   },
   "d0_restore": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
    "sha256": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
-    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
-    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
-    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py",
-    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_restore.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
+    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
+    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
+    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py",
+    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_restore.py"
    }
   },
   "d0_launch": {
@@ -727,12 +777,12 @@
   },
   "d0_trace_parse": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_trace_parse.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_trace_parse.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_trace_parse.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_trace_parse.py",
    "sha256": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f",
    "functions": {
-    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_trace_parse.py",
-    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-epgzhti3/src/runtime/d0/d0_trace_parse.py"
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_trace_parse.py",
+    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-gvgz89oe/src/runtime/d0/d0_trace_parse.py"
    }
   }
  },

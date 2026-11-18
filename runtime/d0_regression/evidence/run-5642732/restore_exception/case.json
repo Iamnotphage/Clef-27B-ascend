@@ -2,7 +2,7 @@
  "schema": "d0-regression-case/1",
  "scenario": "restore_exception",
  "target_commit": "56427329248f49490a87877f6a47d04239418bfe",
- "at": "2026-11-18T17:06:43Z",
+ "at": "2026-11-18T17:10:35Z",
  "checks": [
   {
    "check": "main_returned",
@@ -91,7 +91,7 @@
   {
    "check": "label_dynamic",
    "ok": true,
-   "detail": "'d0-restore-20261118T170643Z-75ba503e'",
+   "detail": "'d0-restore-20261118T171035Z-b1693862'",
    "category": "common"
   },
   {
@@ -109,13 +109,13 @@
   {
    "check": "root_child_pid_separate",
    "ok": true,
-   "detail": "child=424200 service=424242 harness=78053",
+   "detail": "child=424200 service=424242 harness=91766",
    "category": "common"
   },
   {
    "check": "proc_before_empty",
    "ok": true,
-   "detail": "['78053']",
+   "detail": "['91766']",
    "category": "common"
   },
   {
@@ -236,9 +236,9 @@
      "torch.distributed.run",
      "--standalone",
      "--nproc-per-node=2",
-     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_launch.py",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_launch.py",
      "--out-dir",
-     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/out",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/out",
      "--rows",
      "967",
      "--seed",
@@ -274,7 +274,7 @@
     "argv": [
      "bash",
      "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
-     "d0-restore-20261118T170643Z-75ba503e"
+     "d0-restore-20261118T171035Z-b1693862"
     ]
    },
    {
@@ -289,13 +289,13 @@
   "kill_simulated": [],
   "net": [],
   "unexpected": [],
-  "label": "d0-restore-20261118T170643Z-75ba503e",
+  "label": "d0-restore-20261118T171035Z-b1693862",
   "vfs_miss": [
    "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json"
   ],
   "workspace_writes": [],
   "proc_before_launch": [
-   "78053"
+   "91766"
   ]
  },
  "artifacts": {
@@ -307,11 +307,11 @@
    }
   },
   "plan.json": {
-   "sha256": "e191596096197912f9143b293a8c4faaac3a66432419d9299a901b2041a71853",
+   "sha256": "7aa2fd87f20aff3ae93c6caa15111ab7f78b40818863fd7d21272f4509be4419",
    "size": 850,
    "json": {
-    "run_id": "d0-20261119T010643-out",
-    "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/out",
+    "run_id": "d0-20261119T011035-out",
+    "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/out",
     "cell": {
      "mm_dim": 1,
      "use_hccl": 2,
@@ -349,10 +349,10 @@
    }
   },
   "process-tree.json": {
-   "sha256": "2f8c716a1a0ee434eee10acc9131f175f2793f0f8f7b79bf63e868ae841eca4d",
+   "sha256": "70b02451ee045ceeaead637bfed8fc026fe37c7d7787960771bcb4e02bfba243",
    "size": 286,
    "json": {
-    "root_pid": 78053,
+    "root_pid": 91766,
     "root": {
      "comm": "python3",
      "state": "0",
@@ -361,9 +361,9 @@
      "session": 0,
      "cmdline": ""
     },
-    "captured_at": "2026-11-19T01:06:43+0800",
+    "captured_at": "2026-11-19T01:10:35+0800",
     "processes": {
-     "78053": {
+     "91766": {
       "comm": "python3",
       "state": "0",
       "ppid": 1,
@@ -386,12 +386,12 @@
    }
   },
   "restore-failure.json": {
-   "sha256": "c5844fd2188501e3f20d46c2b8231a6eb4eb74e1e48eadabdde41d63e2593ce4",
+   "sha256": "c8756c9f565a1fdfb4b237cf731fc4e2f5b4512009882beaa42f6a1660cea396",
    "size": 1413,
    "json": {
     "failure": "FileNotFoundError",
     "message": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
-    "traceback": "Traceback (most recent call last):\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py\", line 305, in main\n    verified = verify(build_commands(render_request), rlog,\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py\", line 292, in build_commands\n    text_body = render(\"text\")\n                ^^^^^^^^^^^^^^\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py\", line 110, in render_request\n    doc = json.loads(Path(TEXT_SOURCE).read_text())\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-24/runtime/d0_regression/d0_main_regression.py\", line 346, in scenario_read\n    return real_vfs_read(self, *a, **kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-24/runtime/d0_regression/d0_main_regression.py\", line 227, in fake_read_text\n    raise FileNotFoundError(p)\nFileNotFoundError: /workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json\n",
+    "traceback": "Traceback (most recent call last):\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py\", line 305, in main\n    verified = verify(build_commands(render_request), rlog,\n                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py\", line 292, in build_commands\n    text_body = render(\"text\")\n                ^^^^^^^^^^^^^^\n  File \"/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py\", line 110, in render_request\n    doc = json.loads(Path(TEXT_SOURCE).read_text())\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-24/runtime/d0_regression/d0_main_regression.py\", line 346, in scenario_read\n    return real_vfs_read(self, *a, **kw)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-24/runtime/d0_regression/d0_main_regression.py\", line 227, in fake_read_text\n    raise FileNotFoundError(p)\nFileNotFoundError: /workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json\n",
     "test_rc": 0,
     "test_exception": null
    }
@@ -1852,7 +1852,7 @@
    }
   },
   "root-child.json": {
-   "sha256": "9780da0b33e2ecac5122bb055270970635d37eeb33e0c567232c64de0665e851",
+   "sha256": "d1959e3d179e6670cc260c09e260bc4e68e41429fbd84066d81360dbd0f3fe7b",
    "size": 684,
    "json": {
     "child_pid": 424200,
@@ -1861,7 +1861,7 @@
     "boot_id": "BOOT-TEST-0001",
     "launch_source": "/opt/homebrew/opt/python@3.12/bin/python3.12 -m torch.distributed.run",
     "tree_at_start": {
-     "root_pid": 78053,
+     "root_pid": 91766,
      "root": {
       "comm": "python3",
       "state": "0",
@@ -1870,17 +1870,17 @@
       "session": 0,
       "cmdline": ""
      },
-     "captured_at": "2026-11-19T01:06:43+0800",
+     "captured_at": "2026-11-19T01:10:35+0800",
      "processes": {
       "424200": {
        "comm": "python3",
        "state": "0",
-       "ppid": 78053,
+       "ppid": 91766,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
       },
-      "78053": {
+      "91766": {
        "comm": "python3",
        "state": "0",
        "ppid": 1,
@@ -1894,7 +1894,7 @@
        "pid": 424200,
        "comm": "python3",
        "state": "0",
-       "ppid": 78053,
+       "ppid": 91766,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
@@ -1914,11 +1914,11 @@
    "text": ""
   },
   "tree-after.json": {
-   "sha256": "03a502c313cbef523e2859ff54435ecb37ad780cb804a43e5427aad75b461f9d",
+   "sha256": "a97141d7b57fc6eedc74119a353083ce211c53af3cbef5750f05092a33eef4b8",
    "size": 577,
    "json": {
     "tree": {
-     "root_pid": 78053,
+     "root_pid": 91766,
      "root": {
       "comm": "python3",
       "state": "0",
@@ -1927,17 +1927,17 @@
       "session": 0,
       "cmdline": ""
      },
-     "captured_at": "2026-11-19T01:06:43+0800",
+     "captured_at": "2026-11-19T01:10:35+0800",
      "processes": {
       "424200": {
        "comm": "python3",
        "state": "0",
-       "ppid": 78053,
+       "ppid": 91766,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
       },
-      "78053": {
+      "91766": {
        "comm": "python3",
        "state": "0",
        "ppid": 1,
@@ -1951,7 +1951,7 @@
        "pid": 424200,
        "comm": "python3",
        "state": "0",
-       "ppid": 78053,
+       "ppid": 91766,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
@@ -1989,26 +1989,26 @@
  "module_identity": {
   "d0_run": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py",
    "sha256": "411a4c65812055b130c64bd0fa0661f6985d7f896dfc644b4578379aea3cae3e",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py",
-    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py",
-    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_run.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py",
+    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py",
+    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_run.py"
    }
   },
   "d0_restore": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
    "sha256": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
-    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
-    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
-    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py",
-    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_restore.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
+    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
+    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
+    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py",
+    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_restore.py"
    }
   },
   "d0_launch": {
@@ -2025,12 +2025,12 @@
   },
   "d0_trace_parse": {
    "loaded": true,
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_trace_parse.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_trace_parse.py",
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_trace_parse.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_trace_parse.py",
    "sha256": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f",
    "functions": {
-    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_trace_parse.py",
-    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-ly5a33ls/src/runtime/d0/d0_trace_parse.py"
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_trace_parse.py",
+    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-313kc7ok/src/runtime/d0/d0_trace_parse.py"
    }
   }
  },

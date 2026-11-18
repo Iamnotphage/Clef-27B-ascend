@@ -1,7 +1,7 @@
 # D0 CPU 回归闭合（2026-11-19）
 
 独立 CPU 回归脚本：`runtime/d0_regression/d0_main_regression.py`
-（SHA-256 `209d8d95c1489179980a90ce5e5bf1dd039fcced09e99f0f5d3b4fd921aad2ae`）。
+（SHA-256 `9dacd1f978605e36d725675971158c5a017aab6341903a966dad04e38ef66817`）。
 本报告只覆盖 `d0_run.main` 的 Python 监督/恢复路径；**独立 `d0_restore.main` 不在本 14 例中**，
 其动态 label 由生产代码与模块身份检查覆盖，未单列运行 case。未安装、加载或调用任何 NPU/设备/真实服务命令。
 
@@ -14,6 +14,7 @@
 | 最终生产 | `0bd6f6a4789970728c341c282a88f39ce990cf76`（suite RC **0**，14/14） |
 | 生产改动 | restore/verify 未成功时 `wrapper_rc=3`；外层恢复异常同样回写 `raw-rc.wrapper_rc`；`test_rc`/`child_raw_rc` 保留 |
 | 测试范围 | 1 happy + 13 固定反例；每 case 独立子进程，隔离 `sys.modules`/模块状态 |
+| 汇总聚合 | suite 仅在全部 `case_ok=true` **且** `case_rc==0` 时通过；`test_aggregation.py` 5 项反例覆盖 `case_ok=true`+rc1 |
 | 边界 | 只 mock `subprocess.run/Popen`、`os.kill/killpg/getpgid`、`socket` 与 `/workspace`、`/proc` VFS；生产函数全部真实执行 |
 
 ## 2. 矩阵
@@ -97,6 +98,7 @@ python3 -I runtime/d0_regression/d0_main_regression.py \
 - `runtime/d0_regression/evidence/npu-smi-snapshot-2026-11-12.{txt,json}`（workers 原件）
 - `runtime/d0_regression/evidence/MANIFEST.json`（脚本 SHA、三版生产 fullSHA、矩阵、happy argv、
   loaded module identity、六份冻结源 SHA、npu 源、失败注入列表、排除项）
+- `runtime/d0_regression/evidence/aggregation-self-test.json`（5 项聚合反例结果）
 - `runtime/d0_regression/evidence/SHA256SUMS`（全部证据文件哈希）
 
 ## 7. 边界与未做项
@@ -106,3 +108,5 @@ python3 -I runtime/d0_regression/d0_main_regression.py \
 - 真实写入只发生在临时 run 目录；`/workspace` 与 `/proc` 的写入被断言拒绝。
 - 未新增服务采集；npu-smi 使用上述既有真实原件，text/image 仅用虚拟 fixture。
 - 独立 `d0_restore.main` 不在 14 例中；本报告不把它计为已运行 case。
+- 汇总聚合反例：`ok_json_rc1` 等 5 项由 `runtime/d0_regression/test_aggregation.py` 验证；结果冻结在
+  `evidence/aggregation-self-test.json`。

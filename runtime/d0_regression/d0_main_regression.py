@@ -892,6 +892,12 @@ def evaluate_case(out: dict, state: dict, args, mod_dir: Path) -> None:
                                                  for name in artifacts))
 
 
+def aggregate_cases(cases: list) -> dict:
+    """A suite passes only when every case both asserts and exits zero."""
+    ok = all(case.get("case_ok") is True and case.get("case_rc") == 0 for case in cases)
+    return {"case_ok": ok, "suite_rc": 0 if ok else 1}
+
+
 def run_suite(args) -> int:
     suite_dir = Path(tempfile.mkdtemp(prefix="d0suite-"))
     cases = []
@@ -919,11 +925,12 @@ def run_suite(args) -> int:
                         "test_rc", "wrapper_rc", "restore_ok", "verify_ok",
                         "restore_blocked", "verify_blocked", "production_gap", "failed")}
                       for case in cases],
-            "case_ok": all(case.get("case_ok") for case in cases),
+            "case_ok": aggregate_cases(cases)["case_ok"],
+            "aggregation": aggregate_cases(cases),
             "production_gaps": [case["production_gap"] for case in cases
                                 if case.get("production_gap")],
         }
-        summary["suite_rc"] = 0 if summary["case_ok"] else 1
+        summary["suite_rc"] = summary["aggregation"]["suite_rc"]
         Path(args.json_out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.json_out).write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n")
         if args.freeze_dir:
