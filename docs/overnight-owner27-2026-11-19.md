@@ -58,6 +58,14 @@ probe child_rc0、无 timeout、reaped=true、unknown/residual为空；独立 ve
 
 恢复远端目录 `/workspace/yangchen/logs/handoff27-ab-recover-20261118T184552Z-428a533f/`。精确树1196772/1196897/1196898/1196925/1196926均由 TERM 退出，killed/refused/survivors均为空。02:47:28 CST 恢复四检完成，外层rc0、source f810、guard76595657；新 label `d0-restore-20261118T184556Z-5392095c`，root1198436，worker1198610/1198611。原件：[完成](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/complete.json)、[stop](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/stop-record.json)、[四检](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/restore.json)。后续 N1 cores2 已按20授权与23核定开始；head A/B 等待新版本核验。
 
+## N1 ARon/cores2：两段边界通过
+
+20 授权且23核准后，使用独立 bundle `clef-n1-25-window-v2-aron-c2-owner27`，来源 `f16a15107e970bf1d4bfee72f8f7a7345daa6767`，payload `697a7538b218b6c059b6b6f162fc75266ac53fdb85e4e6ecfb27139e9415b478`。相对 cores1 仅变更 cores=2；输入、包、adapter、固定门与监管流程保持。
+
+两 rank 各12个真实 bin 的 SHA/大小核验通过；reduced/Y/residual/rstd 与本格 reference 及 cores1 原始字节相等，固定门全过。diag 直接解码证明 slot0 [0,483)、slot1 [483,967)，四个有效槽的 FNV 校验和通过，剩46槽全零。rstd 第481–484行在两rank、reference、cores1间均逐位相等。该格覆盖两段行边界和已观测的跨核 reduced 可见性，性能保持未测。
+
+远端 `/workspace/yangchen/logs/n1-v2-aron-c2-owner27-20261119T0245/`；窗口 overall_rc0，probe child_rc0、reaped、无未知/残留。vendor退役16文件逐SHA匹配。02:49:50 CST 恢复四检闭合：label `d0-restore-20261118T184817Z-ea064140`，root1200025，worker1200187/1200188。原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/window.json)、[probe](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/probe/head-probe.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/restore.json)。23已独立闭合数值、diag、vendor与恢复证据。
+
 ## 后续执行
 
-后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
+等待最终 head A/B 包 `c0a176d14d66836226202fbb2602b510776d103a` 的有限核验后重跑新空窗口。后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
