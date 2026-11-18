@@ -183,3 +183,51 @@ python3 runtime/analyze_joint_smallq_acb.py \
   --expect-sha 79d115accb3822425db30c40ccd11775213e45ed5e3ffbecbf5d46c09c203caa \
   --output /tmp/smallq-acb-paired-summary.json
 ```
+
+## B/D 元数据去重实测（2026-11-19 03:31–03:33 CST）
+
+27 按 `9b803fefba4d1aa3beab1125bb4cbc7a3daae12f` / profile `71f7e7a190189ead00df6a6e9d3b5201a7df1c081aef1807a84629958651bf3b` 执行单一新窗口。原件归档 `Clef-27B/logs/joint-smallq-20261119/bd-v1/`；probe SHA `8aea817c7b220a8c681578a39d9ee4bc6bf75cb782cb68c879278fdc9feadfcd`。D 仅每调用元数据读取去重，共享 K/V 校验一次；B 四冻件、projection tail、layout、kernel 和支持域保持。
+
+专用标准库分析器核验 **1440 raw×5字段**全有限且为正、9格×4轮×2臂×20、顺序 `BD/DB/DB/BD`、每轮记录中位数与全部配对 delta 精确匹配。首调用与稳态分列，首个 B wall261.39744ms 属首次编译或缓存查找路径，未计入正式比较。10种损坏原件（缺样本、错顺序、NaN、改写delta、fallback不等、输入hash、sourcehash、D/B不等、defaultoff不等、错误experiment）全部拒绝。
+
+11组原门通过：A参考下 core max_abs≤.001953125、head≤.0009765625、prob≤.00019699335；**所有D/B gate逐位一致**。D defaultoff 对 f810 逐位一致且禁止 backend 调用；两fallback所有臂逐位一致、零backend；A六MHA及K/V身份、B/D六backend、同权重storage、单变量AST、冻件与九组输入哈希全部通过。真实 checkpoint 与前两窗相同，输入为合成BF16。
+
+### 三个完整 head 的同轮配对
+
+单位 ms；四轮各臂20样本取中位数，再计算 D−B。所有下列 wall/device/host_submit 差值均 **4/4为负**。
+
+| L | wall中位差 | wall范围 | wall百分比中位 | device中位差 | device范围 | host_submit中位差 |
+|---|---:|---|---:|---:|---|---:|
+|307|−.0458875|[−.078400,−.023630]|−.9631%|−.0439849|[−.089070,−.024690]|−.0428275|
+|967|−.0369825|[−.204970,−.026035]|−.7922%|−.0390600|[−.156880,−.023360]|−.0388450|
+|1595|−.0495500|[−.254780,−.021020]|−1.0329%|−.0471551|[−.219700,−.023100]|−.0464350|
+
+wall四轮原差值：307 `[-.078400,-.052900,-.038875,-.023630]`；967 `[-.204970,-.026165,-.047800,-.026035]`；1595 `[-.066585,-.254780,-.021020,-.032515]`。个别轮次有较大负差，结论使用四轮配对中位数；所有绝对臂中位数、百分比、范围及五字段逐轮差值均在 `paired-summary.json`。
+
+### 相同 core callable 的控制结果
+
+B/D core均直接调用同一kernel；以下差值单位微秒，表示本窗波动。
+
+| L/Q | wall中位差 | device中位差 | wall快轮/device快轮 |
+|---|---:|---:|---|
+|307/1|−.8725|−1.5050|3/4，3/4|
+|307/4|+.3175|+1.6100|2/4，0/4|
+|967/1|−.7950|+.2700|2/4，1/4|
+|967/4|−.9925|−.5800|3/4，3/4|
+|1595/1|+1.2400|+.4750|1/4，1/4|
+|1595/4|−.2575|−.6850|2/4，3/4|
+
+整头 metadata 去重相对B稳定回收约 **37–50μs**，host_submit 与 wall/device 同向；event含stream gap、host_submit可能含框架同步，仍保留其测量边界。core控制中的小差异不作为kernel改进证据。
+
+本轮 A 只做数值参照，**D相对生产f810尚无稳态总收益证据**；保留各窗独立结果，禁止用旧A/C/B减本窗D/B推算总收益。生产smallQ继续默认off，不升级服务AB；S1/S2与全量OD/ERQA≤2pp尚未实测。
+
+### 恢复闭合与复算
+
+window `862af0c08338c8032cc98ed0d85f5b27c709aa3598206f1b1d5a1739fd4df136` overall0、六步rc0/oktrue；record `5ff9b005470215128229851aa38c2ce4d46a59e19cada152413b4acf8671c500` cleanup rc0/reaped、unknown/residual/killed均空；revert `616e901a9aeed6e3be32be713ef46fd3039c58eca4e89d1f392f00e42207e2b0` 回f810。restore `d6c33ba56886893d8904e6ce739e4cc4927b1bbd4987dc26730f038bf4cbd7d0` 四检rc0/oktrue；label `d0-restore-20261118T193157Z-1b3839a2`，root1220123/start394730336，workers1220262/1220263。
+
+```bash
+python3 runtime/analyze_joint_smallq_bd.py \
+  Clef-27B/logs/joint-smallq-20261119/bd-v1/head-probe.json.gz \
+  --expect-sha 8aea817c7b220a8c681578a39d9ee4bc6bf75cb782cb68c879278fdc9feadfcd \
+  --output /tmp/smallq-bd-paired-summary.json
+```
