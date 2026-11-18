@@ -79,14 +79,18 @@
 | `HcclGetRootInfo(&root)` | rc=0 |
 | `HcclCommInitRootInfo(2, &root, rank, &comm)` | **rc=0，两 rank 均拿到非空 comm** |
 | `HcclKfcOpArgsSet*`（count/reduce/dtype/engine=2） | 全部 rc=0（引擎 2/4 可接受，0/1/3 rc=5） |
-| `HcclCreateOpResCtx(comm, 2, opArgs, &ctx)` | **rc=1**，日志 `[GetAlgInfo] invalid algConfig=[AllReduce=level0:NA;level1:AicpuAllReduceSoleNHRAicpuReduce]` |
+| `HcclCreateOpResCtx(comm, 2, opArgs, &ctx)`，algConfig 为空（自动选择） | **rc=1**，ctx=nil；日志 `[GetAlgInfo] invalid algConfig=[]` |
+| 同上，`AllReduce=level0:ring` | **rc=0，ctx=0x12c081200000（两 rank 相同），PASS** |
+| 同上，`AllReduce=level0:doublering` | **rc=0，ctx 非空，PASS** |
+| 同上，`AllReduce=level0:fullmesh` | **rc=0，ctx 非空，PASS** |
 
-- 结论：**公共 ABI 可用，2-rank comm 可自建**；失败点是 `algConfig` 字符串。22 已确认那是
-  `libmc2_client.so` 的 MC2 executor 名，不在 HCCL 框架词表内，且层级用错（应为 `level0`）。
+- 结论：**公共 ABI 可用，2-rank comm 可自建；资源上下文在显式算法串下创建成功**。空串/自动选择被 `GetAlgInfo` 拒为 invalid，**只证明该参数组合未通过解析，不能据此判定 910_93 KFC 路径不可行**。
+- 真实加载库（`dladdr`）：`HcclGetRootInfo` / `HcclCommInitRootInfo` ← `libhcomm.so`；`HcclKfcAllocOpArgs` / `HcclCreateOpResCtx` ← `libhccl.so`。
 - HCCL 期望格式（`libhccl_fwk.so` 报错原文）：`level0:NA;level1:<algo>` 或 `<op>=level0:NA;level1:<algo>`；
   字面示例包含 `AllReduce=level0:ring`、`AllReduce=level0:doublering`、`AllReduce=level0:fullmesh`，
   词表为小写 `ring / doublering / fullmesh / pairwise / hierarchy / pipeline / star`，AP 级算法在 **level0**。
-- 待验证顺序（**尚未执行，等指令**）：空/`nullptr` 让 HCCL 自选 → `AllReduce=level0:ring` → `doublering` → `fullmesh`。
+- 已执行顺序：空串 → `ring` → `doublering` → `fullmesh`；结果如上。**三种串被接受不等于三种 executor 都实际运行**：本次日志只有通用 `Executor*` 记录，未给出实际算法名，该项**待确认**（后续 kernel 侧以真实 AR 结果与日志再定）。
+- 证据：`/workspace/yangchen/logs/perf-wave3-20261118/gate8/`（三种变体的 HCCL 日志目录 + 最后一次 fullmesh 的 rank0/rank1 stdout）。
 - 证据分层：头文件存在（已核）；运行时报错串与字面示例（已核，仅证明词表）；**实际选中算法与拓扑尚未确认**。
 
 ### 证据分层约定（勿合并）
