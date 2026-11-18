@@ -14,13 +14,15 @@ public:
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR residual, GM_ADDR gamma,
                                 GM_ADDR out, GM_ADDR residualOut, GM_ADDR rstd,
-                                const ClefArAddRmsNormTilingData* t) {
+                                GM_ADDR diag, GM_ADDR workspace, const ClefArAddRmsNormTilingData* t) {
         m_ = t->m;
         n_ = t->n;
         eps_ = t->eps;
         invN_ = t->invN;
         useHccl_ = t->useHccl != 0;
         xGm_ = x;
+        wsGm_ = workspace;
+        diag_.SetGlobalBuffer((__gm__ float*)diag, 8);
         repeat_ = static_cast<uint8_t>(t->repeat);
         mPad_ = t->mPad;
         x_.SetGlobalBuffer((__gm__ bfloat16_t*)x, static_cast<uint64_t>(m_) * n_);
@@ -39,6 +41,7 @@ public:
         pipe_.InitBuffer(bs_, 64 * sizeof(float));
         pipe_.InitBuffer(bwr_, 512 * sizeof(float));
         pipe_.InitBuffer(bgst_, 32);
+        pipe_.InitBuffer(diagT_, 32);
     }
 
     __aicore__ inline void Process() {
@@ -51,13 +54,22 @@ public:
             const int32_t setRc = hccl.SetCcTilingV2(offsetof(ClefArAddRmsNormTilingData, mc2CcTiling));
             rankId = static_cast<int32_t>(hccl.GetRankId());
             rankDim = static_cast<int32_t>(hccl.GetRankDim());
-            HcclHandle h = hccl.AllReduce<true>(xGm_, xGm_, static_cast<uint64_t>(m_) * n_,
+            HcclHandle h = hccl.AllReduce<true>(xGm_, wsGm_, static_cast<uint64_t>(m_) * n_,
                                                 HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM, repeat_);
             PipeBarrier<PIPE_ALL>();
             arRc = hccl.Wait(h) * 100 + setRc;
             hccl.Finalize();
         }
-        tilingDiag(arRc, rankId, rankDim);
+        if (GetBlockIdx() == 0) {
+            LocalTensor<float> d = diagT_.Get<float>();
+            d.SetValue(0, static_cast<float>(rankId));
+            d.SetValue(1, static_cast<float>(rankDim));
+            d.SetValue(2, static_cast<float>(arRc));
+            d.SetValue(3, useHccl_ ? 1.0f : 0.0f);
+            PipeBarrier<PIPE_ALL>();
+            DataCopy(diag_[0], d, 8);
+            PipeBarrier<PIPE_ALL>();
+        }
         LocalTensor<bfloat16_t> gl = bg_.Get<bfloat16_t>();
         LocalTensor<float> gf = bt_.Get<float>();
         DataCopy(gl, g_[0], n_);
@@ -144,6 +156,8 @@ private:
     TBuf<TPosition::VECCALC> bx_, br_, bg_, bo_, bz_, bt_, bw_, bs_, bwr_, bgst_;
     GlobalTensor<bfloat16_t> x_, r_, g_, o_, ro_;
     GlobalTensor<float> rs_;
+    GlobalTensor<float> diag_;
+    TBuf<TPosition::VECCALC> diagT_;
     uint32_t m_{0}, n_{0};
     float eps_{1e-6f};
     float invN_{0.0f};
@@ -151,18 +165,19 @@ private:
     const ClefArAddRmsNormTilingData* tiling_{nullptr};
     bool useHccl_{false};
     GM_ADDR xGm_{nullptr};
+    GM_ADDR wsGm_{nullptr};
     uint8_t repeat_{1};
 };
 
 extern "C" __global__ __aicore__ void clef_ar_add_rms_norm(
     GM_ADDR x, GM_ADDR residual, GM_ADDR gamma,
-    GM_ADDR out, GM_ADDR residualOut, GM_ADDR rstd,
+    GM_ADDR out, GM_ADDR residualOut, GM_ADDR rstd, GM_ADDR diag,
     GM_ADDR workspace, GM_ADDR tilingGm) {
     (void)workspace;
     REGISTER_TILING_DEFAULT(ClefArAddRmsNormTilingData);
     GET_TILING_DATA(tilingData, tilingGm);
     ClefArAddRmsNormKernel kernel;
     kernel.SetTiling(&tilingData);
-    kernel.Init(x, residual, gamma, out, residualOut, rstd, &tilingData);
+    kernel.Init(x, residual, gamma, out, residualOut, rstd, diag, workspace, &tilingData);
     kernel.Process();
 }

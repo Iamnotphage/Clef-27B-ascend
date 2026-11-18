@@ -35,8 +35,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     if (t->repeat == 0 || t->repeat > 255) { return ge::GRAPH_FAILED; }
     // The group must be the real HCCL comm name (from the actual PG), never a
     // hardcoded string; the op def marks it REQUIRED and binds it to MC2.
-    const char* const* groupPtr = context->GetAttrs()->GetAttrPointer<char*>(2);
-    const char* group = (groupPtr != nullptr) ? *groupPtr : nullptr;
+    const char* group = context->GetAttrs()->GetAttrPointer<char>(2);
     if (group == nullptr || group[0] == '\0') { return ge::GRAPH_FAILED; }
     t->commEngine = kEngineAicpu;
     t->opType = kOpTypeAllReduce;
@@ -60,7 +59,9 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     if (cores == 0) cores = 8;
     if (t->useHccl != 0) cores = 1;
     context->SetBlockDim(cores);
-    context->GetWorkspaceSizes(1)[0] = 0;
+    // Out-of-place reduction destination (in-place was observed to leave the
+    // source unchanged even though Wait returned success).
+    context->GetWorkspaceSizes(1)[0] = static_cast<size_t>(t->m) * t->n * 2 + 128;
     return ge::GRAPH_SUCCESS;
 }
 }  // namespace optiling
@@ -74,12 +75,16 @@ static graphStatus InferShape(gert::InferShapeContext* context) {
     gert::Shape rstd;
     rstd.AppendDim(x->GetDim(0));
     *context->GetOutputShape(2) = rstd;            // rstd [M]
+    gert::Shape diag;
+    diag.AppendDim(8);
+    *context->GetOutputShape(3) = diag;
     return GRAPH_SUCCESS;
 }
 static graphStatus InferDataType(gert::InferDataTypeContext* context) {
     context->SetOutputDataType(0, context->GetInputDataType(0));
     context->SetOutputDataType(1, context->GetInputDataType(0));
     context->SetOutputDataType(2, ge::DT_FLOAT);
+    context->SetOutputDataType(3, ge::DT_FLOAT);
     return GRAPH_SUCCESS;
 }
 }  // namespace ge
@@ -97,6 +102,8 @@ public:
                 .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND});
         }
         this->Output("rstd").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND});
+        this->Output("diag").ParamType(REQUIRED).DataType({ge::DT_FLOAT})
             .Format({ge::FORMAT_ND}).UnknownShapeFormat({ge::FORMAT_ND});
         this->Attr("eps").Float();
         this->Attr("repeat").Int(1);

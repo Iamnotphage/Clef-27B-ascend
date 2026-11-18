@@ -56,3 +56,42 @@
 | kernel | `runtime/ascendc/clef_ar_add_rms_norm/op_kernel/clef_ar_add_rms_norm.cpp` |
 
 注意：gate-B 的 `d8851ed7…` 是 11:30 的**脚手架包**，不能代表本次数值构建；本次 kernel 身份以 `71e16663…` 为准。
+
+## 5. KFC AllReduce 融合链实测（2026-11-18 12:40 CST）
+
+**结论：eager 注入链打通、AR 返回成功，但归约结果没有落到提供的 GM 缓冲上；数值未通过。**
+
+### 5.1 构建与接线
+
+- op def：`Attr("group").String()` + `MC2().HcclGroup("group")`；tiling 用真实 group 构造 `Mc2CcTilingConfig`；
+  `mc2InitTiling`(64 B) / `mc2CcTiling`(512 B) 连续置于 tiling 结构最前，kernel 用 `offsetof` 作为 `SetCcTilingV2` 的偏移。
+- kernel：`InitV2(GetHcclContext<HCCL_GROUP_ID_0>(), &tiling->mc2InitTiling)` → `SetCcTilingV2(offsetof(...))` →
+  `AllReduce<true>(x, recv, M*N, BFP16, SUM, 1)` → `Wait` → `Finalize` → Add+RMSNorm；AR 阶段 `blockDim=1`。
+- eager 侧：自研 torch adapter（直接调用生成的 aclnn + `OpCommand.SetCustomHandler`），group 取自真实
+  `ProcessGroupHCCL` 的 `get_hccl_comm_name(rank)`，实测值为 `group_name_0`。
+- 身份：package `84d9cc18…`（255,016 B）、kernel `.o` `926c6e8a…`、adapter `.so` `781f07a4…`。
+
+### 5.2 逐步结果（两 rank 均保存）
+
+| 运行 | 结果 |
+| --- | --- |
+| run6 | 在 `GetWorkspaceSize` 内 **SIGSEGV**：根因是 group attr 取法错误（`GetAttrPointer<char*>` 解引用）；按固定范本改为 `GetAttrPointer<char>` 修复 |
+| run7 | 原始 rc=0；两 rank `GetWorkspaceSize st=0/ws=0/exec≠null`、`OpCommand.Run` 返回；三输出产出，但 `max_abs_y=4.09`、`residual=1.61`、`rstd=0.787` |
+| run9/10 | 增加独立 `diag` 输出：`[rankId=0, rankDim=2, rc=0, useHccl=1]`，**上下文有效且 AR 报成功** |
+| run11 | 改为 out-of-place（workspace 作 recvBuf）：`ours_res = r`（workspace 为 0），仍无对端贡献 |
+
+### 5.3 现象与解释边界
+
+- in-place：`z = x_local + r`（无对端项）；out-of-place：`z = 0 + r`（workspace 未被写入）。
+- 参考（同进程 `dist.all_reduce` + `npu_add_rms_norm`）在相同输入上正确：`total = x0 + x1`。
+- 因此不是上下文缺失、不是 shape/类型错误，而是**归约数据没有出现在我们提供的 GM 地址**。
+- 候选解释（未证实，按证据区分）：KFC `AllReduce` 的 send/recv 可能需要落在**通信窗口**（`GetWindowsInAddr/OutAddr`）
+  或由 tiling 指定的窗口内，而不是任意 workspace；也可能需要额外的窗口注册/可见性步骤。
+- **尚未做性能测量**，也没有任何质量结论；该链当前只到 “AR+Add+RMSNorm，不含 MatMul”。
+
+### 5.4 下一步
+
+1. 只读核对 adv_api `Hccl` 对 sendBuf/recvBuf 的窗口要求与 `GetWindowsInAddr/OutAddr` 语义；
+2. 若需要窗口，调整 tiling/kernel 让 AR 目标落在窗口内后重跑同一两 rank 测试（判据：`residual_sum` 与
+   `dist.all_reduce` 参考一致）；
+3. 通过后再做同条件完整链计时与 A–E；服务在阶段结束时已恢复（health/文本/图文均通过）。
