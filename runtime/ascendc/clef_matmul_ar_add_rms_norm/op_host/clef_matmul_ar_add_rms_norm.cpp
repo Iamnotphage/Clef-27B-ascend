@@ -162,10 +162,10 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     mmTiling.SetDim(static_cast<int32_t>(mmDim));
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
-    // B is ND in this diagnostic build: the block-dim sweep must isolate a
-    // single variable.  The service contract is FRACTAL_NZ and the NZ build is
-    // produced once the block-dim / sub-block question is settled.
-    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
+    // B is FRACTAL_NZ: the service already packs the down-projection weight
+    // with npu_format_cast(..., 29) at load time, so the op never converts.
+    // N=5120 and K=8704 both satisfy the 16-element NZ alignment.
+    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ,
                       matmul_tiling::DataType::DT_BFLOAT16, bTrans);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16);
