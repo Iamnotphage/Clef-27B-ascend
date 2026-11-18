@@ -18,6 +18,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -328,12 +329,25 @@ class ServiceAB:
 
     def is_final_vllm(self, identity):
         cmdline = (identity or {}).get("cmdline", "")
-        markers = ("-m vllm.entrypoints.cli.main serve",
-                   "--served-model-name clef",
-                   "--tensor-parallel-size 2",
-                   "--enforce-eager",
-                   f"--port {self.args.port}")
-        return all(marker in cmdline for marker in markers)
+        try:
+            tokens = shlex.split(cmdline)
+        except ValueError:
+            return False
+        if len(tokens) < 5:
+            return False
+        if tokens[0] != getattr(self.args, "python", ""):
+            return False
+        if tokens[1:4] != ["-m", "vllm.entrypoints.cli.main", "serve"]:
+            return False
+        if tokens[4] != "/workspace/yangchen/models/Clef-27B":
+            return False
+        def value(name):
+            return tokens[tokens.index(name) + 1] if name in tokens[:-1] else None
+        return (value("--served-model-name") == "clef"
+                and value("--tensor-parallel-size") == "2"
+                and value("--port") == str(self.args.port)
+                and "--enforce-eager" in tokens
+                and value("--host") == "127.0.0.1")
 
     def refresh_arm_identity(self, label):
         identity = getattr(self, "arm_identity", None)
@@ -353,6 +367,32 @@ class ServiceAB:
         self.arm_identity = {"root": live,
                              "descendants": self.win.descendants(saved["pid"])}
         return True
+
+    def run_arm(self, flag, label):
+        arm = self.start_arm(flag, label)
+        provenance = arm
+        samples = None
+        arm_error = None
+        stop_info = None
+        stop_error = None
+        try:
+            samples = self.run_inputs(label)
+        except Exception as exc:
+            arm_error = f"{type(exc).__name__}: {exc}"
+        finally:
+            try:
+                stop_info = self.stop_tree(arm, label)
+            except Exception as exc:
+                stop_error = f"{type(exc).__name__}: {exc}"
+                self.cleanup_unconfirmed = True
+            if stop_error is None:
+                self.arm_identity = None
+        if arm_error:
+            raise AbError(arm_error)
+        if stop_error:
+            raise AbError(stop_error)
+        return {"label": label, "provenance": provenance, "samples": samples,
+                "error": None, "stop": stop_info, "stop_error": None}
 
     def start_arm(self, flag, label):
         try:
@@ -603,34 +643,9 @@ def main() -> int:
             ab.flush(f"round-{index}-start")
             for flag in order:
                 label = f"d0-ab-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{index}-{flag}-{uuid.uuid4().hex[:6]}"
-                arm = ab.start_arm(flag, label)
-                provenance = arm
-                samples = None
-                arm_error = None
-                stop_info = None
-                stop_error = None
-                try:
-                    samples = ab.run_inputs(label)
-                except Exception as exc:
-                    arm_error = f"{type(exc).__name__}: {exc}"
-                finally:
-                    try:
-                        stop_info = ab.stop_tree(arm, label)
-                    except Exception as exc:
-                        stop_error = f"{type(exc).__name__}: {exc}"
-                        ab.cleanup_unconfirmed = True
-                    row["arms"][str(flag)] = {
-                        "label": label, "provenance": provenance,
-                        "samples": samples, "error": arm_error,
-                        "stop": stop_info, "stop_error": stop_error}
-                    ab.flush(f"round-{index}-flag-{flag}")
-                    if stop_error is None:
-                        arm = None
-                        ab.arm_identity = None
-                if arm_error:
-                    raise AbError(arm_error)
-                if stop_error:
-                    raise AbError(stop_error)
+                arm_row = ab.run_arm(flag, label)
+                row["arms"][str(flag)] = arm_row
+                ab.flush(f"round-{index}-flag-{flag}")
     except Exception as exc:
         ab.state["error"] = f"{type(exc).__name__}: {exc}"
     finally:

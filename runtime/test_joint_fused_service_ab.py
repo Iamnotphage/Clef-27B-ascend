@@ -41,7 +41,8 @@ def main() -> int:
           and mod.IMAGE_SHA.startswith("f3229f5c"))
 
     runner_meta = object.__new__(mod.ServiceAB)
-    runner_meta.args = types.SimpleNamespace(port=18143)
+    runner_meta.args = types.SimpleNamespace(
+        port=18143, python="/workspace/yangchen/venvs/clef-py312/bin/python")
     choice = json.dumps({"questions": {"answer": {"type": "choice"}}}).encode()
     score = json.dumps({"questions": {"answer": {"type": "score"}}}).encode()
     check("expect from frozen schema", 
@@ -54,11 +55,22 @@ def main() -> int:
     else:
         bad_schema = False
     check("missing schema type rejected", bad_schema)
-    final = {"cmdline": "python -m vllm.entrypoints.cli.main serve --served-model-name clef "
-                        "--tensor-parallel-size 2 --enforce-eager --port 18143"}
+    final = {"cmdline": "/workspace/yangchen/venvs/clef-py312/bin/python -m "
+                        "vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B "
+                        "--served-model-name clef --tensor-parallel-size 2 --enforce-eager "
+                        "--host 127.0.0.1 --port 18143"}
     stale = {"cmdline": "setsid nohup bash Clef-27B/start.sh --config s1"}
     check("final vllm argv recognized", runner_meta.is_final_vllm(final)
           and not runner_meta.is_final_vllm(stale))
+    for bad in (final["cmdline"].replace("--port 18143", "--port 181430"),
+                final["cmdline"].replace("--tensor-parallel-size 2",
+                                         "--tensor-parallel-size 20"),
+                final["cmdline"].replace("--served-model-name clef",
+                                         "--served-model-name clef-other"),
+                final["cmdline"].replace("/workspace/yangchen/models/Clef-27B",
+                                         "/workspace/yangchen/models/Clef-27B-other")):
+        check("wrong final argv rejected: " + bad.split("--")[-1][:20],
+              not runner_meta.is_final_vllm({"cmdline": bad}))
 
     # continuity refresh: same pid/start/boot/pgid + known final argv updates
     runner_meta.win = types.SimpleNamespace(
@@ -73,7 +85,7 @@ def main() -> int:
     runner_meta.attribution_unknown = False
     check("exec refresh updates live identity",
           runner_meta.refresh_arm_identity("L") is True
-          and runner_meta.arm_identity["root"]["cmdline"].startswith("python -m vllm")
+          and "/python -m vllm.entrypoints.cli.main serve" in runner_meta.arm_identity["root"]["cmdline"]
           and runner_meta.arm_identity["descendants"] == [{"pid": 1197000}])
     runner_meta.attribution_unknown = False
     runner_meta.win.proc_identity = lambda pid: dict(
@@ -199,6 +211,26 @@ def main() -> int:
                   == mod.SERVICE_CHECK_SOURCE_SHA)
         check("stage candidate against approved wrapper", ok)
         checks[-1] = (checks[-1][0], ok)
+
+    # real run_arm used by main: sampling error still stops the bound arm
+    runner_arm = object.__new__(mod.ServiceAB)
+    runner_arm.cleanup_unconfirmed = False
+    runner_arm.arm_identity = {"root": {"pid": 7}, "descendants": []}
+    runner_arm.start_arm = lambda flag, label: {"root": {"pid": 7}, "label": label}
+    def bad_inputs(label):
+        raise mod.AbError("sampling failed")
+    runner_arm.run_inputs = bad_inputs
+    stopped = []
+    runner_arm.stop_tree = lambda identity, label: stopped.append((identity, label)) or {"ok": True}
+    try:
+        runner_arm.run_arm(0, "L")
+    except mod.AbError:
+        arm_blocked = True
+    else:
+        arm_blocked = False
+    check("main arm cleanup on sampling error", arm_blocked
+          and len(stopped) == 1 and stopped[0][0]["root"]["pid"] == 7
+          and runner_arm.arm_identity is None)
 
     with tempfile.TemporaryDirectory(prefix="ab-restore-") as tmp:
         tree = Path(tmp) / "tree"
