@@ -107,6 +107,17 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const auto* bufSpaceAttr = context->GetAttrs()->GetAttrPointer<int64_t>(8);
     const int64_t bufSpaceReq = (bufSpaceAttr == nullptr) ? 0 : *bufSpaceAttr;
     if (bufSpaceReq < 0 || bufSpaceReq > 2) { return ge::GRAPH_FAILED; }
+    // norm_ub_late=1 (default) defers the normalisation pass's ~120 KB of UB
+    // until after the cube stage, so the matmul's own InitBuffer cannot find
+    // the pool already spent.  0 restores the previous allocation order.
+    const auto* normLateAttr = context->GetAttrs()->GetAttrPointer<int64_t>(9);
+    t->normLate = ((normLateAttr == nullptr) || (*normLateAttr != 0)) ? 1u : 0u;
+    // mm_btrans=1: B is physically column-major.  The host tiling flag and the
+    // kernel's SetTensorB flag are driven by this one attribute so they cannot
+    // disagree.
+    const auto* bTransAttr = context->GetAttrs()->GetAttrPointer<int64_t>(10);
+    const bool bTrans = (bTransAttr != nullptr) && (*bTransAttr != 0);
+    t->mmBTrans = bTrans ? 1u : 0u;
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
@@ -148,7 +159,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     // single variable.  The service contract is FRACTAL_NZ and the NZ build is
     // produced once the block-dim / sub-block question is settled.
     mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
-                      matmul_tiling::DataType::DT_BFLOAT16, false);
+                      matmul_tiling::DataType::DT_BFLOAT16, bTrans);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16);
     mmTiling.SetBias(false);
@@ -229,6 +240,8 @@ public:
         this->Attr("mm_dim").Int(0);
         this->Attr("mm_mode").Int(2);
         this->Attr("mm_bufspace").Int(0);
+        this->Attr("norm_ub_late").Int(1);
+        this->Attr("mm_btrans").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");

@@ -15,17 +15,24 @@ using namespace AscendC;
 //   * InitV2(GetHcclContext<HCCL_GROUP_ID_0>(), &tiling->mc2InitTiling);
 //   * SetCcTilingV2(offsetof(tiling, mc2CcTiling)) -- offset relative to the
 //     initTiling pointer, which is why mc2InitTiling is the first member;
-//   * AllReduce<true>(send, recv, m*n, BFP16, SUM, repeat) is out-of-place
-//     (in-place was observed to leave the source unchanged);
+//   * AllReduce<true>(send, recv, m*n, BFP16, SUM, repeat) is out-of-place;
 //   * after Wait() the reduced buffer is read only after a full-cache
 //     invalidate;
 //   * only core 0 writes hcclMsgArea, the other cores wait on a GM flag.
+//
+// Device-qualified facts this file is built around:
+//   * mm_enable=0 is clean, so the vector path is sound;
+//   * the scalar-access fault reproduces at Init/SetOrgShape time (mm_mode=1)
+//     and with a single core (mm_dim=1), so it is not the iterate and not the
+//     multi-core split;
+//   * use_hccl=0 hangs, use_hccl=2 (lifecycle only) is clean -- 2 is the
+//     no-AllReduce control arm.
 class ClefMatmulArAddRmsNormKernel {
 public:
     using AT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     // Diagnostic build: B stays ND so the block-dim sweep isolates a single
     // variable.  The service contract is FRACTAL_NZ and moves back to
-    // CubeFormat::NZ once the block-dim / sub-block question is settled.
+    // CubeFormat::NZ once the cube fault is gone.
     using BT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using CT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using BiasT = MatmulType<TPosition::GM, CubeFormat::ND, float, false>;
@@ -41,11 +48,9 @@ public:
         k_ = t->k;
         eps_ = t->eps;
         invN_ = t->invN;
-        // 0 = skip everything, 1 = full (lifecycle + AllReduce/Wait),
-        // 2 = lifecycle only (InitV2 / SetCcTilingV2 / Finalize, no AllReduce).
-        hcclMode_ = t->useHccl;
         mPad_ = t->mPad;
         repeat_ = static_cast<uint8_t>(t->repeat);
+        hcclMode_ = t->useHccl;
         wsGm_ = workspace;
 
         xGm_ = x;
@@ -66,6 +71,18 @@ public:
         ro_.SetGlobalBuffer((__gm__ bfloat16_t*)residualOut, static_cast<uint64_t>(m_) * n_);
         rs_.SetGlobalBuffer((__gm__ float*)rstd, m_);
 
+        // Only the tiny diag buffer is taken before the cube stage, so the
+        // matmul's own InitBuffer cannot collide with the ~120 KB the
+        // normalisation pass needs when norm_ub_late is set.
+        pipe_.InitBuffer(diagT_, 32);
+        if (t->normLate == 0u) {
+            InitNormBuffers();
+        }
+    }
+
+    __aicore__ inline void InitNormBuffers() {
+        if (normBuffersReady_) return;
+        normBuffersReady_ = true;
         pipe_.InitBuffer(bx_, n_ * sizeof(bfloat16_t));
         pipe_.InitBuffer(br_, n_ * sizeof(bfloat16_t));
         pipe_.InitBuffer(bg_, n_ * sizeof(bfloat16_t));
@@ -77,7 +94,19 @@ public:
         pipe_.InitBuffer(bs_, 64 * sizeof(float));
         pipe_.InitBuffer(bwr_, 8 * 1024);
         pipe_.InitBuffer(bgst_, 2 * 1024);
-        pipe_.InitBuffer(diagT_, 32);
+    }
+
+    __aicore__ inline void WriteTilingDiag() {
+        if (GetBlockIdx() != 0) return;
+        LocalTensor<float> d = diagT_.Get<float>();
+        // 5 = usedCoreNum, 6 = baseM, 7 = depthA1: written before the cube
+        // stage so a fault inside the matmul still leaves the tiling visible.
+        d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
+        d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
+        d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
+        PipeBarrier<PIPE_ALL>();
+        DataCopy(diag_[0], d, 8);
+        PipeBarrier<PIPE_ALL>();
     }
 
     __aicore__ inline void Process() {
@@ -86,12 +115,12 @@ public:
         int32_t rankId = -1;
         int32_t rankDim = -1;
 
+        WriteTilingDiag();
+
         // ---- 1) MatMul X[M,K] x W[K,N] -> partial[M,N] (workspace region 0) --
-        // mm_enable=0 skips the whole cube stage: that is the bisect arm which
-        // tells whether the scalar-access fault lives in the matmul at all.
-        // Only blocks below the tiling's usedCoreNum may enter the matmul, so
-        // SetDim and SetBlockDim can be decoupled without indexing cores that
-        // the cube tiling never allocated internal buffers for.
+        // mm_enable=0 skips the whole cube stage.  Only blocks below the
+        // tiling's usedCoreNum may enter the matmul, so SetDim and SetBlockDim
+        // can be decoupled safely.
         if (tiling_->mmEnable != 0 &&
             GetBlockIdx() < static_cast<uint32_t>(tiling_->cubeTiling.usedCoreNum)) {
             GlobalTensor<bfloat16_t> aG, bG, cG;
@@ -101,8 +130,10 @@ public:
             mm_.Init(&tiling_->cubeTiling, &pipe_);
             mm_.SetOrgShape(m_, n_, k_);
             mm_.SetTensorA(aG, false);
-            mm_.SetTensorB(bG, false);
-            // mm_mode=1 stops before IterateAll, so one run separates a
+            // mm_btrans=1 tells the cube B is stored column-major (the
+            // classic ND-layout mismatch); host tiling and kernel must agree.
+            mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
+            // mm_mode=1 stops before IterateAll: one run separates a
             // tiling/init fault from an iterate (L1/L0C streaming) fault.
             if (tiling_->mmMode >= 2u) {
                 mm_.IterateAll(cG);
@@ -111,6 +142,10 @@ public:
         }
         AscendC::SyncAll();
         PipeBarrier<PIPE_ALL>();
+
+        if (tiling_->normLate != 0u) {
+            InitNormBuffers();
+        }
 
         // ---- 2) TP AllReduce partial -> reduced (out-of-place) ----------------
         if (hcclMode_ >= 1u && arGm_ != nullptr) {
@@ -166,13 +201,6 @@ public:
             d.SetValue(2, static_cast<float>(arRc));
             d.SetValue(3, hcclMode_ == 1u ? 1.0f : (hcclMode_ >= 1u ? 2.0f : 0.0f));
             d.SetValue(4, static_cast<float>(mmRc));
-            // 5 = the cube tiling's usedCoreNum, which is what the matmul
-            // actually splits over; compare it against GetBlockNum().
-            d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
-            // 6/7 = baseM / depthA1: the cube tiling's tile and L1 depth, which
-            // is where an over-allocated internal buffer would show up.
-            d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
-            d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
             PipeBarrier<PIPE_ALL>();
             DataCopy(diag_[0], d, 8);
             PipeBarrier<PIPE_ALL>();
@@ -265,6 +293,7 @@ private:
     uint32_t mPad_{0};
     ClefMatmulArAddRmsNormTilingData* tiling_{nullptr};
     uint32_t hcclMode_{0};
+    bool normBuffersReady_{false};
     GM_ADDR xGm_{nullptr};
     GM_ADDR wGm_{nullptr};
     GM_ADDR wsGm_{nullptr};

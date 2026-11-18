@@ -76,6 +76,8 @@ bash build.sh
 | `mm_dim` | 只驱动 `MultiCoreMatmulTiling::SetDim`（即 `TCubeTiling.usedCoreNum`），`0` = 跟随 `block_dim`，`-1` = AIC 数，`>0` = 显式 |
 | `mm_mode` | `2` = 完整（默认）；`1` = **停在 Init/SetOrgShape/SetTensorA/B 之后，不调 `IterateAll`** |
 | `mm_bufspace` | `0` = 用 tiling 自带的缓冲模型；`1` = 把 L1/L0C 约束到平台真实尺寸；`2` = 再为归一化段预留 128 KB UB |
+| `norm_ub_late` | `1`（默认）= 归一化段约 120 KB 的 UB **推迟到 cube 阶段之后**才分配；`0` = 恢复在 `Init()` 里先分配 |
+| `mm_btrans` | `1` = B 物理上是列主序（`isTransposeB`）；**host tiling 的 `SetBType(isTrans)` 与 kernel 的 `SetTensorB(isTrans)` 由同一个 attr 驱动**，不会打架 |
 
 ### 已由设备侧定性的两条（21 实测）
 
@@ -95,7 +97,20 @@ bash build.sh
 | 3 | 2 | 2 | 0 | 完整 + 为归一化预留 128 KB UB | 干净 → UB 预算冲突 |
 | 4 | 2 | 0 | 1 | 单核 cube | 干净 → 与多核切分有关 |
 
-`diag[6] = baseM`、`diag[7] = depthA1`，用来判断 tiling 给出的 tile 与 L1 深度是否离谱。
+### 已由设备侧定性的第三、四条
+
+3. `mm_dim=1`（单核）**仍崩**、`blk=0` → 与多核切分无关。
+4. `mm_mode=1`（停在 Init/SetOrgShape/SetTensorA/B，从不 IterateAll）**仍崩**、`blk=11`
+   → 故障在 **matmul 对象初始化/形状设置阶段**，不在 `IterateAll` 的流式。
+
+因此 `diag[5..7]`（usedCoreNum / baseM / depthA1）改为**在 cube 阶段之前写出**，
+`mm_mode=1` 崩溃时也能拿到 tiling 数值（也可以用 `mm_enable=0` 直接读）。
+
+### 当前主假设
+
+`Init()` 里先把归一化段约 120 KB 的 UB 分配掉了，等 `mm_.Init()` 再去取自己的 buffer 时
+池子已经不够 —— 这与"故障发生在 Init、且与核数无关"完全吻合。`norm_ub_late` 默认改为 `1`
+把归一化段的分配推到 cube 之后，所以**默认配置下一次运行就直接检验这个假设**。
 
 （历史记录：`E v1 (ND, b61e2836)` 与 `block_dim=-1` 复测都是同一故障
 `fftsplus aivector error`、`blk=22`、`subErrType:4`、
