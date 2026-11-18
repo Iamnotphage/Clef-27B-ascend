@@ -195,6 +195,12 @@ def main() -> int:
             "rstd": bf16_gate(rstd, refb_rstd.reshape(-1)),
             "y_max_rel": y_max_rel(out, refb_y),
             "criterion": "|c-r| <= 1e-5 + 0.016*|r| (torch.bfloat16 defaults), every element",
+            "hashes": {"x_sha256": hashlib.sha256(x.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                       "w_sha256": hashlib.sha256(w.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                       "r_sha256": hashlib.sha256(r.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                       "gamma_sha256": hashlib.sha256(gamma.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                       "eps": a.eps, "seed": a.seed, "w_format": "NZ" if a.w_nz else "ND",
+                       "reference": "same r/gamma/eps tensors as the candidate"},
             "seed": a.seed}
     # One-shot export over the union of residual and Y failures: both outputs'
     # values at every index, plus row/col and the row/col factors.
