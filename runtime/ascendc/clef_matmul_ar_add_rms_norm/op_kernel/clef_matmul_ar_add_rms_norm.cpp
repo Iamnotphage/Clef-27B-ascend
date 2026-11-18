@@ -147,8 +147,15 @@ public:
         // mm_enable=0 skips the whole cube stage.  Only blocks below the
         // tiling's usedCoreNum may enter the matmul, so SetDim and SetBlockDim
         // can be decoupled safely.
-        if (tiling_->mmEnable != 0 &&
-            GetBlockIdx() < static_cast<uint32_t>(tiling_->cubeTiling.usedCoreNum)) {
+        // The KFC client/server pair must be complete on every participating
+        // block: each AIV client's destructor posts a service-quit message and
+        // the per-AIC server only leaves its loop when it has collected
+        // MIX_NUM of them (kernel_kfc.h isRun() -> quitSize < MIX_NUM).  Gating
+        // the registration on usedCoreNum leaves servers short of quits and
+        // they spin forever, which surfaces as "aicore execution times out".
+        // So only the compute calls are gated; the wiring scope encloses them
+        // so the client outlives every matmul call.
+        if (tiling_->mmEnable != 0) {
             GlobalTensor<bfloat16_t> aG, bG, cG;
             aG.SetGlobalBuffer((__gm__ bfloat16_t*)xGm_, static_cast<uint64_t>(m_) * k_);
             bG.SetGlobalBuffer((__gm__ bfloat16_t*)wGm_, static_cast<uint64_t>(k_) * n_);
@@ -169,35 +176,38 @@ public:
             // server-owned internal buffers -- the device fault we saw.
             REGIST_MATMUL_OBJ(&pipe_, GetSysWorkSpacePtr(), mm_,
                               &tiling_->cubeTiling);
-            if (stage == 1u) { WriteStageDiag(1u); }  // after wiring/Init
-            if (stage != 1u) {
-                mm_.SetOrgShape(m_, n_, k_);
-                if (stage == 2u) { WriteStageDiag(2u); }
-            }
-            if (stage != 1u && stage != 2u) {
-                mm_.SetTensorA(aG, false);
-                if (stage == 3u) { WriteStageDiag(3u); }
-            }
-            if (stage != 1u && stage != 2u && stage != 3u) {
-                // mm_btrans=1 tells the cube B is stored column-major; host
-                // tiling and kernel are driven by the same attribute.
-                mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
-                if (stage == 4u) { WriteStageDiag(4u); }
-            }
-            if (stage == 0u || stage == 5u) {
-                if (tiling_->mmMode >= 2u) {
-                    // waitIterateAll=true makes the client wait until the cube
-                    // has actually produced the tile before End() retires it.
-                    mm_.IterateAll(cG, 0, false, true);
+            // Only the compute calls are gated; the wiring above runs on every
+            // block so each per-AIC server collects its MIX_NUM quits.
+            if (GetBlockIdx() < static_cast<uint32_t>(tiling_->cubeTiling.usedCoreNum)) {
+                if (stage == 1u) { WriteStageDiag(1u); }  // after wiring/Init
+                if (stage != 1u) {
+                    mm_.SetOrgShape(m_, n_, k_);
+                    if (stage == 2u) { WriteStageDiag(2u); }
                 }
-                if (stage == 5u) { WriteStageDiag(5u); }
-                // The documented call order ends with End(); on the client
-                // path it posts MMFUN_END so the pending task is retired and
-                // the KFC server side can quiesce.  Leaving it out leaves the
-                // server loop waiting, which reads as an aicore timeout.
-                mm_.End();
+                if (stage != 1u && stage != 2u) {
+                    mm_.SetTensorA(aG, false);
+                    if (stage == 3u) { WriteStageDiag(3u); }
+                }
+                if (stage != 1u && stage != 2u && stage != 3u) {
+                    // mm_btrans=1 tells the cube B is stored column-major; host
+                    // tiling and the kernel share the same attribute.
+                    mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
+                    if (stage == 4u) { WriteStageDiag(4u); }
+                }
+                if (stage == 0u || stage == 5u) {
+                    if (tiling_->mmMode >= 2u) {
+                        // waitIterateAll=true so End() retires a tile that has
+                        // actually been produced.
+                        mm_.IterateAll(cG, 0, false, true);
+                    }
+                    if (stage == 5u) { WriteStageDiag(5u); }
+                    // The documented call order ends with End(); on the client
+                    // path it posts MMFUN_END, which retires the pending cube
+                    // task before the client's scope ends.
+                    mm_.End();
+                }
+                mmRc = 0;
             }
-            mmRc = 0;
         }
         if (tiling_->mmStage >= 1u && tiling_->mmStage <= 5u) {
             // Stage-gated run: leave together, no barrier, no AR, no norm.
