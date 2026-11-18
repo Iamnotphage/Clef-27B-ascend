@@ -180,7 +180,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     // B is FRACTAL_NZ: the service already packs the down-projection weight
     // with npu_format_cast(..., 29) at load time, so the op never converts.
     // N=5120 and K=8704 both satisfy the 16-element NZ alignment.
-    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ,
+    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, bTrans);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16);

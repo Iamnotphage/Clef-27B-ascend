@@ -35,7 +35,7 @@ public:
     // time), so the operator assumes "weight arrives already NZ" and never
     // converts.  The ND variant remains at commit b1f1741 for the numeric
     // gate; host SetBType and SetTensorB are driven by the same attribute.
-    using BT = MatmulType<TPosition::GM, CubeFormat::NZ, bfloat16_t, false>;
+    using BT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using CT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using BiasT = MatmulType<TPosition::GM, CubeFormat::ND, float, false>;
 
