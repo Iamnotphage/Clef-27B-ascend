@@ -1,0 +1,108 @@
+utc=2026-11-18T12:38:59+00:00
+full chain normrt: use_hccl=1 mm_enable=1 mm_dim=1 M967 K8704 N5120
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py", line 1442, in load_library
+[rank0]:     ctypes.CDLL(path)
+[rank0]:   File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/ctypes/__init__.py", line 379, in __init__
+[rank0]:     self._handle = _dlopen(self._name, mode)
+[rank0]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: OSError: /workspace/yangchen/work/wave3-e-adapter/clef_e_adapter.so: undefined symbol: _ZN9torch_npu9NPUBridge17GetNpuStorageImplERKN2at6TensorE
+
+[rank0]: The above exception was the direct cause of the following exception:
+
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 186, in <module>
+[rank0]:     raise SystemExit(main())
+[rank0]:                      ^^^^^^
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 62, in main
+[rank0]:     mod = build(a.adapter_dir, a.op_api_dir, a.build_dir)
+[rank0]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 13, in build
+[rank0]:     return load(name="clef_e_adapter", sources=[str(adapter_dir / "clef_e_adapter.cpp")],
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 1767, in load
+[rank0]:     return _jit_compile(
+[rank0]:            ^^^^^^^^^^^^^
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 2233, in _jit_compile
+[rank0]:     return _import_module_from_library(name, build_directory, is_python_module)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 2737, in _import_module_from_library
+[rank0]:     torch.ops.load_library(filepath)
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py", line 1444, in load_library
+[rank0]:     raise OSError(f"Could not load this library: {path}") from e
+[rank0]: OSError: Could not load this library: /workspace/yangchen/work/wave3-e-adapter/clef_e_adapter.so
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py", line 1442, in load_library
+[rank1]:     ctypes.CDLL(path)
+[rank1]:   File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/ctypes/__init__.py", line 379, in __init__
+[rank1]:     self._handle = _dlopen(self._name, mode)
+[rank1]:                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: OSError: /workspace/yangchen/work/wave3-e-adapter/clef_e_adapter.so: undefined symbol: _ZN9torch_npu9NPUBridge17GetNpuStorageImplERKN2at6TensorE
+
+[rank1]: The above exception was the direct cause of the following exception:
+
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 186, in <module>
+[rank1]:     raise SystemExit(main())
+[rank1]:                      ^^^^^^
+[rank1]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 62, in main
+[rank1]:     mod = build(a.adapter_dir, a.op_api_dir, a.build_dir)
+[rank1]:           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 13, in build
+[rank1]:     return load(name="clef_e_adapter", sources=[str(adapter_dir / "clef_e_adapter.cpp")],
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 1767, in load
+[rank1]:     return _jit_compile(
+[rank1]:            ^^^^^^^^^^^^^
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 2233, in _jit_compile
+[rank1]:     return _import_module_from_library(name, build_directory, is_python_module)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/utils/cpp_extension.py", line 2737, in _import_module_from_library
+[rank1]:     torch.ops.load_library(filepath)
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/_ops.py", line 1444, in load_library
+[rank1]:     raise OSError(f"Could not load this library: {path}") from e
+[rank1]: OSError: Could not load this library: /workspace/yangchen/work/wave3-e-adapter/clef_e_adapter.so
+[ERROR] 2026-11-18-12:39:22 (PID:1111821, Device:0, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+[ERROR] 2026-11-18-12:39:22 (PID:1111822, Device:1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+W1118 12:39:24.405000 1111815 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1111822 closing signal SIGTERM
+E1118 12:39:24.821000 1111815 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 0 (pid: 1111821) of binary: /workspace/yangchen/venvs/clef-py312/bin/python
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+runtime/wave3_e_test.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-11-18_12:39:24
+  host      : 25e6d0590726
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 1111822)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1111822
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-11-18_12:39:24
+  host      : 25e6d0590726
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 1111821)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+[ERROR] 2026-11-18-12:39:24 (PID:1111815, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+RAW_RC=1
