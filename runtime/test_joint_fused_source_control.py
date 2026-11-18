@@ -2,6 +2,7 @@
 """CPU tests for the independent f810/aa3e source-control runner."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -48,10 +49,90 @@ def main() -> int:
           and "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA" not in f810_env
           and "CLEF_JOINT_SMALLQ" not in f810_env
           and f810_env["CLEF_LAUNCH_CONFIG"] == "s1")
+    clean_env = runner.clean_restore_environment()
+    check("clean restore env exact", clean_env == {
+        "PATH": mod.CLEAN_PATH, "CLEF_LAUNCH_CONFIG": "s1"}
+        and runner.arm_environment("f810", 0)["PATH"] != clean_env["PATH"])
     check("aa3e arm env: flag1, exact allow",
           aa3e_env["CLEF_JOINT_FUSED_ATTN"] == "1"
           and aa3e_env["CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"] == mod.AA3E
           and aa3e_env["CLEF_LAUNCH_CONFIG"] == "s1")
+
+    # clean restore must not fall back to prod_env on failure
+    runner_restore = object.__new__(mod.SourceControl)
+    runner_restore.prod_env = {"PATH": "/polluted", "CLEF_LAUNCH_CONFIG": "old"}
+    runner_restore.state = {"steps": {}}
+    runner_restore.args = types.SimpleNamespace(
+        launch="/launch.sh", wait="/wait.sh", wait_timeout=1)
+    with tempfile.TemporaryDirectory(prefix="restore-proc-") as tmp:
+        runner_restore.run_dir = Path(tmp) / "run"
+        runner_restore.run_dir.mkdir()
+        runner_restore.win = types.SimpleNamespace(PROC_ROOT=Path(tmp) / "proc")
+        runner_restore.win.PROC_ROOT.mkdir()
+        seen = []
+        original_run = mod.subprocess.run
+        mod.subprocess.run = lambda cmd, **kw: (seen.append((cmd, dict(kw.get("env") or {})))
+                                                 or types.SimpleNamespace(
+                                                     returncode=1, stdout="", stderr="fail"))
+        try:
+            try:
+                runner_restore.restore_prod()
+            except mod.base.AbError:
+                restore_failed = True
+            else:
+                restore_failed = False
+        finally:
+            mod.subprocess.run = original_run
+    check("clean restore no fallback", restore_failed and len(seen) == 1
+          and seen[0][0][0] == "/bin/bash"
+          and seen[0][1] == {"PATH": mod.CLEAN_PATH, "CLEF_LAUNCH_CONFIG": "s1"}
+          and runner_restore.prod_env["PATH"] == "/polluted")
+
+    with tempfile.TemporaryDirectory(prefix="source-env-") as tmp:
+        tmp = Path(tmp)
+        logs = tmp / "logs"
+        label = "d0-restore-test"
+        (logs / label).mkdir(parents=True)
+        (logs / label / "api.pid").write_text("4242\n")
+        proc = tmp / "proc"
+        (proc / "4242").mkdir(parents=True)
+        opp = "a:b:c:d:e:f:g:h:i"
+        ld = "1:2:3:4:5:6:7:8:9:10:11:12"
+        expected = tmp / "expected.json"
+        expected.write_text(json.dumps({"service_environment": {
+            "ASCEND_CUSTOM_OPP_PATH": opp, "LD_LIBRARY_PATH": ld}}))
+        original_expected_sha = mod.CLEAN_ENV_EXPECT_SHA
+        mod.CLEAN_ENV_EXPECT_SHA = hashlib.sha256(expected.read_bytes()).hexdigest()
+        (proc / "4242/environ").write_bytes(
+            f"ASCEND_CUSTOM_OPP_PATH={opp}\0LD_LIBRARY_PATH={ld}\0PATH=/bin\0".encode())
+        runner_env = object.__new__(mod.SourceControl)
+        runner_env.args = types.SimpleNamespace(
+            clean_env_expect=str(expected), service_log_root=str(logs))
+        runner_env.run_dir = tmp / "run"
+        runner_env.state = {"steps": {}}
+        runner_env.win = types.SimpleNamespace(
+            PROC_ROOT=proc, sha256=lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest())
+        result = {"label": label}
+        cmp = runner_env.verify_restored_env(result)
+        check("restored OPP/LD byte match", cmp["match"] is True
+              and cmp["counts"] == {"ASCEND_CUSTOM_OPP_PATH": 9, "LD_LIBRARY_PATH": 12}
+              and (runner_env.run_dir / "restore-env-expected.json").is_file()
+              and (runner_env.run_dir / "restore-env-actual.json").is_file()
+              and result["restore_env"]["match"] is True)
+        mismatch = tmp / "mismatch.json"
+        mismatch.write_text(json.dumps({"service_environment": {
+            "ASCEND_CUSTOM_OPP_PATH": opp + ":extra", "LD_LIBRARY_PATH": ld}}))
+        mod.CLEAN_ENV_EXPECT_SHA = hashlib.sha256(mismatch.read_bytes()).hexdigest()
+        runner_env.args.clean_env_expect = str(mismatch)
+        try:
+            runner_env.verify_restored_env({"label": label})
+        except mod.base.AbError:
+            env_blocked = True
+        else:
+            env_blocked = False
+        check("restored OPP/LD mismatch blocks", env_blocked
+              and runner_env.state["steps"]["restore_env"]["ok"] is False)
+        mod.CLEAN_ENV_EXPECT_SHA = original_expected_sha
 
     with tempfile.TemporaryDirectory(prefix="source-control-") as tmp:
         tmp = Path(tmp)

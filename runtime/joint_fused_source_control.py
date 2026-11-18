@@ -15,6 +15,7 @@ import argparse
 import importlib.util
 import json
 import shlex
+import shutil
 import subprocess
 import time
 import uuid
@@ -24,6 +25,12 @@ HERE = Path(__file__).resolve().parent
 BASE_PATH = HERE / "joint_fused_service_ab.py"
 F810 = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
 AA3E = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+CLEAN_PATH = ("/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:"
+              "/usr/games:/usr/local/games:/snap/bin")
+CLEAN_ENV_KEYS = ("ASCEND_CUSTOM_OPP_PATH", "LD_LIBRARY_PATH")
+CLEAN_ENV_EXPECT_SHA = "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"
+CLEAN_ENV_EXPECT_PATH = ("/workspace/yangchen/logs/perf-wave2-20261118/"
+                         "s1-final-r1/launch-manifest.json")
 ORDERS = [
     [("f810", 0), ("aa3e", 1)],
     [("aa3e", 1), ("f810", 0)],
@@ -102,6 +109,111 @@ class SourceControl(base.ServiceAB):
         if source == "aa3e":
             env[base.ALLOW_ENV] = base.POSTIMAGE_SHA
         return env
+
+    def clean_restore_environment(self):
+        return {"PATH": CLEAN_PATH, "CLEF_LAUNCH_CONFIG": "s1"}
+
+    def _read_root_env_bytes(self, label):
+        pid_file = Path(self.args.service_log_root) / label / "api.pid"
+        if not pid_file.is_file():
+            raise base.AbError(f"restored api.pid missing: {pid_file}")
+        pid = int(pid_file.read_text().strip())
+        raw = (self.win.PROC_ROOT / f"{pid}/environ").read_bytes()
+        entries = {}
+        for item in raw.split(b"\0"):
+            if b"=" in item:
+                key, value = item.split(b"=", 1)
+                entries[key.decode()] = value
+        return pid, entries
+
+    def verify_restored_env(self, result):
+        expected_path = Path(self.args.clean_env_expect or CLEAN_ENV_EXPECT_PATH).expanduser().resolve()
+        if not expected_path.is_file():
+            raise base.AbError(f"clean env expected missing: {expected_path}")
+        expected_sha = self.win.sha256(expected_path)
+        if expected_sha != CLEAN_ENV_EXPECT_SHA:
+            raise base.AbError(f"clean env expected SHA mismatch: {expected_sha}")
+        expected_doc = json.loads(expected_path.read_text())
+        expected_env = expected_doc.get(
+            "service_environment", expected_doc.get("env", expected_doc.get("expected", expected_doc)))
+        expected = {}
+        for key in CLEAN_ENV_KEYS:
+            if key not in expected_env:
+                raise base.AbError(f"clean env expected lacks {key}")
+            expected[key] = str(expected_env[key]).encode()
+        pid, actual_raw = self._read_root_env_bytes(result["label"])
+        actual = {}
+        for key in CLEAN_ENV_KEYS:
+            if key not in actual_raw:
+                raise base.AbError(f"restored root lacks {key}")
+            actual[key] = actual_raw[key]
+        compare = {
+            "schema": "restore-env-compare/1",
+            "expected_path": str(expected_path),
+            "expected_sha256": self.win.sha256(expected_path),
+            "root_pid": pid,
+            "match": actual == expected,
+            "counts": {key: len(actual[key].split(b":")) for key in CLEAN_ENV_KEYS},
+            "expected_counts": {key: len(expected[key].split(b":")) for key in CLEAN_ENV_KEYS},
+            "expected_sha256_values": {k: __import__("hashlib").sha256(expected[k]).hexdigest() for k in CLEAN_ENV_KEYS},
+            "actual_sha256_values": {k: __import__("hashlib").sha256(actual[k]).hexdigest() for k in CLEAN_ENV_KEYS},
+        }
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(expected_path, self.run_dir / "restore-env-expected.json")
+        (self.run_dir / "restore-env-actual.json").write_text(json.dumps(
+            {k: v.decode() for k, v in actual.items()}, indent=1) + "\n")
+        (self.run_dir / "restore-env-compare.json").write_text(
+            json.dumps(compare, indent=1) + "\n")
+        self.state.setdefault("steps", {})["restore_env"] = {
+            "ok": compare["match"], "compare": compare}
+        if not compare["match"]:
+            raise base.AbError("restored root OPP/LD mismatch against frozen expected")
+        result["restore_env"] = compare
+        return compare
+
+    def restore_prod(self):
+        label = (f"d0-restore-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-"
+                 f"{uuid.uuid4().hex[:8]}")
+        clean = self.clean_restore_environment()
+        original = self.prod_env
+        self.prod_env = clean
+        self.state.setdefault("steps", {})["restore_env_input"] = {
+            "source": "28-clean-parent", "keys": sorted(clean),
+            "PATH": clean["PATH"], "CLEF_LAUNCH_CONFIG": clean["CLEF_LAUNCH_CONFIG"]}
+        try:
+            before = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
+            launch = subprocess.run(["/bin/bash", self.args.launch, label], env=clean,
+                                    capture_output=True, text=True, timeout=60)
+            (self.run_dir / "restore-launch.log").write_text(launch.stdout + launch.stderr)
+            if launch.returncode != 0:
+                raise base.AbError("clean restore launch failed")
+            wait = subprocess.run(["/bin/bash", self.args.wait], env=clean,
+                                  capture_output=True, text=True,
+                                  timeout=self.args.wait_timeout)
+            (self.run_dir / "restore-wait.log").write_text(wait.stdout + wait.stderr)
+            if wait.returncode != 0:
+                raise base.AbError("clean restore wait failed")
+            sys.path.insert(0, str(self.run_dir / "stage" / "d0"))
+            import d0_restore
+            import d0_run
+            disc = d0_restore.discover_service_pids(label, before)
+            if disc.get("error") or not disc.get("pids"):
+                raise base.AbError(f"restore discovery failed: {disc.get('error')}")
+            log = {"label": label, "service_discovery": disc,
+                   "restore_env": dict(clean), "restore_env_source": "28-clean-parent"}
+            verified = d0_restore.verify(
+                d0_restore.build_commands(d0_run.render_request), log,
+                service_pids=set(disc["pids"]))
+            (self.run_dir / "restore.json").write_text(
+                json.dumps(log, ensure_ascii=False, indent=1) + "\n")
+            if not verified:
+                raise base.AbError("restore four-check verification failed")
+            result = {"label": label, "verify_ok": True,
+                      "service_pids": sorted(disc["pids"])}
+            self.verify_restored_env(result)
+            return result
+        finally:
+            self.prod_env = original
 
     def _start_arm(self, flag, label):
         source = self.active_source
@@ -185,6 +297,8 @@ def main(argv=None) -> int:
     ap.add_argument("--wait", default="/workspace/yangchen/logs/perf-wave2-20261118/wait.sh")
     ap.add_argument("--stop-script", default="/tmp/d0cc/d0_stop.py")
     ap.add_argument("--service-log-root", default="/workspace/yangchen/logs/perf-wave2-20261118")
+    ap.add_argument("--clean-env-expect", default=CLEAN_ENV_EXPECT_PATH,
+                    help="28 frozen launch-manifest; SHA pinned")
     ap.add_argument("--data", default="/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json")
     ap.add_argument("--short", default="od-0105")
     ap.add_argument("--long", default="od-1534")
