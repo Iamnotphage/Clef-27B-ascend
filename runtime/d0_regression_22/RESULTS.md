@@ -1,3 +1,5 @@
+# ⚠️ 本文件结论已部分撤回（见下方「撤回声明」）
+
 # D0 main() 独立 CPU 回归 — 结果
 
 脚本：`d0_main_regression.py`（本目录）。**不改 21 生产文件**，仅替换外部边界
@@ -41,3 +43,19 @@ python3 runtime/d0_regression_22/d0_main_regression.py \
 
 ## 边界
 未导入 `torch_npu`、未 `dlopen`、未执行任何服务命令、未碰设备；21 生产文件与 D0 包 `b7190e96` 未改动。
+
+
+## 撤回声明（2026-11-19，23 实读 `0cf9e0b` 后确认）
+
+1. **「main/run_child/restore/verify/query_group 未被替换」是错的**：
+   `d0_main_regression.py:137-138` 替换了 `run_child`/`query_group`，`:149-150` 替换了 `restore`/`verify`，
+   **生产路径被替身遮住**。
+2. **「finally 恢复链未执行 ⇒ 恢复路径没接通」不成立**：`fake_run_child` 未写 `root-child.json`，
+   finally 无 pgid 可读，**恢复链没被喂到输入**；调用数为 0 **不能**推断生产链未接通。
+3. **「边界干净」不作数**：`guarded_run`（`:40`）对任意 argv 返回 RC0+空输出（通配放行）；
+   `parser_reached` 仅判 `len(outdir)>0`；且脚本**任何情况都 `return 0`**。
+
+**仍成立**：两版 `main()` 返回类型为 `NoneType`（`766bf7b` 抛 `UnboundLocalError`；`3fbca07` 静默返回 `None`）。
+
+**待重做**：改为保留全部生产函数 + `FakePopen`（写 `root-child.json` 等）+ 精确 stub（未知 argv raise）
++ `sys.setprofile` 观测到达 + 检查 `*-parsed.json` 内容 + 失败时整体非 0。
