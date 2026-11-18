@@ -683,7 +683,7 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 
 - `GetBlockIdx()` 在 AIV 为 `aicIdx*2+subBlockId`；`usedCoreNum=24` 时参与的是 AIV 0..23 ⇒ **aicIdx 0..11**，每 AIC 两个 client 各认领不同 M 段。
 - **不漏行、不重复写**（M 段互斥且覆盖全区间；CPU 140 例只证这一点），但**不是 24 路 cube 并行**，只是 12 个 cube 各做两段。
-- **前提条件**：以上成立需 ratio=2 **且** 实际 launch 集合完整；**实际 launch 集合尚未记录**，故 24→12 是**在该条件下的推论**，不是已测事实。
+- **前提条件（22 已按此收窄）**：结论需 **`get_subblockdim()` 在 AIV 返回 2** **且** launch 集合完整（2×AIC 个 AIV 都在）**同时成立**；任一条不成立则该结论不成立。两者**均未直接取得**（取决于构建/运行时条件）。
 - 若要 `usedCoreNum` 路 cube，worker 判据应改为 `subBlockId==0 && aicIdx<usedCoreNum`，其中 **`aicIdx = get_block_idx() / GetTaskRationImpl()`**（SDK 实际式为 `get_block_idx()*GetTaskRationImpl()+subid`），且 `MIX_NUM` 存在**宏覆盖**（`__MIX_CORE_AIC_RATION__`）——**需改代码，本轮未做**。
 
 ### 27.3 问题 ②（来源更正：**23 实读**；事件时间 `2026-11-18T14:35:51Z`，本地 transcript；远端时钟另记）：该挂死推断引用了错误的函数
