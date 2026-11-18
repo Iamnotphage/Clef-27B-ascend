@@ -89,6 +89,8 @@ def main() -> int:
                     help="first candidate is fixed at 1")
     ap.add_argument("--use-hccl", type=int, default=2, choices=(2,),
                     help="first candidate is fixed at 2 (AR off)")
+    ap.add_argument("--adapter", type=Path, help="prebuilt extension to load")
+    ap.add_argument("--adapter-sha", help="expected sha256 of that extension")
     ap.add_argument("--dry-run", action="store_true", help="print the plan only; touches no device")
     a = ap.parse_args()
 
@@ -119,29 +121,61 @@ def main() -> int:
     child = subprocess.Popen(
         [sys.executable, str(Path(__file__).with_name("d0_launch.py")),
          "--out-dir", str(a.out_dir), "--rows", str(a.rows), "--seed", str(a.seed),
-         "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl)],
-        start_new_session=True,                       # own session and process group
+         "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl),
+         "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)],
+        start_new_session=True,                       # child.pid is the pgid leader
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (a.out_dir / "process-tree.json").write_text(
         json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
+    pgid = child.pid                                   # leader of its own session
+    timed_out = False
     try:
         out, err = child.communicate(timeout=a.timeout)
-        rc = child.returncode
+        child_raw_rc = child.returncode
     except subprocess.TimeoutExpired:
-        # Kill the whole group, not just the direct child, then drain pipes.
+        timed_out = True
+        # The leader may already be gone while grandchildren still hold the pipe,
+        # so signal the whole group and then reap with a bound of its own.
         try:
-            os.killpg(os.getpgid(child.pid), signal.SIGKILL)
+            os.killpg(pgid, signal.SIGKILL)
         except OSError:
-            child.kill()
-        out, err = child.communicate()
+            try:
+                child.kill()
+            except OSError:
+                pass
+        try:
+            out, err = child.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            out, err = "", "reap timed out after 30s; descendants may survive"
+        child_raw_rc = child.returncode
         (a.out_dir / "trace-unavailable.json").write_text(json.dumps(
-            {"reason": "timeout", "timeout_s": a.timeout,
+            {"reason": "timeout", "timeout_s": a.timeout, "pgid": pgid,
              "note": "trace could not be copied back; slot count is not recoverable"},
             ensure_ascii=False) + "\n")
-        rc = 2
-    (a.out_dir / "raw-rc.json").write_text(json.dumps({"raw_rc": rc}, ensure_ascii=False) + "\n")
+    (a.out_dir / "raw-rc.json").write_text(json.dumps(
+        {"wrapper_rc": 2 if timed_out else child_raw_rc,
+         "child_raw_rc": child_raw_rc, "timed_out": timed_out, "pgid": pgid},
+        ensure_ascii=False) + "\n")
+    rc = 2 if timed_out else child_raw_rc
     (a.out_dir / "stdout.log").write_text(out or "")
     (a.out_dir / "stderr.log").write_text(err or "")
+    (a.out_dir / "tree-after.json").write_text(
+        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
+
+    # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from d0_trace_parse import decode
+        for res in a.out_dir.glob("result-rank*.json"):
+            rec = json.loads(res.read_text())
+            parsed = decode(rec["flat_u32"], aic_cap=24, sub_cap=2, m=a.rows,
+                            magic=0xD0D0C0DE)
+            res.with_name(res.stem + "-parsed.json").write_text(
+                json.dumps(parsed, ensure_ascii=False, indent=1) + "\n")
+    except Exception as exc:                                  # noqa: BLE001
+        (a.out_dir / "parse-failure.json").write_text(
+            json.dumps({"failure": type(exc).__name__, "message": str(exc)},
+                       ensure_ascii=False) + "\n")
     return rc
 
 

@@ -127,8 +127,9 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
     at_npu::native::OpCommand cmd;
     cmd.Name("ClefD0Trace");
     cmd.SetCustomHandler([ws, ws_size, ex, stream, trace]() -> int {
-        aclError clr = aclrtMemsetAsync(trace.data_ptr(), kTraceSlots * kTraceFields * 4,
-                                        0, stream);
+        const size_t nbytes = static_cast<size_t>(kTraceSlots * kTraceFields * 4);
+        // aclrtMemsetAsync(void* dst, size_t destMax, int32_t value, size_t count, stream)
+        aclError clr = aclrtMemsetAsync(trace.data_ptr(), nbytes, 0, nbytes, stream);
         if (clr != ACL_SUCCESS) return static_cast<int>(clr);
         return static_cast<int>(aclnnClefD0Trace(ws, ws_size, ex, stream));
     });

@@ -15,17 +15,20 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=20261118)
     ap.add_argument("--mm-dim", type=int, default=1)
     ap.add_argument("--use-hccl", type=int, default=2)
+    ap.add_argument("--adapter", type=Path, required=True)
+    ap.add_argument("--adapter-sha", required=True)
     a = ap.parse_args()
     try:
         import torch
         import torch_npu  # noqa: F401
+        import torch.distributed as dist
         from d0_executor import run, summarize_failure
     except Exception as exc:                                  # noqa: BLE001
         (a.out_dir / "import-failure.json").write_text(
             json.dumps({"failure": type(exc).__name__, "message": str(exc)}, ensure_ascii=False) + "\n")
         return 3
     try:
-        run(torch, torch_npu, a, a.out_dir)
+        run(torch, torch_npu, a, a.out_dir, dist)
     except Exception as exc:                                  # noqa: BLE001
         (a.out_dir / "trace-unavailable.json").write_text(
             json.dumps(summarize_failure(exc), ensure_ascii=False) + "\n")
