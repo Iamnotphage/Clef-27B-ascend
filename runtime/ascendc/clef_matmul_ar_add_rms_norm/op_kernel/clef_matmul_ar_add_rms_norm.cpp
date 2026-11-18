@@ -185,8 +185,17 @@ public:
                 if (stage == 4u) { WriteStageDiag(4u); }
             }
             if (stage == 0u || stage == 5u) {
-                if (tiling_->mmMode >= 2u) { mm_.IterateAll(cG); }
+                if (tiling_->mmMode >= 2u) {
+                    // waitIterateAll=true makes the client wait until the cube
+                    // has actually produced the tile before End() retires it.
+                    mm_.IterateAll(cG, 0, false, true);
+                }
                 if (stage == 5u) { WriteStageDiag(5u); }
+                // The documented call order ends with End(); on the client
+                // path it posts MMFUN_END so the pending task is retired and
+                // the KFC server side can quiesce.  Leaving it out leaves the
+                // server loop waiting, which reads as an aicore timeout.
+                mm_.End();
             }
             mmRc = 0;
         }
