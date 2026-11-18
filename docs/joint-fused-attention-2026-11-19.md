@@ -115,7 +115,7 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `9c81b54142d45aeca1635e4ad31b754e4694f0815f75725a7c669daa047604d5`。
+SHA-256 `87c2159d4afec13e88ff3ca4e2b76a58fe6fb7752eded1a49e03171590357c0e`。
 CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `4b9fe1f4e450fdebdbf9a45742b44758521a0311a91b2c92afba2caa37ec95a3`），
 18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
@@ -189,3 +189,33 @@ $PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
 - 额外 kernel 文件通过 `--payload SRC:REL:SHA` 逐文件 stage/hash；installer 的 `HERE` 为 `stage/runtime`，
   所以 REL 使用 `runtime/joint_smallq/...`。
 - stop/restore 完全复用同一 wrapper；26 不写 stop/restore。两条路线互斥，21 串行并先 revert 到 `f8101b98`。
+
+
+## 12. external-vendor 模式（25 N1 / 任意独立 vendor）
+
+head 默认行为不变；外部候选使用：
+
+```bash
+$PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
+  --candidate-kind external-vendor \
+  --vendor-installer-rel runtime/vendor_check.py \
+  --vendor-installer-source "$VENDOR_REPO/runtime/vendor_check.py" \
+  --vendor-installer-sha <SHA> \
+  --vendor-apply-flag --install --vendor-revert-flag --revert \
+  --vendor-extra-arg <optional arg> \
+  --probe-rel runtime/n1_probe_shim.py --probe-source "$VENDOR_REPO/runtime/n1_probe_shim.py" \
+  --probe-sha <SHA> --probe-schema n1-probe/1 \
+  --env-flag "" --child-env KEY=VALUE --child-env KEY2=VALUE2 \
+  --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75... \
+  --tree /workspace/yangchen/work/src/vllm --device 0
+```
+
+- `candidate-kind=external-vendor` 时 head target 必须始终为 `f8101b98`；不要求 head postimage，也不调用 head installer。
+- vendor installer 契约：`--check`、`--install`、`--revert`（可由参数改名），每次 RC 非 0 阻断；
+  wrapper 在 preflight 跑 check、候选阶段跑 install、finally 跑 revert；vendor 失败阻断 restore。
+- `--env-flag ""` 时不注入候选 env；`--child-env KEY=VALUE` 仅注入 probe 子进程，不进入 prod/restore。
+- probe 必须输出 `n1-probe/1`、`gate_passed=true` 且无 `error`；raw timing 记录在 `timing[].rounds[].arms[].samples`
+  （若该字段存在，wrapper 原样保留 JSON）。
+- stop/cleanup/PGID/timeout/finally 四检与 head 模式共用同一实现。
+- 注意：external-vendor 版本的 wrapper 为 `0f07848b…3886`，尚未纳入 head 冻结 `a6268f7`；head 窗口继续用
+  `a6268f7` 的 wrapper `87c2159d…7c0e`。两 installer 仍互斥。

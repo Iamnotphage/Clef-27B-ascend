@@ -200,6 +200,10 @@ class Window:
     def cfg(self, name, default):
         return getattr(self.args, name, default)
 
+    @property
+    def external(self) -> bool:
+        return self.cfg("candidate_kind", "head-postimage") == "external-vendor"
+
     def __init__(self, args):
         self.args = args
         self.run_dir = Path(args.run_dir).expanduser().resolve()
@@ -212,6 +216,7 @@ class Window:
         self.stop_attempted = False
         self.restored = False
         self.probe_residual = False
+        self.vendor_applied = False
         self.identity = None
         self.prod_env = {}
         self.source_env = {}
@@ -253,19 +258,34 @@ class Window:
         def source_arg(name, default):
             value = getattr(self.args, name, None)
             return Path(value) if value else default
-        spec = {
-            self.cfg("postimage_rel", POSTIMAGE_REL):
-                (source_arg("postimage_source", repo / POSTIMAGE_REL),
-                 self.cfg("postimage_sha", POSTIMAGE_SHA)),
-            self.cfg("installer_rel", INSTALLER_REL):
-                (source_arg("installer_source", repo / INSTALLER_REL),
-                 self.cfg("installer_sha", INSTALLER_SHA)),
-            self.cfg("probe_rel", PROBE_REL):
-                (source_arg("probe_source", repo / PROBE_REL),
-                 self.cfg("probe_sha", PROBE_SHA)),
-        }
+        if self.external:
+            vendor_rel = self.cfg("vendor_installer_rel", "")
+            if not vendor_rel:
+                raise StepError("external-vendor requires --vendor-installer-rel")
+            vendor_sha = self.cfg("vendor_installer_sha", None)
+            if not vendor_sha:
+                raise StepError("external-vendor requires --vendor-installer-sha")
+            spec = {
+                vendor_rel: (source_arg("vendor_installer_source", repo / vendor_rel),
+                             vendor_sha),
+                self.cfg("probe_rel", PROBE_REL):
+                    (source_arg("probe_source", repo / PROBE_REL),
+                     self.cfg("probe_sha", PROBE_SHA)),
+            }
+        else:
+            spec = {
+                self.cfg("postimage_rel", POSTIMAGE_REL):
+                    (source_arg("postimage_source", repo / POSTIMAGE_REL),
+                     self.cfg("postimage_sha", POSTIMAGE_SHA)),
+                self.cfg("installer_rel", INSTALLER_REL):
+                    (source_arg("installer_source", repo / INSTALLER_REL),
+                     self.cfg("installer_sha", INSTALLER_SHA)),
+                self.cfg("probe_rel", PROBE_REL):
+                    (source_arg("probe_source", repo / PROBE_REL),
+                     self.cfg("probe_sha", PROBE_SHA)),
+            }
         client_rel = self.cfg("client_rel", CLIENT_REL)
-        if client_rel:
+        if client_rel and not self.external:
             spec[client_rel] = (source_arg("client_source", repo / client_rel),
                                 self.cfg("client_sha", CLIENT_SHA))
         for payload in self.cfg("payload", []) or []:
@@ -313,11 +333,16 @@ class Window:
                                    "wait_sha256": WAIT_SHA}
         self.source_env = self._source_env()
         self._loader_check()
-        state = self._installer(["--check"])
         target_path = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         actual_pre = sha256(target_path) if target_path.is_file() else None
         if actual_pre != self.cfg("preimage_sha", PREIMAGE_SHA):
             raise StepError(f"target is not preimage: {actual_pre}")
+        if self.external:
+            self.state["preflight"]["mode"] = "external-vendor"
+            self.state["preflight"]["vendor_check"] = self._vendor_installer(["--check"])
+        else:
+            state = self._installer(["--check"])
+            self.state["preflight"]["mode"] = "head-postimage"
         self.state["preflight"]["preimage"] = self.cfg("preimage_sha", PREIMAGE_SHA)
         port_state = port_open(self.args.port)
         self.state["preflight"]["port"] = port_state
@@ -423,6 +448,23 @@ class Window:
                                     "stderr": result.stderr[-1000:]})
         return json.loads(result.stdout)
 
+    def _vendor_installer(self, action: list) -> dict:
+        cmd = [self.args.python, str(self.stage / self.cfg("vendor_installer_rel", "")),
+               *action, *self.cfg("vendor_extra_arg", [])]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        log = self.run_dir / ("vendor-" + action[0].lstrip("-") + ".log")
+        log.write_text(result.stdout + result.stderr)
+        if result.returncode != 0:
+            raise StepError(f"vendor installer {action} failed: {result.returncode}",
+                            rc=result.returncode,
+                            detail={"cmd": cmd, "rc": result.returncode,
+                                    "stdout": result.stdout[-1000:],
+                                    "stderr": result.stderr[-1000:]})
+        try:
+            return json.loads(result.stdout)
+        except Exception:
+            return {"raw": result.stdout[-1000:]}
+
     # ------------------------------------------------------------------
     def stop(self):
         self.stop_attempted = True
@@ -462,6 +504,10 @@ class Window:
         return {"stop_json": str(out), "port": port_state}
 
     def apply(self):
+        if self.external:
+            self.vendor_applied = True
+            report = self._vendor_installer([self.cfg("vendor_apply_flag", "--install")])
+            return {"vendor_apply": report}
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         try:
             report = self._installer(["--apply", "--manifest", str(self.run_dir / "apply.json")])
@@ -559,7 +605,14 @@ class Window:
                      "CLEF_JOINT_SMALLQ_KERNEL"):
             env.pop(flag, None)
         env["CLEF_JOINT_SINGLE_FIELD"] = "1"
-        env[self.cfg("env_flag", "CLEF_JOINT_FUSED_ATTN")] = "1"
+        flag = self.cfg("env_flag", "CLEF_JOINT_FUSED_ATTN")
+        if flag:
+            env[flag] = "1"
+        for item in self.cfg("child_env", []) or []:
+            if "=" not in item:
+                raise StepError(f"invalid --child-env KEY=VALUE: {item}")
+            key, value = item.split("=", 1)
+            env[key] = value
         env["PYTHONUNBUFFERED"] = "1"
         cmd = [self.args.python, str(self.stage / self.cfg("probe_rel", PROBE_REL)),
                "--tree", str(self.args.tree), "--device", str(self.args.device),
@@ -616,6 +669,7 @@ class Window:
             raise StepError("probe left unknown/residual processes",
                             rc=record["rc"], detail={"probe_record": record})
         self.probe_residual = False
+        self.vendor_applied = False
         if timed_out:
             raise StepError("probe timed out", rc=record["rc"],
                             detail={"probe_record": record})
@@ -623,7 +677,7 @@ class Window:
             raise StepError(f"probe failed rc={rc}", rc=rc,
                             detail={"probe_record": record})
         schema = self.cfg("probe_schema", "joint-fused-attention-probe/2")
-        if schema == "joint-smallq-probe/1":
+        if schema in ("joint-smallq-probe/1", "n1-probe/1"):
             if (not isinstance(data, dict) or data.get("schema") != schema
                     or data.get("gate_passed") is not True
                     or data.get("error") is not None):
@@ -636,6 +690,10 @@ class Window:
         return record
 
     def revert(self):
+        if self.external:
+            report = self._vendor_installer([self.cfg("vendor_revert_flag", "--revert")])
+            self.vendor_applied = False
+            return {"vendor_revert": report}
         report = self._installer(["--revert", "--manifest", str(self.run_dir / "revert.json")])
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         actual = sha256(target) if target.is_file() else None
@@ -753,7 +811,12 @@ class Window:
             return
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         target_sha = sha256(target) if target.is_file() else None
-        if self.applied or target_sha == self.cfg("postimage_sha", POSTIMAGE_SHA):
+        if getattr(self, "vendor_applied", False):
+            entry = self.step("revert", required=True)
+            if not entry["ok"]:
+                self.overall_failed = True
+        if self.applied or (not self.external
+                            and target_sha == self.cfg("postimage_sha", POSTIMAGE_SHA)):
             entry = self.step("revert", required=True)
             if not entry["ok"]:
                 self.overall_failed = True
@@ -818,6 +881,16 @@ def main() -> int:
                     help="optional D0/candidate vendor OPP path, child only")
     ap.add_argument("--candidate-lib-prepend", default="",
                     help="optional D0/candidate op_api/lib path, child only")
+    ap.add_argument("--candidate-kind", choices=("head-postimage", "external-vendor"),
+                    default="head-postimage")
+    ap.add_argument("--vendor-installer-rel", default="")
+    ap.add_argument("--vendor-installer-source", default=None)
+    ap.add_argument("--vendor-installer-sha", default=None)
+    ap.add_argument("--vendor-apply-flag", default="--install")
+    ap.add_argument("--vendor-revert-flag", default="--revert")
+    ap.add_argument("--vendor-extra-arg", action="append", default=[])
+    ap.add_argument("--child-env", action="append", default=[],
+                    help="KEY=VALUE injected only into the child process")
     ap.add_argument("--postimage-rel", default=POSTIMAGE_REL)
     ap.add_argument("--postimage-source", default=None)
     ap.add_argument("--postimage-sha", default=POSTIMAGE_SHA)
