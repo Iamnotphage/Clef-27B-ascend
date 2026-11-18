@@ -272,3 +272,20 @@
 **含义**：自定义 Op 只要声明 `MC2().HcclGroup`，框架就会注入带参数的 KFC 启动；要让这条路径可用，必须按框架契约
 提供合法的 MC2 参数块（当前 tiling 的 `mc2InitTiling/mc2CcTiling` + group 未满足），或改用不声明 MC2 的路径（则拿不到 context）。
 这是 E 组实现前必须解决的前置：**不是 kernel 语法问题，而是 MC2 参数契约问题**。
+
+## 13. C 判别二：有效 tiling + `use_hccl=0` → 挂起（2026-11-18 14:44 CST）
+
+最小修复假设（保留两臂一致且有效的 MC2 tiling，仅 device 跳过 AllReduce）实测：
+
+- 改动：`TilingFunc` 不再按 `use_hccl` 跳过 `Mc2CcTilingConfig::GetTiling`，两臂都生成有效 init/cc tiling；
+  device 分支仍按 `useHccl` 跳过 `InitV2/AllReduce/Finalize`。
+- 运行：单 shape N=1280、单 mode OFF、单次；两 rank 均打印到
+  `[adapter] after GetWorkspaceSize st=0 ws=2475648` 与 `[adapter] after OpCommand.Run`，随后**挂起**，
+  无 `RAW_RC`，无 `param invalid`。按有限超时以 SIGTERM 终止（日志内 `got signal: 15`）。
+- 对比：改动前 OFF 为**立即** `execute kernel param invalid`；改动后变为**等待**。
+
+**判读（待验证假设，非根因）**：host 侧注入的 KFC 服务在等待 device 侧 `InitV2/Finalize` 配对；
+仅跳过 AllReduce 而跳过整个生命周期会让服务悬挂。下一步应在 OFF 臂里只跳过“数据归约调用”，
+仍执行 `InitV2` + `SetCcTilingV2` + `Finalize`（不调用 `AllReduce`/`Wait`），观察是否能正常结束。
+
+**服务**：测试进程已按超时清理；默认服务已恢复，`/health` ready，文本 od-1534 → score、图文 erqa-0000 → choice 均通过。

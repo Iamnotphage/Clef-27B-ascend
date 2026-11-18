@@ -1,0 +1,65 @@
+date=2026-11-18T06:42:13+00:00
+mode=off shape=1280 iters=1 warmup=0 pkg=install-c2
+[rank0]:[W1118 06:42:35.846286090 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())
+[adapter] before GetWorkspaceSize group=group_name_0 N=1280 use_hccl=0
+[adapter] before GetWorkspaceSize group=group_name_0 N=1280 use_hccl=0
+[adapter] after GetWorkspaceSize st=0 ws=2475648 exec=0xaaab1decd910
+[adapter] before OpCommand.Run
+[adapter] after OpCommand.Run
+[adapter] after GetWorkspaceSize st=0 ws=2475648 exec=0xaaaaf6f05700
+[adapter] before OpCommand.Run
+[adapter] after OpCommand.Run
+W1118 06:46:07.330000 1043310 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1043316 closing signal SIGTERM
+W1118 06:46:07.331000 1043310 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1043317 closing signal SIGTERM
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 731, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 908, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 86, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 1043310 got signal: 15
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 308, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/metrics/api.py", line 134, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 739, in run
+    logger.warning("Received %s death signal, shutting down workers", e.sigval)
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/logging/__init__.py", line 1551, in warning
+    self._log(WARNING, msg, args, **kwargs)
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/logging/__init__.py", line 1682, in _log
+    record = self.makeRecord(self.name, level, fn, lno, msg, args,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/logging/__init__.py", line 1651, in makeRecord
+    rv = _logRecordFactory(name, level, fn, lno, msg, args, exc_info, func,
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/logging/__init__.py", line 324, in __init__
+    if (args and len(args) == 1 and isinstance(args[0], collections.abc.Mapping)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen abc>", line 119, in __instancecheck__
+  File "<frozen abc>", line 123, in __subclasscheck__
+  File "<frozen _collections_abc>", line 435, in __subclasshook__
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 86, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 1043310 got signal: 15
+[ERROR] 2026-11-18-06:46:08 (PID:1043310, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
