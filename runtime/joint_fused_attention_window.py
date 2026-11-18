@@ -841,10 +841,20 @@ class Window:
             return
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         target_sha = sha256(target) if target.is_file() else None
+        vendor_revert_failed = False
         if getattr(self, "vendor_applied", False):
             entry = self.step("revert", required=True)
             if not entry["ok"]:
                 self.overall_failed = True
+                vendor_revert_failed = True
+        if vendor_revert_failed:
+            self.state["steps"]["restore"] = {
+                "rc": 1, "ok": False, "action": "blocked_vendor_revert_failed",
+                "vendor_applied": getattr(self, "vendor_applied", None),
+                "finished_at": now()}
+            self.overall_failed = True
+            self.flush()
+            return
         if self.applied or (not self.external
                             and target_sha == self.cfg("postimage_sha", POSTIMAGE_SHA)):
             entry = self.step("revert", required=True)

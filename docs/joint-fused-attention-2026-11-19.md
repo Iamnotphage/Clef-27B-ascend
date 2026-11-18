@@ -217,8 +217,8 @@ $PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
 - probe 必须输出 `n1-probe/1`、`gate_passed=true` 且无 `error`；raw timing 记录在 `timing[].rounds[].arms[].samples`
   （若该字段存在，wrapper 原样保留 JSON）。
 - stop/cleanup/PGID/timeout/finally 四检与 head 模式共用同一实现。
-- 注意：external-vendor 版本的 wrapper 为 `0f07848b…3886`，尚未纳入 head 冻结 `a6268f7`；head 窗口继续用
-  `a6268f7` 的 wrapper `87c2159d…7c0e`。两 installer 仍互斥。
+- external-vendor 增量 wrapper 为 `9245e1a6…a747d5`（测试 23/23）；**head 窗口仍用已核 `89ebd3f` 的
+  wrapper `700cf10d…e8473`（测试 21/21）**。两 installer 仍互斥。
 
 
 ## 13. 现场首错修复（2026-11-19 18:00 窗口）
@@ -237,3 +237,11 @@ $PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
   仍保留真实 Window 方法，只替外部边界。
 - 25 已纯 CPU 验证 `torchrun --run-path --start-method spawn` 两 rank 继承 launcher PGID/SID（无设备）；
   N1 shim 采用该 argv，shim/torchrun 不新建 session，保留 wrapper PGID 监督。
+
+
+## 14. external vendor revert 失败契约（2026-11-19）
+
+`finish` 在 external 模式先执行 vendor revert；若 revert 返回非 0/无法确认，立即写
+`steps.restore.action = blocked_vendor_revert_failed`，保留 `vendor_applied=true` 和原始 RC/stdout/stderr，
+**不启动恢复**（避免在 vendor ownership 未知时覆盖现场），整体非 0。只有 revert 成功后 `vendor_applied`
+才清零并继续 target preimage 检查/恢复。CPU 新增成功与失败两条 finally 回归；head 21 例不变，合计 23/23。

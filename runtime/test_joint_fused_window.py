@@ -351,7 +351,76 @@ def main() -> int:
             missing_blocked = False
         check("missing restore module blocks preflight", missing_blocked)
 
-    print(json.dumps({"checks": 21, "failed": failures, "ok": not failures}))
+    # external-vendor finally: revert success keeps going, failure blocks restore
+    with tempfile.TemporaryDirectory(prefix="window-vendor-") as tmp:
+        tmp = Path(tmp)
+        tree = tmp / "vtree"
+        target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+        target.parent.mkdir(parents=True)
+        shutil.copy2(PREIMAGE, target)
+        stage = tmp / "vstage"
+        (stage / "runtime").mkdir(parents=True)
+        (stage / "runtime/vendor.py").write_text("")
+        window = object.__new__(mod.Window)
+        window.args = types.SimpleNamespace(
+            tree=tree, port=18143, python="python", candidate_kind="external-vendor",
+            vendor_installer_rel="runtime/vendor.py",
+            vendor_apply_flag="--install", vendor_revert_flag="--revert",
+            vendor_extra_arg=[], postimage_sha=mod.POSTIMAGE_SHA)
+        window.stage = stage
+        window.run_dir = tmp / "vrun"
+        window.run_dir.mkdir()
+        window.state = {"steps": {}}
+        window.candidate_started = True
+        window.vendor_applied = True
+        window.applied = False
+        window.stopped = True
+        window.stop_attempted = True
+        window.restored = False
+        window.probe_residual = True
+        window.overall_failed = False
+        window.identity = None
+        original_run = mod.subprocess.run
+        def vendor_run(cmd, **kwargs):
+            return types.SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True}),
+                                         stderr="")
+        mod.subprocess.run = vendor_run
+        try:
+            window.finish()
+        finally:
+            mod.subprocess.run = original_run
+        check("external revert success then residual block",
+              window.vendor_applied is False
+              and window.state["steps"]["restore"]["action"] == "blocked_probe_residual")
+        saved_args = window.args
+        window = object.__new__(mod.Window)
+        window.args = saved_args
+        window.stage = stage
+        window.run_dir = tmp / "vrun2"
+        window.run_dir.mkdir()
+        window.state = {"steps": {}}
+        window.candidate_started = True
+        window.vendor_applied = True
+        window.applied = False
+        window.stopped = True
+        window.stop_attempted = True
+        window.restored = False
+        window.probe_residual = False
+        window.overall_failed = False
+        window.identity = None
+        def vendor_fail(cmd, **kwargs):
+            return types.SimpleNamespace(returncode=1, stdout="not-json", stderr="boom")
+        mod.subprocess.run = vendor_fail
+        try:
+            window.finish()
+        finally:
+            mod.subprocess.run = original_run
+        check("external revert failure blocks restore",
+              window.vendor_applied is True
+              and window.state["steps"]["restore"]["action"] == "blocked_vendor_revert_failed"
+              and window.overall_failed is True)
+
+    print(json.dumps({"checks": 23, "failed": failures, "ok": not failures}))
     return 0 if not failures else 1
 
 
