@@ -41,7 +41,7 @@
 | [conv+QKV 融合算子](gdn-conv-qkv-2026-11-17.md) | conv 与 QKV norm 合一、packed QKVZ 免拷贝、逐位探针与服务级对照 |
 | [Wave 2 攻关](perf-wave2-20261118.md) | 默认栈重新 profile、S2 预算复测、GDN chunk 扩展扫描、joint head 分解与最终三轮验证 |
 | [Wave 2 调研](perf-wave2-research.md) | 只读调研：T1 allreduce+RMSNorm 融合、T2 K 维流水、T4 ATB cache、T5 分桶 graph；T3 已实测关闭 |
-| [GDN Norm BLOCK_M 准备](gdn-norm-block-m-2026-11-18.md) | 四臂 BLOCK_M 的源码核准、哈希门控安装器、48 调用微基准批次协议；首轮启动环境与 decorator 入口已修，待 21 三检后单次重试 |
+| [GDN Norm BLOCK_M 准备](gdn-norm-block-m-2026-11-18.md) | 四臂 BLOCK_M 的源码核准、哈希门控安装器、48 调用微基准批次协议；run1/2 启动问题与 run3 BM128 编译容量失败已记录，probe 按臂隔离后待 run4 |
 | [交接文档 11-17](handoff-11-17.md) | 当前状态、baseline 对比、已采用优化、负结果、profile、复现与开放问题 |
 | [输入长度与特征分布](input-distribution-2026-11-16.md) | OD/ERQA 的 token 桶、延迟/时间占比、字段/候选/图片结构 |
 | [B10/B12 合批扫描](batching-b10-b12-2026-11-16.md) | B8/B10/B12/B16 吞吐、p95 与质量，S2 工作点结论 |

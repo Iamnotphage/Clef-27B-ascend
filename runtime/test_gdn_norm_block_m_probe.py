@@ -9,6 +9,7 @@ torch_npu or vllm_ascend import happens here.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,6 +36,16 @@ class Wrapper:
 
 class NoFn:
     pass
+
+
+class MLIRCompilationError(Exception):
+    pass
+
+
+def compile_failure(message, cause):
+    error = MLIRCompilationError(message)
+    error.__cause__ = cause
+    return error
 
 
 def main() -> int:
@@ -69,6 +80,25 @@ def main() -> int:
         row = probe.grid_row(arm)
         check(f"grid BM{arm}", row["blocks"] == blocks and row["padding_rows"] == padding
               and row["requested_grid"] == [blocks, 1] and row["ngroups"] == 1)
+
+    overflow = "ub overflow, requires 2101248 bits while 1572864 bits available"
+    bishengir = subprocess.CalledProcessError(
+        1, ["/x/bishengir-compile", "/tmp/kernel.mlir", "-o", "/tmp/kernel"])
+    error = compile_failure(overflow + "\nThe compiled kernel cache is in /cache/SK3", bishengir)
+    check("recognises bishengir UB overflow", probe.is_compile_capacity_failure(error) is True)
+    check("extracts cache dir", probe.extract_cache_dir(str(error)) == "/cache/SK3")
+    check("rejects device error", probe.is_compile_capacity_failure(RuntimeError("sync failed")) is False)
+    check("rejects unrelated compile error",
+          probe.is_compile_capacity_failure(compile_failure("other compile error", bishengir)) is False)
+    check("rejects overflow text without compiler",
+          probe.is_compile_capacity_failure(RuntimeError(overflow)) is False)
+
+    preregistered = [[16, 32, 64, 128], [32, 64, 128, 16], [64, 128, 16, 32]]
+    check("projects orders onto OK arms",
+          probe.project_orders(preregistered, [64, 16, 32])
+          == [[16, 32, 64], [32, 64, 16], [64, 16, 32]])
+    check("projects single reference arm",
+          probe.project_orders(preregistered, [64]) == [[64], [64], [64]])
 
     if failures:
         print(f"{len(failures)} failure(s): {', '.join(failures)}")

@@ -40,9 +40,12 @@ import inspect
 import json
 import math
 import os
+import re
 import statistics
+import subprocess
 import sys
 import time
+import traceback
 from pathlib import Path
 
 ROWS = 23208
@@ -51,6 +54,9 @@ ENV_VAR = "CLEF_GDN_NORM_BLOCK_M"
 ALLOWED_BLOCK_M = (16, 32, 64, 128)
 DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm-ascend")
 TARGET = "vllm_ascend/ops/triton/layernorm_gated.py"
+CACHE_DIR_PATTERN = re.compile(r"The compiled kernel cache is in (\S+)")
+UB_OVERFLOW_PATTERN = re.compile(
+    r"requires\s+\d+\s+bits\s+while\s+\d+\s+bits\s+available", re.IGNORECASE)
 
 
 def sha256_tensor(torch, tensor) -> str:
@@ -94,6 +100,46 @@ def unwrap_jit_function(kernel):
         current = current.fn
     chain.append(type(current).__name__)
     return current, chain
+
+
+def extract_cache_dir(text: str):
+    match = CACHE_DIR_PATTERN.search(text or "")
+    return match.group(1) if match else None
+
+
+def is_compile_capacity_failure(exc: BaseException) -> bool:
+    """True only for the recognisable bishengir UB-overflow compile failure.
+
+    ``MLIRCompilationError`` wraps a ``subprocess.CalledProcessError`` from
+    ``bishengir-compile`` and its message carries the exact
+    ``requires N bits while M bits available`` line.  Anything else (device,
+    synchronize, HCCL, OOM, other compile errors) must abort instead of being
+    treated as an isolatable arm.
+    """
+    chain, seen = [], set()
+    current = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+
+    names = {type(item).__name__ for item in chain}
+    texts = [str(item) for item in chain]
+    has_mlir = bool(names & {"MLIRCompilationError", "CompilationError"})
+    has_bishengir = False
+    for item in chain:
+        if isinstance(item, subprocess.CalledProcessError):
+            command = item.cmd if isinstance(item.cmd, (list, tuple)) else [item.cmd]
+            if any("bishengir-compile" in str(part) for part in command):
+                has_bishengir = True
+    has_overflow = any(UB_OVERFLOW_PATTERN.search(text) for text in texts)
+    return has_overflow and (has_mlir or has_bishengir)
+
+
+def project_orders(orders, arms_ok):
+    """Project the preregistered round orders onto the executable arms."""
+    allowed = set(arms_ok)
+    return [[arm for arm in order if arm in allowed] for order in orders]
 
 
 def kernel_info(jit_fn, compiled) -> dict:
@@ -252,6 +298,10 @@ def main(argv=None) -> int:
     if args.eps <= 0 or not math.isfinite(args.eps):
         parser.error("eps must be a positive finite value")
 
+    preregistered_orders = [
+        [arms[(index + shift) % len(arms)] for index in range(len(arms))]
+        for shift in range(args.rounds)
+    ]
     report = {"schema": "gdn-norm-block-m-probe/1",
               "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
               "tree": str(tree), "target": TARGET, "rows": ROWS, "cols": COLS,
@@ -263,8 +313,8 @@ def main(argv=None) -> int:
                   "calls_per_batch": args.calls_per_batch,
                   "warmup_calls_per_arm": args.warmup_calls,
                   "rounds": args.rounds,
-                  "round_orders": [[arms[(index + shift) % len(arms)] for index in range(len(arms))]
-                                   for shift in range(args.rounds)],
+                  "preregistered_round_orders": preregistered_orders,
+                  "executed_round_orders": None,
                   "buffers": "x/z/weight allocated once on device and reused; the wrapper allocates "
                              "out and rstd per call (production behavior unchanged)",
                   "allocator": "returned output tuples are dropped after each call; the caching "
@@ -364,6 +414,13 @@ def main(argv=None) -> int:
 
     report["grid"] = {str(arm): grid_row(arm) for arm in arms}
     specializations, correctness = {}, {}
+    arm_status = {str(arm): {"arm": arm, "status": "pending", "stage": None} for arm in arms}
+    arm_failures = []
+    report["arm_status"] = arm_status
+    report["arms_ok"] = []
+    report["arms_failed"] = []
+    report["paired_comparison_possible"] = False
+    report["status"] = "running"
     reference_out = reference_rstd = None
     from triton.runtime import driver as triton_driver
     cache_device = triton_driver.active.get_current_device()
@@ -373,60 +430,157 @@ def main(argv=None) -> int:
     def flush(phase: str) -> None:
         report["phase"] = phase
         report["failures"] = failures
-        report["ready"] = not failures
+        report["arm_failures"] = arm_failures
+        report["ready"] = bool(report.get("paired_comparison_possible")) and not failures
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n")
 
-    for arm in [args.reference_arm] + [value for value in arms if value != args.reference_arm]:
-        os.environ[ENV_VAR] = str(arm)
-        before_keys = set(cache.keys())
-        for _ in range(args.warmup_calls):
-            call()
-        torch.npu.synchronize()
-        new_keys = [key for key in cache.keys() if key not in before_keys]
-        entries = [kernel_info(jit_fn, cache[key]) for key in new_keys]
-        block_m_values = [entry["constants"].get("BLOCK_M") for entry in entries
-                          if isinstance(entry.get("constants"), dict)]
-        specialization_ok = arm in block_m_values
-        specializations[str(arm)] = {
-            "new_cache_entries": len(entries),
-            "kernels": entries,
-            "requested_block_m": arm,
-            "block_m_values": block_m_values,
-            "specialization_ok": specialization_ok,
-        }
-        if not specialization_ok:
-            failures.append(f"BLOCK_M={arm} did not select a matching kernel specialization")
+    def arm_error(arm: int, stage: str, exc: BaseException) -> dict:
+        text = traceback.format_exc()
+        return {"arm": arm, "stage": stage, "error_type": type(exc).__name__,
+                "error_message": str(exc),
+                "cache_dir": extract_cache_dir(str(exc)) or extract_cache_dir(text),
+                "traceback": text[-12000:]}
 
-        out, mean, rstd = call()
-        torch.npu.synchronize()
-        if arm == args.reference_arm:
-            reference_out, reference_rstd = out.clone(), rstd.clone()
-        correctness[str(arm)] = {
-            "mean_is_none": mean is None,
-            "out_vs_reference": compare(torch, out, reference_out),
-            "rstd_vs_reference": compare(torch, rstd, reference_rstd),
-        }
-        if not all(correctness[str(arm)][name]["finite_actual"] for name in ("out_vs_reference",
-                                                                              "rstd_vs_reference")):
-            failures.append(f"BLOCK_M={arm} produced non-finite values")
+    flush("arms-registered")
+
+    warmup_order = [args.reference_arm] + [value for value in arms if value != args.reference_arm]
+    for arm in warmup_order:
+        status = arm_status[str(arm)]
+        os.environ[ENV_VAR] = str(arm)
+        status.update({"status": "starting", "stage": "start"})
+        flush(f"arm-{arm}-start")
+        stage = "warmup"
+        try:
+            before_keys = set(cache.keys())
+            status.update({"status": "warming", "stage": stage})
+            flush(f"arm-{arm}-warmup-start")
+            for _ in range(args.warmup_calls):
+                call()
+            torch.npu.synchronize()
+
+            stage = "metadata"
+            new_keys = [key for key in cache.keys() if key not in before_keys]
+            entries = [kernel_info(jit_fn, cache[key]) for key in new_keys]
+            block_m_values = [entry["constants"].get("BLOCK_M") for entry in entries
+                              if isinstance(entry.get("constants"), dict)]
+            specialization_ok = arm in block_m_values
+            specializations[str(arm)] = {
+                "new_cache_entries": len(entries),
+                "kernels": entries,
+                "requested_block_m": arm,
+                "block_m_values": block_m_values,
+                "specialization_ok": specialization_ok,
+            }
+            status.update({"stage": stage, "new_cache_entries": len(entries),
+                           "specialization_ok": specialization_ok})
+            flush(f"arm-{arm}-metadata")
+            if not specialization_ok:
+                status["status"] = "specialization_failed"
+                failures.append(f"BLOCK_M={arm} did not select a matching kernel specialization")
+                flush(f"arm-{arm}-specialization-failed")
+                break
+
+            stage = "correctness"
+            status.update({"status": "comparing", "stage": stage})
+            flush(f"arm-{arm}-compare-start")
+            out, mean, rstd = call()
+            torch.npu.synchronize()
+            if arm == args.reference_arm:
+                reference_out, reference_rstd = out.clone(), rstd.clone()
+            correctness[str(arm)] = {
+                "mean_is_none": mean is None,
+                "out_vs_reference": compare(torch, out, reference_out),
+                "rstd_vs_reference": compare(torch, rstd, reference_rstd),
+            }
+            finite_ok = all(correctness[str(arm)][name]["finite_actual"]
+                            for name in ("out_vs_reference", "rstd_vs_reference"))
+            status.update({"stage": "correctness_done",
+                           "out_bit_equal": correctness[str(arm)]["out_vs_reference"]["bit_equal"],
+                           "rstd_bit_equal": correctness[str(arm)]["rstd_vs_reference"]["bit_equal"]})
+            if not finite_ok:
+                status["status"] = "correctness_failed"
+                arm_failures.append({"arm": arm, "status": "correctness_failed", "stage": stage,
+                                     "error_type": "NonFinite"})
+                flush(f"arm-{arm}-correctness-failed")
+                continue
+            status["status"] = "ok"
+            flush(f"arm-{arm}-ok")
+        except Exception as exc:
+            if is_compile_capacity_failure(exc):
+                record = arm_error(arm, stage, exc)
+                status.clear()
+                status.update({"arm": arm, "status": "compile_failed", **record})
+                specializations[str(arm)] = {
+                    "new_cache_entries": 0,
+                    "kernels": [],
+                    "requested_block_m": arm,
+                    "block_m_values": [],
+                    "specialization_ok": None,
+                    "compile_failed": True,
+                    "cache_dir": record["cache_dir"],
+                }
+                arm_failures.append({"arm": arm, "status": "compile_failed", "stage": stage,
+                                     "error_type": record["error_type"],
+                                     "error_message": record["error_message"][:2000],
+                                     "cache_dir": record["cache_dir"]})
+                flush(f"arm-{arm}-compile-failed")
+                continue
+            record = arm_error(arm, stage, exc)
+            status.clear()
+            status.update({"arm": arm, "status": "aborted", **record})
+            flush(f"arm-{arm}-aborted")
+            raise
 
     report["specializations"] = specializations
     report["correctness"] = correctness
-    flush("specializations")
+    ok_arms = [arm for arm in arms if arm_status[str(arm)]["status"] == "ok"]
+    failed_arms = [arm for arm in arms if arm not in ok_arms]
+    report["arms_ok"] = ok_arms
+    report["arms_failed"] = failed_arms
+    paired = args.reference_arm in ok_arms and len(ok_arms) >= 2
+    report["paired_comparison_possible"] = paired
+    if paired:
+        report["status"] = "complete" if not failed_arms else "partial"
+    else:
+        report["status"] = ("reference_failed" if args.reference_arm not in ok_arms
+                            else "insufficient_arms")
+    flush("arms-finished")
+    if not paired or failures:
+        if failures:
+            report["status"] = "probe_failed"
+        flush("no-timing")
+        print(json.dumps({key: report.get(key) for key in (
+            "schema", "at", "status", "arms", "arms_ok", "arms_failed",
+            "paired_comparison_possible", "failures", "arm_failures", "ready")},
+            ensure_ascii=False, indent=1))
+        print(f"written {args.output}")
+        return 1
 
+    executed_orders = project_orders(preregistered_orders, ok_arms)
+    report["protocol"]["executed_round_orders"] = executed_orders
     rounds = []
-    for round_index, order in enumerate(report["protocol"]["round_orders"]):
-        row = {"round": round_index, "order": order, "arms": {}}
-        for arm in order:
-            os.environ[ENV_VAR] = str(arm)
-            row["arms"][str(arm)] = timed_batch(torch, call, args.calls_per_batch)
-        reference = row["arms"][str(args.reference_arm)]
-        for arm in order:
-            timing = row["arms"][str(arm)]
-            timing["paired_device_delta_ms"] = timing["batch_device_ms"] - reference["batch_device_ms"]
-            timing["paired_device_ratio"] = (timing["batch_device_ms"] / reference["batch_device_ms"]
-                                             if reference["batch_device_ms"] else None)
+    for round_index, order in enumerate(executed_orders):
+        try:
+            row = {"round": round_index, "preregistered_order": preregistered_orders[round_index],
+                   "order": order, "arms": {}}
+            for arm in order:
+                os.environ[ENV_VAR] = str(arm)
+                row["arms"][str(arm)] = timed_batch(torch, call, args.calls_per_batch)
+            reference = row["arms"][str(args.reference_arm)]
+            for arm in order:
+                timing = row["arms"][str(arm)]
+                timing["paired_device_delta_ms"] = timing["batch_device_ms"] - reference["batch_device_ms"]
+                timing["paired_device_ratio"] = (timing["batch_device_ms"] / reference["batch_device_ms"]
+                                                 if reference["batch_device_ms"] else None)
+        except Exception as exc:
+            report["timing_error"] = {"round": round_index, "order": order,
+                                      "error_type": type(exc).__name__,
+                                      "error_message": str(exc),
+                                      "traceback": traceback.format_exc()[-12000:]}
+            flush(f"round-{round_index}-failed")
+            os.environ.pop(ENV_VAR, None)
+            raise
         rounds.append(row)
         report["timing"] = {"rounds": rounds}
         flush(f"round-{round_index}")
@@ -434,13 +588,21 @@ def main(argv=None) -> int:
     per_call = None
     if args.per_call:
         per_call = {}
-        for arm in arms:
+        for arm in ok_arms:
             os.environ[ENV_VAR] = str(arm)
-            per_call[str(arm)] = per_call_batch(torch, call, args.calls_per_batch)
+            try:
+                per_call[str(arm)] = per_call_batch(torch, call, args.calls_per_batch)
+            except Exception as exc:
+                report["per_call_error"] = {"arm": arm, "error_type": type(exc).__name__,
+                                            "error_message": str(exc),
+                                            "traceback": traceback.format_exc()[-12000:]}
+                flush(f"per-call-{arm}-failed")
+                os.environ.pop(ENV_VAR, None)
+                raise
     os.environ.pop(ENV_VAR, None)
 
     summary = {}
-    for arm in arms:
+    for arm in ok_arms:
         device_values = [row["arms"][str(arm)]["batch_device_ms"] for row in rounds]
         wall_values = [row["arms"][str(arm)]["batch_wall_ms"] for row in rounds]
         deltas = [row["arms"][str(arm)]["paired_device_delta_ms"] for row in rounds]
@@ -458,7 +620,13 @@ def main(argv=None) -> int:
     report["specializations"] = specializations
     report["correctness"] = correctness
     report["timing"] = {"rounds": rounds, "summary": summary}
+    report["status"] = "complete" if not failed_arms else "partial"
+    report["arm_status"] = arm_status
+    report["arms_ok"] = ok_arms
+    report["arms_failed"] = failed_arms
+    report["paired_comparison_possible"] = True
     report["failures"] = failures
+    report["arm_failures"] = arm_failures
     report["ready"] = not failures
     report["notes"] = [
         "batch timings are microbenchmark evidence only; service p95 and quality are not implied",
@@ -466,11 +634,16 @@ def main(argv=None) -> int:
         "no elementwise tolerance gate is introduced here; adoption uses the service A/B and "
         "the official 2PP quality gate",
         "grid is the wrapper-derived request; backend coalesce metadata is reported separately",
+        "arm_status/arm_failures record a recognisable bishengir UB-overflow compile failure; "
+        "failed arms are excluded from timing and the remaining arms still run",
+        "if the reference arm fails, paired_comparison_possible is false and no timing runs",
+        "each arm flushes start/warmup/metadata/compare, so a later failure keeps earlier evidence",
     ]
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n")
-    print(json.dumps({key: report[key] for key in ("schema", "at", "source", "device", "inputs",
-                                                   "timing", "failures", "ready")},
+    print(json.dumps({key: report[key] for key in ("schema", "at", "status", "arms_ok", "arms_failed",
+                                                   "paired_comparison_possible", "timing",
+                                                   "failures", "arm_failures", "ready")},
                      ensure_ascii=False, indent=1))
     print(f"written {args.output}")
     return 0 if not failures else 1
