@@ -72,6 +72,7 @@ public:
         }
         diag_.SetGlobalBuffer((__gm__ float*)diag, 8);
 
+        residualGm_ = residual;
         r_.SetGlobalBuffer((__gm__ bfloat16_t*)residual, static_cast<uint64_t>(m_) * n_);
         g_.SetGlobalBuffer((__gm__ bfloat16_t*)gamma, n_);
         o_.SetGlobalBuffer((__gm__ bfloat16_t*)out, static_cast<uint64_t>(m_) * n_);
@@ -269,7 +270,15 @@ public:
         }
 
         // ---- 3) full-N Add + RMSNorm on the reduced partial -------------------
-        GM_ADDR srcGm = (hcclMode_ == 1u && arGm_ != nullptr) ? arGm_ : partialGm_;
+        // norm_from_residual=1 is a diagnostic-only path: the residual input
+        // slot carries an externally supplied partial, the residual add is
+        // skipped, so the norm consumes exactly the tensor the caller passed.
+        // Without it there is no way to inject a partial: with mm_enable=0 the
+        // norm would read partialGm_, which is framework workspace that nothing
+        // has written.
+        GM_ADDR srcGm = (tiling_->normFromResidual != 0u)
+                            ? residualGm_
+                            : ((hcclMode_ == 1u && arGm_ != nullptr) ? arGm_ : partialGm_);
         x_.SetGlobalBuffer((__gm__ bfloat16_t*)srcGm, static_cast<uint64_t>(m_) * n_);
         PipeBarrier<PIPE_ALL>();
         DataCacheCleanAndInvalid<bfloat16_t, CacheLine::ENTIRE_DATA_CACHE,
@@ -318,8 +327,10 @@ public:
             LocalTensor<float> z = bz_.Get<float>();
             LocalTensor<float> tmp = bw_.Get<float>();
             Cast(z, xl, RoundMode::CAST_NONE, n_);
-            Cast(tmp, rl, RoundMode::CAST_NONE, n_);
-            Add(z, z, tmp, n_);
+            if (tiling_->normFromResidual == 0u) {
+                Cast(tmp, rl, RoundMode::CAST_NONE, n_);
+                Add(z, z, tmp, n_);
+            }
 
             LocalTensor<bfloat16_t> rol = bo_.Get<bfloat16_t>();
             Cast(rol, z, RoundMode::CAST_RINT, n_);
@@ -381,6 +392,7 @@ private:
     GM_ADDR wsGm_{nullptr};
     GM_ADDR partialGm_{nullptr};
     GM_ADDR arGm_{nullptr};
+    GM_ADDR residualGm_{nullptr};
     __gm__ float* flagGm_{nullptr};
     uint8_t repeat_{1};
 };

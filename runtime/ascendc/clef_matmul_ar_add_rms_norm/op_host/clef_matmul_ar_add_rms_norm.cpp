@@ -125,6 +125,14 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const int64_t mmStageReq = (mmStageAttr == nullptr) ? 0 : *mmStageAttr;
     if (mmStageReq < 0 || mmStageReq > 5) { return ge::GRAPH_FAILED; }
     t->mmStage = static_cast<uint32_t>(mmStageReq);
+    // norm_from_residual=1: diagnostic path where the residual input slot
+    // carries the partial to be normalised and the residual add is skipped.
+    // It is the only way to feed an external partial into this operator; with
+    // mm_enable=0 the norm would otherwise read unwritten workspace.
+    const auto* normSrcAttr = context->GetAttrs()->GetAttrPointer<int64_t>(12);
+    const int64_t normSrcReq = (normSrcAttr == nullptr) ? 0 : *normSrcAttr;
+    if (normSrcReq < 0 || normSrcReq > 1) { return ge::GRAPH_FAILED; }
+    t->normFromResidual = static_cast<uint32_t>(normSrcReq);
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
@@ -254,6 +262,7 @@ public:
         this->Attr("norm_ub_late").Int(1);
         this->Attr("mm_btrans").Int(0);
         this->Attr("mm_stage").Int(0);
+        this->Attr("norm_from_residual").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");
