@@ -84,19 +84,20 @@ def guard() -> None:
         if "curl" in joined:
             if "/health" in joined:
                 return types.SimpleNamespace(returncode=0, stdout='{"status":"ready"}', stderr="")
-            if "systemone" in joined or "decide" in joined:
-                # text sample -> score, image sample -> choice (both shapes given)
+            if "/v1/systemone" in joined:
                 return types.SimpleNamespace(
-                    returncode=0,
-                    stdout='{"answers":{"answer":{"type":"score"}},'
-                           '"choices":[{"type":"choice"}]}', stderr="")
+                    returncode=0, stdout='{"answers":{"answer":{"type":"score"}}}', stderr="")
+            if "/v1/decide" in joined:
+                return types.SimpleNamespace(
+                    returncode=0, stdout='{"answers":{"answer":{"type":"choice"}}}', stderr="")
         if joined.startswith("npu-smi"):
             # header + two worker rows: second column is the pid
-            rows = ["NPU Name Chip Process id Process name",
-                    f"7  0  0  {REC.get('root_pid', 424242)}  python",
-                    f"7  1  0  {REC.get('root_pid', 424242)}  python",
-                    "7  2  0  424244  VLLMWorker_TP0",
-                    "7  3  0  424245  VLLMWorker_TP1"]
+            w = REC.get("workers") or [424301, 424302]
+            # npu-smi rows are pipe separated and _worker_pids reads cell[1]
+            rows = ["+---+--------+----------------+",
+                    f"| 0 | {REC.get('root_pid', 424242)} | python |",
+                    f"| 0 | {w[0]} | VLLMWorker_TP0 |",
+                    f"| 1 | {w[1]} | VLLMWorker_TP1 |"]
             return types.SimpleNamespace(returncode=0, stdout="\n".join(rows), stderr="")
         return types.SimpleNamespace(returncode=0, stdout="", stderr="")
 
@@ -281,6 +282,14 @@ def guard() -> None:
             fields[19] = start
             vfs_put(f"/proc/{pid}/stat", f"{pid} (python3) " + " ".join(fields) + "\n")
     REC["_spawn_tree"] = spawn_service_tree
+
+    # request sources (read-only fixtures)
+    TEXT = "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json"
+    IMAGE = "/workspace/yangchen/logs/perf-wave2-20261118/erqa/samples/erqa-0000/request.json"
+    vfs_put(TEXT, json.dumps({"samples": [{"name": "od-1534",
+                                          "request": {"prompt": "x", "candidates": ["a", "b"]}}]}))
+    vfs_put(IMAGE, json.dumps({"request": {"prompt": "x", "images": ["i0"],
+                                           "candidates": ["a", "b"]}}))
     vfs_put("/proc/sys/kernel/random/boot_id", "BOOT-TEST-0001\n")
     REC["root_pid"] = ROOT_PID
     # discovery reads SERVICE_LABEL (a module constant), not the dynamic label
@@ -420,6 +429,50 @@ def main() -> int:
         if not any(name in k for k in REC["arrived"]):
             out["not_reached"].append(name)
 
+    _r = out.get("artifacts", {}).get("restore.json") or {}
+    chk("restore_ok_true", _r.get("restore_ok") is True, f"restore_ok={_r.get('restore_ok')!r}")
+    chk("verify_ok_true", _r.get("verify_ok") is True, f"verify_ok={_r.get('verify_ok')!r}")
+    for stage in ("health", "workers", "text", "image"):
+        e = _r.get(stage) or {}
+        chk(f"verify_{stage}_ok", e.get("ok") is True,
+            f"rc={e.get('rc')!r} stdout={str(e.get('stdout'))[:80]!r} workers={e.get('workers')!r}")
+    for rank in (0, 1):
+        pj = out.get("artifacts", {}).get(f"result-rank{rank}-parsed.json")
+        chk(f"parsed_rank{rank}_present", bool(pj), f"keys={sorted(pj) if isinstance(pj, dict) else type(pj)}")
+    # artifact-dependent checks are re-evaluated last so ordering cannot matter
+    _late = {"restore_ok_true", "verify_ok_true", "verify_health_ok", "verify_workers_ok",
+             "verify_text_ok", "verify_image_ok", "parsed_rank0_present", "parsed_rank1_present"}
+    out["checks"] = [c for c in out["checks"] if c["check"] not in _late]
+    _r2 = out.get("artifacts", {}).get("restore.json") or {}
+    def _chk2(n, ok, d=""):
+        out["checks"].append({"check": n, "ok": bool(ok), "detail": d})
+    _chk2("restore_ok_true", _r2.get("restore_ok") is True, f"{_r2.get('restore_ok')!r}")
+    _chk2("verify_ok_true", _r2.get("verify_ok") is True, f"{_r2.get('verify_ok')!r}")
+    for stage in ("health", "workers", "text", "image"):
+        e = _r2.get(stage) or {}
+        _chk2(f"verify_{stage}_ok", e.get("ok") is True, f"rc={e.get('rc')!r} workers={e.get('workers')!r}")
+    for rank in (0, 1):
+        pj = out.get("artifacts", {}).get(f"result-rank{rank}-parsed.json")
+        _chk2(f"parsed_rank{rank}_present", bool(pj), f"keys={sorted(pj) if isinstance(pj, dict) else None}")
+    out["failed"] = [c["check"] for c in out["checks"] if not c["ok"]]
+    Path(a.json_out).write_text(json.dumps(out, indent=1))
+    print(json.dumps({k: out[k] for k in ("target_commit", "main_returned", "main_return_type",
+                                         "main_exception", "out_dir", "not_reached", "failed")}, indent=1))
+    # artifact-dependent checks are re-evaluated last so ordering cannot matter
+    _late = {"restore_ok_true", "verify_ok_true", "verify_health_ok", "verify_workers_ok",
+             "verify_text_ok", "verify_image_ok", "parsed_rank0_present", "parsed_rank1_present"}
+    out["checks"] = [c for c in out["checks"] if c["check"] not in _late]
+    _r2 = out.get("artifacts", {}).get("restore.json") or {}
+    def _chk2(n, ok, d=""):
+        out["checks"].append({"check": n, "ok": bool(ok), "detail": d})
+    _chk2("restore_ok_true", _r2.get("restore_ok") is True, f"{_r2.get('restore_ok')!r}")
+    _chk2("verify_ok_true", _r2.get("verify_ok") is True, f"{_r2.get('verify_ok')!r}")
+    for stage in ("health", "workers", "text", "image"):
+        e = _r2.get(stage) or {}
+        _chk2(f"verify_{stage}_ok", e.get("ok") is True, f"rc={e.get('rc')!r} workers={e.get('workers')!r}")
+    for rank in (0, 1):
+        pj = out.get("artifacts", {}).get(f"result-rank{rank}-parsed.json")
+        _chk2(f"parsed_rank{rank}_present", bool(pj), f"keys={sorted(pj) if isinstance(pj, dict) else None}")
     out["failed"] = [c["check"] for c in out["checks"] if not c["ok"]]
     Path(a.json_out).write_text(json.dumps(out, indent=1))
     print(json.dumps({k: out[k] for k in ("target_commit", "main_returned", "main_return_type",
@@ -428,7 +481,8 @@ def main() -> int:
     keep = {}
     for name in ("restore.json", "restore-failure.json", "parse-failure.json",
                  "root-child.json", "raw-rc.json", "tree-after.json",
-                 "result-rank0.json"):
+                 "result-rank0.json", "result-rank0-parsed.json",
+                 "result-rank1-parsed.json"):
         f = odir / name
         if f.is_file():
             try:
