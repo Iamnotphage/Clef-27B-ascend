@@ -16,6 +16,13 @@ import d0_restore  # noqa: E402
 fails = []
 
 
+class R:
+    """Minimal completed-process stub shared by the restore cases."""
+
+    def __init__(self, rc=0, out="", err=""):
+        self.returncode, self.stdout, self.stderr = rc, out, err
+
+
 def check(name, cond, extra=""):
     print(f"{name}: {'OK' if cond else 'FAIL ' + str(extra)}")
     if not cond:
@@ -97,15 +104,13 @@ def gate_cases():
 
 
 def restore_cases():
-    class R:
-        def __init__(self, rc=0, out="ok", err=""):
-            self.returncode, self.stdout, self.stderr = rc, out, err
 
     # 1 an absent target is unavailable, never signalled and never "cleaned"
     killed = []
     with tempfile.TemporaryDirectory() as td:
         log = {}
-        d0_restore.cleanup([{"pid": 999999}], log, killer=lambda k, v: killed.append((k, v)))
+        d0_restore.cleanup([{"pid": 999999, "starttime": "1", "boot_id": "b"}], log,
+                           killer=lambda k, v: killed.append((k, v)))
         check("absent target never signalled",
               not killed and len(log["cleanup"]["unavailable"]) == 1
               and not log["cleanup"]["killed"], log["cleanup"])
@@ -117,6 +122,14 @@ def restore_cases():
                        log, killer=lambda k, v: killed.append((k, v)))
     check("cleanup refuses pid<=1 and self",
           not killed and len(log["cleanup"]["refused"]) == 2, log["cleanup"])
+
+    # 1b2 a target without starttime/boot_id is refused even if the pid exists
+    killed.clear()
+    log = {}
+    d0_restore.cleanup([{"pid": os.getppid()}], log,
+                       killer=lambda k, v: killed.append((k, v)))
+    check("cleanup requires identity fields",
+          not killed and len(log["cleanup"]["refused"]) == 1, log["cleanup"])
 
     # 1c identity mismatch is refused (starttime checked via a stubbed reader)
     killed.clear()
@@ -180,6 +193,56 @@ def restore_cases():
 def main() -> int:
     gate_cases()
     restore_cases()
+    # 5 worker counting is scoped to the restored service pids
+    log = {}
+    rows = "| 7 0 | 111 | VLLMWorker_TP | x |\n| 7 1 | 222 | VLLMWorker_TP | y |\n| 7 0 | 999 | other |"
+    ok = d0_restore.verify({"health": ["h"], "workers": ["w"], "text": ["t"], "image": ["i"]},
+                           log, runner=lambda c, **k: R(rc=0, out={
+                               "h": '{"status":"ready"}', "w": rows,
+                               "t": '{"answers":{"answer":{"type":"score"}}}',
+                               "i": '{"answers":{"answer":{"type":"choice"}}}'}[c[0]]))
+
+    check("two workers accepted", ok and log["workers"].get("workers") == 2, log["workers"])
+    check("worker count scoped helper",
+          d0_restore._count_workers(rows, {111}) == 1
+          and d0_restore._count_workers(rows, {111, 222}) == 2, "")
+
+    # 6 finally: restore failure does not overwrite the test rc
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td) / "run"
+        code = f"""
+import sys, json
+sys.path.insert(0, {str(Path(__file__).resolve().parent)!r})
+from pathlib import Path
+import d0_run, d0_restore
+
+def fake_child(cmd, out_dir, timeout, env=None):
+    (Path(out_dir) / "raw-rc.json").write_text(json.dumps(
+        {{"wrapper_rc": 7, "child_raw_rc": 7, "timed_out": False, "pgid": 1}}))
+    return 7
+d0_run.run_child = fake_child                   # test fails with rc 7
+calls = {{}}
+def fake_restore(launch, wait, log, runner=None):
+    calls["launch"] = launch
+    log["restore"] = {{"launch_rc": 1}}       # restore also fails
+    return False
+d0_restore.restore = fake_restore
+d0_run.restore = fake_restore
+argv = ["x", "--out-dir", {str(d)!r}, "--adapter", "/tmp/a.so", "--adapter-sha", "0"*64]
+sys.argv = argv
+try:
+    rc = d0_run.main()
+except SystemExit as e:
+    rc = e.code
+log = json.loads((Path({str(d)!r}) / "restore.json").read_text())
+print("RC", rc, "TEST", log["test_rc"], "OK", log["restore_ok"], "LAUNCH", calls.get("launch"))
+"""
+        p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        out = p.stdout.strip()
+        check("restore failure keeps test rc",
+              "TEST 7" in out and "OK False" in out and "launch.sh" in out
+              and ("RC 7" in out or "RC 5" in out), out + p.stderr[-300:])
+
     print("RESULT:", "ALL PASS" if not fails else f"FAILURES: {fails}")
     return 0 if not fails else 1
 

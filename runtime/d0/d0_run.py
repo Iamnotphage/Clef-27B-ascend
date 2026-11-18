@@ -116,8 +116,12 @@ def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -
     child = subprocess.Popen(cmd, start_new_session=True, env=env,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     pgid = child.pid                                   # leader of its own session
+    from d0_restore import _identity
     (out_dir / "root-child.json").write_text(json.dumps(
         {"child_pid": child.pid, "pgid": pgid,
+         "starttime": (_identity(child.pid) or {}).get("starttime"),
+         "boot_id": (_identity(child.pid) or {}).get("boot_id"),
+         "launch_source": " ".join(cmd[:3]),
          "tree_at_start": snapshot_tree(os.getpid())}, ensure_ascii=False) + "\n")
     timed_out = False
     try:
@@ -205,7 +209,26 @@ def main() -> int:
     # Real executor lives in its own module; this process only supervises it.
     env = dict(os.environ)
     env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
-    rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
+    test_rc = 0
+    try:
+        rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
+        test_rc = rc
+    finally:
+        # Restore runs on every exit path and keeps its own record; a restore
+        # failure never overwrites the test rc.
+        try:
+            from d0_restore import SERVICE_LAUNCH, SERVICE_WAIT, restore, verify
+            rlog = {"test_rc": test_rc}
+            restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
+            verified = verify({"health": [], "workers": [], "text": [], "image": []},
+                              rlog) if restored else False
+            rlog["restore_ok"], rlog["verify_ok"] = restored, verified
+            (a.out_dir / "restore.json").write_text(
+                json.dumps(rlog, ensure_ascii=False, indent=1) + "\n")
+        except Exception as exc:                              # noqa: BLE001
+            (a.out_dir / "restore-failure.json").write_text(json.dumps(
+                {"failure": type(exc).__name__, "message": str(exc),
+                 "test_rc": test_rc}, ensure_ascii=False) + "\n")
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
     try:
@@ -222,10 +245,10 @@ def main() -> int:
         (a.out_dir / "parse-failure.json").write_text(json.dumps(
             {"failure": type(exc).__name__, "message": str(exc)},
             ensure_ascii=False) + "\n")
-        prev = json.loads((a.out_dir / "raw-rc.json").read_text())
+        rc_file = a.out_dir / "raw-rc.json"
+        prev = json.loads(rc_file.read_text()) if rc_file.exists() else {}
         prev["wrapper_rc"] = 5                 # child_raw_rc is left untouched
-        (a.out_dir / "raw-rc.json").write_text(
-            json.dumps(prev, ensure_ascii=False) + "\n")
+        rc_file.write_text(json.dumps(prev, ensure_ascii=False) + "\n")
         rc = 5
     return rc
 

@@ -22,6 +22,22 @@ from pathlib import Path
 
 STAGES = ("cleanup", "restore", "health", "workers", "text", "image")
 
+# Sources taken read-only from the recorded successful restore (seq2809/2821).
+# They are the actual paths used then; this module never runs them here.
+# The config is pinned rather than inherited: an inherited CLEF_LAUNCH_CONFIG
+# is not a verified default.
+SERVICE_LABEL = "final-default-s1"
+SERVICE_CONFIG = "s1"
+SERVICE_LAUNCH = ["bash", "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+                  SERVICE_LABEL]
+SERVICE_WAIT = ["bash", "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh"]
+HEALTH_URL = "http://127.0.0.1:18143/health"
+TEXT_SOURCE = ("/workspace/yangchen/logs/tuning/20261114-013000-fix4/"
+               "opendecisions/all2352.json")
+TEXT_SAMPLE = "od-1534"
+IMAGE_SOURCE = ("/workspace/yangchen/logs/perf-wave2-20261118/erqa/samples/"
+                "erqa-0000/request.json")
+
 
 def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
@@ -49,13 +65,18 @@ def _verify_identity(target: dict) -> tuple[bool, str]:
         return False, "refused: pid missing, non-integer or <= 1"
     if pid == os.getpid():
         return False, "refused: target is the current process"
+    if not target.get("starttime") or not target.get("boot_id"):
+        return False, "refused: starttime and boot_id are required"
     now = _identity(pid)
     if now is None:
         return False, "unavailable: process not present"
-    if target.get("starttime") and now["starttime"] != target["starttime"]:
+    if now["starttime"] != target["starttime"]:
         return False, "refused: starttime mismatch (pid likely reused)"
-    if target.get("boot_id") and now["boot_id"] != target["boot_id"]:
+    if not now["boot_id"] or now["boot_id"] != target["boot_id"]:
         return False, "refused: boot_id mismatch"
+    want_pgid = target.get("pgid")
+    if want_pgid is not None and os.getpgid(pid) != want_pgid:
+        return False, "refused: pgid does not match the recorded group"
     return True, "ok"
 
 
@@ -88,8 +109,10 @@ def cleanup(targets: list[dict], log: dict, killer=None) -> dict:
     return result
 
 
-def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subprocess.run) -> bool:
-    started = runner(launch_cmd, capture_output=True, text=True)
+def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subprocess.run,
+            timeout: int = 300) -> bool:
+    started = runner(launch_cmd, capture_output=True, text=True, timeout=timeout,
+                     env={**os.environ, "CLEF_LAUNCH_CONFIG": SERVICE_CONFIG})
     log["restore"] = {"at": _now(), "launch_rc": started.returncode,
                       "stdout": started.stdout[-2000:], "stderr": started.stderr[-2000:]}
     if wait_cmd:
@@ -106,8 +129,17 @@ def _parse_health(text: str) -> bool:
         return False
 
 
-def _count_workers(text: str) -> int:
-    return sum(1 for line in text.splitlines() if "VLLMWorker_TP" in line)
+def _count_workers(text: str, service_pids: set[int] | None = None) -> int:
+    """Count worker rows, optionally restricted to the restored service tree.
+
+    A whole-machine count would include unrelated rows, so when the service
+    pids are known only those are attributed.
+    """
+    rows = [ln for ln in text.splitlines() if "VLLMWorker_TP" in ln]
+    if service_pids:
+        rows = [ln for ln in rows
+                if any(str(pid) in ln for pid in service_pids)]
+    return len(rows)
 
 
 def _parse_answer(text: str, expect: str) -> bool:

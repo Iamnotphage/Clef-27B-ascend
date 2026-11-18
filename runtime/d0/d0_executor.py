@@ -187,8 +187,12 @@ def run(torch, torch_npu, args, out_dir: Path, dist=None, env=None) -> dict:
         raise RuntimeError(f"trace numel {int(trace.numel())} != {TRACE_SLOTS * TRACE_FIELDS}")
     rows = trace.cpu().tolist()
     from d0_gate import evaluate
-    gate = evaluate({"residual": res_out, "y": out, "rstd": rstd.reshape(-1)},
-                    {"residual": ref_res, "y": ref_y, "rstd": ref_rstd})
+    torch.npu.synchronize()                     # complete before any host copy
+    cand = {"residual": res_out.detach().cpu(), "y": out.detach().cpu(),
+            "rstd": rstd.detach().cpu()}        # candidate keeps its own shape
+    ref = {"residual": ref_res.detach().cpu(), "y": ref_y.detach().cpu(),
+           "rstd": ref_rstd.detach().cpu()}     # reference normalised per protocol
+    gate = evaluate(cand, ref)
     (out_dir / f"gate-rank{rank}.json").write_text(
         json.dumps(gate, ensure_ascii=False, indent=1) + "\n")
     record = {"rank": rank, "group": group_name, "raw_trace": rows,

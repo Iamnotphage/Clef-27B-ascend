@@ -62,8 +62,18 @@ def gate_output(name: str, cand, ref, mode: str) -> dict:
     return out
 
 
+def normalise(obj: dict) -> dict:
+    """Only the reference is normalised (rstd to 1-D); the candidate is judged
+    in the shape the operator actually produced."""
+    import torch
+    out = dict(obj)
+    if "rstd" in out:
+        out["rstd"] = out["rstd"].reshape(-1)
+    return out
+
+
 def evaluate(cand, ref) -> dict:
-    """cand/ref: dicts with residual/y/rstd tensors, same r/gamma/eps."""
+    """cand/ref: CPU tensors with residual/y/rstd, same r/gamma/eps."""
     results = [gate_output("residual", cand["residual"], ref["residual"], "mixed"),
                gate_output("y", cand["y"], ref["y"], "y"),
                gate_output("rstd", cand["rstd"], ref["rstd"], "abs")]

@@ -40,10 +40,14 @@ def main() -> int:
         write_failure(a.out_dir, "import-failure", exc)
         return 3
     try:
-        run(torch, torch_npu, a, a.out_dir, dist)
+        record = run(torch, torch_npu, a, a.out_dir, dist)
     except Exception as exc:                                  # noqa: BLE001
         write_failure(a.out_dir, "trace-unavailable", exc)
         return 4
+    # A numeric gate failure is its own return code so the runner can tell it
+    # apart from a crash, while raw trace and claims stay on disk.
+    if record is not None and record.get("gate_pass") is False:
+        return 6
     return 0
 
 
