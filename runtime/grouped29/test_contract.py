@@ -12,7 +12,9 @@ from contract import OWNER, check_owner, check_sha, cpu_inputs, record_tensor, s
 class ContractTests(unittest.TestCase):
     def test_two_ranks_share_inputs_but_select_distinct_real_slices(self):
         full = torch.arange(32, dtype=torch.float32).reshape(4, 8).to(torch.bfloat16)
-        a = cpu_inputs(torch, full, 3, 20261118, 0)
+        metrics = {}
+        a = cpu_inputs(torch, full, 3, 20261118, 0, metrics)
+        self.assertGreaterEqual(metrics['candidate_weight_cpu_layout_wall_ms'], 0)
         b = cpu_inputs(torch, full, 3, 20261118, 1)
         for name in ('x', 'r', 'gamma'):
             self.assertEqual(record_tensor(torch, a[name]), record_tensor(torch, b[name]))

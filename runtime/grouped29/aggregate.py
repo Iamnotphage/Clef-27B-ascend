@@ -54,6 +54,10 @@ def aggregate(cell, stage, identity, pgid):
                 meta.get('layout', {}).get('service_weight_format') != 29 or
                 not isinstance(meta.get('group'), str) or not meta['group']):
             raise ValueError(f'rank{rank} ND/NZ/group mismatch')
+        for name in ('candidate_weight_cpu_layout_wall_ms', 'candidate_weight_upload_wall_ms', 'service_nz_setup_wall_ms'):
+            value = meta['layout'].get(name)
+            if type(value) not in (float, int) or not math.isfinite(value) or value < 0:
+                raise ValueError('Missing/nonfinite initialization cost: ' + name)
         for name in ('x', 'r', 'gamma'):
             load_raw(root, name, meta['inputs'][name], meta['inputs'][name]['shape'], 'torch.bfloat16')
         arms_by_prefix = {'': ('baseline', 'nd_native', 'candidate'),

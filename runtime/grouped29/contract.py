@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import time
 from pathlib import Path
 
 OWNER = 'clef-27b-ascend-27'
@@ -89,11 +90,14 @@ def load_gate(path):
     return module.evaluate
 
 
-def cpu_inputs(torch, full_weight, rows, seed, rank):
+def cpu_inputs(torch, full_weight, rows, seed, rank, layout_metrics=None):
     if rank not in (0, 1) or full_weight.ndim != 2 or full_weight.shape[1] % 2:
         raise ValueError('Invalid TP2 weight/rank')
     width = full_weight.shape[1] // 2
+    begin = time.perf_counter_ns()
     weight = full_weight[:, rank * width:(rank + 1) * width].t().contiguous()
+    if layout_metrics is not None:
+        layout_metrics['candidate_weight_cpu_layout_wall_ms'] = (time.perf_counter_ns() - begin) / 1e6
     gen = torch.Generator(device='cpu').manual_seed(seed)
     # Keep exact N1 ordering: x, residual, gamma; rank only selects the weight.
     x = torch.randn(rows, width, generator=gen).to(torch.bfloat16)

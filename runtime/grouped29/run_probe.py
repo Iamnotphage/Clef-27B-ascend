@@ -81,7 +81,8 @@ def main():
             full_w = f.get_tensor(WEIGHT_KEY)
         if tuple(full_w.shape) != (5120, 17408) or full_w.dtype != torch.bfloat16:
             raise RuntimeError('Actual model weight shape/dtype differs from frozen TP2 contract')
-        source = cpu_inputs(torch, full_w, a.rows, a.seed, rank)
+        layout_metrics = {}
+        source = cpu_inputs(torch, full_w, a.rows, a.seed, rank, layout_metrics)
         meta['inputs'] = {name: record_tensor(torch, t) for name, t in source.items()}
         meta['weight'] = {'key': WEIGHT_KEY, 'shard': shard, 'slice': [rank * 8704, (rank + 1) * 8704]}
         for name in ('x', 'r', 'gamma'):
@@ -102,18 +103,25 @@ def main():
             if both[0][name] != both[1][name]:
                 raise RuntimeError('Ranks differ in shared input: ' + name)
         meta['both_rank_inputs'] = both
-        tensors = {name: tensor.npu() for name, tensor in source.items()}
-        x, w, residual, gamma = (tensors[n] for n in ('x', 'w', 'r', 'gamma'))
+        torch.npu.synchronize()
+        layout_begin = time.perf_counter_ns()
+        w = source['w'].npu()
+        torch.npu.synchronize()
+        layout_metrics['candidate_weight_upload_wall_ms'] = (time.perf_counter_ns() - layout_begin) / 1e6
+        tensors = {name: source[name].npu() for name in ('x', 'r', 'gamma')}
+        tensors['w'] = w
+        x, residual, gamma = (tensors[n] for n in ('x', 'r', 'gamma'))
         bias = torch.zeros(5120, dtype=torch.float32, device=x.device)
+        torch.npu.synchronize()
         layout_begin = time.perf_counter_ns()
         # NZ is the actual service reference. Candidate accepts only ND.
         service_w = torch_npu.npu_format_cast(w.t().contiguous(), 29)
         torch.npu.synchronize()
-        meta['layout'] = {'candidate_weight_format': torch_npu.get_npu_format(w),
+        meta['layout'] = {**layout_metrics, 'candidate_weight_format': torch_npu.get_npu_format(w),
                           'service_weight_format': torch_npu.get_npu_format(service_w),
-                          'setup_wall_ms': (time.perf_counter_ns() - layout_begin) / 1e6,
+                          'service_nz_setup_wall_ms': (time.perf_counter_ns() - layout_begin) / 1e6,
                           'candidate_static_weight_bytes': w.numel() * w.element_size(),
-                          'scope': 'one-time ND/transpose/NZ preparation, excluded from timing'}
+                          'scope': 'separate CPU ND layout, ND weight upload, and device transpose/NZ reference setup; excluded from timing'}
         if meta['layout']['candidate_weight_format'] != 2 or meta['layout']['service_weight_format'] != 29:
             raise RuntimeError('Unexpected ND/NZ storage formats')
         if not torch.equal(service_w.cpu(), source['w'].t()):
