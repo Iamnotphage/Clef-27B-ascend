@@ -1,11 +1,10 @@
 # GDN 输出 Norm 的 BLOCK_M 单变量准备（2026-11-18）
 
-状态：CPU 准备完成。设备侧已有三轮启动尝试，均未产生可用的四 BM 计时：run1 是 runner 未加载
-`activate_env.sh`（`libhccl.so` 缺失），run2 是 probe 对 Triton decorator 的解包入口（`Heuristics` 无
-`device_caches`），run3 是 **BM128 在固定栈下的 UB 编译容量限制**（BM64/16/32 已成功编译并走到准备阶段，
-但结果尚未落盘、计时未进入）。三轮均已归档，**不构成四 BM 的数值或性能证据**。probe 已补按臂失败隔离与
-逐阶段落盘，等待 21 在 E 采集和三检之后用新空目录单次重试。本文不报告任何未实测收益，也不把 48 调用
-微基准批次写成每请求 48 层链。
+状态：CPU 准备完成。run4（唯一重试）已实际执行并产出 `probe.json`：**三臂可执行 + BM128 编译容量失败**。
+BM64/16/32 对同输入 BM64 的 `out` 与 `rstd` 全部逐位一致、finite、0 NaN/Inf；三轮 48 调用微基准批次的
+device 配对差方向翻转，没有臂在 ≥3 轮稳定优于 BM64。20 已决定本轮**保持默认 BM64**，不据此启服务 A/B、
+全量质量或追加 GDN 窗口；BLOCK_M 单变量方向按预定判据关闭。run1/run2/run3 的失败格归档，不追填旧
+run，也不把本结果换算为服务收益。
 
 ## 1. 范围与冻结契约
 
@@ -279,6 +278,110 @@ run3 根因与修复：
 | `runtime/run_gdn_norm_block_m.sh` | `716c82154a82c8ce8d03b318d52cf885f586e09503a25674b874e18a0438057a` |
 | `runtime/test_gdn_norm_block_m_probe.py` | `66ef11b2a12b5c7916587482a4a10fcd7fdaaad4787282e59694a7e95b59da01` |
 
-重试策略：旧三格归档；21 完成三检后使用**尚不存在的**新目录
-`/workspace/yangchen/logs/gdn-norm-block-m-20261118-run4` 单次重试；runner 会拒绝已存在目录，并在探针
+重试策略：旧三格归档；run4 已按新空目录单次执行完成，见第 11 节；runner 会拒绝已存在目录，并在探针
 失败时仍执行 revert。设备、服务与三检仍由 21 负责。
+
+## 11. run4 结果（2026-11-18 14:30 UTC，唯一重试）
+
+- 日志 `/workspace/yangchen/logs/perf-wave3-20261118/e-test/run-gdn4.log`（465 行，14,106 B，
+  SHA-256 `719d6182…d4d5`）；`ENV_CHECK_RC=0`、`CHECK_RC=0`、`APPLY_RC=0`、`PROBE_RC=0`、`REVERT_RC=0`；
+  运行 probe SHA-256 `ae346bed…9a80f`，installer `140766f2…02bc1`；目标已 revert 回 preimage
+  `68f61d7f…a774`。
+- `probe.json`：SHA-256 `552c00e8…1ec94`；`status=partial`、`ready=true`、`failures=[]`、
+  `paired_comparison_possible=true`；`arms_ok=[16,32,64]`、`arms_failed=[128]`。
+- 四 BM 矩阵本次为 **三臂可执行 + 一臂编译容量失败**；`num_warps/num_stages/精度/kernel/矩阵` 均未改。
+- BM128：`stage=warmup`、`MLIRCompilationError`、UB overflow；`cache_dir=SK3IPF…`；完整 traceback 见
+  `probe.json.arm-128.traceback.txt`（4,985 B，SHA-256 `661a008c…95cc`）；无 kernel、无计时、无数值比较。
+
+### 11.1 输入（synthetic）
+
+`inputs.source=synthetic`；`x/z` BF16 `[23208,128]` contiguous，strides `[128,1]`；`weight` BF16 `[128]`，
+strides `[1]`；`eps=1e-6`。实际字节 SHA-256：
+
+| 输入 | SHA-256 |
+| --- | --- |
+| x | `0959617c9aeeb32670f94e851260ea465bac4e146ad208092284a2380900721d` |
+| z | `ba26fd560421a7094e138cb377fe30c2a656bec8b368a835417300a9cd032166` |
+| weight | `1ede9ebfa1ad011b89a3e3df648a958674d64afa0726d98858a68b8a4da14ee0` |
+
+grid 派生值：BM16 1451/8、BM32 726/24、BM64 363/24、BM128 182/88（blocks/padding rows）。
+
+### 11.2 metadata 与 specialization
+
+| 臂 | kernel hash 前缀 | BLOCK_M constexpr | warps/stages | coalesce/axis | shared | missing |
+| --- | --- | ---: | --- | --- | ---: | --- |
+| 64 | `f72f309a989ae5de` | 64 | 32/2 | 1/-1 | 1 | [] |
+| 16 | `a6ec9de472a57936` | 16 | 32/2 | 1/-1 | 1 | [] |
+| 32 | `c8d639b9a58f0813` | 32 | 32/2 | 1/-1 | 1 | [] |
+| 128 | —（编译失败） | — | — | — | — | — |
+
+三臂的 `specialization_ok=true`，`BLOCK_M` 与请求臂一致；`BLOCK_N=128`、`HAS_Z=true`、`HAS_BIAS=false`、
+`IS_RMS_NORM=true`、`NORM_BEFORE_GATE=true`、`ACTIVATION=0`。三臂已解析字段无缺失；BM128 的
+`specialization_ok=null`，不伪造为通过。
+
+### 11.3 正确性（相对同输入 BM64）
+
+三臂结果相同：
+
+| 输出 | equal/total | bit_equal | finite | NaN/Inf | max_abs / mean_abs / rmse |
+| --- | --- | --- | --- | --- | --- |
+| out BF16 | 2,970,624 / 2,970,624 | true | true | 0 / 0 | 0.0 / 0.0 / 0.0 |
+| rstd FP32 | 23,208 / 23,208 | true | true | 0 / 0 | 0.0 / 0.0 / 0.0 |
+
+即 BM16/32/64 在该 synthetic 输入上 `out` 与 `rstd` 全部逐位一致且 finite；未发现 NaN/Inf。
+
+### 11.4 计时（48 调用微基准批次）
+
+协议：每批 48 次连续调用、每臂 48 次 warmup、3 轮；预登记顺序
+`[16,32,64,128] / [32,64,128,16] / [64,128,16,32]`，投影到可执行臂后为
+`[16,32,64] / [32,64,16] / [64,16,32]`。下表 `device/wall` 为该轮原始批次时间，`Δdevice/Δwall`
+为同轮相对 BM64 的配对差（wall 配对差由原始 `batch_wall_ms` 直接相减得到）。
+
+| 轮 | 臂 | device ms | wall ms | Δdevice ms | Δwall ms |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 16 | 3.5225 | 5.0535 | +0.1798 | +1.6004 |
+| 0 | 32 | 3.4086 | 3.5486 | +0.0659 | +0.0956 |
+| 0 | 64 | 3.3427 | 3.4530 | 0 | 0 |
+| 1 | 32 | 3.3995 | 3.5379 | −0.2418 | −0.2610 |
+| 1 | 64 | 3.6413 | 3.7989 | 0 | 0 |
+| 1 | 16 | 3.4111 | 3.5552 | −0.2302 | −0.2437 |
+| 2 | 64 | 3.4553 | 3.6179 | 0 | 0 |
+| 2 | 16 | 3.4136 | 3.5334 | −0.0418 | −0.0846 |
+| 2 | 32 | 3.4413 | 3.5574 | −0.0141 | −0.0605 |
+
+三轮汇总（batch = 48 调用；per-call = batch/48）：
+
+| 臂 | device 中位 ms/batch | per-call 中位 ms | batch max device ms | Δdevice 中位 / 均值 ms | Δwall 中位 / 均值 ms |
+| ---: | ---: | ---: | ---: | --- | --- |
+| 16 | 3.4136 | 0.071116 | 3.5225 | −0.0418 / −0.0307 | −0.0846 / +0.4241 |
+| 32 | 3.4086 | 0.071012 | 3.4413 | −0.0141 / −0.0633 | −0.0605 / −0.0753 |
+| 64 | 3.4553 | 0.071986 | 3.6413 | 0 / 0 | 0 / 0 |
+
+`per_call=null`：本 run 未做逐调用仪器采样，因此**不报告单次最大值**；上表只给 batch max。
+
+### 11.5 判读
+
+- 三臂对同输入的 `out`/`rstd` 全部逐位一致且 finite，数值层面没有差异证据。
+- device 配对比：BM16 `1.0538 / 0.9368 / 0.9879`，BM32 `1.0197 / 0.9336 / 0.9959`；两臂都在不同轮出现
+  正负号翻转，BM64 自身三轮批时间为 3.3427–3.6413 ms（中位 3.4553，相对中位约 8.6%）。没有臂在 ≥3 轮稳定
+  优于 BM64，预登记的“稳定优于 BM64”判据未满足。
+- 因此本轮保持默认 BM64；不据此启动服务 A/B、全量质量或追加 GDN 窗口；BLOCK_M 单变量方向按判据关闭。
+  以上均为 48 调用微基准批次，不换算服务 P95/吞吐或质量收益。
+- BM128 是固定栈下的编译容量失败；若强行纳入需改 `num_warps/num_stages`/kernel，超出本方向冻结范围，
+  本轮不做。
+
+### 11.6 来源缺口
+
+- run4 的日志与 probe.json 都**没有记录实际进程 PID 树**：日志无 `PID/RankID` 行，probe 仅记录
+  device id/name、versions、source SHA、脚本 SHA 与各阶段 RC；因此无法从本次证据还原进程父子关系。
+  该缺口如实保留，不从旧 run 追填。若后续需要进程级来源，由 21 的 runner 在启动时记录 PID/父子树。
+
+### 11.7 证据文件
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `run-gdn4.log` | `719d6182698decd63fdab4738f9c834248a2f93f7bddb36963541436c5fad4d5` |
+| `run4/probe.json` | `552c00e8e702bb1e916af94b297dee5c1751e4c8db24485ed0d0cb907ff1ec94` |
+| `run4/probe.json.arm-128.traceback.txt` | `661a008c61e713354645881280c7fca11b0d9cd4956bf06d76d3278d8abe95cc` |
+| `run4/apply.json` | `fbe7e7af9fcab9ad05e902ce640c052dab23d77f8d9859ab27db362259ad7dc7` |
+| `run4/revert.json` | `762f3593e3cef5a598e0cc460107522dd6eb6760e46dfdb224300ff26e8ed25a` |
