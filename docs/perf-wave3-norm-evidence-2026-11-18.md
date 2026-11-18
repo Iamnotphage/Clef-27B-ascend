@@ -250,3 +250,25 @@
 4. 确认 `use_hccl=0` 是否仍走 KFC ctx（当前未证实）。
 
 **E 组状态**：E 的 cube GEMM 实现依赖上述 kernel 缺陷先定位；C 的完整 2/4 块/尾部与 ready 粒度仍未测。
+
+## 12. C 判别结果：OFF 臂仍触发 KFC，且是 host 注入（2026-11-18 14:38 CST）
+
+单 shape（N=1280）、单 mode（`use_hccl=0`）、单次调用，独立日志目录，两 rank 均失败于**首个 device 任务**：
+
+- `[adapter] before GetWorkspaceSize group=group_name_0 N=1280 use_hccl=0`（两 rank）
+- `an exception occurred during AICPU execution, stream_id:13, task_id:3, errcode:1, msg:execute kernel param invalid`
+  （chipId 7 / dieId 0 与 1，serial 105 / 9）
+- `RAW_RC=1`
+
+**结论（有证据）**：
+
+1. `use_hccl=0` 在 device 分支里跳过了 `InitV2/AllReduce`，但 **host 侧仍提交了 `RunAicpuKfcSrvLaunch`**，且参数块被拒。
+   这与静态证据一致：`NnopbaseSetMc2/SetHcomGroup` 与 `RunAicpuKfcSrvLaunch` 都在 host 侧库，launch 由 opdef 的
+   `MC2().HcclGroup("group")` 声明触发，device 分支无法关闭。
+2. 因此 OFF 臂不是“无 KFC 对照”，之前把 ON/OFF 当作 HCCL 开/关两臂的做法**作废**；C 的两臂差异无法用该开关获得。
+3. `task_id=3`（首个 device 任务）即失败，说明失败发生在 KFC server 启动的参数校验，不是后续 AR 数据路径。
+4. 早前 ON N=1280 打印的 “成功” 只是 host 调用返回；KFC 任务异步失败后在 `synchronize` 暴露——两者并不矛盾。
+
+**含义**：自定义 Op 只要声明 `MC2().HcclGroup`，框架就会注入带参数的 KFC 启动；要让这条路径可用，必须按框架契约
+提供合法的 MC2 参数块（当前 tiling 的 `mc2InitTiling/mc2CcTiling` + group 未满足），或改用不声明 MC2 的路径（则拿不到 context）。
+这是 E 组实现前必须解决的前置：**不是 kernel 语法问题，而是 MC2 参数契约问题**。
