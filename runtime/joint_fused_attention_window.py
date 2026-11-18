@@ -53,7 +53,8 @@ DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm")
 DEFAULT_PYTHON = "/workspace/yangchen/venvs/clef-py312/bin/python"
 SERVICE_LOG_ROOT = "/workspace/yangchen/logs/perf-wave2-20261118"
 PROC_ROOT = Path("/proc")
-CANDIDATE_KEYS = {"CLEF_JOINT_FUSED_ATTN"}
+CANDIDATE_KEYS = {"CLEF_JOINT_FUSED_ATTN", "CLEF_JOINT_SMALLQ",
+                  "CLEF_JOINT_SMALLQ_KERNEL"}
 CLEANUP_KEYS = ("CLEF_PROFILE_MARKERS", "CLEF_PROFILE_OBSERVE_DIR",
                 "CLEF_PROFILE_SCOPE_FILTER", "CLEF_GDN_NORM_BLOCK_M")
 ENV_PREFIXES = ("CLEF_", "ASCEND_", "ATB_", "HCCL_", "FLA_")
@@ -317,7 +318,7 @@ class Window:
         actual_pre = sha256(target_path) if target_path.is_file() else None
         if actual_pre != self.cfg("preimage_sha", PREIMAGE_SHA):
             raise StepError(f"target is not preimage: {actual_pre}")
-        self.state["preflight"]["preimage"] = PREIMAGE_SHA
+        self.state["preflight"]["preimage"] = self.cfg("preimage_sha", PREIMAGE_SHA)
         port_state = port_open(self.args.port)
         self.state["preflight"]["port"] = port_state
         if port_state != "open":
@@ -472,7 +473,7 @@ class Window:
         if not self.applied:
             raise StepError(f"apply did not install postimage: {report.get('state_after')}",
                             detail={"postimage": self.applied})
-        return {"postimage": POSTIMAGE_SHA}
+        return {"postimage": self.cfg("postimage_sha", POSTIMAGE_SHA)}
 
     def _probe_cleanup(self, proc, saved: list[dict], timed_out: bool) -> dict:
         killed, unknown, zombies = [], [], []
@@ -642,7 +643,7 @@ class Window:
             raise StepError("revert did not restore preimage",
                             detail={"target_sha256": actual})
         self.applied = False
-        return {"preimage": PREIMAGE_SHA}
+        return {"preimage": self.cfg("preimage_sha", PREIMAGE_SHA)}
 
     def restore(self):
         sys.path.insert(0, str(Path(self.args.repo) / "runtime" / "d0"))

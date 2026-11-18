@@ -114,7 +114,7 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `49c1ede62a08b390fde3473ccbc62be62f0f60115c7605e35d8e35b205945423`。
+SHA-256 `66503dc0afa0ede4bf1de52ef85c3859bde2736597e3ac545bea282cedf87040`。
 CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `4b9fe1f4e450fdebdbf9a45742b44758521a0311a91b2c92afba2caa37ec95a3`），
 18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
