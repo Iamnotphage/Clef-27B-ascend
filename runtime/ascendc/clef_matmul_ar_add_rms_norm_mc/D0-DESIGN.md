@@ -145,3 +145,33 @@ slots = AIC_CAP * (1 + SUB_CAP)
 需**新增独立输出 `trace` + host shape + adapter 读取**（新 ABI），
 **不复用 8 float `diag`**；需 20 显式授权设备时间。
 本文件为**可审查设计**，未改 kernel、未编译、未上板。
+
+## 附录 A：路线 C 的必要守卫（**待 20 裁决，未实现**）
+
+若 20 选路线 C（仅用公开 API 还原原始 `block`），**必须**按下列顺序取值并校验，
+**不得**写成 `linear / ratio` 的裸除：
+
+```cpp
+const int64_t linear = GetBlockIdx();
+const int64_t sub    = GetSubBlockIdx();
+const int64_t ratio  = GetTaskRatio();
+
+bool ok = (ratio > 0) && (sub >= 0) && (sub < ratio) &&
+          (linear >= sub) && (((linear - sub) % ratio) == 0);
+int64_t block = ok ? ((linear - sub) / ratio) : -1;      // 由公开值反推
+
+// 域/边界/AIC sub0
+ok = ok && (block >= 0) && (block < 24);
+if (ASCEND_IS_AIC) ok = ok && (sub == 0);
+const int64_t slot = ok ? ((ASCEND_IS_AIC ? 0 : 24) + block * 2 + sub) : -1;
+if (!ok || slot < 0 || slot >= 72) { /* 仅禁用 trace 写；主路径继续 */ }
+```
+
+- **失败只禁 trace 写**：`REGIST_MATMUL_OBJ` / `IterateAll` / `End` / 屏障**原控制流不动**。
+- **`block` 必须标为"由公开值反推"**，**不是** raw 读取；文档与字段语义均按此表述。
+- **源内代数链（沿用已读证据，不重启搜索）**：
+  `impl/basic_api/kernel_operator_sys_var_intf_impl.h:66` `GetTaskRatio() { return GetTaskRationImpl(); }`；
+  c220 `GetBlockIdxImpl()` 用的是**同一个** `GetTaskRationImpl()` ⇒ 三条公开值同源。
+- **两类证据分列**：**CPU 纯编译**只证可编译；**运行期取值/一致性**（ratio 实值、`(linear-sub)%ratio==0` 是否恒成立）
+  仍需**设备观测**，本轮**未验证**。
+- **形状/字段/`seal` 全部不变**；本附录不改变已核契约，只规定路线 C 的准入守卫。
