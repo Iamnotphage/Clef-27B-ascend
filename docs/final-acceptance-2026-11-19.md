@@ -187,6 +187,38 @@ B8/B16/ERQA在此命令末尾使用第5节原覆盖参数。27监督器中等价
 
 验证：9项CPU回归全部通过；新增真实CLI测试验证单轮argv恰好等于默认S1前两步、原manifest未变、S2组合拒绝；文件夹具验证单轮完整质量通过仍`final_s1_complete=false`，默认最终缺轮报错，篡改rounds=1仍被默认最终至少3轮门拒绝。已有27监督器v4来源为27提交`ab2903db592dd1e690f0f9ac9ad0b437ef96365e`，supervisor `03409c78…db41` / test `f9034f72…17f`；单轮转发适配后的身份以27后续审定tuple为准。
 
+27监督器v5已固定为提交 `063109a4b1c8b2c3611b5850d7f1915046fd10df`，stage使用扁平目录。23已有限核通过；28于UTC原值`2026-11-18T19:42:02Z`（北京时间03:42:02）只读核验stage，以下文件SHA一致：
+
+| 执行文件 | SHA-256 |
+| --- | --- |
+| v5 `final_acceptance_supervisor.py` | `172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876` |
+| v5 `test_final_acceptance_supervisor.py` | `044a4ef7033a8a2d7929aa3ea3413a0b1f0b1883274a18ba3cd70fada82e3ff0` |
+| cc7 `runtime/final_acceptance.py` | `7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab` |
+| cc7 `runtime/final_acceptance_manifest.json` | `0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2` |
+
+**已审单轮完整监督命令，当前未执行。** 27先完成当前unknown阻断的恢复、四检与严格env检查，再现场填写六个必填变量：两个全新输出目录、ready后identity/launch/owner证据路径、含UTC时区的绝对截止。变量缺失时shell直接阻断；身份与截止不能复用历史值。
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/final-owner27-063109a4b1c8b2c3611b5850d7f1915046fd10df/final_acceptance_supervisor.py \
+  --code /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab \
+  --manifest /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
+  --manifest-sha 0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2 \
+  --phase s1 --single-baseline-round \
+  --output-dir "${CLEF_BASELINE_ROUND1:?27填写全新评测输出目录}" \
+  --records-dir "${CLEF_BASELINE_SUPERVISION:?27填写全新监督输出目录}" \
+  --identities "${CLEF_READY_IDS:?27填写fresh运行期root及descendants原件}" \
+  --launch-manifest "${CLEF_READY_LAUNCH:?27填写本次ready服务launch原件}" \
+  --owner-evidence "${CLEF_OWNER_EVIDENCE:?27填写本次资源与同卡准入原件}" \
+  --deadline-utc "${CLEF_BASELINE_DEADLINE_UTC:?27填写含时区的绝对截止}" \
+  --helper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --execute
+```
+
+helper SHA仍为 `9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`。删除最末`--execute`可只打印客户端argv；v5仍检查runner/manifest/helper SHA与新目录，但不访问服务或创建输出。v5单次绝对monotonic截止贯穿准备、Popen与运行循环，到期按已审身份绑定路径清理，并显式转发single flag；退出后27须检查`clients_exited=true`再进入任何服务切换。监督器`status=complete`表明本次客户端完成；单轮验收仍明确`final_s1_complete=false`。
+
+最终四phase复用此v5入口，删除`--single-baseline-round`，按phase填写`s1/s2_b8/s2_b16/erqa`及各自fresh目录、服务证据和截止；默认S1至少3轮保持。第10节候选元数据补充不改变cc7执行字段，27可继续使用本节已审cc7/0338 stage。
+
 ## 9. 06:30–08:00 执行预算（计划值）
 
 下表的实测耗时只取历史成功原件，预算和截止为建议调度值，最终由27的绝对deadline监督器落实。S1沿Wave2五轮，B8 C8与B16 C32沿11月16日完整扫描；后两者的软件优化版本较早，明确作为耗时估计依据保留。
