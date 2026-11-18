@@ -102,38 +102,47 @@ def unwrap_jit_function(kernel):
     return current, chain
 
 
+class FatalArmError(RuntimeError):
+    """Already recorded fatal arm failure; re-raise without re-recording."""
+
+
 def extract_cache_dir(text: str):
     match = CACHE_DIR_PATTERN.search(text or "")
     return match.group(1) if match else None
 
 
 def is_compile_capacity_failure(exc: BaseException) -> bool:
-    """True only for the recognisable bishengir UB-overflow compile failure.
+    """True only for this exact bishengir UB-overflow compile failure.
 
-    ``MLIRCompilationError`` wraps a ``subprocess.CalledProcessError`` from
-    ``bishengir-compile`` and its message carries the exact
-    ``requires N bits while M bits available`` line.  Anything else (device,
-    synchronize, HCCL, OOM, other compile errors) must abort instead of being
-    treated as an isolatable arm.
+    Requirements, all of them:
+
+    * the exception itself is ``MLIRCompilationError``;
+    * following only explicit ``__cause__`` links, a
+      ``subprocess.CalledProcessError`` runs ``bishengir-compile``;
+    * the message carries both ``ub overflow`` and the exact
+      ``requires N bits while M bits available`` line.
+
+    Implicit ``__context__`` is deliberately not followed: a device or
+    synchronize error must not inherit an earlier compile context and be
+    swallowed as an isolatable arm.
     """
-    chain, seen = [], set()
-    current = exc
+    if type(exc).__name__ != "MLIRCompilationError":
+        return False
+    causes, seen = [], set()
+    current = exc.__cause__
     while current is not None and id(current) not in seen:
         seen.add(id(current))
-        chain.append(current)
-        current = current.__cause__ or current.__context__
-
-    names = {type(item).__name__ for item in chain}
-    texts = [str(item) for item in chain]
-    has_mlir = bool(names & {"MLIRCompilationError", "CompilationError"})
-    has_bishengir = False
-    for item in chain:
-        if isinstance(item, subprocess.CalledProcessError):
-            command = item.cmd if isinstance(item.cmd, (list, tuple)) else [item.cmd]
-            if any("bishengir-compile" in str(part) for part in command):
-                has_bishengir = True
-    has_overflow = any(UB_OVERFLOW_PATTERN.search(text) for text in texts)
-    return has_overflow and (has_mlir or has_bishengir)
+        causes.append(current)
+        current = current.__cause__
+    has_bishengir = any(
+        isinstance(item, subprocess.CalledProcessError)
+        and any("bishengir-compile" in str(part)
+                for part in (item.cmd if isinstance(item.cmd, (list, tuple)) else [item.cmd]))
+        for item in causes
+    )
+    text = "\n".join([str(exc)] + [str(item) for item in causes])
+    has_overflow = "ub overflow" in text.lower() and bool(UB_OVERFLOW_PATTERN.search(text))
+    return has_bishengir and has_overflow
 
 
 def project_orders(orders, arms_ok):
@@ -414,6 +423,8 @@ def main(argv=None) -> int:
 
     report["grid"] = {str(arm): grid_row(arm) for arm in arms}
     specializations, correctness = {}, {}
+    report["specializations"] = specializations
+    report["correctness"] = correctness
     arm_status = {str(arm): {"arm": arm, "status": "pending", "stage": None} for arm in arms}
     arm_failures = []
     report["arm_status"] = arm_status
@@ -421,6 +432,7 @@ def main(argv=None) -> int:
     report["arms_failed"] = []
     report["paired_comparison_possible"] = False
     report["status"] = "running"
+    report["fatal"] = False
     reference_out = reference_rstd = None
     from triton.runtime import driver as triton_driver
     cache_device = triton_driver.active.get_current_device()
@@ -431,21 +443,46 @@ def main(argv=None) -> int:
         report["phase"] = phase
         report["failures"] = failures
         report["arm_failures"] = arm_failures
-        report["ready"] = bool(report.get("paired_comparison_possible")) and not failures
+        report["ready"] = (not report.get("fatal", False)
+                           and bool(report.get("paired_comparison_possible"))
+                           and not failures)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n")
+
+    def write_traceback(prefix: str, text: str) -> str:
+        path = args.output.with_name(args.output.name + f".{prefix}.traceback.txt")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        return str(path)
 
     def arm_error(arm: int, stage: str, exc: BaseException) -> dict:
         text = traceback.format_exc()
         return {"arm": arm, "stage": stage, "error_type": type(exc).__name__,
                 "error_message": str(exc),
                 "cache_dir": extract_cache_dir(str(exc)) or extract_cache_dir(text),
-                "traceback": text[-12000:]}
+                "traceback": text,
+                "traceback_path": write_traceback(f"arm-{arm}", text)}
 
     flush("arms-registered")
 
+    def mark_remaining_not_run(index: int, reason: str) -> None:
+        for remaining in warmup_order[index + 1:]:
+            arm_status[str(remaining)] = {"arm": remaining, "status": "not_run",
+                                          "stage": None, "reason": reason}
+
+    def stop_after_reference_failure(index: int) -> bool:
+        arm = warmup_order[index]
+        if arm != args.reference_arm or arm_status[str(arm)]["status"] == "ok":
+            return False
+        mark_remaining_not_run(index, "reference_arm_failed")
+        report["status"] = "reference_failed"
+        report["fatal"] = True
+        report["ready"] = False
+        flush("reference-failed")
+        return True
+
     warmup_order = [args.reference_arm] + [value for value in arms if value != args.reference_arm]
-    for arm in warmup_order:
+    for arm_index, arm in enumerate(warmup_order):
         status = arm_status[str(arm)]
         os.environ[ENV_VAR] = str(arm)
         status.update({"status": "starting", "stage": "start"})
@@ -478,6 +515,9 @@ def main(argv=None) -> int:
             if not specialization_ok:
                 status["status"] = "specialization_failed"
                 failures.append(f"BLOCK_M={arm} did not select a matching kernel specialization")
+                mark_remaining_not_run(arm_index, "probe_failed")
+                report["status"] = "probe_failed"
+                report["fatal"] = True
                 flush(f"arm-{arm}-specialization-failed")
                 break
 
@@ -502,12 +542,18 @@ def main(argv=None) -> int:
                 status["status"] = "correctness_failed"
                 arm_failures.append({"arm": arm, "status": "correctness_failed", "stage": stage,
                                      "error_type": "NonFinite"})
+                mark_remaining_not_run(arm_index, "fatal_abort")
+                report["status"] = "fatal"
+                report["fatal"] = True
+                report["ready"] = False
                 flush(f"arm-{arm}-correctness-failed")
-                continue
+                raise FatalArmError(f"BLOCK_M={arm} produced non-finite values")
             status["status"] = "ok"
             flush(f"arm-{arm}-ok")
         except Exception as exc:
-            if is_compile_capacity_failure(exc):
+            if isinstance(exc, FatalArmError):
+                raise
+            if stage == "warmup" and is_compile_capacity_failure(exc):
                 record = arm_error(arm, stage, exc)
                 status.clear()
                 status.update({"arm": arm, "status": "compile_failed", **record})
@@ -525,10 +571,16 @@ def main(argv=None) -> int:
                                      "error_message": record["error_message"][:2000],
                                      "cache_dir": record["cache_dir"]})
                 flush(f"arm-{arm}-compile-failed")
+                if stop_after_reference_failure(arm_index):
+                    break
                 continue
             record = arm_error(arm, stage, exc)
             status.clear()
             status.update({"arm": arm, "status": "aborted", **record})
+            mark_remaining_not_run(arm_index, "fatal_abort")
+            report["status"] = "fatal"
+            report["fatal"] = True
+            report["ready"] = False
             flush(f"arm-{arm}-aborted")
             raise
 
@@ -574,10 +626,15 @@ def main(argv=None) -> int:
                 timing["paired_device_ratio"] = (timing["batch_device_ms"] / reference["batch_device_ms"]
                                                  if reference["batch_device_ms"] else None)
         except Exception as exc:
+            text = traceback.format_exc()
             report["timing_error"] = {"round": round_index, "order": order,
                                       "error_type": type(exc).__name__,
                                       "error_message": str(exc),
-                                      "traceback": traceback.format_exc()[-12000:]}
+                                      "traceback": text,
+                                      "traceback_path": write_traceback(f"round-{round_index}", text)}
+            report["status"] = "fatal"
+            report["fatal"] = True
+            report["ready"] = False
             flush(f"round-{round_index}-failed")
             os.environ.pop(ENV_VAR, None)
             raise
@@ -593,9 +650,14 @@ def main(argv=None) -> int:
             try:
                 per_call[str(arm)] = per_call_batch(torch, call, args.calls_per_batch)
             except Exception as exc:
+                text = traceback.format_exc()
                 report["per_call_error"] = {"arm": arm, "error_type": type(exc).__name__,
                                             "error_message": str(exc),
-                                            "traceback": traceback.format_exc()[-12000:]}
+                                            "traceback": text,
+                                            "traceback_path": write_traceback(f"per-call-{arm}", text)}
+                report["status"] = "fatal"
+                report["fatal"] = True
+                report["ready"] = False
                 flush(f"per-call-{arm}-failed")
                 os.environ.pop(ENV_VAR, None)
                 raise

@@ -92,6 +92,28 @@ def main() -> int:
           probe.is_compile_capacity_failure(compile_failure("other compile error", bishengir)) is False)
     check("rejects overflow text without compiler",
           probe.is_compile_capacity_failure(RuntimeError(overflow)) is False)
+    check("rejects overflow without bishengir cause",
+          probe.is_compile_capacity_failure(compile_failure(overflow, RuntimeError("no command"))) is False)
+
+    class CompilationError(Exception):
+        pass
+
+    other_type = CompilationError(overflow)
+    other_type.__cause__ = bishengir
+    check("rejects a non-MLIR exception type",
+          probe.is_compile_capacity_failure(other_type) is False)
+    outer = RuntimeError("device sync failed")
+    outer.__context__ = error
+    check("does not follow implicit context",
+          probe.is_compile_capacity_failure(outer) is False)
+
+    source = PROBE_PATH.read_text()
+    check("metadata attached before warmup",
+          source.index('report["specializations"] = specializations') < source.index('warmup_order ='))
+    check("correctness attached before warmup",
+          source.index('report["correctness"] = correctness') < source.index('warmup_order ='))
+    check("full traceback retained", "[-12000:]" not in source and '"traceback_path"' in source)
+    check("reference failure guard present", "stop_after_reference_failure" in source)
 
     preregistered = [[16, 32, 64, 128], [32, 64, 128, 16], [64, 128, 16, 32]]
     check("projects orders onto OK arms",

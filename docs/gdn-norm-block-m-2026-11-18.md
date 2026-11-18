@@ -142,10 +142,15 @@ $PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --revert --manifest
 - **warmup / 同步边界**：每臂先跑 `--warmup-calls`（默认 48）次并 `torch.npu.synchronize()`；
   每个计时批次外同步一次、内不同步。环境变量只在臂之间切换，绝不在批次内切换。
 - **按臂状态与逐阶段落盘**：每臂依次写 `arm_status` 的 start / warmup / metadata / compare 阶段并立即落盘；
-  仅把 `MLIRCompilationError` + `bishengir-compile` + `ub overflow ... requires N bits while M bits available`
-  识别为可隔离的编译容量失败，记入 `arm_status`/`arm_failures`（完整 error、traceback、cache_dir），
-  该臂不进入计时，其余臂继续。其他编译错误、设备运行或同步异常先落盘再抛出，不做宽泛吞错。
-  BM64 参考臂失败时 `paired_comparison_possible=false`，不进入计时与配对。
+  `specializations`/`correctness` 从创建起即挂在 report 上，flush 不会丢掉此前的 metadata/逐元素结果。
+  仅当异常本身是 `MLIRCompilationError`、显式 `__cause__` 链上有 `bishengir-compile` 的
+  `CalledProcessError`、且文本同时包含 `ub overflow` 与 `requires N bits while M bits available` 时，
+  才在 **warmup 阶段**识别为可隔离的编译容量失败；不跟随隐式 `__context__`。该臂记入
+  `arm_status`/`arm_failures`（完整 error、完整 traceback、独立 `*.traceback.txt`、cache_dir），
+  不进入计时，其余臂继续。其他编译错误、NonFinite、设备运行或同步异常一律 fatal：先置
+  `status=fatal`/`ready=false` 并落盘，再抛出，不做宽泛吞错。
+  BM64 参考臂失败时立即停止后续臂比较，剩余臂登记为 `not_run`，`paired_comparison_possible=false`，
+  不进入计时与配对。
 - **指标分开记录**：`batch_device_ms` 是批次外一对 event 的差值；`batch_mean_device_ms = batch_device_ms / 48`；
   `batch_wall_ms` 是同步墙钟批次时间（含 host dispatch 与收尾同步），三者不混写。
 - **交错与配对**：预登记顺序写入 `preregistered_round_orders`，再按可执行臂投影为 `executed_round_orders`；
@@ -194,16 +199,17 @@ $PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --revert --manifest
   revert 优先用该备份，缺失时按精确逆变换恢复并校验 preimage SHA。
 - 探针 JSON 记录 source path/SHA、输入 SHA、协议、`arm_status`、四臂 specialization、correctness、逐轮 timing
   与 summary；每臂 start/warmup/metadata/compare 分阶段落盘，异常时保留已完成部分。
-- 离线验证：patch 测试 20 项、probe helper 测试 18 项、四个 Python 脚本 `py_compile`、两个 shell 脚本
+- 离线验证：patch 测试 20 项、probe helper 测试 25 项、四个 Python 脚本 `py_compile`、两个 shell 脚本
   `bash -n`，全部通过。远端 CPU loader 预检在真实环境通过（`hccl_dir=/usr/local/Ascend/cann-9.2.1/lib64`）；
   不含 `libhccl.so` 的 stub 环境按预期失败。本准备未导入 torch/torch_npu/vllm_ascend。
 
 ## 9. 交给 21 的回报清单
 
-请回传：`probe.json`、`arm_status` 与 `arms_ok/arms_failed`、四个臂的 specialization（BM128 预期为
-`compile_failed` 并带完整 error）、每臂 `out/rstd` 的 `bit_equal/finite/max_abs`、三轮
-`paired_device_delta_ms` 与 `batch_device_ms/batch_wall_ms`，以及运行时的 source SHA 与
-`CLEF_GDN_NORM_BLOCK_M` 值。收到这些数据后再决定是否进入服务 A/B。
+请回传：`probe.json` 及其同目录 `*.traceback.txt`（如有失败臂）、`arm_status` 与 `arms_ok/arms_failed`
+（BM128 预期为 `compile_failed`，参考臂失败时其余为 `not_run`）、四个臂的 specialization（BM128 预期带完整
+error）、每臂 `out/rstd` 的 `bit_equal/finite/max_abs`、三轮 `paired_device_delta_ms` 与
+`batch_device_ms/batch_wall_ms`，以及运行时的 source SHA 与 `CLEF_GDN_NORM_BLOCK_M` 值。收到这些数据后再决定
+是否进入服务 A/B。
 
 ## 10. 三轮执行记录与修复（归档）
 
@@ -247,7 +253,10 @@ run3 根因与修复：
   `_layer_norm_fwd_1pass_kernel_npu.ttir` 第 24/31/32 行为 `c128`、`pid_m * 128`、`make_range ... 128`，
   故失败臂为 **BM128**。同一窗口 14:17:22–28 已依次生成 BM64 `64XTB…`、BM16 `U3WJ…`、BM32 `ZDLD…` 的
   `npubin` + `json`；三者 metadata 均为 `num_warps=32`、`num_stages=2`、`coalesce_factor=1`、`axis=-1`、
-  `shared=1`、`mix_mode=aiv`，与生产 BM64 同口径。没有 service 编译选项差异。
+  `shared=1`、`mix_mode=aiv`。生产侧独立读取的 BM64 缓存条目 `T4ZH…`（mtime 2026-11-12 09:16，早于 run3）
+  同样为 `num_warps=32`、`num_stages=2`、`coalesce_factor=1`、`axis=-1`、`shared=1`、`mix_mode=aiv`、
+  `target=Ascend910_9382`。本次只比较了这些 cache metadata 字段，**不能**据此宣称 service 的全部编译选项或
+  环境与探针相同；完整服务环境未逐项枚举。
 - probe 顺序为 64,16,32,128；每臂 48 次 warmup + 同步 + compare 后才进入下一臂，flush 原在四臂循环之后，
   所以 run3 没有 `probe.json`，但前三臂的准备阶段已实际执行；计时从后续代码才开始，未进入；数值明细未保存，
   不追认任何过门结论。
@@ -264,11 +273,11 @@ run3 根因与修复：
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `runtime/wave3_gdn_norm_block_m_probe.py` | `a5b1784d669ff1de2a43a7b7b9302c611da5d9edb7530315a94508a4febe323f` |
+| `runtime/wave3_gdn_norm_block_m_probe.py` | `ae346bed3ce78980b776f1d278afff47bb40a4328a3e70b321b48fc16219a80f` |
 | `runtime/apply_gdn_norm_block_m.py` | `140766f26914a26d13c0b25b7082fcb5e5fbdac4c4b1438888a926244ba02bc1`（未变） |
 | `runtime/gdn_norm_block_m_env_check.sh` | `805d60b2213f2fe856b5cf777e7ce28b4d015a6cb7c83631a748c60a495daf58` |
 | `runtime/run_gdn_norm_block_m.sh` | `716c82154a82c8ce8d03b318d52cf885f586e09503a25674b874e18a0438057a` |
-| `runtime/test_gdn_norm_block_m_probe.py` | `ed991f369abea220cb9c07a1c2d8002d667bcce48e4c340301ffb2430404b12e` |
+| `runtime/test_gdn_norm_block_m_probe.py` | `66ef11b2a12b5c7916587482a4a10fcd7fdaaad4787282e59694a7e95b59da01` |
 
 重试策略：旧三格归档；21 完成三检后使用**尚不存在的**新目录
 `/workspace/yangchen/logs/gdn-norm-block-m-20261118-run4` 单次重试；runner 会拒绝已存在目录，并在探针
