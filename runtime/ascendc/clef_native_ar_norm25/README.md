@@ -409,3 +409,54 @@ bench SHA `1fd5dcefc43f1b91535c334c077013dd6deca5016abde4077faeea9aeb7ac05e`。
   --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
   --run-dir /workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310
 ```
+
+## cores24 实际闭合与 input-ready 计时负结果
+
+27执行上述冻结窗口，run 为
+`/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310`。
+window SHA `36f8875517cbede58161d2578e7058638de6eb6c488d11f14ac7df0ba589488a`，
+overall0、六步骤RC0；restore SHA
+`3f400e4a7ffe8185a47d2c893c2e0c2e7d4a31221c6a5418cb2bc7b1742af9ca`，
+label `d0-restore-20261118T191020Z-4516976e`，真实health/workers/text/image四项RC0/oktrue。
+probe清理reaped=true，unknown/residual为空；active vendor已消失，退役原件保留。
+
+23与25逐项核验初始24份、计时终态18份原bin，共42份大小/SHA/shape/dtype一致。
+两rank reduced/Y/residual/rstd候选与本格参考、cores2对应字节全部相等，原固定门误差全0。
+五输入metadata同cores2，r/gamma/partial实际字节也相同；x/w只有哈希，未保存原bin。
+四份实际diag（两rank×初始/终态）有效槽集合均为0..23，17段40行与7段41行覆盖967行，
+FNV、通信状态、rank字段通过，后24槽全0，初始与终态逐字节相等。rstd的967项有限且为正。
+这些证据覆盖本输入c24/ARon正确性及生命周期，实际参与观测为上述24槽。
+
+96条原始样本（48/rank，其中40/rank正式）重新按`timing_contract.aggregate_samples`
+聚合，所有计时字段与现场summary精确相等；summary额外封装diag和rank结果哈希。
+summary SHA `fc8e8008b857a5ffe5ef6cad8d26713892f2ac26b5e8a0492ec8e27cc80e601b`。
+原`probe/timing/rank0/samples.jsonl` SHA
+`c37769cca4affeca68aae531f4d8b76869bad414c9dd88741932c5593ef743b5`；rank1 SHA
+`5f0a281a4b4aeafacd8a06282c4ce205dfacb7ccb21fb6bd46902fa03bf31850`。
+
+正式20对样本全部保留，单位ms：
+
+| 口径 | baseline中位数 | N1中位数 | 配对(candidate-baseline)中位数 | 配对baseline/N1中位数 |
+| --- | ---: | ---: | ---: | ---: |
+| 整体critical wall span | 0.567595 | 0.578880 | +0.012930 | 0.977116 |
+| slow-rank wall | 0.544860 | 0.571320 | +0.028000 | 0.950803 |
+| slow-rank event | 0.449630 | 0.478040 | +0.027530 | 0.941371 |
+
+四轮critical wall分列如下；两臂中位数之差与配对差中位数使用不同统计定义：
+
+| 轮次/顺序 | baseline中位数 | N1中位数 | 两臂中位数之差 | 配对差中位数 |
+| --- | ---: | ---: | ---: | ---: |
+| 0 / AB | 0.509020 | 0.534600 | +0.025580 | +0.043190 |
+| 1 / BA | 0.530990 | 0.568860 | +0.037870 | +0.039780 |
+| 2 / BA | 0.577380 | 0.583980 | +0.006600 | +0.011540 |
+| 3 / AB | 1.251440 | 0.964910 | -0.286530 | -0.300140 |
+
+前三轮候选偏慢，末轮两臂都升高；保留末轮且不对变化机制归因。
+critical/event/slow-wall分别有9/8/7对候选更快。首调用critical为baseline10.57658、
+N1 303.83746，setup rank0/1为1435.97522/1660.58330，均单列并排除于正式统计。
+四轮末固定门、diag及native source门均通过；最后一轮另保存18份真实tensor原件。
+
+**当前N1 v2没有稳定性能收益证据，保持独立实验产物。**计时范围只覆盖input-ready
+AR+AddRMSNorm，包含adapter分配及diag，GEMM/输入恢复在外；完整服务收益与全量质量未测。
+当前总event/wall无法分辨MC2通信、归一化、adapter分配或diag各阶段耗时，
+后续MC2配平仍需实际tiling及隔离Tcomm/Tcompute。cores48不排，冻结包与原件保持不变。
