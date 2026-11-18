@@ -1,0 +1,47 @@
+diff --git a/runtime/joint_smallq/clef_joint_schema.py b/runtime/joint_smallq_dispatch/clef_joint_schema.py
+index 83cd283..fbb4a0b 100644
+--- a/runtime/joint_smallq/clef_joint_schema.py
++++ b/runtime/joint_smallq_dispatch/clef_joint_schema.py
+@@ -81,19 +81,32 @@ def _smallq_cross_attention(module, query, key, value, *, enabled):
+             or module.bias_v is not None or module.add_zero_attn
+             or module.embed_dim != 1024 or module.num_heads != 16):
+         return None
+-    if any(t.ndim != 3 or t.shape[0] != 1 or t.shape[2] != 1024
+-           or t.dtype != torch.bfloat16 or t.device.type != "npu"
+-           or t.device != query.device or t.stride(-1) != 1
+-           or t.stride(1) < 1024 for t in (query, key, value)):
++    # Snapshot metadata once per call; all dynamic guards remain live.
++    same_kv = key is value
++    q_shape, k_shape = query.shape, key.shape
++    v_shape = k_shape if same_kv else value.shape
++    if any(len(shape) != 3 or shape[0] != 1 or shape[2] != 1024
++           for shape in ((q_shape, k_shape) if same_kv else (q_shape, k_shape, v_shape))):
+         return None
+-    if not (1 <= query.shape[1] <= 8 and 1 <= key.shape[1] <= 2048
+-            and key.shape == value.shape):
++    if not (1 <= q_shape[1] <= 8 and 1 <= k_shape[1] <= 2048
++            and k_shape == v_shape):
+         return None
+-    parameters = (module.in_proj_weight, module.in_proj_bias,
+-                  module.out_proj.weight, module.out_proj.bias)
+-    if any(p is not None and (p.dtype != query.dtype or p.device != query.device)
+-           for p in parameters):
++    q_dtype, q_device = query.dtype, query.device
++    if (q_dtype != torch.bfloat16 or q_device.type != "npu"
++            or query.stride(-1) != 1 or query.stride(1) < 1024):
+         return None
++    # Shared decoder K/V has identical metadata and needs one validation.
++    for tensor in ((key,) if same_kv else (key, value)):
++        if (tensor.dtype != q_dtype or tensor.device != q_device
++                or tensor.stride(-1) != 1 or tensor.stride(1) < 1024):
++            return None
++    out_proj = module.out_proj
++    parameters = (module.in_proj_weight, module.in_proj_bias,
++                  out_proj.weight, out_proj.bias)
++    for parameter in parameters:
++        if parameter is not None and (parameter.dtype != q_dtype
++                                      or parameter.device != q_device):
++            return None
+     # Use the same packed/unpacked projection dispatch and tensor ranks as MHA.
+     # Routing has separate norm outputs for K/V; decoder shares K/V identity.
+     if key is value:
