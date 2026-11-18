@@ -50,6 +50,7 @@ def main() -> int:
     ap.add_argument("--norm-from-residual", type=int, default=0)
     ap.add_argument("--norm-from-x", type=int, default=0)
     ap.add_argument("--w-nz", action="store_true")
+    ap.add_argument("--seed", type=int, default=20261118)
     ap.add_argument("--adapter-dir", type=Path, required=True)
     ap.add_argument("--op-api-dir", type=Path, required=True)
     ap.add_argument("--build-dir", type=Path, required=True)
@@ -68,7 +69,7 @@ def main() -> int:
     # For the op contract x[M,K] @ w[K,N], pass w = slice.T (contiguous).
     w = w_cpu.t().contiguous().npu()
     m = a.rows
-    g = torch.Generator().manual_seed(20261118)
+    g = torch.Generator().manual_seed(a.seed)
     x = torch.randn(m, k, generator=g).to(torch.bfloat16).npu()
     r = torch.randn(m, n, generator=g).to(torch.bfloat16).npu()
     gamma = torch.rand(n, generator=g).to(torch.bfloat16).npu()
@@ -134,7 +135,37 @@ def main() -> int:
     dyb = (out.float() - refb_y.float()).abs()
     dresb = (res_out.float() - refb_res.float()).abs()
     drstdb = (rstd.float() - refb_rstd.float().reshape(-1)).abs()
-    summary = {"rank": rank, "group": group, "m": m, "k": k, "n": n,
+    def bf16_gate(cand, ref):
+        """Elementwise BF16 dev gate: |c-r| <= 1e-5 + 0.016*|r| for every element."""
+        d = (cand.float() - ref.float()).abs()
+        tol = 1e-5 + 0.016 * ref.float().abs()
+        bad = d > tol
+        n_bad = int(bad.sum().cpu())
+        ratio = (d / tol)
+        out = {"fail_count": n_bad, "max_abs": float(d.max().cpu()),
+               "max_ratio": float(ratio.max().cpu()), "finite": bool(torch.isfinite(cand.float()).all().cpu())}
+        if n_bad:
+            flat = ratio.flatten()
+            top = torch.topk(flat, min(3, flat.numel()))
+            out["worst"] = [{"idx": int(i), "abs": float(d.flatten()[i].cpu()),
+                             "ratio": float(v)} for i, v in zip(top.indices.cpu().tolist(),
+                                                                top.values.cpu().tolist())]
+        return out
+
+    def y_max_rel(cand, ref):
+        d = (cand.float() - ref.float()).abs()
+        denom = ref.float().abs().clamp(min=1e-5)   # zero handling documented: |ref|<1e-5 excluded
+        mask = ref.float().abs() >= 1e-5
+        rel = torch.where(mask, d / denom, torch.zeros_like(d))
+        return float(rel.max().cpu())
+
+    gate = {"residual_sum": bf16_gate(res_out, ref_res),
+            "y": bf16_gate(out, ref_y),
+            "rstd": bf16_gate(rstd, ref_rstd.reshape(-1)),
+            "y_max_rel": y_max_rel(out, ref_y),
+            "criterion": "|c-r| <= 1e-5 + 0.016*|r| (torch.bfloat16 defaults), every element",
+            "seed": a.seed}
+    summary = {"rank": rank, "group": group, "m": m, "k": k, "n": n, "gate": gate,
                "bf16_ar_ref": {"max_abs_y": float(dyb.max().cpu()),
                                "max_abs_residual_sum": float(dresb.max().cpu()),
                                "max_abs_rstd": float(drstdb.max().cpu()),
