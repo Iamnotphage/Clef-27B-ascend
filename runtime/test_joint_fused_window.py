@@ -315,7 +315,43 @@ def main() -> int:
             mod.subprocess.run = original_run
         check("source failure raises", source_failed)
 
-    print(json.dumps({"checks": 18, "failed": failures, "ok": not failures}))
+    # real probe aggregation regression (the wall-shadow first failure)
+    probe_spec = importlib.util.spec_from_file_location(
+        "joint_probe_test", HERE / "joint_fused_attention_probe.py")
+    probe_mod = importlib.util.module_from_spec(probe_spec)
+    assert probe_spec.loader is not None
+    probe_spec.loader.exec_module(probe_mod)
+    arms = probe_mod.summarize_arms({"0": [1.0, 2.0], "1": [3.0, 4.0]},
+                                    {"0": [5.0, 6.0], "1": [7.0, 8.0]})
+    check("probe round aggregation", arms["0"]["device_samples"] == [1.0, 2.0]
+          and arms["0"]["wall_samples"] == [5.0, 6.0]
+          and arms["1"]["samples"][1]["wall_ms"] == 8.0, str(arms))
+    check("probe writes partial per round",
+          "partial.json" in (HERE / "joint_fused_attention_probe.py").read_text())
+
+    # restore modules must be staged/verified before stop
+    with tempfile.TemporaryDirectory(prefix="window-d0-") as tmp:
+        window = object.__new__(mod.Window)
+        window.stage = Path(tmp) / "stage"
+        window.state = {"preflight": {}}
+        window._stage_d0(HERE.parent)
+        staged = sorted(path.name for path in (window.stage / "runtime/d0").iterdir())
+        check("stage six restore modules", staged == sorted(mod.D0_MODULES),
+              str(staged))
+        empty = Path(tmp) / "empty"
+        empty.mkdir()
+        window2 = object.__new__(mod.Window)
+        window2.stage = Path(tmp) / "stage2"
+        window2.state = {"preflight": {}}
+        try:
+            window2._stage_d0(empty)
+        except mod.StepError:
+            missing_blocked = True
+        else:
+            missing_blocked = False
+        check("missing restore module blocks preflight", missing_blocked)
+
+    print(json.dumps({"checks": 21, "failed": failures, "ok": not failures}))
     return 0 if not failures else 1
 
 

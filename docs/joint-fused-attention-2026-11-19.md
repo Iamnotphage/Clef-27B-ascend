@@ -115,9 +115,9 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `87c2159d4afec13e88ff3ca4e2b76a58fe6fb7752eded1a49e03171590357c0e`。
-CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `4b9fe1f4e450fdebdbf9a45742b44758521a0311a91b2c92afba2caa37ec95a3`），
-18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
+SHA-256 `700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473`。
+CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `1488f4bae881822e10ce98cace8ea10daec62bb1b0e56cb634f91e91ccfa6db9`），
+21/21 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
 单次命令（21 执行；run-dir 必须不存在）：
 
@@ -219,3 +219,21 @@ $PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
 - stop/cleanup/PGID/timeout/finally 四检与 head 模式共用同一实现。
 - 注意：external-vendor 版本的 wrapper 为 `0f07848b…3886`，尚未纳入 head 冻结 `a6268f7`；head 窗口继续用
   `a6268f7` 的 wrapper `87c2159d…7c0e`。两 installer 仍互斥。
+
+
+## 13. 现场首错修复（2026-11-19 18:00 窗口）
+
+- **probe 变量覆盖**：round 循环内 `wall = walls[str(value)]` 覆盖聚合 `wall` dict，首轮后
+  `wall[value].extend` / `stats(wall[0])` 触发 `TypeError: float object is not iterable`。已抽成
+  `summarize_arms(devices, walls)`（内部 `arm_wall`），每轮完成即写 `probe/partial.json` 保留已完成
+  raw；异常不丢已完成样本。原窗口无 `head-probe.json`，**不作性能证据**。
+- **restore ModuleNotFoundError d0_restore**：旧 wrapper 从 `args.repo/runtime/d0` 直接 import，preflight
+  未核/未 stage。新 wrapper 在停服前校验 `runtime/d0` 六文件存在 + 源 SHA（d0_run/d0_restore/d0_launch/
+  d0_gate/d0_executor/d0_trace_parse），stage 到 `stage/runtime/d0`；`restore`/`verify_existing` 只从
+  stage 导入，缺件在 stop 前拒绝。21 部署时用 exact commit 的完整 runtime 目录。
+- `vendor_applied` 只在 candidate apply 成功/部分失败保持 true，probe cleanup 不再提前清零；仅
+  vendor revert 成功后清 false；vendor stdout 非 JSON 严格 fail-closed。
+- CPU 21/21：新增真实入口防回归（probe `summarize_arms`、每轮 partial、d0 六文件 stage 正/负），
+  仍保留真实 Window 方法，只替外部边界。
+- 25 已纯 CPU 验证 `torchrun --run-path --start-method spawn` 两 rank 继承 launcher PGID/SID（无设备）；
+  N1 shim 采用该 argv，shim/torchrun 不新建 session，保留 wrapper PGID 监督。

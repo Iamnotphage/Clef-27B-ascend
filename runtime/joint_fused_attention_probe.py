@@ -36,6 +36,23 @@ def stats(values):
             "p95": ordered[lo] + (ordered[hi] - ordered[lo]) * (idx - lo)}
 
 
+def summarize_arms(devices: dict, walls: dict) -> dict:
+    report = {}
+    for value in (0, 1):
+        dev = devices[str(value)]
+        arm_wall = walls[str(value)]
+        report[str(value)] = {
+            "device_ms": stats(dev),
+            "wall_ms": stats(arm_wall),
+            "device_samples": [round(item, 6) for item in dev],
+            "wall_samples": [round(item, 6) for item in arm_wall],
+            "samples": [{"index": sample, "device_ms": round(dev[sample], 6),
+                         "wall_ms": round(arm_wall[sample], 6)}
+                        for sample in range(len(dev))],
+        }
+    return report
+
+
 def schema_for(options: int):
     # One question span and one span per option, each two tokens.
     spans = [(2 * index, 2 * index + 2) for index in range(1 + options)]
@@ -140,7 +157,7 @@ def main() -> int:
     orders = [[0, 1], [1, 0], [1, 0], [0, 1]]
     rounds = []
     raw = {0: [], 1: []}
-    wall = {0: [], 1: []}
+    wall_all = {0: [], 1: []}
     last = {}
     error = None
     try:
@@ -152,23 +169,23 @@ def main() -> int:
                     outs = []
                     arm(value, outs, devices[str(value)], walls[str(value)])
                     raw[value].extend(devices[str(value)])
-                    wall[value].extend(walls[str(value)])
+                    wall_all[value].extend(walls[str(value)])
                     last[value] = outs[-1].detach().to("cpu")
-                arms_report = {}
-                for value in (0, 1):
-                    dev = devices[str(value)]
-                    wall = walls[str(value)]
-                    arms_report[str(value)] = {
-                        "device_ms": stats(dev),
-                        "wall_ms": stats(wall),
-                        "device_samples": [round(item, 6) for item in dev],
-                        "wall_samples": [round(item, 6) for item in wall],
-                        "samples": [{"index": sample, "device_ms": round(dev[sample], 6),
-                                     "wall_ms": round(wall[sample], 6)}
-                                    for sample in range(len(dev))],
-                    }
+                arms_report = summarize_arms(devices, walls)
                 rounds.append({"round": index, "order": orders[index],
                                "raw_units": "ms", "arms": arms_report})
+                partial = {
+                    "schema": "joint-fused-attention-probe/2",
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "args": vars(args) | {"output": str(args.output)},
+                    "rounds": rounds,
+                    "raw_device": {str(key): raw[key] for key in (0, 1)},
+                    "raw_wall": {str(key): wall_all[key] for key in (0, 1)},
+                    "partial": True,
+                }
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                (args.output.with_name("partial.json")).write_text(
+                    json.dumps(partial, ensure_ascii=False, indent=1) + "\n")
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
 
@@ -202,8 +219,8 @@ def main() -> int:
                   "schema_spans": 1 + options},
         "interface": interface,
         "rounds": rounds,
-        "baseline": {"device_ms": stats(raw[0]), "wall_ms": stats(wall[0])} if raw[0] else None,
-        "candidate": {"device_ms": stats(raw[1]), "wall_ms": stats(wall[1])} if raw[1] else None,
+        "baseline": {"device_ms": stats(raw[0]), "wall_ms": stats(wall_all[0])} if raw[0] else None,
+        "candidate": {"device_ms": stats(raw[1]), "wall_ms": stats(wall_all[1])} if raw[1] else None,
         "candidate_error": error,
     }
     if not error and raw[0] and raw[1]:

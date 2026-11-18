@@ -39,7 +39,7 @@ PROBE_REL = "runtime/joint_fused_attention_probe.py"
 CLIENT_REL = "runtime/joint_fused_attention_client.py"
 POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 INSTALLER_SHA = "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
-PROBE_SHA = "441764eb13866f9cdfc90247c1e4ec9992592d63bffd72e3f359e4a0526d80aa"
+PROBE_SHA = "fda7cc8dcce719291e312345ab9f28fe122ff2b2e8b784bce285d4b37b3e15f3"
 CLIENT_SHA = "9f7f700c9b0c16c62a5951e1e0b0a1954e82a3f55a4683b616ab417bb2630777"
 PREIMAGE_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
 ACTIVATE_DEFAULT = "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh"
@@ -53,6 +53,14 @@ DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm")
 DEFAULT_PYTHON = "/workspace/yangchen/venvs/clef-py312/bin/python"
 SERVICE_LOG_ROOT = "/workspace/yangchen/logs/perf-wave2-20261118"
 PROC_ROOT = Path("/proc")
+D0_MODULES = {
+    "d0_run.py": "7cdd2cfee7ef73c1403b620fdedd6c78882e33eaac466bf4f44885a166e9d11e",
+    "d0_restore.py": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
+    "d0_launch.py": "779542c625e20b789ee74eaf04f58be6f0b24c5e5e558012737ba79e2ca07fc0",
+    "d0_gate.py": "5dae02c2fa3e32e2a6500b831ad7029f368d9405bd2ea3df0ca4100d92ab1543",
+    "d0_executor.py": "1c91e0c4e35defcd315fc633e30432188336fa402bdf531208ebaa40008ff8f4",
+    "d0_trace_parse.py": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f",
+}
 CANDIDATE_KEYS = {"CLEF_JOINT_FUSED_ATTN", "CLEF_JOINT_SMALLQ",
                   "CLEF_JOINT_SMALLQ_KERNEL"}
 CLEANUP_KEYS = ("CLEF_PROFILE_MARKERS", "CLEF_PROFILE_OBSERVE_DIR",
@@ -331,6 +339,7 @@ class Window:
                                    "activate_sha256": ACTIVATE_SHA,
                                    "launch_sha256": LAUNCH_SHA,
                                    "wait_sha256": WAIT_SHA}
+        self._stage_d0(repo)
         self.source_env = self._source_env()
         self._loader_check()
         target_path = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
@@ -434,6 +443,23 @@ class Window:
         self.state["preflight"].setdefault("loader", {})[label] = {
             "hccl_dir": hccl, "extension": str(ext), "venv": venv, "ok": True}
 
+    def _stage_d0(self, repo: Path) -> None:
+        target = self.stage / "runtime" / "d0"
+        target.mkdir(parents=True, exist_ok=True)
+        staged = {}
+        for name, expected in D0_MODULES.items():
+            source = repo / "runtime" / "d0" / name
+            if not source.is_file():
+                raise StepError(f"restore module missing: {source}")
+            actual = sha256(source)
+            if actual != expected:
+                raise StepError(f"restore module SHA mismatch: {name}: {actual}")
+            shutil.copy2(source, target / name)
+            if sha256(target / name) != expected:
+                raise StepError(f"staged restore module mismatch: {name}")
+            staged[name] = expected
+        self.state["preflight"]["d0_modules"] = staged
+
     def _installer(self, action: list) -> dict:
         cmd = [self.args.python, str(self.stage / self.cfg("installer_rel", INSTALLER_REL)),
                "--tree", str(self.args.tree), *action]
@@ -462,8 +488,13 @@ class Window:
                                     "stderr": result.stderr[-1000:]})
         try:
             return json.loads(result.stdout)
-        except Exception:
-            return {"raw": result.stdout[-1000:]}
+        except Exception as exc:
+            raise StepError("vendor installer returned non-JSON",
+                            rc=result.returncode,
+                            detail={"cmd": cmd, "rc": result.returncode,
+                                    "stdout": result.stdout[-1000:],
+                                    "stderr": result.stderr[-1000:],
+                                    "json_error": f"{type(exc).__name__}: {exc}"})
 
     # ------------------------------------------------------------------
     def stop(self):
@@ -669,7 +700,6 @@ class Window:
             raise StepError("probe left unknown/residual processes",
                             rc=record["rc"], detail={"probe_record": record})
         self.probe_residual = False
-        self.vendor_applied = False
         if timed_out:
             raise StepError("probe timed out", rc=record["rc"],
                             detail={"probe_record": record})
@@ -704,7 +734,7 @@ class Window:
         return {"preimage": self.cfg("preimage_sha", PREIMAGE_SHA)}
 
     def restore(self):
-        sys.path.insert(0, str(Path(self.args.repo) / "runtime" / "d0"))
+        sys.path.insert(0, str(self.stage / "runtime" / "d0"))
         import d0_restore
         import d0_run
 
@@ -787,7 +817,7 @@ class Window:
             return False, {"error": "saved root pgid/cmdline changed"}
         if port_open(self.args.port) != "open":
             return False, {"error": "port is not open"}
-        sys.path.insert(0, str(Path(self.args.repo) / "runtime" / "d0"))
+        sys.path.insert(0, str(self.stage / "runtime" / "d0"))
         import d0_restore
         import d0_run
         pids = {saved["pid"]} | {item["pid"] for item in self.identity["descendants"]}
