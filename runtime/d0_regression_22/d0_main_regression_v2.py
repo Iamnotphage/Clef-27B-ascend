@@ -75,15 +75,11 @@ def guard() -> None:
         if len(argv) >= 3 and argv[0] == "bash" and argv[1].endswith("launch.sh"):
             label = argv[2]
             REC["label"] = label
-            root = 424242
-            REC["root_pid"] = root
-            try:
-                base = Path("/workspace/yangchen/logs/perf-wave2-20261118") / label
-                base.mkdir(parents=True, exist_ok=True)
-                (base / "api.pid").write_text(f"{root}\n")
-                REC["api_pid_written"] = str(base / "api.pid")
-            except Exception as exc:
-                REC["api_pid_error"] = f"{type(exc).__name__}: {exc}"
+            put, mkdir = REC["_vfs_put"], REC["_vfs_dir"]
+            base = f"/workspace/yangchen/logs/perf-wave2-20261118/{label}"
+            mkdir(base, ["api.pid"])
+            put(f"{base}/api.pid", f"{REC['root_pid']}\n")
+            REC["api_pid_written"] = f"{base}/api.pid"
         if "curl" in joined:
             if "/health" in joined:
                 return types.SimpleNamespace(returncode=0, stdout='{"status":"ready"}', stderr="")
@@ -191,44 +187,95 @@ def guard() -> None:
     socket.create_connection = no_net
     REC["sources"]["guards"] = "subprocess.run/Popen, os.kill/killpg, socket"
 
-    # ---- filesystem boundary for the read-only identity sources --------------
-    # /proc/<pid>/stat and the boot id are the only inputs _identity uses; the
-    # api.pid file is what discover_service_pids reads. All three are external
-    # read-only sources, so they may be supplied here without touching any
-    # production function.
+    # ---- virtual filesystem for every read-only production source ----------
+    # Nothing is written to /workspace: all fixtures live in this mapping, while
+    # the temp run directory keeps real IO.
     import pathlib
-    real_read_text = pathlib.Path.read_text
-    state = {"stat_reads": 0, "boot_reads": 0}
 
+    VFS_FILES: dict = {}
+    VFS_DIRS: dict = {}
+    real_read_text = pathlib.Path.read_text
+    real_is_file = pathlib.Path.is_file
+    real_is_dir = pathlib.Path.is_dir
+    real_iterdir = pathlib.Path.iterdir
+
+    def vfs_put(path, text):
+        VFS_FILES[str(path)] = text
+        parent = str(pathlib.Path(path).parent)
+        VFS_DIRS.setdefault(parent, set()).add(str(pathlib.Path(path).name))
+
+    def vfs_dir(path, children):
+        VFS_DIRS[str(path)] = set(children)
 
     def fake_read_text(self, *a, **kw):
         p = str(self)
-        SC = REC.get("scenario", "happy")   # read dynamically, not at guard time
-        if p.startswith("/proc/") and p.endswith("/stat"):
-            state["stat_reads"] += 1
-            # root_changed: a different starttime on the second read
-            start = "1000" if (SC != "root_changed" or state["stat_reads"] == 1) else "2000"
-            fields = ["0"] * 20
-            fields[19] = start
-            return "1 (comm) " + " ".join(fields) + "\n"
-        if p.endswith("/boot_id"):
-            state["boot_reads"] += 1
-            if SC == "boot_missing":
-                raise FileNotFoundError(p)
-            return "BOOT-TEST-0001\n"
-        if p.endswith("/api.pid"):
-            return "424242\n"
+        if p in VFS_FILES:
+            return VFS_FILES[p]
+        if p.startswith("/workspace/") or p.startswith("/proc/"):
+            REC.setdefault("vfs_miss", []).append(p)
+            raise FileNotFoundError(p)
         return real_read_text(self, *a, **kw)
 
-    real_is_file = pathlib.Path.is_file
-
     def fake_is_file(self):
-        if str(self).endswith("/api.pid"):
+        p = str(self)
+        if p in VFS_FILES:
             return True
+        if p.startswith("/workspace/") or p.startswith("/proc/"):
+            return False
         return real_is_file(self)
+
+    def fake_is_dir(self):
+        p = str(self)
+        if p in VFS_DIRS:
+            return True
+        if p.startswith("/proc"):
+            return False
+        return real_is_dir(self)
+
+    def fake_iterdir(self):
+        p = str(self)
+        if p in VFS_DIRS:
+            base = pathlib.Path(p)
+            for name in sorted(VFS_DIRS[p]):
+                yield base / name
+            return
+        if p.startswith("/proc"):
+            REC.setdefault("vfs_miss", []).append(p)
+            return
+        yield from real_iterdir(self)
 
     pathlib.Path.read_text = fake_read_text
     pathlib.Path.is_file = fake_is_file
+    pathlib.Path.is_dir = fake_is_dir
+    pathlib.Path.iterdir = fake_iterdir
+
+    real_listdir = os.listdir
+
+    def fake_listdir(path="."):
+        p = str(path)
+        if p in VFS_DIRS:
+            return sorted(VFS_DIRS[p])
+        if p.startswith("/proc"):
+            REC.setdefault("vfs_miss", []).append(p)
+            return []
+        return real_listdir(path)
+
+    os.listdir = fake_listdir
+    REC["_vfs"] = (VFS_FILES, VFS_DIRS, vfs_put, vfs_dir)
+    REC["_vfs_put"] = vfs_put
+    REC["_vfs_dir"] = vfs_dir
+
+    # /proc: the root plus two VLLMWorker_TP descendants
+    ROOT_PID = 424242
+    WORKERS = [424301, 424302]
+    vfs_dir("/proc", [str(ROOT_PID)] + [str(w) for w in WORKERS])
+    for pid, start in [(ROOT_PID, "1000"), (WORKERS[0], "1100"), (WORKERS[1], "1200")]:
+        fields = ["0"] * 20
+        fields[19] = start
+        vfs_put(f"/proc/{pid}/stat", f"{pid} (python3) " + " ".join(fields) + "\n")
+    vfs_put("/proc/sys/kernel/random/boot_id", "BOOT-TEST-0001\n")
+    REC["root_pid"] = ROOT_PID
+    REC["workers"] = WORKERS
     REC["sources"]["fs"] = "Path.read_text for /proc/*/stat, boot_id, api.pid"
 
 
