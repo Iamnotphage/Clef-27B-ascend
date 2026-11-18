@@ -98,3 +98,64 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 | 停止条件 | 出现 `507014/0x25`、超时、或 `partial` 出现未写行 ⇒ 立即停，不继续下一格 |
 | 判读 | 只回答"集合/比值/是否漏行"，**不判数值因果**；固定门仍为 mixed 容差 |
 | 前置 | 需 20 显式授权设备时间；当前 E 设备授权关闭 |
+
+## 6. 本次定向捕获结果（dump_cce，已冻结）
+
+用**同一 TU**、`--debug-config=dump_cce` 做了一次定向重跑（RC=0），生成件被保留下来。
+保留目录（driver 的 `working_dir = cwd/<opType>_<computeUnit>`，**独立于** `--output-path`）：
+
+`build_out/op_kernel/ClefMatmulArAddRmsNorm_ascend910_93/`（6 个文件）
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `bin_param/ClefMatmulArAddRmsNorm-clef_matmul_ar_add_rms_norm-0.sh` | `e0fb4e87f4986c389f95883d3293bc787167613042c92e52cff4534f7cef56e6` |
+| `bin_param/ClefMatmulArAddRmsNorm_b87a0f8f….json` | `9caf2d18153d57555d0f533bde6fdffbf90caec3cdbc637c80c3b1376de8b059` |
+| `dynamic/ClefMatmulArAddRmsNorm.py` | 见目录（`__pycache__` 一并冻结） |
+| `clef_matmul_ar_add_rms_norm.make` | 同上 |
+| `customize/op_impl/ai_core/tbe/config/ascend910_93/aic-ascend910_93-ops-info.json` | 同上 |
+
+日志：`/tmp/audit_build.log` `150abca952e31bcae55ec1b513b150a8e36b0e8b50a3d9263a32988846919c45`、
+`/tmp/dumpcce.log` `eddb484566ad5a43cdf023ff8cf746b0d17dd1bbe64634842e50724220bc5232`。
+清单**不含自身**。
+
+### 6.1 真实 pass 调用（`.sh` 原文，按值记录）
+
+```
+asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
+  --soc_version=Ascend910_9391  --output=$2 \
+  --impl_mode=high_performance,optional --op_mode=dynamic --simplified_key_mode=0
+```
+
+**三个名字分别列，不作故障推断**：
+`--compute-unit=ascend910_93`（构建单元）／`--soc_version=Ascend910_9391`（本次 opc 目标）／
+服务实机 `Ascend910_9382`（03 文档记录）。
+
+### 6.2 更正 §3：外层 `--compile-options=""` ≠ 下游无 `-D`
+
+`dynamic/ClefMatmulArAddRmsNorm.py` **显式注入**编译宏：
+`:259-302` 补 `DTYPE/ORIG_DTYPE/FORMAT`、`-DHIGH_PERFORMANCE=1`、`DETERMINISTIC_MODE` 等；
+`:327 get_code_channel`、`:332 compile_op`。
+因此 **"外层 `--compile-options` 为空" 不能推出"下游没有 `-D`"**，我此前那一层推断**撤回**。
+`USE_SSBUF`/`USE_WORKSPACE` 与各 `-D` 的**最终取值**须以该 `.py` + `asc_opc` 内部分支为准，
+**本次仍未取得**逐 pass 宏表/预处理。
+
+### 6.3 更正 §2：`taskRation` 的效力边界
+
+`taskRation = 1:2` **只作为本次生成元数据报告**。
+它与 `get_subblockdim()` 的**运行返回值之间没有本次取得的直接契约**，也没有设备实读；
+动态 builtin 仍是缺口。**不得**写成"ratio 运行值已证明"或"只剩一个条件"。
+
+### 6.4 D0 草案再收窄（仍属未授权建议）
+
+- 两格应写**请求的 `mm_dim` 预算**（1 与 2），`usedCoreNum` 与实际 launch 集合**只记实测**，不预定为 1/2；
+- 首末行 checksum **只验证采样位置**，不能判全张量无漏写或覆盖正确；
+- 若将来要回答覆盖问题，草案须要求**每个参与者的身份 + 区间记录**与**全范围覆盖检查**；
+- client 发出 `End`/quit 与 server 收到，**分别记观测可达性**，未采到的一侧不可推定；
+- 180 s 与两格均**未获执行授权**。
+
+## 7. 本次交付的缺项（明确）
+
+1. **逐 pass 的 `-D` 宏表与预处理输出**：未取得（今次只拿到 `.sh`/param/`.py`/config，宏在 `asc_opc` 内注入）；
+2. `__MIX_CORE_AIC_RATION__` 是否定义：未知；
+3. `get_block_idx()`/`get_subblockid()`/`GetBlockNum()` 运行值：未取得；
+4. 本次重建**只证明本次构建**，不追证旧 E 装载。
