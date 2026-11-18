@@ -117,6 +117,42 @@ class CliTests(unittest.TestCase):
             p=Path(tmp)/'source';p.write_text('original');item={'path':str(p),'sha256':accept.sha(p)}
             accept.verify_file(item);p.write_text('changed')
             with self.assertRaisesRegex(RuntimeError,'identity mismatch'):accept.verify_file(item)
+    def test_single_baseline_plan_keeps_final_three_rounds(self):
+        m=accept.read(ROOT/'runtime/final_acceptance_manifest.json')
+        before=json.dumps(m,sort_keys=True)
+        normal=accept.commands(m,'s1',Path('/tmp/unused'))
+        single=accept.commands(m,'s1',Path('/tmp/unused'),True)
+        self.assertEqual(len(normal),6);self.assertEqual(single,normal[:2])
+        self.assertEqual(json.dumps(m,sort_keys=True),before)
+        with tempfile.TemporaryDirectory() as tmp:
+            proc=self.run_cli('runtime/final_acceptance.py','--phase','s1','--output-dir',Path(tmp)/'new',
+                              '--single-baseline-round')
+            self.assertEqual(proc.returncode,0,proc.stderr)
+            self.assertEqual(json.loads(proc.stdout)['scope'],'baseline_single_round')
+            self.assertFalse((Path(tmp)/'new').exists())
+            proc=self.run_cli('runtime/final_acceptance.py','--phase','s2_b8','--output-dir',Path(tmp)/'new',
+                              '--single-baseline-round')
+            self.assertNotEqual(proc.returncode,0);self.assertIn('requires phase s1',proc.stderr)
+    def test_single_baseline_summary_never_completes_final_s1(self):
+        m=accept.read(ROOT/'runtime/final_acceptance_manifest.json')
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp);samples=[{'request':{'index':i}} for i in range(2352)]
+            (p/'samples.json').write_text(json.dumps(samples));m['data']['od_samples']['path']=str(p/'samples.json')
+            rows=[{'index':i,'request':s['request'],'status':'ok','probabilities':{'A':1.0}}
+                  for i,s in enumerate(samples)]
+            raw={'requests':rows,'summary':{'successful':2352,'failed':0,'latency_ms':{'p95':155.0}}}
+            (p/'c1-r1.json').write_text(json.dumps(raw))
+            quality={'order_mismatch':0,'protocol_failures':0,'accuracy_denominator':2352,
+                     'score_mae_denominator':588,'scoring_result':{k:m['baseline_metrics'][k]
+                         for k in ('calibration','intelligence','capability')}}
+            (p/'c1-r1-quality.json').write_text(json.dumps({'runs':{'candidate':quality}}))
+            summary=accept.summarize(m,'s1',p,True)
+            self.assertTrue(summary['quality_passed']);self.assertFalse(summary['final_s1_complete'])
+            self.assertEqual(summary['completed_rounds'],1);self.assertEqual(summary['required_final_rounds'],3)
+            self.assertNotIn('p95_median_ms',summary)
+            with self.assertRaises(FileNotFoundError):accept.summarize(m,'s1',p)
+            m['phases']['s1']['rounds']=1
+            with self.assertRaisesRegex(RuntimeError,'>=3'):accept.summarize(m,'s1',p)
     def test_nonfinite_http_json_persists_every_error(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);values=['NaN','Infinity','-Infinity','1e999']

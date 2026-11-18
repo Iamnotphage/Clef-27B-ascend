@@ -151,3 +151,38 @@ CPU验证记录：真实CLI/本地HTTP测试覆盖成功、HTTP503完整body、�
 原件身份：`ab.json` 294,790字节、SHA `c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003`；`restore.json` 5,375字节、SHA `fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f`。此次更新仅扩充候选证据元数据；冻结phase、生产源码、guard、env、argv、评分门和所有runner保持原值。
 
 23独立复核已并入上述61199e2文档：24份raw JSONL共192行（120正式、72预热），HTTP200/valid/finite、bodySHA对齐及跨8臂答案/概率精确相等；28另外只读重计192/120/72与全valid均匹配。此次只更新结果文档引用及覆盖元数据。
+
+## 8. clean-parent 路径复核与显式 baseline 第1轮
+
+27的只读预检原件 `/workspace/yangchen/logs/final-acceptance-preflight-27-20261118T192040Z/selected-env-mismatch.json` 显示当前OPP/LD字符串累积；`frozen_check`全过，`service_check`严格阻断。恢复流程的 `env=dict(prod_env)` 继承运行态，launcher重复source CANN/ATB，入口再次前置vendor，解释了新增重复链。历史成功四phase的expected保持原值；相同unique路径顺序本身不构成实际库变化证据。
+
+28已完成CPU只读构造验证：从仅含下列两项的父环境实际source原`activate_env.sh`，启动venv Python，抽取生产`inference.py`原AST中的`qkv_norm_environment()`执行其stdlib路径构造。没有执行整个模型入口、installer、推理或服务生命周期；`sys.modules`确认torch/torch_npu/fla_npu子模块/vllm/triton均未加载。四历史phase的OPP **9项**、LD **12项**与expected逐字节一致。全局`/usr/bin/python3`的torch spec为空；原ATB探测选择历史已采用的cxx_abi_1。
+
+```json
+{"PATH":"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin","CLEF_LAUNCH_CONFIG":"s1"}
+```
+
+FLA的`.pth`钩子先加入一组FLA路径，入口再加入一组；因此成功expected中的两组FLA具有源码依据。干净父环境保持`ASCEND_CUSTOM_OPP_PATH`/`LD_LIBRARY_PATH`未设置，CANN/ATB/入口自行构造完整链，保留CANN与三个driver库目录；历史LD链上的`libhccl.so`路径已通过只读文件存在检查。此处完整执行建议供27下一合法切换窗口使用，**本轮没有执行launch**：
+
+```bash
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 \
+  /bin/bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "${CLEF_UNIQUE_LABEL:?本阶段新唯一label}"
+```
+
+B8/B16/ERQA在此命令末尾使用第5节原覆盖参数。27监督器中等价调用是 `subprocess.run(['/bin/bash', launch_path, fresh_label, *phase_overrides], env=seed, ...)`；父环境只取上列显式seed，每次由launcher完成一次activation。当前服务继续受原门保护，等待其自然合法恢复窗口。
+
+20授权闲时先做正式f810完整S1第1轮后，新增 `--single-baseline-round` 参数：仅与`--phase s1`组合，并在请求前后额外校验head等于清单的生产f810 SHA。清单`phases.s1.rounds=3`与默认最终至少3轮门保持原值。该参数从原命令序列中选择第一轮benchmark及作者评分，原2352请求/顺序/C1/warmup0/timeout300/全概率/journal/严格身份与质量门全部沿用：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python "$CLEF_ACCEPT_CODE/runtime/final_acceptance.py" \
+  --manifest "$CLEF_ACCEPT_CODE/runtime/final_acceptance_manifest.json" \
+  --phase s1 --single-baseline-round --output-dir "$CLEF_BASELINE_ROUND1" \
+  --identities "$CLEF_READY_IDS" --launch-manifest "$CLEF_READY_LAUNCH" \
+  --owner-evidence "$CLEF_OWNER_EVIDENCE" --execute
+```
+
+上列实际执行仍置于27已审客户端监督器之下。监督器最小适配为显式接受并转发`--single-baseline-round`，并固定本次新runner SHA；其进程组/截止/cleanup逻辑继续保持。未带`--execute`时打印完整argv而不执行。
+
+新目录输出仍为 `c1-r1.json`、`c1-r1.jsonl`、`c1-r1-quality.json`及所有输入/身份/步骤记录。`execution.json.scope=baseline_single_round`；`acceptance.json`明确写入`scope=baseline_single_round`、`completed_rounds=1`、`required_final_rounds=3`、`final_s1_complete=false`与`baseline_p95_ms`。正式第1轮可保留为后续相同冻结协议/源配置下三轮汇总的原件，最终汇总须核验至少三份独立完整运行的身份及时间窗口。该参数不建立新的生命周期，也不把单轮标记为最终完成。
+
+验证：9项CPU回归全部通过；新增真实CLI测试验证单轮argv恰好等于默认S1前两步、原manifest未变、S2组合拒绝；文件夹具验证单轮完整质量通过仍`final_s1_complete=false`，默认最终缺轮报错，篡改rounds=1仍被默认最终至少3轮门拒绝。已有27监督器v4来源为27提交`ab2903db592dd1e690f0f9ac9ad0b437ef96365e`，supervisor `03409c78…db41` / test `f9034f72…17f`；单轮转发适配后的身份以27后续审定tuple为准。

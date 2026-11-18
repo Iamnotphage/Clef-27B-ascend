@@ -52,6 +52,13 @@ def verify_file(item):
     require(p.is_file() and sha(p) == item['sha256'], f'file identity mismatch: {p}')
 
 
+def verify_baseline_source(m):
+    heads = [item for item in m['source_files']
+             if item['path'].endswith('/vllm/model_executor/models/clef_joint_schema.py')]
+    require(len(heads) == 1, 'unique production head source required')
+    verify_file({'path': heads[0]['path'], 'sha256': m['source_selection']['production_head_sha']})
+
+
 def identity(pid):
     p = Path('/proc') / str(pid)
     fields = (p / 'stat').read_text().split(') ', 1)[1].split()
@@ -169,7 +176,8 @@ def frozen_check(m):
                 for s, t in zip(samples, templates)), 'OD template mismatch')
 
 
-def commands(m, phase, out):
+def commands(m, phase, out, single_baseline_round=False):
+    require(not single_baseline_round or phase == 's1', 'single baseline round requires phase s1')
     py, d, p = m['python'], m['data'], m['phases'][phase]
     steps = []
     if phase == 'erqa':
@@ -182,7 +190,7 @@ def commands(m, phase, out):
             '--output', str(out / 'erqa-score.json')]))
     else:
         for c in p['concurrencies']:
-            for n in range(1, p['rounds']+1):
+            for n in range(1, (1 if single_baseline_round else p['rounds'])+1):
                 name = f'c{c}-r{n}'
                 report = out / (name+'.json')
                 steps.append((name, [py, str(CODE / 'runtime/od_full_benchmark.py'),
@@ -211,7 +219,8 @@ def verify_od(path, m):
     return d['summary']
 
 
-def summarize(m, phase, out):
+def summarize(m, phase, out, single_baseline_round=False):
+    require(not single_baseline_round or phase == 's1', 'single baseline round requires phase s1')
     if phase == 'erqa':
         score = read(out / 'erqa-score.json')
         run = read(out / 'erqa/summary.json')
@@ -228,7 +237,7 @@ def summarize(m, phase, out):
                 'quality_passed': abs(delta) <= Fraction(str(m['quality_gate']['erqa_absolute_accuracy']))}
     points=[]
     for c in m['phases'][phase]['concurrencies']:
-        for n in range(1, m['phases'][phase]['rounds']+1):
+        for n in range(1, (1 if single_baseline_round else m['phases'][phase]['rounds'])+1):
             name=f'c{c}-r{n}'; perf=verify_od(out/(name+'.json'), m)
             quality=read(out/(name+'-quality.json'))['runs']['candidate']
             require(quality['order_mismatch']==0 and quality['protocol_failures']==0
@@ -240,9 +249,15 @@ def summarize(m, phase, out):
                            'delta_points':deltas,'quality_passed':all(abs(v)<=2 for v in deltas.values())})
     result={'points':points,'quality_passed':all(p['quality_passed'] for p in points)}
     if phase=='s1':
-        require(len(points)>=3, 'S1 requires >=3 complete rounds')
         values=[p['performance']['latency_ms']['p95'] for p in points]
-        result.update(p95_median_ms=statistics.median(values),p95_range_ms=[min(values),max(values)])
+        if single_baseline_round:
+            result.update(scope='baseline_single_round', completed_rounds=1,
+                          required_final_rounds=m['phases']['s1']['rounds'],
+                          final_s1_complete=False, baseline_p95_ms=values[0])
+        else:
+            require(len(points)>=3, 'S1 requires >=3 complete rounds')
+            result.update(p95_median_ms=statistics.median(values),p95_range_ms=[min(values),max(values)],
+                          scope='final_s1', completed_rounds=len(points), final_s1_complete=True)
     return result
 
 
@@ -254,17 +269,21 @@ def main():
     ap.add_argument('--identities',type=Path)
     ap.add_argument('--launch-manifest',type=Path)
     ap.add_argument('--owner-evidence',type=Path,help='27 resource/restore gate evidence; preserved verbatim, interpreted by owner')
+    ap.add_argument('--single-baseline-round',action='store_true',
+                    help='One full f810 S1 control round; never marks final S1 complete')
     ap.add_argument('--execute',action='store_true')
     a=ap.parse_args();m=read(a.manifest);out=a.output_dir.resolve()
-    steps=commands(m,a.phase,out)
+    steps=commands(m,a.phase,out,a.single_baseline_round)
+    scope='baseline_single_round' if a.single_baseline_round else 'final_phase'
     if not a.execute:
-        print(json.dumps({'status':'plan_not_executed','phase':a.phase,'steps':steps},ensure_ascii=False,indent=2));return 0
+        print(json.dumps({'status':'plan_not_executed','scope':scope,'phase':a.phase,'steps':steps},ensure_ascii=False,indent=2));return 0
     require(a.identities and a.launch_manifest and a.owner_evidence,'execute requires fresh owner identity, launch and resource evidence')
     require(not out.exists(),'output directory already exists; choose a new run')
     require(all(p.is_file() for p in (a.identities,a.launch_manifest,a.owner_evidence)), 'owner input file missing')
     require(m['phases']['s1']['rounds']>=3,'manifest S1 minimum is 3')
     out.mkdir(parents=True,exist_ok=False)
-    state={'status':'running','started_utc':now(),'manifest_sha256':sha(a.manifest),'phase':a.phase,'steps':[]}
+    state={'status':'running','started_utc':now(),'manifest_sha256':sha(a.manifest),'phase':a.phase,
+           'scope':scope,'steps':[]}
     state_path=out/'execution.json'
     write(out/'frozen-manifest.json',m)
     for name,path in [('identities-input.json',a.identities),('launch-input.json',a.launch_manifest),('owner-evidence.json',a.owner_evidence)]:
@@ -272,6 +291,8 @@ def main():
     write(state_path,state)
     try:
         frozen_check(m)
+        if a.single_baseline_round:
+            verify_baseline_source(m)
         # Keep the fixed question/request denominator even after client interruption.
         input_key = 'erqa_samples' if a.phase == 'erqa' else 'od_samples'
         source = Path(m['data'][input_key]['path'])
@@ -288,8 +309,10 @@ def main():
             if name.startswith('c') and not name.endswith('-quality'):
                 verify_od(out/(name+'.json'),m)
         frozen_check(m)
+        if a.single_baseline_round:
+            verify_baseline_source(m)
         write(out/'service-after.json',service_check(m,a.phase,a.identities,a.launch_manifest))
-        summary=summarize(m,a.phase,out);write(out/'acceptance.json',summary)
+        summary=summarize(m,a.phase,out,a.single_baseline_round);write(out/'acceptance.json',summary)
         require(summary['quality_passed'],'2pp quality gate failed; evidence retained')
         state['status']='complete'
     except BaseException as exc:
