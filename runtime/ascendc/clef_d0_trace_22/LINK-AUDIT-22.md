@@ -32,7 +32,10 @@
 - ❌ "`Py*` 仅宿主提供、取不到提供者" —— **已由 §3.2 否证**（实际库 102/102）；
 - ❌ "`at/c10` 已闭合为 torch 提供" —— **在首次 RC1 中并未闭合**，需 `libtorch_cpu`。
 
-## 3) 严格链接复核（**一次**，逐字记录）——结论已更正
+## 3) 严格链接复核（**一次**）——结论已更正
+
+> 下方命令块为**路径缩写示意**（`<venv>`、`<包内>` 为占位），**不是逐字命令**；
+> 逐字命令见 `fixed_link_cmd.txt`（§6 有完整绝对路径）。
 ```
 g++ -shared -z defs -o d0_strict.so d0_adapter.o \
   -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
@@ -70,7 +73,10 @@ SHA-256 `212da0dac0371ea3d1f87cd24b6750b6db12d145280d9b4480cac66b16c3c169`
 ⇒ **缺失链接输入 = `libpython3.12`**。两项缺失都是**可指名的输入**，
 非"只能运行期才知道"。
 
-### 3.3 明确更正声明
+### 3.3 明确更正声明（**首次 RC1 的历史阶段**）
+
+> **当前状态以 §6 为准**（补两库后 RC=0）。本节记录的是**首次 RC1 阶段**的两条更正，
+> 其"缺失链接输入"结论正是 §6 修正的依据，不表示当前仍未闭合。
 **撤回**"非 Python 类全部解析"与"Py 仅宿主可提供"两条结论。
 当前事实：**严格链接失败由两个具名缺失输入造成**（`libtorch_cpu`、`libpython3.12`），
 是否做**一次有限修正**由 20 裁定；**本次未追加链接**。
@@ -97,7 +103,7 @@ SHA-256 `212da0dac0371ea3d1f87cd24b6750b6db12d145280d9b4480cac66b16c3c169`
 其余依赖按**原已核路径固定**：包内 `libcust_opapi.so` `33149226…48ec`、
 CANN `lib64/libnnopbase.so` `72cd43b4…477c`（**未混用 devlib 版**）。
 
-**逐字命令**（`fixed_link_cmd.txt`）：
+**命令（§6 的完整绝对路径版本已存 `fixed_link_cmd.txt`；下方为同一命令的可读排版）：**
 ```
 g++ -shared -z defs -o d0_strict_fixed.so d0_adapter.o \
   -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
@@ -107,7 +113,9 @@ g++ -shared -z defs -o d0_strict_fixed.so d0_adapter.o \
   /workspace/yangchen/python/cpython-3.12.16+20261110/lib/libpython3.12.so.1.0
 ```
 
-**结果**：`LINK_RC=0`；`fixed_unresolved.txt` **0 条**；产物
+**结果**：`LINK_RC=0`；**零未解析链接报错**（`fixed_unresolved.txt` 0 条）。
+> 注：产物 ELF 仍有 **288 个具名动态导入（UND）**，属正常动态依赖，不因 `-z defs` 通过而消失。
+> 产物
 `d0_strict_fixed.so` SHA-256 **`f80b0e50c50eb2fb0eb25b13a77df11ef65173015b5861903e57315ad821a60a`**。
 旧失败产物 `d0_strict.so` 与 `strict_link.log` **保留未动**。
 
