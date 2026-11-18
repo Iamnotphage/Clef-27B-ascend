@@ -928,3 +928,37 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 ### 33.5 我方 CPU 侧状态（解析器 `c0b4adb`）
 
 域相关前置与该插桩表一致：AIC 仅需 K1/K8（K4/K7 不可达），AIV worker 需 K1/K4/K8，AIV 非 worker 保留身份不计覆盖；14 项 CPU 反例全通过。
+
+## 34. D0 CPU 交付证据与未接线项（2026-11-18 23:5x CST）
+
+### 34.1 编译与链接（真实生成头与真实工具链）
+
+| 检查 | 命令要点 | 结果 |
+| --- | --- | --- |
+| 对象编译 | `g++ -std=c++17 -c -O0 -fPIC … -o d0_adapter.o` | **`OBJECT_RC=0`**，0 error，`.o` **3,038,768 B** |
+| 共享库链接 | `g++ -shared … -ltorch_npu -ltorch -lc10 -lcust_opapi` | **`LINK_RC=0`** |
+| 严格链接 `-Wl,-z,defs` | 同上加 `-z defs` | **`STRICT_RC=1`**，285 处未解析 |
+
+**严格链接失败的构成（已分类，不是模糊说法）**：
+
+- 未解析符号**全部**属于 **Python C API（`Py*` / `_Py*`）** 与 **libtorch/c10**（如 `at::_ops::empty_memory_format::call`、`c10::FloatType::get`）——这两类由**宿主进程**在加载时提供，属 Python 扩展模块的正常形态；
+- **`aclnnClefD0*` / `clef_d0` 的未解析符号数为 0**，即自定义算子符号已由 `libcust_opapi.so` 解析；
+- 产物 `DT_NEEDED`：`libtorch_npu.so`、`libtorch.so`、`libc10.so`、**`libcust_opapi.so`**、`libstdc++`、`libgcc_s`、`libc`、`ld-linux`；
+- 链接使用的 `libcust_opapi.so`：`/workspace/yangchen/work/wave3-e-d0-22/runtime/ascendc/clef_d0_trace_22/build_out/op_host/libcust_opapi.so`，SHA `3c1728432a76a1a1…`；
+- 生成头 `aclnn_clef_d0_trace.h` SHA `146daf7f29a7a835…`。
+
+**结论边界**：`-z defs` 对本类产物不适用，失败原因已逐类归因；`LINK_RC0` 只证明 `.so` 可生成，**不证明运行可用**。**未加载、未 dlopen、未执行**。
+
+### 34.2 仍未接线（明确未完成，不宣称齐全）
+
+1. **两 rank 启动**：`d0_run` 启动单 child，而 executor 用 `env://` 需要 `RANK`/`WORLD_SIZE`/`MASTER_ADDR`；应改为 `torch.distributed.run --standalone --nproc-per-node=2` 或等价，并前置 `WORLD_SIZE=2`、固定 rank 0/1。
+2. **metadata 增量未 flush**：`meta` 仅在开头写一次，之后补入的 adapter 实 SHA、weight、inputs **未再落盘**；应在调用前完整 flush。
+3. **BF16 hash 顺序**：应**先 `.cpu().contiguous()` 再 `.view(torch.uint16)`**，避免在 NZ/NPU 张量上做 dtype-view。
+4. **两 rank 失败文件同名**：`trace-unavailable.json` 会被覆盖，应 rank 独立并保留完整 traceback；`parser` 的 `SystemExit` 未被 `except Exception` 捕获，parse 失败应计为 wrapper 失败。
+5. **C++ 前置与 RAII**：无 device/dtype/shape 前置断言；`GetWorkspaceSize` 成功后 `malloc`/`Run` 抛异常会漏掉全部 `aclTensor`，需统一 RAII。
+6. **恢复三检**与**固定 mixed 数值门**：**均未实现**，分别列为「未完成」与「待 20 决定」；claims 覆盖**不代替**数值门。
+7. **进程树夹具**：需新增 CPU 进程夹具（构造超时与孙进程持 pipe）验证 PGID 清理，本仓库尚未提供。
+
+### 34.3 `uint32` 承载的口径
+
+`uint32` 分配在当前栈未获支持证据，故文档记为**本实现选择**：容器 `int32`、`aclTensor` 视图 `ACL_UINT32`、读回按 `& 0xFFFFFFFF` 无损规范化（`0xD0D0C0DE` / `0xC0FFEE00` / `0` / `0xFFFFFFFF` 往返已核）。
