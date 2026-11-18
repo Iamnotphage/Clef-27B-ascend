@@ -6,8 +6,8 @@
 ## 身份
 
 - 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）；runner 通过 `Path(win.__file__)` 核 wrapper SHA，不依赖 wrapper 常量。
-- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `e8092397c5d1ebb51cbeb875a1a08f8e3a880cf5c8c5be12b49cc5fe8cb2a9a9`
-- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `1c03c4cfb654bffddb106c5f19a027c9cffce03c45808278ee2212fb727682a9`，8/8
+- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `478a541ad04f3427ea48d1fbdd682c34fa79a6b12fd0b7aa00c836647c6e3ba6`
+- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `8a591cbe9a779f55b51915726977780554e08c7a11a2700ba9aea66d22048341`，8/8
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 
 ## 命令（新不存在 run-dir）
@@ -49,3 +49,28 @@ runner 读取后重新计算 SHA，任一不符即中止；每请求记录 statu
 
 8/8：ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
 真实服务启动/性能/质量由 21 现场执行、20 判定；本文件不报告服务收益。
+
+## 服务启动 guard 适配（精确 aa3e）
+
+启动阻断：`Clef-27B/inference.py` 在启动时调用
+`runtime/apply_joint_single_field_patch.py --check`，原 guard 只认 preimage 197863 和 single-field
+f810；head 候选 postimage aa3e 被判 unknown。
+
+- adapter installer：`runtime/apply_joint_service_check.py`，SHA
+  `498f7144af24cd0c3b8d1015ab95c3fbbd9b9bf15366c950c77b259a178b18e3`
+- 服务端 postimage：`runtime/joint_service_check/apply_joint_single_field_patch.py`，SHA
+  `20abe6800dfdf807a0ba54fbdf86b155a57d22bbce25dcc85ca3d5c36ca37e61`
+- preimage guard：`76595657…`；adapter 只在 env `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA` **精确等于**
+  `aa3e1758…` 时把该 SHA 作为 single-field；变量未设或其它值时原 guard 不变。无全局绕开/容差。
+- AB runner 在 head postimage 安装后 apply adapter；两臂服务 env 仅注入该变量；restore env 移除；
+  finally 先 revert adapter 并核 preimage SHA，再恢复；adapter revert 失败则阻断 restore。
+
+基线恢复单命令（target 必须 f810、端口 closed）：
+
+```bash
+$PY $REPO/runtime/joint_fused_service_ab.py --run-dir "$RUN" --repo "$REPO" \
+  --tree /workspace/yangchen/work/src/vllm --restore-only
+```
+
+CPU 证据：`runtime/test_joint_service_check.py` 6/6（aa3e 无 env 被拒、精确 env 通过、其它值拒绝）；
+AB runner 8/8。adapter 源码 diff 即上述两个常量与 `allowed_postimage` 判定，无其它行为变化。

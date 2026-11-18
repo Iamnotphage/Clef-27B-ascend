@@ -33,6 +33,11 @@ POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b7250
 STOP_SHA = "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
 INSTALLER_SHA = "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
 WINDOW_SHA = "700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473"
+SERVICE_CHECK_INSTALLER_SHA = "498f7144af24cd0c3b8d1015ab95c3fbbd9b9bf15366c950c77b259a178b18e3"
+SERVICE_CHECK_SOURCE_SHA = "20abe6800dfdf807a0ba54fbdf86b155a57d22bbce25dcc85ca3d5c36ca37e61"
+SERVICE_CHECK_PREIMAGE_SHA = "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
+SERVICE_ROOT = "/workspace/yangchen/Clef-27B-ascend"
+ALLOW_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 ACTIVATE_SHA = "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
 LAUNCH_SHA = "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321"
 WAIT_SHA = "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0"
@@ -41,7 +46,8 @@ TEXT_SHA = {
     "od-1534": "568ea1583377dcc6044d3fcd4a099c3beb4cd0e118155f95b595bda72b1c76bf",
 }
 IMAGE_SHA = "f3229f5c120098ac4eebcc6f4025c28254e35f959fd01998cac5db7b8d209aab"
-CANDIDATE_FLAGS = {"CLEF_JOINT_FUSED_ATTN", "CLEF_JOINT_SMALLQ", "CLEF_JOINT_SMALLQ_KERNEL"}
+CANDIDATE_FLAGS = {"CLEF_JOINT_FUSED_ATTN", "CLEF_JOINT_SMALLQ",
+                   "CLEF_JOINT_SMALLQ_KERNEL", ALLOW_ENV}
 ORDERS = [[0, 1], [1, 0], [1, 0], [0, 1]]
 
 
@@ -68,6 +74,7 @@ class ServiceAB:
         self.run_dir = Path(args.run_dir).expanduser().resolve()
         self.attribution_unknown = False
         self.cleanup_unconfirmed = False
+        self.service_check_applied = False
 
     def flush(self, phase):
         self.state["phase"] = phase
@@ -116,7 +123,45 @@ class ServiceAB:
             raise AbError("staged postimage SHA mismatch")
         if self.win.sha256(Path(self.win.__file__)) != WINDOW_SHA:
             raise AbError("helper window SHA mismatch")
+        shutil.copy2(Path(self.args.repo) / "runtime" / "apply_joint_service_check.py",
+                     root / "apply_joint_service_check.py")
+        (root / "joint_service_check").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(self.args.repo) / "runtime" / "joint_service_check" /
+                     "apply_joint_single_field_patch.py",
+                     root / "joint_service_check" /
+                     "apply_joint_single_field_patch.py")
+        if self.win.sha256(root / "apply_joint_service_check.py") != SERVICE_CHECK_INSTALLER_SHA:
+            raise AbError("staged service-check installer SHA mismatch")
+        if self.win.sha256(root / "joint_service_check" /
+                           "apply_joint_single_field_patch.py") != SERVICE_CHECK_SOURCE_SHA:
+            raise AbError("staged service-check source SHA mismatch")
         return root
+
+    def apply_service_check(self):
+        installer = self.run_dir / "stage" / "runtime" / "apply_joint_service_check.py"
+        check = self.call([self.args.python, str(installer),
+                           "--service-root", SERVICE_ROOT, "--check"])
+        report = json.loads(check.stdout)
+        if report.get("state_after") == "preimage":
+            self.call([self.args.python, str(installer),
+                       "--service-root", SERVICE_ROOT, "--apply",
+                       "--manifest", str(self.run_dir / "service-check-apply.json")])
+        elif report.get("state_after") != "postimage":
+            raise AbError(f"service-check state: {report.get('state_after')}")
+        target = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
+        if self.win.sha256(target) != SERVICE_CHECK_SOURCE_SHA:
+            raise AbError("service-check adapter not installed")
+        self.service_check_applied = True
+
+    def revert_service_check(self):
+        installer = self.run_dir / "stage" / "runtime" / "apply_joint_service_check.py"
+        self.call([self.args.python, str(installer),
+                   "--service-root", SERVICE_ROOT, "--revert",
+                   "--manifest", str(self.run_dir / "service-check-revert.json")])
+        target = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
+        if self.win.sha256(target) != SERVICE_CHECK_PREIMAGE_SHA:
+            raise AbError("service-check adapter did not restore original guard")
+        self.service_check_applied = False
 
     def current_service(self):
         if self.win.port_open(self.args.port) != "open":
@@ -275,6 +320,7 @@ class ServiceAB:
             env.pop(key, None)
         if flag is not None:
             env["CLEF_JOINT_FUSED_ATTN"] = str(flag)
+        env[ALLOW_ENV] = POSTIMAGE_SHA
         env["CLEF_LAUNCH_CONFIG"] = "s1"
         before = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
         self.arm_identity = None
@@ -317,6 +363,8 @@ class ServiceAB:
             raise AbError(f"arm {label} root env flag mismatch: {root_env.get('CLEF_JOINT_FUSED_ATTN')}")
         if root_env.get("CLEF_LAUNCH_CONFIG") != "s1":
             raise AbError(f"arm {label} launch config mismatch: {root_env.get('CLEF_LAUNCH_CONFIG')}")
+        if root_env.get(ALLOW_ENV) != POSTIMAGE_SHA:
+            raise AbError(f"arm {label} service-check env mismatch: {root_env.get(ALLOW_ENV)}")
         if source_sha != POSTIMAGE_SHA:
             raise AbError(f"arm {label} source SHA mismatch: {source_sha}")
         npu = subprocess.run(["npu-smi", "info"], capture_output=True, text=True,
@@ -327,6 +375,7 @@ class ServiceAB:
                 "after_new": sorted(after - before),
                 "env_flag": root_env.get("CLEF_JOINT_FUSED_ATTN"),
                 "launch_config": root_env.get("CLEF_LAUNCH_CONFIG"),
+                "service_check_env": root_env.get(ALLOW_ENV),
                 "source_sha256": source_sha, "npu_file": str(self.run_dir / f"npu-{label}.txt")}
 
     def restore_prod(self):
@@ -387,6 +436,8 @@ def main() -> int:
     ap.add_argument("--text-url", default="http://127.0.0.1:18143/v1/systemone")
     ap.add_argument("--image-url", default="http://127.0.0.1:18143/v1/decide")
     ap.add_argument("--service-log-root", default="/workspace/yangchen/logs/perf-wave2-20261118")
+    ap.add_argument("--restore-only", action="store_true",
+                    help="restore baseline f810 service only; no install/AB")
     args = ap.parse_args()
     if Path(args.run_dir).expanduser().resolve().exists():
         print(json.dumps({"error": "run dir exists"}))
@@ -394,6 +445,40 @@ def main() -> int:
     if args.rounds < 4:
         print(json.dumps({"error": "rounds must be at least 4"}))
         return 1
+    if args.restore_only:
+        if Path(args.run_dir).expanduser().resolve().exists():
+            print(json.dumps({"error": "run dir exists"}))
+            return 1
+        ab = ServiceAB(args)
+        ab.state = {"schema": "joint-fused-service-ab/1", "at": now(),
+                    "mode": "restore-only", "steps": {}, "overall_rc": 1}
+        try:
+            ab.run_dir.mkdir(parents=True, exist_ok=False)
+            ab.stage_d0()
+            target = Path(args.tree) / "vllm/model_executor/models/clef_joint_schema.py"
+            if not target.is_file() or ab.win.sha256(target) != PREIMAGE_SHA:
+                raise AbError("head target is not f8101b98")
+            for path, expected, name in ((args.activate, ACTIVATE_SHA, "activate"),
+                                         (args.launch, LAUNCH_SHA, "launch"),
+                                         (args.wait, WAIT_SHA, "wait")):
+                if ab.win.sha256(Path(path)) != expected:
+                    raise AbError(f"{name} SHA mismatch")
+            if ab.win.port_open(args.port) != "closed":
+                raise AbError("service port is open; stop it with the exact identity first")
+            ab.prod_env = ab.source_env()
+            for key in CANDIDATE_FLAGS:
+                ab.prod_env.pop(key, None)
+            restored = ab.restore_prod()
+            ab.state["steps"]["restore"] = {"ok": True, **restored}
+            ab.state["overall_rc"] = 0
+        except Exception as exc:
+            ab.state["error"] = f"{type(exc).__name__}: {exc}"
+            ab.state["overall_rc"] = 1
+        ab.state["finished_at"] = now()
+        ab.flush("finished")
+        print(json.dumps({k: ab.state.get(k) for k in ("mode", "error", "steps", "overall_rc")},
+                         ensure_ascii=False, indent=1))
+        return ab.state["overall_rc"]
     ab = ServiceAB(args)
     ab.state = {"schema": "joint-fused-service-ab/1", "at": now(),
                 "args": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
@@ -433,7 +518,9 @@ def main() -> int:
         ab.flush("initial-stopped")
         applied = True
         ab.apply_postimage()
+        ab.apply_service_check()
         ab.state["steps"]["apply"] = {"ok": True}
+        ab.state["steps"]["service_check_apply"] = {"ok": True}
         ab.flush("applied")
         for index in range(args.rounds):
             order = ORDERS[index % len(ORDERS)]
@@ -502,13 +589,27 @@ def main() -> int:
                 ab.state["steps"]["revert"] = {"ok": False,
                                                "error": f"{type(exc).__name__}: {exc}"}
             target_sha = ab.win.sha256(target) if target.is_file() else None
+        service_check_ok = True
+        if getattr(ab, "service_check_applied", False):
+            try:
+                ab.revert_service_check()
+                ab.state["steps"]["service_check_revert"] = {"ok": True}
+            except Exception as exc:
+                service_check_ok = False
+                ab.state["steps"]["service_check_revert"] = {
+                    "ok": False, "error": f"{type(exc).__name__}: {exc}"}
+        else:
+            service_target = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
+            service_check_ok = (service_target.is_file()
+                                and ab.win.sha256(service_target) == SERVICE_CHECK_PREIMAGE_SHA)
         ab.state["target_sha256"] = target_sha
         if stopped and ab.win.port_open(args.port) != "closed":
             stopped = False
-        if target_sha != PREIMAGE_SHA or not revert_ok:
+        if target_sha != PREIMAGE_SHA or not revert_ok or not service_check_ok:
             ab.state["steps"]["restore"] = {
                 "ok": False, "action": "blocked_source_or_revert_not_clean",
-                "target_sha256": target_sha, "revert_ok": revert_ok}
+                "target_sha256": target_sha, "revert_ok": revert_ok,
+                "service_check_ok": service_check_ok}
         elif not stopped:
             ab.state["steps"]["restore"] = {
                 "ok": False, "action": "blocked_service_not_proven_stopped",

@@ -143,7 +143,12 @@ def main() -> int:
         ok = (runner.win.sha256(staged / "apply_joint_fused_attention.py") == mod.INSTALLER_SHA
               and runner.win.sha256(staged / "joint_fused_attention" /
                                     "clef_joint_schema.py") == mod.POSTIMAGE_SHA
-              and runner.win.sha256(Path(runner.win.__file__)) == mod.WINDOW_SHA)
+              and runner.win.sha256(Path(runner.win.__file__)) == mod.WINDOW_SHA
+              and runner.win.sha256(staged / "apply_joint_service_check.py")
+                  == mod.SERVICE_CHECK_INSTALLER_SHA
+              and runner.win.sha256(staged / "joint_service_check" /
+                                    "apply_joint_single_field_patch.py")
+                  == mod.SERVICE_CHECK_SOURCE_SHA)
         check("stage candidate against approved wrapper", ok)
         checks[-1] = (checks[-1][0], ok)
 
