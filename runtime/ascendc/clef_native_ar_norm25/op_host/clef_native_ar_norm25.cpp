@@ -22,7 +22,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* c) {
     const int64_t requested = *c->GetAttrs()->GetAttrPointer<int64_t>(3);
     if (!std::isfinite(eps) || eps <= 0 || (use != 0 && use != 1) ||
         requested < 1 || requested > 48 ||
-        (use && (!group || !group[0]))) return ge::GRAPH_FAILED;
+        !group || !group[0]) return ge::GRAPH_FAILED;
     auto p = platform_ascendc::PlatformAscendC(c->GetPlatformInfo());
     if (requested > p.GetCoreNumAiv()) return ge::GRAPH_FAILED;
     auto* t = c->GetTilingData<ClefNativeArNorm25TilingData>();
@@ -31,7 +31,8 @@ static ge::graphStatus TilingFunc(gert::TilingContext* c) {
     t->useHccl = use; t->eps = eps; t->invN = 1.0f / 5120.0f;
     static_assert(sizeof(::Mc2InitTiling) == 64, "MC2 init ABI");
     static_assert(sizeof(::Mc2CcTiling) == 512, "MC2 cc ABI");
-    if (use) {
+    // The generated API marks both arms MC2. ARoff retains Init/Finalize.
+    {
         AscendC::Mc2CcTilingConfig cfg(group, 2, "AllReduce=level0:ring", 0, 11, 11, 2);
         if (cfg.GetTiling(*reinterpret_cast<::Mc2InitTiling*>(t->mc2InitTiling)) != 0 ||
             cfg.GetTiling(*reinterpret_cast<::Mc2CcTiling*>(t->mc2CcTiling)) != 0)

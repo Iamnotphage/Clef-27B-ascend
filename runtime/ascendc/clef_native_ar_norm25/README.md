@@ -1,5 +1,8 @@
 # N1：原生 GEMM + 独立 AllReduce/AddRMSNorm 边界
 
+当前待验产物为文末 **v2 生命周期修复**。下列 v1 包 `0e12…` 保持冻结，暂停上板；
+v1 对应源码提交 `eb2e33f`，v2 位于独立分支 `ao/ascend-fusion/native-ar-norm-lifecycle`。
+
 2026-11-19，worker25。独立 op `ClefNativeArNorm25`，vendor
 `clef_native_ar_norm25`，Torch namespace `clef_n1_25`。设备执行、隔离安装、
 加载与服务恢复由 worker21 负责。E、D0 b719 与生产文件均保持原身份。
@@ -126,3 +129,42 @@ rstd max_abs≤1e-3。固定门通过后才进入性能对照。
 
 后续 MC2 配平需要 owner 提供真实 tiling、单次 full-payload AR 与 norm 隔离耗时；
 本阶段没有按缺失数据推导通信切块或服务收益。
+
+## v2：MC2 生命周期修复（独立编译）
+
+证据：生成 `aclnn_clef_native_ar_norm25.cpp` 第 231–232 行，无条件调用
+`NnopbaseSetMc2(*executor)` 与 `NnopbaseSetHcomGroup(*executor, group)`。
+SDK `asc/include/adv_api/hccl/hccl.h` 的 `Finalize` 文档：通知服务端无后续任务、
+等待最后任务完成、清理 `finishedTurnCnt`。实读 `hccl_aicpu_impl.h:524` 的实现
+包含 `SendFinalizeMsg` 路径。因此 v2 为 AR off 也保留完整生命周期；
+v1 的设备行为尚未实测，其挂起风险维持待证。
+
+相对 `eb2e33f` 的功能差异仅有以下五项：
+
+1. host：group 在两臂均必填；`Mc2CcTilingConfig.GetTiling` 在两臂均执行，
+   构造有效 init/cc tiling。
+2. kernel：core0 均执行 InitV2、SetCcTilingV2、GetRankId/Dim、Finalize。
+   AllReduce/Wait 仅在 `useHccl=1 && setRc==0` 执行。全核屏障位置保持一致。
+3. adapter：group 在 AR off 也必须非空。调用生成 API 的签名和输出分配保持一致。
+4. diag/parser：AR off core0 的 rank/ranks 从 `-1/-1` 改为实际 `rank/2`；
+   其余核仍为 `-1/-1`。`expected_comm` 与测试同步更新。
+5. CPU 回归新增 AR off 生命周期 rank 的正反例。契约 5/5 通过；固定门实现未改，
+   既有 5/5 回归仍适用；最终静态同步扫描红线/高等级 0，性能提示 15。
+
+数值归约、舍入、reduced 输出、固定门、五输出 shape/dtype、4 属性顺序及生成头
+SHA 均保持 v1 契约。当前 `runtime/n1_25/build_identity.json` 为 v2 的16文件完整清单，
+v1 清单保留在 `eb2e33f` 与远端 v1/identity.json。
+
+| v2 产物（根 `/workspace/yangchen/work/clef-n1-25-v2`） | SHA256 |
+| --- | --- |
+| `build_out/custom_opp_ubuntu_aarch64.run` | `b9c3aa2bf3a5beb7b213e45e6b44fc0bd7abeff72fe982cd6e329bb34bbf9164` |
+| `n1_adapter.so` | `3e73937a9df211f0dbbbfd2b6070774ff80a6ef6f838fb5b2f1efee20ef61c0c` |
+| `build_out/autogen/aclnn_clef_native_ar_norm25.h` | `e56737c99f6f3d67b68d1475b23a6a346275c5ee7642aa903d74642db923d231` |
+
+编译日志：`/workspace/yangchen/work/clef-n1-25-v2-build.log` 与
+`clef-n1-25-v2-adapter.log`。runner 改用独立目录
+`/workspace/yangchen/work/clef-n1-25-v2-runner/run_cell.py`，首格命令其余参数保持一致，
+identity 和 adapter 路径均替换为 v2 根目录。须使用 v2 parser。
+
+v1/v2 各自独立冻结，使用相同 N1 op 名，按互斥安装/进程隔离测试。
+v2 尚未安装/加载/执行；23 核新增链及身份后，由21安排 head 后首格。

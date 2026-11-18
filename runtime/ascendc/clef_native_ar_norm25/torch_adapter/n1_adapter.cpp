@@ -63,7 +63,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> n1(
                 partial.size(1) == 5120 && residual.sizes() == partial.sizes() &&
                 gamma.dim() == 1 && gamma.size(0) == 5120, "N1 shape mismatch");
     TORCH_CHECK(std::isfinite(eps) && eps > 0 && (use_hccl == 0 || use_hccl == 1) &&
-                cores >= 1 && cores <= 48 && (!use_hccl || !group.empty()), "N1 attrs invalid");
+                cores >= 1 && cores <= 48 && !group.empty(), "N1 attrs invalid");
     static Api api(api_path);
     TORCH_CHECK(api.path == api_path, "N1 opapi identity cannot change in a running process");
     auto y = at::empty(partial.sizes(), partial.options());

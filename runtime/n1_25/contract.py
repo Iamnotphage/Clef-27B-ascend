@@ -40,7 +40,7 @@ def parse_diag(rows, m, cores, use_hccl, rank):
             errors.append(f"slot {i}: checksum mismatch")
         if any(row[13:31]):
             errors.append(f"slot {i}: reserved fields nonzero")
-        expected_comm = [rank, 2, 0, 0] if use_hccl and i == 0 else [0xFFFFFFFF, 0xFFFFFFFF, 0, 0]
+        expected_comm = [rank, 2, 0, 0] if i == 0 else [0xFFFFFFFF, 0xFFFFFFFF, 0, 0]
         if row[7:11] != expected_comm:
             errors.append(f"slot {i}: communication status mismatch")
     if any(any(r) for r in rows[cores:]):

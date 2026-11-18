@@ -37,18 +37,20 @@ public:
 
     __aicore__ inline void Process() {
         int32_t rank = -1, ranks = -1, setRc = 0, waitRc = 0;
-        if (t_->useHccl) {
-            if (GetBlockIdx() == 0) {
-                Hccl hccl;
-                hccl.InitV2(GetHcclContext<HCCL_GROUP_ID_0>(), &t_->mc2InitTiling);
-                setRc = hccl.SetCcTilingV2(offsetof(ClefNativeArNorm25TilingData, mc2CcTiling));
-                rank = hccl.GetRankId(); ranks = hccl.GetRankDim();
+        if (GetBlockIdx() == 0) {
+            Hccl hccl;
+            hccl.InitV2(GetHcclContext<HCCL_GROUP_ID_0>(), &t_->mc2InitTiling);
+            setRc = hccl.SetCcTilingV2(offsetof(ClefNativeArNorm25TilingData, mc2CcTiling));
+            rank = hccl.GetRankId(); ranks = hccl.GetRankDim();
+            if (t_->useHccl && setRc == 0) {
                 auto handle = hccl.AllReduce<true>(partial_, reduced_,
                     static_cast<uint64_t>(t_->m) * t_->n,
                     HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM, 1);
                 waitRc = hccl.Wait(handle);
-                hccl.Finalize();
             }
+            // Generated NnopbaseSetMc2 is unconditional: the ARoff arm
+            // closes the same communication lifecycle without issuing AR.
+            hccl.Finalize();
         }
         // All launched AIVs reach exactly one FFTS barrier, including idle rows.
         // Wait completion and GM visibility still require the two-rank device gate.

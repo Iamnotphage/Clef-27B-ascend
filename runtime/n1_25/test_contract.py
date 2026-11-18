@@ -8,8 +8,8 @@ class ContractTests(unittest.TestCase):
         rows = [[0] * 32 for _ in range(48)]
         for i, (a, b) in enumerate(intervals(m, cores)):
             rows[i][:13] = [MAGIC, 1, i, cores, a, b, ar,
-                           rank if ar and i == 0 else 0xFFFFFFFF,
-                           2 if ar and i == 0 else 0xFFFFFFFF, 0, 0, m, 5120]
+                           rank if i == 0 else 0xFFFFFFFF,
+                           2 if i == 0 else 0xFFFFFFFF, 0, 0, m, 5120]
             rows[i][31] = checksum(rows[i][:31])
         return rows
 
@@ -35,6 +35,13 @@ class ContractTests(unittest.TestCase):
             rows = self.good()
             rows[0][w] ^= 1
             self.assertFalse(parse_diag(rows, 967, 48, 1, 0)["pass"])
+
+    def test_aroff_requires_lifecycle_rank(self):
+        rows = self.good(967, 1, 0, 1)
+        self.assertTrue(parse_diag(rows, 967, 1, 0, 1)["pass"])
+        rows[0][7:9] = [0xFFFFFFFF, 0xFFFFFFFF]
+        rows[0][31] = checksum(rows[0][:31])
+        self.assertFalse(parse_diag(rows, 967, 1, 0, 1)["pass"])
 
     def test_incomplete_and_extra_slot(self):
         rows = self.good(967, 1)
