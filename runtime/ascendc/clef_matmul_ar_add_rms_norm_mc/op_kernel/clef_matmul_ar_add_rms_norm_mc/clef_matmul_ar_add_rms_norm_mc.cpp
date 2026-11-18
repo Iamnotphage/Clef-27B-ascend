@@ -1,7 +1,7 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 #include "adv_api/hccl/hccl.h"
-#include "clef_matmul_ar_add_rms_norm_tiling.h"
+#include "../clef_matmul_ar_add_rms_norm_tiling.h"
 
 using namespace AscendC;
 
