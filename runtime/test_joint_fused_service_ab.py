@@ -60,6 +60,34 @@ def main() -> int:
     check("final vllm argv recognized", runner_meta.is_final_vllm(final)
           and not runner_meta.is_final_vllm(stale))
 
+    # continuity refresh: same pid/start/boot/pgid + known final argv updates
+    runner_meta.win = types.SimpleNamespace(
+        proc_identity=lambda pid: dict(final, pid=1196772, starttime="394415908",
+                                       boot_id="393ecc15", pgid=1196772,
+                                       cmdline=final["cmdline"]),
+        descendants=lambda pid: [{"pid": 1197000}])
+    runner_meta.arm_identity = {"root": {"pid": 1196772, "starttime": "394415908",
+                                         "boot_id": "393ecc15", "pgid": 1196772,
+                                         "cmdline": stale["cmdline"]},
+                                "descendants": []}
+    runner_meta.attribution_unknown = False
+    check("exec refresh updates live identity",
+          runner_meta.refresh_arm_identity("L") is True
+          and runner_meta.arm_identity["root"]["cmdline"].startswith("python -m vllm")
+          and runner_meta.arm_identity["descendants"] == [{"pid": 1197000}])
+    runner_meta.attribution_unknown = False
+    runner_meta.win.proc_identity = lambda pid: dict(
+        final, pid=1196772, starttime="394415908", boot_id="393ecc15",
+        pgid=1196772, cmdline="python -m unknown.server --port 18143")
+    check("unknown exec cmdline rejected", runner_meta.refresh_arm_identity("L") is False
+          and runner_meta.attribution_unknown is True)
+    runner_meta.attribution_unknown = False
+    runner_meta.win.proc_identity = lambda pid: dict(
+        final, pid=1196772, starttime="999", boot_id="393ecc15",
+        pgid=1196772, cmdline=final["cmdline"])
+    check("changed start/boot rejected", runner_meta.refresh_arm_identity("L") is False
+          and runner_meta.attribution_unknown is True)
+
     with tempfile.TemporaryDirectory(prefix="ab-test-") as tmp:
         tmp = Path(tmp)
         existing = tmp / "exists"
@@ -171,6 +199,27 @@ def main() -> int:
                   == mod.SERVICE_CHECK_SOURCE_SHA)
         check("stage candidate against approved wrapper", ok)
         checks[-1] = (checks[-1][0], ok)
+
+    with tempfile.TemporaryDirectory(prefix="ab-restore-") as tmp:
+        tree = Path(tmp) / "tree"
+        target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+        target.parent.mkdir(parents=True)
+        target.write_text("not the preimage")
+        run = Path(tmp) / "run"
+        argv = sys.argv
+        sys.argv = ["ab", "--run-dir", str(run), "--repo", str(HERE.parent),
+                    "--tree", str(tree), "--restore-only"]
+        import io
+        from contextlib import redirect_stdout
+        try:
+            with redirect_stdout(io.StringIO()):
+                code = mod.main()
+        finally:
+            sys.argv = argv
+        state = json.loads((run / "ab.json").read_text())
+        check("main restore-only rejects unknown source before launch",
+              code == 1 and "not f8101b98" in state.get("error", "")
+              and "restore" not in state.get("steps", {}))
 
     failed = [name for name, ok in checks if not ok]
     print(json.dumps({"checks": len(checks), "failed": failed, "ok": not failed}))

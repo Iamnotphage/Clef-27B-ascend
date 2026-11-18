@@ -7,7 +7,7 @@
 
 - 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）；runner 通过 `Path(win.__file__)` 核 wrapper SHA，不依赖 wrapper 常量。
 - runner：`runtime/joint_fused_service_ab.py`，SHA-256 `c72e73808fa2483017eda0f6434811503b32e27df0f828200f28be1e2bd59dc8`
-- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `88ef2c111ec562a90ee942af461641c23d0e28f4b8d1e1840305e020e62a4da7`，8/8
+- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `868ca0082a90b6a5c69c6fe339f6c7307ae8d4c96190c0c540d58d10c2159091`，8/8
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 
 ## 命令（新不存在 run-dir）
@@ -49,7 +49,7 @@ runner 读取后重新计算 SHA，任一不符即中止；expect **由冻结请
 
 ## CPU 测试范围
 
-11/11：schema expect、final argv 识别、ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
+15/15：schema expect、final argv 识别、exec 连续性、main restore-only 未知源拒绝、ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
 真实服务启动/性能/质量由 27 现场执行、20 判定；本文件不报告服务收益。
 
 ## 服务启动 guard 适配（精确 aa3e）
@@ -76,3 +76,23 @@ $PY $REPO/runtime/joint_fused_service_ab.py --run-dir "$RUN" --repo "$REPO" \
 
 CPU 证据：`runtime/test_joint_service_check.py` 8/8（aa3e 无 env 被拒、精确 env 通过、其它值拒绝；apply/revert 不接受 aa3e）；
 AB runner 8/8。adapter 源码 diff 即上述两个常量与 `allowed_postimage` 判定，无其它行为变化。
+
+
+## f810 生产来源对照（独立模式评估，未并入当前 AB）
+
+当前 8b46/e132 两臂同为 aa3e，只比较 aa3e 内 flag0/1；aa3e OFF 已无条件共享 routing KV，
+不能把 flag0 当生产 f810，也不能用当前差值推生产总收益。最终采用前必须另跑真 f810 服务。
+
+最小独立模式（建议新 flag `--source-control`，默认不启用；当前协议不变）：
+
+- 每臂开始前服务已停净；按目标源 SHA 切换并核验：
+  - aa3e 臂：`apply_joint_fused_attention.py --apply`（f810→aa3e），核 target `aa3e1758…`；
+  - f810 臂：`apply_joint_fused_attention.py --revert`（aa3e→f810），核 target `f8101b98…`。
+- 源臂固定为 `f810`（无 `CLEF_JOINT_FUSED_ATTN`，无 service-check allow env）与
+  `aa3e flag0/flag1`；service-check adapter 只在 aa3e 臂注入 exact aa3e，f810 臂走原 guard。
+- 每臂唯一 label，wait 后同 PID/start/boot/PGID + final vllm argv/端口 + source SHA + root env
+  硬断言；固定 od-0105/od-1534/erqa-0000，raw JSONL；停净后再切下一源。
+- 顺序至少 `aa3e0, f810, aa3e1, f810` 四轮；f810 与 aa3e 概率/choice/耗时同输入配对。
+- finally 必须回 f810、revert service-check adapter、唯一 label 恢复四检；任一未知源/身份拒绝。
+- 质量结论仍需独立 OD/ERQA 真 f810 全量对照；固定三输入只作服务/概率一致性门，不替代质量门。
+- 该模式尚未实现，需 23 另核；不在当前 AB runner 默认路径，不改变现有两臂协议。
