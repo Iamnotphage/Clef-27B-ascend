@@ -62,18 +62,20 @@ def main() -> int:
     raw = blank()
     put(raw, 0, 0, 0, 0, 0, 50, seal=0x12345678)
     r = run(raw)
-    c4 = (not r["present"] and r["rejected"][0]["rejected"] == ["seal"]
+    c4 = (not r["present"] and r["partial_unsealed"]
+          and r["partial_unsealed"][0]["rejected"] == ["seal"]
           and not r["claims_by_domain"]["aic"]["ranges"])
-    print("bad seal:", "OK" if c4 else f"FAIL {r['rejected']}")
+    print("bad seal -> partial:", "OK" if c4 else f"FAIL {r['partial_unsealed']}")
     ok &= c4
 
     # 5 non-worker with a claim
     raw = blank()
     put(raw, 0, 0, 0, 0, 0, 50, bits2=0)
     r = run(raw)
-    c5 = (not r["present"] and r["rejected"][0]["rejected"] == ["not_worker"]
+    c5 = (not r["present"]
+          and r["rejected"][0]["inconsistent"] == ["not_worker_but_has_claim"]
           and not r["claims_by_domain"]["aic"]["ranges"])
-    print("non-worker:", "OK" if c5 else f"FAIL {r['rejected']}")
+    print("non-worker no coverage:", "OK" if c5 else f"FAIL {r['rejected']}")
     ok &= c5
 
     # 6 wrong domain / wrong slot

@@ -8,6 +8,11 @@ module keeps the ones below):
     [3] claim_start_m, [4] claim_m, [5] stage_bits, [6] stage_bits2,
     [7] seal = 0xC0FFEE00 ^ id
   slot: AIC slot = block; AIV slot = AIC_CAP + block*SUB_CAP + sub
+  AIV block is DERIVED by the probe from the public linear index and the
+  ratio (host metadata marks identity_provenance=derived); the trace does
+  not carry a raw linear or ratio readback, so this parser cannot
+  re-derive it and only cross-checks the decoded (block, sub) against the
+  slot that was written.
 
 A record counts only when magic, seal, domain, the id bounds, the
 slot-of-identity check and the stage bits are all valid AND it declares
@@ -53,11 +58,28 @@ def _as_uint32(v, where: str) -> int:
     return v
 
 
-def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int) -> dict:
+def check_derivation(block: int, sub: int, ratio: int, aiv_blocks: int) -> list:
+    """Sanity checks for the derived AIV identity (host reports it as derived).
+
+    The probe derives block from a public linear index; this only checks the
+    result is internally plausible, it cannot re-derive it.
+    """
+    why = []
+    if ratio <= 0:
+        why.append("ratio_nonpositive")
+    if sub < 0 or sub >= ratio:
+        why.append("sub_out_of_ratio")
+    if block < 0 or block >= aiv_blocks:
+        why.append("block_out_of_domain")
+    return why
+
+
+def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
+           ratio: int | None = None, aiv_blocks: int | None = None) -> dict:
     n = slots_for(aic_cap, sub_cap)
     if len(raw) != n * FIELDS:
         raise SystemExit(f"trace length {len(raw)} != {n * FIELDS} (slots={n})")
-    present, rejected = [], []
+    present, rejected, partial = [], [], []
     for s in range(n):
         f = [_as_uint32(v, f"slot{s}") for v in raw[s * FIELDS:(s + 1) * FIELDS]]
         got_magic, pid, domain, start_m, claim_m, bits, bits2, seal = f
@@ -66,7 +88,8 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int) -> dict:
         why = []
         if got_magic != magic:
             why.append("magic")
-        if seal != (SEAL_SEED ^ pid):
+        sealed = seal == (SEAL_SEED ^ pid)
+        if not sealed:
             why.append("seal")
         if domain not in (0, 1):
             why.append("domain")
@@ -78,6 +101,8 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int) -> dict:
         expect = slot_of(domain, block, sub, aic_cap, sub_cap) if domain in (0, 1) else None
         if expect != s:
             why.append(f"slot_mismatch(expect={expect})")
+        if domain == 1 and ratio is not None and aiv_blocks is not None:
+            why.extend(check_derivation(block, sub, ratio, aiv_blocks))
         rec = {"slot": s, "id": pid, "block": block, "sub": sub,
                "domain": "aic" if domain == 0 else ("aiv" if domain == 1 else "bad"),
                "claim_start_m": start_m, "claim_m": claim_m,
@@ -86,10 +111,14 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int) -> dict:
                "is_worker": bool(bits2 >> 3 & 1)}
         if why:
             rec["rejected"] = why
-            rejected.append(rec)
+            # An unsealed record is a stage record that never completed: it is
+            # listed on its own and never enters the valid set.
+            (partial if why == ["seal"] else rejected).append(rec)
             continue
         if not rec["is_worker"]:
-            rec["rejected"] = ["not_worker"]
+            # Identity is fine but the record does not claim worker duty: its
+            # range must not count toward coverage, and the mismatch is noted.
+            rec["inconsistent"] = ["not_worker_but_has_claim"] if rec["claim_m"] else ["not_worker"]
             rejected.append(rec)
             continue
         present.append(rec)
@@ -122,10 +151,14 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int) -> dict:
                            "overlap": overlap, "gaps": gaps, "covered_to": cursor}
     return {
         "aic_cap": aic_cap, "sub_cap": sub_cap, "slots": n, "m": m,
-        "present": present, "rejected": rejected, "bad_ranges": bad_ranges,
+        "present": present, "partial_unsealed": partial, "rejected": rejected,
+        "bad_ranges": bad_ranges,
         "claims_by_domain": per_domain,
-        "scope": ("capacity-internal observations only; absent slot is not a missing "
-                  "participant; launch set, SDK receipt, partial writes and consumer "
+        "coverage_basis": "fully valid worker records only",
+        "scope": ("capacity-internal observations only; capacity is not an expected "
+                  "count and an absent slot is not a missing participant; AIV block is "
+                  "a derived value (identity_provenance=derived), no raw linear/ratio "
+                  "readback; launch set, SDK receipt, partial writes and consumer "
                   "visibility are outside this trace"),
     }
 
@@ -137,12 +170,14 @@ def main() -> int:
     ap.add_argument("--sub-cap", type=int, default=2)
     ap.add_argument("--m", type=int, required=True, help="row count M used for claim checks")
     ap.add_argument("--magic", type=lambda x: int(x, 0), default=DEFAULT_MAGIC)
+    ap.add_argument("--ratio", type=int, help="declared sub ratio for AIV derivation checks")
+    ap.add_argument("--aiv-blocks", type=int, help="AIV block domain size for derivation checks")
     ap.add_argument("--output", type=Path)
     a = ap.parse_args()
     raw = json.loads(a.trace_json.read_text())
     if isinstance(raw, dict):
         raw = raw.get("trace") or raw.get("data") or []
-    out = decode(raw, a.aic_cap, a.sub_cap, a.m, a.magic)
+    out = decode(raw, a.aic_cap, a.sub_cap, a.m, a.magic, a.ratio, a.aiv_blocks)
     text = json.dumps(out, ensure_ascii=False, indent=1)
     if a.output:
         a.output.write_text(text + "\n")
