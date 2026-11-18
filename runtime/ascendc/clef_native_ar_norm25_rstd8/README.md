@@ -71,3 +71,39 @@ Torch diag容器int32不变。UB从103040增至103072B；tiling布局和字段�
 浮点门、shape/dtype/finite、explicit reduced逐位门保持。rstd须完整967项并特别核查各核尾/边界。
 新旧输出逐字节对照与计时结论均待设备原件；无稳定收益就关闭本优化假设。
 同PGID240秒监督与失败finally恢复复用wrapper5c045eb；cores48不排。
+
+
+## 已冻结监督入口
+
+核心源码提交 `8d266267cd308a62d5b235072fb4f9dd2443baeb`。
+远端完整bundle：`/workspace/yangchen/work/clef-n1-25-window-v3-rstd8-c24-timing-owner27`。
+
+| 产物 | SHA256 |
+| --- | --- |
+| window_payload.json | 70e6390eeedafce61cff1569ba7ac263b55fcf0213dff6148ce20576a68698fe |
+| plan.json | 10b2dd3fc6834b2250a49e804c7af3e0d22046c4794abfd73641fb9a9814a3ef |
+| supervised_window.py | 67a1cfa726f472a9b13700d42b06760a26dda8348dd9ba612f14c796396a5558 |
+
+13文件payload逐SHA冻结。`run_cell.py`相对v2只改变Torch namespace，`contract.py`只改变vendor名；
+`window_probe.py`、`window_vendor.py`、`fixed_gate.py`、`timing_contract.py`均保持v2原字节。
+真实执行owner27，通过仅probe child的CLEF_N1_EXECUTION_OWNER分列；legacy runner owner21兼容tag保留。
+所有独立OPP/opapi/devices只注入probe子进程；PYTHONPATH只注入torchrun子进程。
+wrapper `5c045eb1427e9cb902867bd7147c0d636ce91e1c`、SHA
+`9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`与六恢复模块复用。
+stop/精确PGID/240s/失败finally/唯一label/四检保持，revert退役vendor保留原件。
+
+下列只读命令已执行并生成上表plan。23核新增身份与diff后，27依20授权加`--execute`串行运行：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v3-rstd8-c24-timing-owner27/supervised_window.py \
+  --owner clef-27b-ascend-27 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha 70e6390eeedafce61cff1569ba7ac263b55fcf0213dff6148ce20576a68698fe \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v3-rstd8-c24-timing-owner27-20261119T0340
+```
+
+实际加载ABI、scalar到DMA完成语义、数值、速度与恢复均待该窗口证据。
+性能只有同窗口native基线与v3的配对比较；与历史v2横跨窗口的差值仅作辅助。
