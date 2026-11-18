@@ -203,6 +203,24 @@ class ServiceAB:
         return rows
 
     def start_arm(self, flag, label):
+        try:
+            return self._start_arm(flag, label)
+        except Exception:
+            # A launch may have created a service before api.pid/identity was
+            # readable.  Stop exactly that listener before propagating.
+            try:
+                pids = self.win.find_api_pid(self.args.port)
+                if len(pids) == 1:
+                    identity = self.win.proc_identity(pids[0])
+                    if identity is not None:
+                        self.stop_tree({"root": identity,
+                                        "descendants": self.win.descendants(identity["pid"])},
+                                       f"failed-{label}")
+            except Exception as exc:
+                self.state["start_cleanup_error"] = f"{type(exc).__name__}: {exc}"
+            raise
+
+    def _start_arm(self, flag, label):
         env = dict(self.prod_env)
         for key in CANDIDATE_FLAGS:
             env.pop(key, None)

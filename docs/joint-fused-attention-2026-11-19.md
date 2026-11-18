@@ -274,7 +274,7 @@ window `65dcced4…cc5ee`，probe `f5bd3d70…f1676b`，restore `0c9cc408…43d3
 ## 16. 服务 A/B runner（21 执行）
 
 文件：`runtime/joint_fused_service_ab.py`
-SHA-256 `0a1304b6b794f2218183a6d41d203ae94c75e5b4c5703361b00e87e67e3e48e4`；
+SHA-256 `cc02071bbe12d8e250cea9a48152b7f3e853ee04ac84d2910157cbbbb33feddf`；
 测试 `runtime/test_joint_fused_service_ab.py`（SHA `438009a6…6a50d4`），6/6：
 ABBA 顺序、≥4 轮、固定输入 hash、旧目录拒绝、stop 失败、输入 hash 不符拒绝。
 
