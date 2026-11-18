@@ -102,7 +102,7 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `bf49c987de14d684804444b39f4875b31568008096993bac9ca8838464c341a9`。
+SHA-256 `4b1ff4e07b07efa399c3cd67456b2a40aad5d7ef660a7e559a377b675b97c3c3`。
 CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `7e6e170abdc9dad261b5bfbd3f4e6f9f93d608b1c9a37826a237c69b8ee82ce0`），
 16/16 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
@@ -144,3 +144,35 @@ $PY "$REPO/runtime/joint_fused_attention_window.py" \
 `npu_fusion_attention`。本候选的 installer 只接受 `f8101b98`，26 安装后本窗口 preflight 会拒绝；
 反过来 26 的 check 也会拒绝本 postimage。21 必须串行：任一路线测试前先 `--revert` 到 `f8101b98`，
 检查 SHA 后再装另一路线；禁止混装或同时保持两个 postimage。
+
+
+## 11. 26 候选的参数化复用
+
+wrapper 默认仍是本候选；26 的独立小 Q Triton 路线用参数覆盖，不混装：
+
+```bash
+$PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
+  --tree /workspace/yangchen/work/src/vllm --device 0 \
+  --stop-script /tmp/d0cc/d0_stop.py \
+  --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 \
+  --postimage-rel runtime/joint_smallq/clef_joint_schema.py \
+  --postimage-source "$REPO/runtime/joint_smallq/clef_joint_schema.py" \
+  --postimage-sha <26 postimage SHA> \
+  --installer-rel runtime/apply_joint_smallq.py \
+  --installer-source "$REPO/runtime/apply_joint_smallq.py" \
+  --installer-sha <26 installer SHA> \
+  --probe-rel runtime/joint_smallq_probe.py \
+  --probe-source "$REPO/runtime/joint_smallq_probe.py" \
+  --probe-sha <26 probe SHA> \
+  --payload "$REPO/runtime/joint_smallq/clef_smallq_kernel.py:runtime/joint_smallq/clef_smallq_kernel.py:<kernel SHA>" \
+  --client-rel "" --env-flag CLEF_JOINT_SMALLQ \
+  --probe-schema joint-smallq-probe/1 --preimage-sha f8101b98...
+```
+
+- 26 installer 必须支持 `--tree`、`--check/--apply/--revert`、`--manifest`；wrapper 以实际 target SHA
+  判定 pre/postimage，不依赖 installer 的 state 字符串。
+- probe 返回 `joint-smallq-probe/1`、`gate_passed=true` 且无 `error` 才合格；raw timing 路径
+  `timing[].rounds[].arms[].samples` 记录在 `probe/record.json`。
+- 额外 kernel 文件通过 `--payload SRC:REL:SHA` 逐文件 stage/hash；installer 的 `HERE` 为 `stage/runtime`，
+  所以 REL 使用 `runtime/joint_smallq/...`。
+- stop/restore 完全复用同一 wrapper；26 不写 stop/restore。两条路线互斥，21 串行并先 revert 到 `f8101b98`。

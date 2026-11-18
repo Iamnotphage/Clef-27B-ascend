@@ -196,6 +196,9 @@ def find_api_pid(port: int) -> list[int]:
 
 
 class Window:
+    def cfg(self, name, default):
+        return getattr(self.args, name, default)
+
     def __init__(self, args):
         self.args = args
         self.run_dir = Path(args.run_dir).expanduser().resolve()
@@ -245,15 +248,33 @@ class Window:
             raise StepError(f"run dir already exists: {self.run_dir}")
         self.run_dir.mkdir(parents=True)
         self.stage.mkdir()
+        repo = Path(self.args.repo)
+        def source_arg(name, default):
+            value = getattr(self.args, name, None)
+            return Path(value) if value else default
         spec = {
-            POSTIMAGE_REL: POSTIMAGE_SHA,
-            INSTALLER_REL: INSTALLER_SHA,
-            PROBE_REL: PROBE_SHA,
-            CLIENT_REL: CLIENT_SHA,
+            self.cfg("postimage_rel", POSTIMAGE_REL):
+                (source_arg("postimage_source", repo / POSTIMAGE_REL),
+                 self.cfg("postimage_sha", POSTIMAGE_SHA)),
+            self.cfg("installer_rel", INSTALLER_REL):
+                (source_arg("installer_source", repo / INSTALLER_REL),
+                 self.cfg("installer_sha", INSTALLER_SHA)),
+            self.cfg("probe_rel", PROBE_REL):
+                (source_arg("probe_source", repo / PROBE_REL),
+                 self.cfg("probe_sha", PROBE_SHA)),
         }
+        client_rel = self.cfg("client_rel", CLIENT_REL)
+        if client_rel:
+            spec[client_rel] = (source_arg("client_source", repo / client_rel),
+                                self.cfg("client_sha", CLIENT_SHA))
+        for payload in self.cfg("payload", []) or []:
+            try:
+                source, rel, digest = payload.split(":", 2)
+            except ValueError:
+                raise StepError(f"invalid --payload (SRC:REL:SHA): {payload}")
+            spec[rel] = (Path(source), digest)
         staged = {}
-        for rel, expected in spec.items():
-            source = Path(self.args.repo) / rel
+        for rel, (source, expected) in spec.items():
             if not source.is_file():
                 raise StepError(f"missing candidate file: {source}")
             actual = sha256(source)
@@ -292,8 +313,10 @@ class Window:
         self.source_env = self._source_env()
         self._loader_check()
         state = self._installer(["--check"])
-        if state.get("state_after") != "preimage":
-            raise StepError(f"target is not preimage: {state.get('state_after')}")
+        target_path = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
+        actual_pre = sha256(target_path) if target_path.is_file() else None
+        if actual_pre != self.cfg("preimage_sha", PREIMAGE_SHA):
+            raise StepError(f"target is not preimage: {actual_pre}")
         self.state["preflight"]["preimage"] = PREIMAGE_SHA
         port_state = port_open(self.args.port)
         self.state["preflight"]["port"] = port_state
@@ -382,7 +405,7 @@ class Window:
             "hccl_dir": hccl, "extension": str(ext), "venv": venv, "ok": True}
 
     def _installer(self, action: list) -> dict:
-        cmd = [self.args.python, str(self.stage / INSTALLER_REL),
+        cmd = [self.args.python, str(self.stage / self.cfg("installer_rel", INSTALLER_REL)),
                "--tree", str(self.args.tree), *action]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         log = self.run_dir / (action[0].lstrip("-") + ".log")
@@ -436,9 +459,10 @@ class Window:
         finally:
             # The file may already be the postimage when manifest parsing fails;
             # finish() must still revert it.
-            self.applied = target.is_file() and sha256(target) == POSTIMAGE_SHA
-        if report.get("state_after") != "postimage" or not self.applied:
-            raise StepError(f"apply state: {report.get('state_after')}",
+            self.applied = (target.is_file()
+                            and sha256(target) == self.cfg("postimage_sha", POSTIMAGE_SHA))
+        if not self.applied:
+            raise StepError(f"apply did not install postimage: {report.get('state_after')}",
                             detail={"postimage": self.applied})
         return {"postimage": POSTIMAGE_SHA}
 
@@ -520,10 +544,13 @@ class Window:
             "ASCEND_CUSTOM_OPP_PATH": self.args.candidate_opp_prepend,
             "LD_LIBRARY_PATH": self.args.candidate_lib_prepend,
         }
+        for flag in ("CLEF_JOINT_FUSED_ATTN", "CLEF_JOINT_SMALLQ",
+                     "CLEF_JOINT_SMALLQ_KERNEL"):
+            env.pop(flag, None)
         env["CLEF_JOINT_SINGLE_FIELD"] = "1"
-        env["CLEF_JOINT_FUSED_ATTN"] = "1"
+        env[self.cfg("env_flag", "CLEF_JOINT_FUSED_ATTN")] = "1"
         env["PYTHONUNBUFFERED"] = "1"
-        cmd = [self.args.python, str(self.stage / PROBE_REL),
+        cmd = [self.args.python, str(self.stage / self.cfg("probe_rel", PROBE_REL)),
                "--tree", str(self.args.tree), "--device", str(self.args.device),
                "--output", str(output)]
         stdout = (probe_dir / "probe.log").open("wb")
@@ -545,6 +572,7 @@ class Window:
         finally:
             stdout.close()
             stderr.close()
+        data = None
         record = {"rc": cleanup["rc"], "timed_out": timed_out,
                   "pid": proc.pid, "saved": saved, "cleanup": cleanup,
                   "started_at": started, "finished_at": now(),
@@ -569,7 +597,15 @@ class Window:
         if rc != 0:
             raise StepError(f"probe failed rc={rc}", rc=rc,
                             detail={"probe_record": record})
-        if not record.get("interface_ok") or record.get("candidate_error") is not None:
+        schema = self.cfg("probe_schema", "joint-fused-attention-probe/2")
+        if schema == "joint-smallq-probe/1":
+            if (not isinstance(data, dict) or data.get("schema") != schema
+                    or data.get("gate_passed") is not True
+                    or data.get("error") is not None):
+                raise StepError("smallq probe gate failed", rc=rc,
+                                detail={"probe_record": record})
+            record["probe_timing_path"] = "timing[].rounds[].arms[].samples"
+        elif not record.get("interface_ok") or record.get("candidate_error") is not None:
             raise StepError("probe interface/candidate failure", rc=rc,
                             detail={"probe_record": record})
         return record
@@ -578,8 +614,8 @@ class Window:
         report = self._installer(["--revert", "--manifest", str(self.run_dir / "revert.json")])
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         actual = sha256(target) if target.is_file() else None
-        if report.get("state_after") != "preimage" or actual != PREIMAGE_SHA:
-            raise StepError("revert did not restore f8101b98",
+        if actual != self.cfg("preimage_sha", PREIMAGE_SHA):
+            raise StepError("revert did not restore preimage",
                             detail={"target_sha256": actual})
         self.applied = False
         return {"preimage": PREIMAGE_SHA}
@@ -684,12 +720,12 @@ class Window:
             return
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         target_sha = sha256(target) if target.is_file() else None
-        if self.applied or target_sha == POSTIMAGE_SHA:
+        if self.applied or target_sha == self.cfg("postimage_sha", POSTIMAGE_SHA):
             entry = self.step("revert", required=True)
             if not entry["ok"]:
                 self.overall_failed = True
             target_sha = sha256(target) if target.is_file() else None
-        if target_sha != PREIMAGE_SHA:
+        if target_sha != self.cfg("preimage_sha", PREIMAGE_SHA):
             self.state["steps"]["restore"] = {
                 "rc": 1, "ok": False, "action": "blocked_source_not_preimage",
                 "target_sha256": target_sha, "finished_at": now()}
@@ -749,6 +785,23 @@ def main() -> int:
                     help="optional D0/candidate vendor OPP path, child only")
     ap.add_argument("--candidate-lib-prepend", default="",
                     help="optional D0/candidate op_api/lib path, child only")
+    ap.add_argument("--postimage-rel", default=POSTIMAGE_REL)
+    ap.add_argument("--postimage-source", default=None)
+    ap.add_argument("--postimage-sha", default=POSTIMAGE_SHA)
+    ap.add_argument("--installer-rel", default=INSTALLER_REL)
+    ap.add_argument("--installer-source", default=None)
+    ap.add_argument("--installer-sha", default=INSTALLER_SHA)
+    ap.add_argument("--probe-rel", default=PROBE_REL)
+    ap.add_argument("--probe-source", default=None)
+    ap.add_argument("--probe-sha", default=PROBE_SHA)
+    ap.add_argument("--client-rel", default=CLIENT_REL)
+    ap.add_argument("--client-source", default=None)
+    ap.add_argument("--client-sha", default=CLIENT_SHA)
+    ap.add_argument("--payload", action="append", default=[],
+                    help="extra staged file SRC:REL:SHA (repeatable)")
+    ap.add_argument("--preimage-sha", default=PREIMAGE_SHA)
+    ap.add_argument("--env-flag", default="CLEF_JOINT_FUSED_ATTN")
+    ap.add_argument("--probe-schema", default="joint-fused-attention-probe/2")
     ap.add_argument("--wait-timeout", type=float, default=900.0)
     ap.add_argument("--preflight-only", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
