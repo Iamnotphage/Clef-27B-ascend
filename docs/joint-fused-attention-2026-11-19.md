@@ -15,18 +15,18 @@
 ## 2. 候选实现
 
 新 postimage：`runtime/joint_fused_attention/clef_joint_schema.py`
-SHA-256 `4e5c450f481579c30bbf892d6fac7c10c9aaa22c4841d0965665273760a25189`。
+SHA-256 `aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503`。
 
 - 环境开关 `CLEF_JOINT_FUSED_ATTN`，默认 **0**；为 1 且 `CLEF_JOINT_SINGLE_FIELD=1` 时，6 处
   cross-attention 使用 `torch_npu.npu_fusion_attention(..., "BSH", scale=1/sqrt(64), keep_prob=1.0)`。
-- 融合仅替换 attention 内部的 softmax + 两次 bmm；q/k/v、out_proj、LayerNorm、FFN、残差和最终打分不变。
-- Q>1 或多字段路径不启用该融合；`in_proj_weight` 缺失时回退原 MHA。
+- 融合仅替换 attention 内部的 softmax + 两次 bmm；q/k/v、out_proj、LayerNorm、FFN、残差和最终打分不变。routing 层由 `single_field` 标记启用，Q>1 多字段仍回退。
+- 多字段路径不启用该融合；`in_proj_weight` 缺失时回退原 MHA。
 - 默认关闭时行为与 `f8101b98` 完全一致；安装器只换文件，不改变默认配置。
 
 ## 3. 收益预算与关闭条件
 
-- 预算（假设，未实测）：6 个 attention 块，每块减少 2–3 次下发/中间读写；head 5 ms 中的
-  **0.3–0.8 ms/请求**；S1 967 p95 影响约 ≤0.5%。
+- 预算（假设，未实测）：6 个 attention 块（2 routing + 4 decoder），每块减少 2–3 次下发/中间读写；
+  head 5 ms 中的 **0.3–0.8 ms/请求**；S1 967 p95 影响约 ≤0.5%。
 - 关闭条件：head probe 三轮交错中 device 或 wall 中位收益 `<0.3 ms`，或方向不一致；关闭后不启服务 A/B。
 
 ## 4. 安装/回退
@@ -47,7 +47,8 @@ $PY runtime/apply_joint_fused_attention.py --tree "$TREE" --revert --manifest "$
 
 - `python3 -I -m py_compile` 三个脚本通过。
 - 数学等价测试（fake `torch_npu.npu_fusion_attention`，CPU torch，`TORCH_DEVICE_BACKEND_AUTOLOAD=0`）：
-  `shape=True, close=True, max_abs=0.0, mean_abs=0.0, off_returns_none=True, q2_falls_back=True`。
+  合法 Q1+O3 schema（4 span）；`shape=True, close=True, max_abs=5.96e-08, on_calls=6`（2 routing+4 decoder），
+  `off_calls=0`，`disabled_none=True`。该测试只证接线/数学，不证真实 NPU 精度或性能。
 - 安装器在临时树对 `f8101b98` 做 check→apply→check→revert，最终恢复 `f8101b98`，全部 RC0。
 
 ## 6. 21 执行：head probe（第一道 A/B）
@@ -62,10 +63,13 @@ $PY runtime/joint_fused_attention_probe.py \
   --output "$MAN/head-probe.json"
 ```
 
-- 输入：随机 BF16 `hidden[967,5120]`、`lexical[4,5120]`、固定 schema；probe 记录两输入的 SHA-256。
+- 输入：随机 BF16 `hidden[967,5120]`、`lexical[4,5120]`、合法 Q1+O4 的 5 span schema；probe 记录两输入 SHA-256。
+- 设备先核接口：probe 在计时前对 Q=1 与 Q=4 各做一次 `npu_fusion_attention` 小调用，显式记录 `BSH`、
+  `scale=1/sqrt(64)`、`keep_prob=1.0`、BF16、head_num/head_dim 与 finite。
 - 两臂共用权重/输入/`CLEF_JOINT_SINGLE_FIELD=1`，仅 `CLEF_JOINT_FUSED_ATTN=0/1`；每臂 5 warmup +
   50 次逐调用 NPU event，报告 mean/median/p95 device 与 wall、`bit_equal/finite/max_abs`。
-- 判读：先看 `candidate_error` 为空、correctness finite；再看 device/wall 中位收益是否 ≥0.3 ms。未过则关闭。
+- 判读：4 轮 ABBA（A/B、B/A、B/A、A/B）逐调用 raw device/wall；先看 interface.ok、candidate_error 为空、
+  correctness finite；再看 per-round 配对中位与总中位是否 ≥0.3 ms 且同向。未过则关闭。
 
 ## 7. 21 执行：服务 A/B（probe 通过后）
 
@@ -83,7 +87,8 @@ CLEF_JOINT_FUSED_ATTN=1 bash start.sh --model-dir /workspace/yangchen/models/Cle
 $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iters 20
 ```
 
-- 客户端校验 `body_sha256` 必须等于上述值；每臂 3 warmup + 20 次，ABBA 至少 3 轮，记录每请求墙钟。
+- 客户端强制校验 `body_sha256`，保留每请求开始/结束、HTTP 状态、完整响应与 answer type；只有 200 且
+  类型匹配才计入延迟。每臂 3 warmup + 20 次，ABBA 至少 3 轮。
 - 服务级通过后再由 21 跑同窗口 S1 ≥3 轮、S2、完整 OpenDecisions+ERQA；质量仍按 ≤2pp，未通过不采用。
 - 若 head probe 收益不足或服务 A/B 不同向，关闭候选并回退 `f8101b98`。
 

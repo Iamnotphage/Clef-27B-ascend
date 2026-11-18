@@ -71,17 +71,18 @@ class SchemaIndices:
 
 
 
-def _fused_cross_attention(module, query: torch.Tensor, memory: torch.Tensor):
+def _fused_cross_attention(module, query: torch.Tensor, memory: torch.Tensor,
+                           enabled: bool = True):
     """Fuse the cross-attention softmax/bmm pair with npu_fusion_attention.
 
-    Only active when CLEF_JOINT_FUSED_ATTN=1 and the query has one token (the
-    production single-field path).  The q/k/v and output projections stay the
-    same; a missing packed projection falls back to the original module.
+    Only active when CLEF_JOINT_FUSED_ATTN=1 and the caller marks the request
+    as single-field (``enabled``).  The query may carry one decoder token or
+    several option rows in an evidence-routing layer; both use the same BSH
+    attention.  The q/k/v and output projections stay the same; a missing
+    packed projection falls back to the original module.
     """
     import os
-    if os.environ.get("CLEF_JOINT_FUSED_ATTN", "0") != "1":
-        return None
-    if query.shape[1] != 1:
+    if os.environ.get("CLEF_JOINT_FUSED_ATTN", "0") != "1" or not enabled:
         return None
     weight = getattr(module, "in_proj_weight", None)
     if weight is None:
@@ -115,11 +116,13 @@ class EvidenceRoutingLayer(nn.Module):
             nn.Linear(feedforward, width),
         )
 
-    def forward(self, queries: torch.Tensor, memory: torch.Tensor) -> torch.Tensor:
+    def forward(self, queries: torch.Tensor, memory: torch.Tensor,
+                single_field: bool = False) -> torch.Tensor:
         # Separate key and value tensors, like the reference, keep attention's
         # unpacked input projections.
         q_in, kv_in = self.query_norm(queries), self.memory_norm(memory)
-        routed = _fused_cross_attention(self.attention, q_in, kv_in)
+        routed = _fused_cross_attention(self.attention, q_in, kv_in,
+                                        enabled=single_field)
         if routed is None:
             routed, _ = self.attention(q_in, kv_in, kv_in, need_weights=False)
         queries = queries + routed
@@ -201,7 +204,7 @@ class JointSchemaHead(nn.Module):
             + self.option_question_projection(question_vectors)[option_question]
         ).unsqueeze(0)
         for layer in self.evidence_layers:
-            options = layer(options, memory)
+            options = layer(options, memory, single_field=(num_questions == 1))
         options = options[0]
 
         # Each field summarizes its options, weighted by their match to it.
@@ -282,7 +285,8 @@ class JointSchemaHead(nn.Module):
             )
             x = x + layer.dropout1(self_attn)
             q_in = layer.norm2(x)
-            cross = _fused_cross_attention(layer.multihead_attn, q_in, memory)
+            cross = _fused_cross_attention(layer.multihead_attn, q_in, memory,
+                                           enabled=True)
             if cross is None:
                 cross, _ = layer.multihead_attn(
                     q_in, memory, memory, need_weights=False

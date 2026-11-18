@@ -24,7 +24,7 @@ HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "joint_fused_attention" / "clef_joint_schema.py"
 TARGET = "vllm/model_executor/models/clef_joint_schema.py"
 PREIMAGE_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
-POSTIMAGE_SHA = "4e5c450f481579c30bbf892d6fac7c10c9aaa22c4841d0965665273760a25189"
+POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 ENV_VAR = "CLEF_JOINT_FUSED_ATTN"
 
 

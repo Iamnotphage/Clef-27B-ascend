@@ -2,9 +2,10 @@
 """NPU head microbenchmark for the fused cross-attention candidate.
 
 Execution owner: 21.  This imports torch/torch_npu and runs the real
-JointSchemaHead from the installed vLLM tree; it is never run by the CPU
-reviewer.  The two arms only differ by CLEF_JOINT_FUSED_ATTN; weights, inputs
-and the single-field flag are shared.
+JointSchemaHead from the installed vLLM tree.  The arms share weights, inputs,
+the single-field flag and an inference-mode context; only
+CLEF_JOINT_FUSED_ATTN differs.  Four interleaved rounds (A/B, B/A, B/A, A/B)
+keep per-call raw device and wall samples.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import statistics
 import sys
@@ -34,6 +36,17 @@ def stats(values):
             "p95": ordered[lo] + (ordered[hi] - ordered[lo]) * (idx - lo)}
 
 
+def schema_for(options: int):
+    # One question span and one span per option, each two tokens.
+    spans = [(2 * index, 2 * index + 2) for index in range(1 + options)]
+    positions = []
+    span_ids = []
+    for index, (start, end) in enumerate(spans):
+        positions.extend(range(start, end))
+        span_ids.extend([index] * (end - start))
+    return positions, span_ids, [end - start for start, end in spans]
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tree", default="/workspace/yangchen/work/src/vllm")
@@ -47,7 +60,8 @@ def main() -> int:
     ap.add_argument("--heads", type=int, default=16)
     ap.add_argument("--feedforward", type=int, default=4096)
     ap.add_argument("--warmup", type=int, default=5)
-    ap.add_argument("--iters", type=int, default=50)
+    ap.add_argument("--iters", type=int, default=30)
+    ap.add_argument("--rounds", type=int, default=4)
     ap.add_argument("--seed", type=int, default=20261119)
     ap.add_argument("--output", type=Path, required=True)
     args = ap.parse_args()
@@ -67,27 +81,50 @@ def main() -> int:
     head = head.to("npu").to(torch.bfloat16).eval()
 
     length, options = args.length, args.options
+    positions, span_ids, lengths = schema_for(options)
     hidden_cpu = torch.randn(length, args.hidden_size, dtype=torch.float32).to(torch.bfloat16)
     lexical_cpu = torch.randn(options, args.hidden_size, dtype=torch.float32).to(torch.bfloat16)
     hidden = hidden_cpu.npu()
     lexical = lexical_cpu.npu()
     schema = SchemaIndices(
-        positions=torch.arange(0, 4, device="npu"),
-        span_ids=torch.tensor([0, 0, 1, 1], device="npu"),
-        span_lengths=torch.tensor([2, 2], device="npu"),
+        positions=torch.tensor(positions, device="npu"),
+        span_ids=torch.tensor(span_ids, device="npu"),
+        span_lengths=torch.tensor(lengths, device="npu"),
         question_types=torch.tensor([1], device="npu"),
         option_question=torch.zeros(options, dtype=torch.long, device="npu"),
         option_slots=torch.arange(options, device="npu"),
         option_mask=torch.ones(1, options, dtype=torch.bool, device="npu"),
     )
     os.environ["CLEF_JOINT_SINGLE_FIELD"] = "1"
+    head_dim = args.width // args.heads
+    scale = 1.0 / math.sqrt(head_dim)
+    interface = {"input_layout": "BSH", "scale": scale, "keep_prob": 1.0,
+                 "dtype": "bfloat16", "head_num": args.heads,
+                 "head_dim": head_dim, "checks": []}
 
-    def arm(value: int):
+    def interface_call(q_len: int):
+        query = torch.randn(1, q_len, args.width, dtype=torch.bfloat16, device="npu")
+        key = torch.randn(1, 8, args.width, dtype=torch.bfloat16, device="npu")
+        out = torch_npu.npu_fusion_attention(
+            query, key, key, args.heads, "BSH", scale=scale,
+            keep_prob=1.0, sparse_mode=0)[0]
+        torch.npu.synchronize()
+        interface["checks"].append({"q_len": q_len, "out_shape": list(out.shape),
+                                    "finite": bool(torch.isfinite(out).all())})
+
+    try:
+        interface_call(1)
+        interface_call(options)
+        interface["ok"] = all(item["finite"] for item in interface["checks"])
+    except Exception as exc:
+        interface["ok"] = False
+        interface["error"] = f"{type(exc).__name__}: {exc}"
+
+    def arm(value: int, outputs: list, devices: list, walls: list):
         os.environ["CLEF_JOINT_FUSED_ATTN"] = str(value)
         for _ in range(args.warmup):
             head(hidden, lexical, schema)
         torch.npu.synchronize()
-        outputs, devices, walls = [], [], []
         for _ in range(args.iters):
             start = torch.npu.Event(enable_timing=True)
             end = torch.npu.Event(enable_timing=True)
@@ -98,35 +135,54 @@ def main() -> int:
             torch.npu.synchronize()
             devices.append(start.elapsed_time(end))
             walls.append((time.perf_counter() - begin) * 1000.0)
-            outputs.append(out.detach().to("cpu"))
-        return outputs, devices, walls
+            outputs.append(out)
 
-    baseline, base_dev, base_wall = arm(0)
+    orders = [[0, 1], [1, 0], [1, 0], [0, 1]]
+    rounds = []
+    raw = {0: [], 1: []}
+    wall = {0: [], 1: []}
+    last = {}
+    error = None
     try:
-        candidate, cand_dev, cand_wall = arm(1)
-        error = None
+        with torch.inference_mode():
+            for index in range(min(args.rounds, len(orders))):
+                devices = {"0": [], "1": []}
+                walls = {"0": [], "1": []}
+                for value in orders[index]:
+                    outs = []
+                    arm(value, outs, devices[str(value)], walls[str(value)])
+                    raw[value].extend(devices[str(value)])
+                    wall[value].extend(walls[str(value)])
+                    last[value] = outs[-1].detach().to("cpu")
+                rounds.append({
+                    "round": index, "order": orders[index],
+                    "arms": {str(value): {"device_ms": stats(devices[str(value)]),
+                                          "wall_ms": stats(walls[str(value)])}
+                             for value in (0, 1)},
+                })
     except Exception as exc:
-        candidate, cand_dev, cand_wall = None, [], []
         error = f"{type(exc).__name__}: {exc}"
 
     report = {
-        "schema": "joint-fused-attention-probe/1",
+        "schema": "joint-fused-attention-probe/2",
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "args": vars(args) | {"output": str(args.output)},
         "versions": {"torch": torch.__version__, "torch_npu": torch_npu.__version__},
         "input": {"length": length, "options": options,
                   "hidden_sha256": sha256_tensor(torch, hidden_cpu),
-                  "lexical_sha256": sha256_tensor(torch, lexical_cpu)},
-        "baseline": {"device_ms": stats(base_dev), "wall_ms": stats(base_wall)},
-        "candidate": ({"device_ms": stats(cand_dev), "wall_ms": stats(cand_wall)}
-                      if candidate is not None else None),
+                  "lexical_sha256": sha256_tensor(torch, lexical_cpu),
+                  "schema_spans": 1 + options},
+        "interface": interface,
+        "rounds": rounds,
+        "baseline": {"device_ms": stats(raw[0]), "wall_ms": stats(wall[0])} if raw[0] else None,
+        "candidate": {"device_ms": stats(raw[1]), "wall_ms": stats(wall[1])} if raw[1] else None,
         "candidate_error": error,
     }
-    if candidate is not None:
-        base = baseline[-1].float()
-        cand = candidate[-1].float()
+    if not error and raw[0] and raw[1]:
+        base = last[0].float()
+        cand = last[1].float()
         report["correctness"] = {
-            "bit_equal": bool(torch.equal(baseline[-1], candidate[-1])),
+            "bit_equal": bool(torch.equal(last[0], last[1])),
             "finite": bool(torch.isfinite(cand).all()),
             "max_abs": float((base - cand).abs().max()),
             "mean_abs": float((base - cand).abs().mean()),
@@ -135,11 +191,14 @@ def main() -> int:
             "device_median_ms": report["candidate"]["device_ms"]["median"] - report["baseline"]["device_ms"]["median"],
             "device_p95_ms": report["candidate"]["device_ms"]["p95"] - report["baseline"]["device_ms"]["p95"],
             "wall_median_ms": report["candidate"]["wall_ms"]["median"] - report["baseline"]["wall_ms"]["median"],
+            "paired_round_device_median_ms": [
+                row["arms"]["1"]["device_ms"]["median"] - row["arms"]["0"]["device_ms"]["median"]
+                for row in rounds],
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n")
     print(json.dumps(report, ensure_ascii=False, indent=1))
-    return 0 if candidate is not None else 1
+    return 0 if (not error and interface.get("ok")) else 1
 
 
 if __name__ == "__main__":
