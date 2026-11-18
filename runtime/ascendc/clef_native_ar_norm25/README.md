@@ -107,18 +107,8 @@ TORCH_DEVICE_BACKEND_AUTOLOAD=0 /workspace/yangchen/venvs/clef-py312/bin/python 
 `vendors/clef_native_ar_norm25`，`LD_LIBRARY_PATH` 保留固定 CANN/torch/torch_npu
 库，opapi 由 runner 传绝对路径。host 产物直接依赖 `libplatform.so`。
 
-```bash
-ASCEND_RT_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node=2 \
-  /workspace/yangchen/work/clef-n1-25-runner/run_cell.py \
-  --owner clef-27b-ascend-21 \
-  --identity /workspace/yangchen/work/clef-n1-25-v1/identity.json \
-  --vendor-root /OWNER_ISOLATED_ROOT/vendors/clef_native_ar_norm25 \
-  --adapter /workspace/yangchen/work/clef-n1-25-v1/n1_adapter.so \
-  --output /OWNER_NEW_EMPTY_RUN_DIR --rows 967 --seed 20261118 --cores 1 --use-hccl 0
-```
-
-该命令由 owner 补入具体隔离路径与独占超时/恢复监督。先 ARoff 相同 partial 固定门，
-再在该边界通过后由 owner 安排 cores 与 ARon。已有 24 head 候选优先。
+首格采用文末的完整监督入口，v1 保持冻结。固定 rows967/seed20261118/cores1/ARoff，
+只由21执行；后续设备格由 owner 按实际固定门结果安排。
 runner 不管理服务、不安装、不重试；新建 rank 子目录防止覆写原件。
 所有输出预填 NaN，先完整同步再读回；保存输入 hash 与候选/参考原始 `.bin`。
 reduced 额外要求逐位相等，用于单独归因通信，三输出固定门完全保持原协议。
@@ -163,8 +153,61 @@ v1 清单保留在 `eb2e33f` 与远端 v1/identity.json。
 
 编译日志：`/workspace/yangchen/work/clef-n1-25-v2-build.log` 与
 `clef-n1-25-v2-adapter.log`。runner 改用独立目录
-`/workspace/yangchen/work/clef-n1-25-v2-runner/run_cell.py`，首格命令其余参数保持一致，
-identity 和 adapter 路径均替换为 v2 根目录。须使用 v2 parser。
+`/workspace/yangchen/work/clef-n1-25-v2-runner/run_cell.py`。完整监督入口会按SHA复制
+原runner、v2 parser、identity、adapter到窗口stage，使用该冻结副本。
 
 v1/v2 各自独立冻结，使用相同 N1 op 名，按互斥安装/进程隔离测试。
 v2 尚未安装/加载/执行；23 核新增链及身份后，由21安排 head 后首格。
+
+## v2 完整监督接线（2026-11-19 02:15 CST）
+
+复用24 `5c045eb1427e9cb902867bd7147c0d636ce91e1c` 的真实监督窗口，SHA
+`9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`。
+远端完整 runtime 根：`/workspace/yangchen/work/scratch-24/joint-fused-5c045eb`。
+其六个 D0 恢复模块在停服前核SHA并stage；stop、PGID、timeout、失败finally、
+唯一label的launch及health/2worker/text/image四检沿用该版本。
+
+N1 bundle：`/workspace/yangchen/work/clef-n1-25-window-v2`。
+`runtime/n1_25/window_payload.json` 列出9文件完整SHA；manifest本身为
+`79a66589fb6fb20805e19312649b8f6fff2b4365cfb54667a21d600efbcb5003`。
+远端 `plan.json` 保存完整wrapper argv和所有SRC:REL:SHA，SHA为
+`b1099cc50ed6dd7c5ce306454fbf2e1d42d5b0aa4c1fb29d4596c8019dbbc715`。
+
+21规范执行命令（省略 `--execute` 仅打印计划，25已执行此CPU路径）：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v2/supervised_window.py \
+  --owner clef-27b-ascend-21 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha 79a66589fb6fb20805e19312649b8f6fff2b4365cfb54667a21d600efbcb5003 \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v2-cell1-20261119T0215 \
+  --execute
+```
+
+- `window_vendor.py` 实现 check/install/revert：精确核b9c3包，读取其中16个已核
+  vendor成员，仅物化到本次 `isolated-opp/vendors/clef_native_ar_norm25`；已知
+  liboptiling相对symlink物化为相同SHA字节。原包脚本和全局CANN目录均不执行/修改。
+  check纯读；install失败保留ownership状态；revert将目录改名`isolated-opp.retired`，
+  保留所有原件、清除活跃路径。revert失败由wrapper阻断restore。
+- `window_probe.py` 接受真实`--tree/device/output`，固定首格及240秒外层probe期限。
+  内部用`torch.distributed.run --standalone --nnodes=1 --nproc-per-node=2
+  --max-restarts=0 --run-path --start-method=spawn`；shim/torchrun都继承wrapper建立的PGID。
+  同目录runner/contract/fixed_gate通过torchrun child专用PYTHONPATH导入。
+- OPP、opapi前插和`ASCEND_RT_VISIBLE_DEVICES=0,1`由wrapper仅注入probe child。
+  adapter为stage绝对路径；opapi再由adapter绝对路径dlopen。外层及restore环境保持原样。
+- 聚合必须child rc0、两rank固定门/diag/reduced全true、完成状态与identity一致；
+  输入/原始partial绑定、全部12份raw字节SHA及双rank x/r/gamma一致均检查。
+  输出`n1-probe/1`，失败保留原件，整体失败。head目标始终要求f8101b98。
+
+CPU验证：接线12/12，既有diag5/5；冻结包16成员只读SHA通过。
+真实`Window.probe`的synthetic CPU子链原件：
+`/tmp/n1-wrapper-cpu-25-5c045eb/`，另复制到bundle的`cpu-pgid-evidence/`。
+`result.json` SHA `ab75ad08103c69ec5277d42173ada9212a2950e63906315002f4893027fb8a46`。
+固定torch2.10.0+cpu、autoload0；成功格wrapper PID1187579/PGID1187578，
+probe1187580、torchrun1187581、rank1187586/1187587均PGID/SID1187580；
+12秒timeout格各子进程均PGID1187599，真实killpg后rc-9、reaped=true、
+unknown/residual空、四PID postcleanup均null。记录包含完整CPU命令与每层argv。
+此验证范围为CPU probe子链；preflight/stop/finish、设备加载/退出和数值结果仍待21首格。
