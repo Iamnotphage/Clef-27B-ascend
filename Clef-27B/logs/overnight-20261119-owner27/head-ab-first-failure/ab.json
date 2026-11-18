@@ -1,0 +1,151 @@
+{
+ "schema": "joint-fused-service-ab/1",
+ "at": "2026-11-18T18:39:29Z",
+ "args": {
+  "run_dir": "/workspace/yangchen/logs/joint-fused-service-ab-27-8b46-first",
+  "repo": "/workspace/yangchen/work/scratch-24/joint-fused-service-ab-8b46a2d",
+  "tree": "/workspace/yangchen/work/src/vllm",
+  "python": "/workspace/yangchen/venvs/clef-py312/bin/python",
+  "activate": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+  "launch": "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+  "wait": "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh",
+  "stop_script": "/tmp/d0cc/d0_stop.py",
+  "stop_timeout": 120.0,
+  "wait_timeout": 900.0,
+  "http_timeout": 180.0,
+  "port": 18143,
+  "rounds": 4,
+  "reps": 5,
+  "warmup": 3,
+  "short": "od-0105",
+  "long": "od-1534",
+  "data": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+  "image_source": "/workspace/yangchen/logs/perf-wave2-20261118/erqa/samples/erqa-0000/request.json",
+  "text_url": "http://127.0.0.1:18143/v1/systemone",
+  "image_url": "http://127.0.0.1:18143/v1/decide",
+  "service_log_root": "/workspace/yangchen/logs/perf-wave2-20261118",
+  "restore_only": false
+ },
+ "rounds": [
+  {
+   "round": 0,
+   "order": [
+    0,
+    1
+   ],
+   "arms": {}
+  }
+ ],
+ "steps": {
+  "initial_stop": {
+   "ok": true
+  },
+  "apply": {
+   "ok": true
+  },
+  "service_check_apply": {
+   "ok": true
+  },
+  "revert": {
+   "ok": true
+  },
+  "service_check_revert": {
+   "ok": true
+  },
+  "restore": {
+   "ok": false,
+   "action": "blocked_service_not_proven_stopped",
+   "port": "open"
+  }
+ },
+ "overall_rc": 1,
+ "current_root": 1195216,
+ "prod_env_keys": [
+  "ACLNN_CACHE_LIMIT",
+  "ASCEND_AICPU_PATH",
+  "ASCEND_CUSTOM_OPP_PATH",
+  "ASCEND_HOME_PATH",
+  "ASCEND_OPP_PATH",
+  "ASCEND_TOOLKIT_HOME",
+  "ATB_COMPARE_TILING_EVERY_KERNEL",
+  "ATB_HOME_PATH",
+  "ATB_MATMUL_SHUFFLE_K_ENABLE",
+  "ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT",
+  "ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT",
+  "ATB_SHARE_MEMORY_NAME_SUFFIX",
+  "ATB_STREAM_SYNC_EVERY_KERNEL_ENABLE",
+  "ATB_STREAM_SYNC_EVERY_OPERATION_ENABLE",
+  "ATB_STREAM_SYNC_EVERY_RUNNER_ENABLE",
+  "ATB_WORKSPACE_MEM_ALLOC_ALG_TYPE",
+  "CLEF_ATB_ENV",
+  "CLEF_CANN_ENV",
+  "CLEF_CONFIG",
+  "CLEF_CONV_QKV_TILE",
+  "CLEF_CONV_QKV_VENDOR",
+  "CLEF_GDN_BSND",
+  "CLEF_GDN_CONV_QKV",
+  "CLEF_GDN_DECISION_PREFILL",
+  "CLEF_GDN_NO_RECOMPUTE",
+  "CLEF_GDN_PREPROCESS_FUSION",
+  "CLEF_GDN_QKV_NORM_MAX_TOKENS",
+  "CLEF_GDN_SKIP_CONV_STATE",
+  "CLEF_GDN_SKIP_INITIAL_STATE",
+  "CLEF_HEALTH_JSON",
+  "CLEF_JOINT_SINGLE_FIELD",
+  "CLEF_LAUNCH_CONFIG",
+  "CLEF_LOG_DIR",
+  "CLEF_MAX_MODEL_LEN",
+  "CLEF_MLP_BF16_NZ",
+  "CLEF_MODEL_DIR",
+  "CLEF_MODEL_NAME",
+  "CLEF_MODEL_REVISION",
+  "CLEF_PROTOCOL_VERSION",
+  "CLEF_QKV_NORM_VENDOR",
+  "CLEF_SCHEMA_TOKEN_CACHE",
+  "CLEF_SCHEMA_TOKEN_CACHE_VERSION",
+  "CLEF_TENSOR_PARALLEL_SIZE",
+  "CLEF_VENV",
+  "CLEF_WORKSPACE",
+  "HF_HOME",
+  "LD_LIBRARY_PATH",
+  "MODEL_DIR",
+  "OMP_NUM_THREADS",
+  "PATH",
+  "PYTHONPATH",
+  "PYTHONUNBUFFERED",
+  "TASK_QUEUE_ENABLE",
+  "TORCH_HOME",
+  "TRITON_CACHE_DIR",
+  "VIRTUAL_ENV",
+  "XDG_CACHE_HOME"
+ ],
+ "inputs": {
+  "od-0105": {
+   "sha256": "25b8acaf74a0d2b9fc210e08687e3a08c3d5fff82e6785c20611418e8cc72bf0",
+   "url": "http://127.0.0.1:18143/v1/systemone",
+   "expect": "score",
+   "kind": "text"
+  },
+  "od-1534": {
+   "sha256": "568ea1583377dcc6044d3fcd4a099c3beb4cd0e118155f95b595bda72b1c76bf",
+   "url": "http://127.0.0.1:18143/v1/systemone",
+   "expect": "score",
+   "kind": "text"
+  },
+  "erqa-0000": {
+   "sha256": "f3229f5c120098ac4eebcc6f4025c28254e35f959fd01998cac5db7b8d209aab",
+   "url": "http://127.0.0.1:18143/v1/decide",
+   "expect": "choice",
+   "kind": "image"
+  }
+ },
+ "phase": "finished",
+ "error": "AbError: invalid response for od-0105 in d0-ab-20261118T183933Z-0-0-ccef63; raw=/workspace/yangchen/logs/joint-fused-service-ab-27-8b46-first/raw/d0-ab-20261118T183933Z-0-0-ccef63-od-0105.jsonl",
+ "cleanup_stop_error": "AbError: stop failed for cleanup-arm: 1",
+ "service_attribution": {
+  "unknown": false,
+  "cleanup_unconfirmed": true
+ },
+ "target_sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+ "finished_at": "2026-11-18T18:41:06Z"
+}

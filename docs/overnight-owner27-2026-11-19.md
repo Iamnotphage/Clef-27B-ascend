@@ -46,6 +46,18 @@ probe child_rc0、无 timeout、reaped=true、unknown/residual为空；独立 ve
 
 本格证明相同输入下 cores1 ARon 的数值与生命周期通过；多核和性能继续单独验证。
 
+## head 服务 A/B 首错：请求类型与 exec 身份快照
+
+首次服务窗口 `/workspace/yangchen/logs/joint-fused-service-ab-27-8b46-first/` 使用 `8b46a2d57f0c91493d614e64218f53190983fc74`，rounds4/reps5/warmup3，外层 SSH rc1。原始 [ab.json](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-failure/ab.json) 与首臂响应已保留。
+
+启动 guard 适配通过，第一臂 OFF 成功启动。冻结 `od-0105` 请求实际为 choice，8 个原始响应均 HTTP200/choice；runner 对文本统一写入 expect=score，触发响应门拒绝。该错误发生在包装契约层，本窗口没有完整 A/B 样本或服务收益结论。
+
+清理的 [严格 stop 原件](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-failure/stop-cleanup-arm.json) 记录 `saved cmdline mismatch`：同 PID1196772、start394415908、boot393ecc…、PGID1196772，从启动 `setsid nohup bash Clef-27B/start.sh` exec 为 `python -m vllm.entrypoints.cli.main`，runner 保留了早期 cmdline。严格 stop 正确拒绝，未发送信号。runner 已将磁盘 head 与 guard 回退到 f810/76595657；运行中服务仍加载候选源码，须完成一次精确停服和新标签四检恢复。
+
+24 负责一次修复请求 schema 类型契约与预期 exec 转换后的身份快照。27 的恢复增量经23核验后执行，脚本 SHA `8ee5efaeeee0fb53f742c94784330ea482033e278a512b848160f0171c810489`，绑定身份文件 SHA `d436fef70394227cd9309caec02a48a2dd373f0b2f825d2c2a898d6b6c0f5fd5`。原标签 api.pid、PID/PPID/start/boot/PGID、完整运行 argv 与 flag0/allowaa3e/s1 均 fresh 核验；仍调用原 d0_stop 严格契约。
+
+恢复远端目录 `/workspace/yangchen/logs/handoff27-ab-recover-20261118T184552Z-428a533f/`。精确树1196772/1196897/1196898/1196925/1196926均由 TERM 退出，killed/refused/survivors均为空。02:47:28 CST 恢复四检完成，外层rc0、source f810、guard76595657；新 label `d0-restore-20261118T184556Z-5392095c`，root1198436，worker1198610/1198611。原件：[完成](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/complete.json)、[stop](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/stop-record.json)、[四检](../Clef-27B/logs/overnight-20261119-owner27/head-ab-first-recovery/restore.json)。后续 N1 cores2 已按20授权与23核定开始；head A/B 等待新版本核验。
+
 ## 后续执行
 
-head 服务 A/B 已在 `/workspace/yangchen/logs/joint-fused-service-ab-27-8b46-first/` 启动，采用经23核准的 `8b46a2d57f0c91493d614e64218f53190983fc74`，rounds4/reps5/warmup3。后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
+后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
