@@ -6,8 +6,12 @@ Contract, as specified by the design and NOT re-derived here:
     [0] magic, [1] id=(block<<8)|sub, [2] domain,
     [3] claim_start_m, [4] claim_m, [5] stage_bits, [6] reserved,
     [7] seal = 0xC0FFEE00 ^ id
-  slot layout: AIC slot = block; AIV slot = AIC_CAP + block*SUB_CAP + sub
-  slots = AIC_CAP * (1 + SUB_CAP)
+  slot layout (2026-11-18 23:05 CST, after the design deviation was approved):
+    AIC: slot = GetBlockIdx()              -> 0 .. AIC_CAP-1
+    AIV: slot = AIC_CAP + GetBlockIdx()    -> AIC_CAP .. AIC_CAP+AIV_BLOCKS-1
+  Uniqueness holds by construction within each domain, so no ratio is
+  assumed. Raw block/sub are NOT encoded in the slot; they are carried by
+  the id and domain fields instead.
 
 What this module deliberately does NOT conclude:
   - a missing slot does not mean a missing participant;
@@ -32,14 +36,13 @@ def slots_for(aic_cap: int, sub_cap: int) -> int:
     return aic_cap * (1 + sub_cap)
 
 
-def slot_of(domain: str, block: int, sub: int, aic_cap: int, sub_cap: int) -> int:
-    if domain == "aic":
-        return block
-    return aic_cap + block * sub_cap + sub
+def slot_range(aic_cap: int, aiv_blocks: int) -> tuple[int, int]:
+    """Return (slots, first AIV slot); slots = AIC_CAP + AIV_BLOCKS."""
+    return aic_cap + aiv_blocks, aic_cap
 
 
-def decode(raw: list[int], aic_cap: int, sub_cap: int) -> dict:
-    n = slots_for(aic_cap, sub_cap)
+def decode(raw: list[int], aic_cap: int, aiv_blocks: int) -> dict:
+    n, aiv0 = slot_range(aic_cap, aiv_blocks)
     if len(raw) != n * FIELDS:
         raise SystemExit(f"trace length {len(raw)} != {n * FIELDS} (slots={n}, fields={FIELDS})")
     present, absent, partial = [], [], []
@@ -72,7 +75,7 @@ def decode(raw: list[int], aic_cap: int, sub_cap: int) -> dict:
             gaps.append({"from": end, "to": start})
         end = max(end, start + length)
     return {
-        "aic_cap": aic_cap, "sub_cap": sub_cap, "slots": n,
+        "aic_cap": aic_cap, "aiv_blocks": aiv_blocks, "slots": n, "first_aiv_slot": aiv0,
         "present": present, "absent_slots": absent, "seal_mismatch": partial,
         "claim_ranges": claims, "claim_overlap": overlap, "claim_gaps": gaps,
         "claimed_span_end": end,
@@ -84,13 +87,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--trace-json", type=Path, required=True, help="file holding a flat uint32 list")
     ap.add_argument("--aic-cap", type=int, required=True)
-    ap.add_argument("--sub-cap", type=int, default=2)
+    ap.add_argument("--aiv-blocks", type=int, default=48)
     ap.add_argument("--output", type=Path)
     a = ap.parse_args()
     raw = json.loads(a.trace_json.read_text())
     if isinstance(raw, dict):
         raw = raw.get("trace") or raw.get("data") or []
-    out = decode([int(v) for v in raw], a.aic_cap, a.sub_cap)
+    out = decode([int(v) for v in raw], a.aic_cap, a.aiv_blocks)
     text = json.dumps(out, ensure_ascii=False, indent=1)
     if a.output:
         a.output.write_text(text + "\n")
