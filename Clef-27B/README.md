@@ -43,11 +43,11 @@
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 适配后 baseline | TP2/BF16/eager/4096/seqs1 | 217.036 ms | 180.069 ms | 205.034 ms | 5.715 | C16 | 325.84 ms |
 | 上一版（BIC + GDN v2 + SF + aclnn cache + MLP NZ） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | 166.002 ms | 121.705 ms | 113.656 ms | 16.376 @ C16 | C16 | 313.506 ms |
-| **当前优化（conv+QKV 融合 + GDN chunk128）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | **157.745 ms** | **115.418 ms** | **107.147 ms** | **17.446 @ C64** | C64 | **309.926 ms** |
-| 变化 | — | **−59.29 ms（−27.32%）** | −64.65 ms（−35.91%） | −97.89 ms（−47.74%） | **约 3.05×** | — | **−15.91 ms（−4.88%）** |
+| **当前优化（conv+QKV 融合 + GDN chunk128，2026-11-18 五轮复核）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs16 | **155.86 ms** | **112.98 ms** | **102.87 ms** | **17.462 @ C64** | C64 | **309.926 ms** |
+| 变化 | — | **−61.18 ms（−28.19%）** | −67.09 ms（−37.26%） | −102.16 ms（−49.83%） | **约 3.06×** | — | **−15.91 ms（−4.88%）** |
 
-- S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms，**MLP BF16 NZ** 后 166.002 ms；同日再叠加 **conv+QKV 融合**（同窗口 p95 165.091→160.419）与 **GDN chunk128**（160.419→157.745），当前默认入口 **157.745 ms / 8.652 dec/s**（mean 115.418、p50 107.147）；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
-- S2 采用 B8 C16（conv+QKV 融合 + chunk128）**16.727 dec/s**、p95 1768.9 ms、Capability 73.8426/accuracy 1905；上一版 16.376 dec/s、p95 1803 ms；seqs4 14.652/14.689 作为历史行保留；
+- S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-18 五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50，mean 112.98、p50 102.87）；历史链路为 2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms、**MLP BF16 NZ** 166.002 ms、**conv+QKV 融合** 165.091→160.419、**GDN chunk128** 160.419→157.745 ms / 8.652 dec/s；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
+- S2 上报点 B16 C64（conv+QKV 融合 + chunk128）**17.462 dec/s**（2026-11-18 两次 17.462/17.475，历史 17.446）、p95 5946–5950 ms；B8 C16 为 16.738 dec/s、p95 1772 ms、Capability 73.8426/accuracy 1905；上一版 16.376 dec/s、p95 1803 ms；seqs4 14.652/14.689 作为历史行保留；主办方对 S2 有效性（p95 约束）的最终规则仍待确认；
 - GDN 融合 v2 对总 token ≤1600 的 prefill 生效，长 ERQA/长请求自动回退 BIC；
 - ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不是同一服务配置；
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照；
@@ -110,6 +110,6 @@ python scripts/verify_systemone.py \
 
 2026-11-17 晚完成 **conv+QKV 融合算子**与 **GDN chunk 128 默认启用**：`ClefGdnConvQkv` 一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，并直接读 packed QKVZ `[T,8192]`（省去逐层 5120 列连续化拷贝），vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，由 `inference.py` 自动注入；chunk 128 在 `inference.py` 中随决策 prefill 自动安装。同窗口全量 S1 从 165.091 降到 **157.745 ms**（mean 122.762→115.418、吞吐 8.137→8.652 dec/s），S2 从 B8 C16 16.376 升到 **B16 C64 17.446**（B8 C16 为 16.727、p95 1768.9），OpenDecisions Capability 74.2476、ERQA 216/400，三项均在 2PP 内；`CLEF_GDN_CONV_QKV=0` / `CLEF_GDN_CHUNK128=0` 可分别复现对照臂。[conv+QKV 报告](../docs/gdn-conv-qkv-2026-11-17.md) · [chunk128 报告](../docs/gdn-chunk128-2026-11-17.md)
 
-`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5425，其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
+`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5400（216/400），其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
-`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC、conv+QKV 融合与 chunk128 后的 P95 **157.745 ms**（上一版 166.002、cache-only 168.633、修复前 190.405 ms）。S2 当前为 B8 C16 的 **16.727 decisions/s**（C16 14.689 见 GDN 数据路径报告），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；S2 已与 conv+QKV 融合和 chunk128 组合复测（16.727 dec/s）。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
+`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC、conv+QKV 融合与 chunk128 后、2026-11-18 五轮复核中位的 P95 **155.86 ms**（历史 157.745、上一版 166.002、cache-only 168.633、修复前 190.405 ms）。S2 当前记录为 B16 C64 的 **17.462 decisions/s**（同日两次 17.462/17.475；B8 C16 16.738 保留在文档表格中），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；主办方对 S2 有效性阈值的最终规则仍待确认。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
