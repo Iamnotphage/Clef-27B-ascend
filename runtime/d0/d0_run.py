@@ -288,10 +288,12 @@ def main() -> int:
                 restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
                 disc = discover_service_pids(SERVICE_LABEL, before)
                 rlog["service_discovery"] = disc
-                service_pids = disc.get("pids") or set()
+                service_pids = set(disc.get("pids") or [])
                 rlog["service_pids"] = sorted(service_pids)
                 verified = verify(build_commands(render_request), rlog,
                                   service_pids=service_pids) if restored else False
+                rlog["verify_ok"] = verified
+                rlog["restore_ok"] = restored
             rlog["restore_ok"], rlog["verify_ok"] = restored, verified
             (a.out_dir / "restore.json").write_text(
                 json.dumps(rlog, ensure_ascii=False, indent=1) + "\n")

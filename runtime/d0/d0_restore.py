@@ -222,7 +222,12 @@ def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
     if ident is None:
         info["error"] = "api pid not alive"
         return info
+    if before is not None and root in before:
+        # The pid existed before this restore: it cannot be the new service.
+        info["error"] = "api pid predates the restore; not attributing it"
+        return info
     descendants: set[int] = set()
+    tree_rows: list[dict] = []
     if Path("/proc").is_dir():
         children: dict[int, list[int]] = {}
         for d in Path("/proc").iterdir():
@@ -236,6 +241,8 @@ def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
             except (OSError, IndexError):
                 continue
             children.setdefault(ppid, []).append(int(d.name))
+            st["ppid"] = ppid
+            tree_rows.append(st)
         stack = [root]
         while stack:
             cur = stack.pop()
@@ -245,8 +252,17 @@ def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
                     stack.append(c)
     if before:
         descendants -= set(before)
-    info["pids"] = {root} | descendants
+    # The root identity must be unchanged after the walk, otherwise the tree
+    # may have been rebuilt underneath us.
+    after = _identity(root)
+    info["root_identity_stable"] = (after is not None
+                                    and after["starttime"] == ident["starttime"]
+                                    and after["boot_id"] == ident["boot_id"])
+    if not info["root_identity_stable"]:
+        info["error"] = "root identity changed during collection"
+    info["pids"] = sorted({root} | descendants)      # JSON-serialisable
     info["descendant_count"] = len(descendants)
+    info["tree"] = [r for r in tree_rows if r["pid"] == root or r["pid"] in descendants]
     return info
 
 
