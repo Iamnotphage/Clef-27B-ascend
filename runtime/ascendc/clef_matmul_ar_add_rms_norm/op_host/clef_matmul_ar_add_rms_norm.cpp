@@ -245,39 +245,40 @@ namespace ops {
 class ClefMatmulArAddRmsNorm : public OpDef {
 public:
     explicit ClefMatmulArAddRmsNorm(const char* name) : OpDef(name) {
-        // Two supported format combinations, positionally aligned across every
-        // input and output (the idiom used by the shipped grouped_matmul ops):
-        //   combo 0: everything ND            -> the diagnostic weight line
-        //   combo 1: w is FRACTAL_NZ, rest ND -> the real service contract
-        // Without the second entry an NZ weight tensor cannot even be declared
-        // to this operator, which is a contract gap independent of the runtime.
+        // This package's device side is compiled for an NZ weight (kernel
+        // MatmulType and host SetBType are fixed at CubeFormat::NZ), so the
+        // operator must declare exactly that and nothing else.  Declaring an
+        // all-ND combination as well would let an ND tensor validate at the
+        // interface and then be consumed by an NZ kernel -- a silent garbage
+        // path.  The ND diagnostic line is a separate package built from the
+        // -nd branch, whose OpDef declares ND only.
         this->Input("x").ParamType(REQUIRED)
-            .DataType({ge::DT_BF16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_BF16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("w").ParamType(REQUIRED)
-            .DataType({ge::DT_BF16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ});
+            .DataType({ge::DT_BF16})
+            .Format({ge::FORMAT_FRACTAL_NZ})
+            .UnknownShapeFormat({ge::FORMAT_FRACTAL_NZ});
         this->Input("residual").ParamType(REQUIRED)
-            .DataType({ge::DT_BF16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_BF16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         this->Input("gamma").ParamType(REQUIRED)
-            .DataType({ge::DT_BF16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType({ge::DT_BF16})
+            .Format({ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND});
         for (const char* output : {"out", "residual_out"}) {
             this->Output(output).ParamType(REQUIRED)
-                .DataType({ge::DT_BF16, ge::DT_BF16})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+                .DataType({ge::DT_BF16})
+                .Format({ge::FORMAT_ND})
+                .UnknownShapeFormat({ge::FORMAT_ND});
         }
         for (const char* output : {"rstd", "diag"}) {
             this->Output(output).ParamType(REQUIRED)
-                .DataType({ge::DT_FLOAT, ge::DT_FLOAT})
-                .Format({ge::FORMAT_ND, ge::FORMAT_ND})
-                .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
+                .DataType({ge::DT_FLOAT})
+                .Format({ge::FORMAT_ND})
+                .UnknownShapeFormat({ge::FORMAT_ND});
         }
         this->Attr("eps").Float();
         this->Attr("repeat").Int(1);
