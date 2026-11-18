@@ -70,7 +70,7 @@ def main(argv=None) -> int:
                 raise ValueError("joint schema source missing")
             digest = sha256(path)
             allowed_postimage = POSTIMAGE_SHA
-            if os.environ.get(SERVICE_ENV) == SERVICE_POSTIMAGE_SHA:
+            if args.check and os.environ.get(SERVICE_ENV) == SERVICE_POSTIMAGE_SHA:
                 allowed_postimage = SERVICE_POSTIMAGE_SHA
             if digest == PREIMAGE_SHA:
                 state = "preimage"

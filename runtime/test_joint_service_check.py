@@ -9,7 +9,7 @@ PREIMAGE = HERE / "joint_service_check" / "apply_joint_single_field_patch_preima
 POSTIMAGE = HERE / "joint_service_check" / "apply_joint_single_field_patch.py"
 AA3E_SOURCE = HERE / "joint_fused_attention" / "clef_joint_schema.py"
 AA3E = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
-POST_SHA = "20abe6800dfdf807a0ba54fbdf86b155a57d22bbce25dcc85ca3d5c36ca37e61"
+POST_SHA = "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
@@ -41,7 +41,13 @@ def main() -> int:
               and rep.get("status_after") == "single-field")
         rc, rep = run("f" * 64)
         check("other env value rejected", rc == 1)
-    print(json.dumps({"checks": 6, "failed": failures, "ok": not failures}))
+        for flag in ("--apply", "--revert"):
+            cmd = [sys.executable, str(POSTIMAGE), "--tree", str(tree), flag]
+            env = dict(__import__("os").environ)
+            env["CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"] = AA3E
+            p = subprocess.run(cmd, capture_output=True, text=True, env=env)
+            check(f"aa3e not allowed for {flag}", p.returncode == 1)
+    print(json.dumps({"checks": 8, "failed": failures, "ok": not failures}))
     return 0 if not failures else 1
 
 if __name__ == "__main__":

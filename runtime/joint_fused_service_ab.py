@@ -33,8 +33,8 @@ POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b7250
 STOP_SHA = "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
 INSTALLER_SHA = "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
 WINDOW_SHA = "700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473"
-SERVICE_CHECK_INSTALLER_SHA = "498f7144af24cd0c3b8d1015ab95c3fbbd9b9bf15366c950c77b259a178b18e3"
-SERVICE_CHECK_SOURCE_SHA = "20abe6800dfdf807a0ba54fbdf86b155a57d22bbce25dcc85ca3d5c36ca37e61"
+SERVICE_CHECK_INSTALLER_SHA = "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c"
+SERVICE_CHECK_SOURCE_SHA = "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
 SERVICE_CHECK_PREIMAGE_SHA = "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
 SERVICE_ROOT = "/workspace/yangchen/Clef-27B-ascend"
 ALLOW_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
@@ -139,29 +139,37 @@ class ServiceAB:
 
     def apply_service_check(self):
         installer = self.run_dir / "stage" / "runtime" / "apply_joint_service_check.py"
-        check = self.call([self.args.python, str(installer),
-                           "--service-root", SERVICE_ROOT, "--check"])
-        report = json.loads(check.stdout)
-        if report.get("state_after") == "preimage":
-            self.call([self.args.python, str(installer),
-                       "--service-root", SERVICE_ROOT, "--apply",
-                       "--manifest", str(self.run_dir / "service-check-apply.json")])
-        elif report.get("state_after") != "postimage":
-            raise AbError(f"service-check state: {report.get('state_after')}")
         target = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
-        if self.win.sha256(target) != SERVICE_CHECK_SOURCE_SHA:
+        try:
+            check = self.call([self.args.python, str(installer),
+                               "--service-root", SERVICE_ROOT, "--check"])
+            report = json.loads(check.stdout)
+            if report.get("state_after") == "preimage":
+                self.call([self.args.python, str(installer),
+                           "--service-root", SERVICE_ROOT, "--apply",
+                           "--manifest", str(self.run_dir / "service-check-apply.json")])
+            elif report.get("state_after") != "postimage":
+                raise AbError(f"service-check state: {report.get('state_after')}")
+        finally:
+            # A successful write followed by a manifest/child failure must still
+            # be reverted by finally.
+            self.service_check_applied = (
+                target.is_file() and self.win.sha256(target) == SERVICE_CHECK_SOURCE_SHA)
+        if not self.service_check_applied:
             raise AbError("service-check adapter not installed")
-        self.service_check_applied = True
 
     def revert_service_check(self):
         installer = self.run_dir / "stage" / "runtime" / "apply_joint_service_check.py"
-        self.call([self.args.python, str(installer),
-                   "--service-root", SERVICE_ROOT, "--revert",
-                   "--manifest", str(self.run_dir / "service-check-revert.json")])
         target = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
-        if self.win.sha256(target) != SERVICE_CHECK_PREIMAGE_SHA:
+        try:
+            self.call([self.args.python, str(installer),
+                       "--service-root", SERVICE_ROOT, "--revert",
+                       "--manifest", str(self.run_dir / "service-check-revert.json")])
+        finally:
+            self.service_check_applied = (
+                target.is_file() and self.win.sha256(target) == SERVICE_CHECK_SOURCE_SHA)
+        if not target.is_file() or self.win.sha256(target) != SERVICE_CHECK_PREIMAGE_SHA:
             raise AbError("service-check adapter did not restore original guard")
-        self.service_check_applied = False
 
     def current_service(self):
         if self.win.port_open(self.args.port) != "open":
@@ -497,6 +505,9 @@ def main() -> int:
         target_sha = ab.win.sha256(target) if target.is_file() else None
         if target_sha != PREIMAGE_SHA:
             raise AbError(f"head target is not preimage at preflight: {target_sha}")
+        service_guard = Path(SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
+        if not service_guard.is_file() or ab.win.sha256(service_guard) != SERVICE_CHECK_PREIMAGE_SHA:
+            raise AbError("service start guard is not the original preimage before stop")
         if ab.win.sha256(Path(args.stop_script)) != STOP_SHA:
             raise AbError("stop script SHA mismatch")
         for path, expected, name in ((args.activate, ACTIVATE_SHA, "activate"),

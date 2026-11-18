@@ -26,7 +26,7 @@ HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "joint_service_check" / "apply_joint_single_field_patch.py"
 TARGET = "runtime/apply_joint_single_field_patch.py"
 PREIMAGE_SHA = "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
-POSTIMAGE_SHA = "20abe6800dfdf807a0ba54fbdf86b155a57d22bbce25dcc85ca3d5c36ca37e61"
+POSTIMAGE_SHA = "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
 ENV_VAR = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 SERVICE_POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 
