@@ -654,6 +654,8 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 | `libcust_opmaster_rt2.0.so` | `290cc31e3ea593b0f11e6c1f24f583938bd8afcf59a6cadc0be470c262ceaaae` |
 | `libcust_opapi.so` | `9d62051f0d7da2efafd741ed68640becd9b9ea88eb8d08e07d050271d56cc227`（与 nzguard 包**逐字节相同**） |
 
-- **集成前置（重要）**：新增**第 15 个属性 `mc_diag`**，我的 adapter 调用参数需由 **14 调为 15**；`libcust_opapi.so` 与旧包相同说明 aclnn 层未变，但**属性个数已变**，必须先核 adapter 再安装。
-- vendor 名 `clef_matmul_ar_add_rms_norm_mc`、op 名仍 `ClefMatmulArAddRmsNorm` → **两个包不可同时安装**。
+- **集成前置（2026-11-18 22:31 CST 更正，标为待核）**：22 声明新增第 15 个属性 `mc_diag`，但 23 同日实读**生成的 aclnn 签名中没有 `mcDiag`**，22 正在修 OpDef/schema。
+  因此「adapter 参数由 14 改为 15」**不是已确立结论**，须以**新生成的 header 实读**为准；`65260db7…` 目前只作**旧 CPU 构建产物**记录，**不按其声明盲改 adapter**。
+- vendor 名 `clef_matmul_ar_add_rms_norm_mc`、op 名仍 `ClefMatmulArAddRmsNorm`。**安装目录共存**与**运行时实际选用**必须分开记录；**不得**仅据同名自行卸载既有包，也不**推断**唯一装载方式。
+- **授权状态**：新包仅 CPU 准备，**20 尚未放行任何 E 设备格**；GDN 完成后亦须有明确排队消息才可执行——**队列顺序不等于上板授权**。
 - 源提交 `aacf371`，MANIFEST 在 `836b8b6`；已归档的 nzguard/ND 包与单核对照**未动**。
