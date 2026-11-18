@@ -298,14 +298,7 @@ public:
             const bool isWorker = (myBlock < workers) && (singleM > 0u) && (curSingleM > 0u);
             TraceBit(0u, 3u);                 // K4: reached the worker decision
             if (isWorker) { TraceWorker(); TraceClaim(startM, curSingleM); }
-            // M slice: each worker owns [startM, startM+curSingleM)
-            const uint32_t singleM = (tiling_->cubeTiling.singleCoreM == 0u)
-                ? ((m_ + workers - 1u) / workers)
-                : static_cast<uint32_t>(tiling_->cubeTiling.singleCoreM);
-            const uint32_t startM = myBlock * singleM;
-            const uint32_t curSingleM = (startM >= m_) ? 0u
-                : (((m_ - startM) < singleM) ? (m_ - startM) : singleM);
-            if (isWorker && curSingleM > 0u) {
+            if (isWorker) {
                 if (stage == 1u) { WriteStageDiag(1u); }  // after wiring/Init
                 if (stage != 1u) {
                     mm_.SetOrgShape(m_, n_, k_);
