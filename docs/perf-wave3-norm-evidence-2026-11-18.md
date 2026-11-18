@@ -550,3 +550,42 @@
 | **运行时加载** | **未证明**：loader / mmap 记录未留存，静态证据不能证明进程实际加载了这三个文件 |
 
 - `diag[7]=16` 已由 22 更正为 **`depthA1`**，不携带格式语义，本 doc 早前相关表述作废。
+
+## 25. 原生 dispatch 采集（2026-11-18 22:04 CST）
+
+### 25.1 运行与冻结
+
+- 脚本 `wave3_dispatch_probe_22.py`，SHA256 `3cb3de30151256b861556873b7c6e0418599510df71379a387361a0bb5cbdad6`（26,990 B，本机直传，双方 SHA 一致）。
+- 两 rank `RC=0`：rank0 → npu0（PID 1141568，`14:02:18–25Z`），rank1 → npu1（PID 1141768，`14:02:31–37Z`）。
+- 冻结目录 `/workspace/yangchen/logs/perf-wave3-20261118/dispatch-probe-20261118/`：含 `rank{0,1}/{meta,exported_fields,numeric}.json`、`maps_filtered.txt`、`trace/`、`probe.py`、`runner.sh`、`run-dispatch.log`；`SHA256SUMS` **177 条，177/177 OK**（排除自身）。
+
+### 25.2 已取得的字段（两 rank 一致）
+
+| 字段 | REF_ND | REF_NZ |
+| --- | --- | --- |
+| Name | `aclnnMatmul_MatMulCommon_MatMulV2` | `aclnnMatmulWeightNz_MatMulCommon_MatMulV2` |
+| Type | `MatMulV2` | `MatMulV2` |
+| Accelerator Core | AI_CORE | AI_CORE |
+| Block Num | **24** | **24** |
+| Mix Block Num | 0 | 0 |
+| **HF32 Eligible** | **NO** | **NO** |
+| Input Formats | `ND;ND` | `ND;FRACTAL_NZ` |
+| Input Data Types | `DT_BF16;DT_BF16` | 同 |
+
+- 时间线关联按 `trace_view.json` 的**窗口包含**判定（每标签窗口内恰好各含一个 API 与一个 kernel 事件），非按 Step 顺序推断。
+- 输入 hash：X `220586f0…`、W0 `1fd0e09d…`、W1 `12539641…`，与 A/B/完整 E 的 `x`/`w` 一致。
+
+### 25.3 缺口（不再重复采集）
+
+- **本次导出未取得 tiling key**：`tiling_columns: []`；`api_statistic.csv` 的 `MatMulV2_Tiling` 是 **API 名 + 调用耗时**，不是 key。
+- kernel 名后缀（`98514`/`229586`）是名字内嵌标识，**不能当 tiling key**；名中 `FP16` 与实际 `DT_BF16` 字段冲突时**以字段为准**。
+- **设备 kernel 二进制身份未闭合**：本轮 maps 为**主机库**映射（各 136 文件、0 个 deleted），且已发现同机存在**多份** `libcust_opapi.so`/`libcust_opmaster_rt2.0.so`（`batch_invariant`、`fla_npu_transformer`、`libcustom_op_runtime.so`）——安装 identity 与实际加载 identity 必须分开记录。
+- 22 已更正其 `exported_fields.json` 的误报：`core_type`/`op_type`/`block_dim` 实际**存在**（提示词下划线 vs 列名空格），真正缺失的只有 tiling key。
+
+### 25.4 数值（背景，非 dispatch 证据）
+
+`numeric.json` 两 rank 各 4,951,040 元素、`max_abs_diff = 0`、`nonzero = 0` —— 本窗口本形状下 ND 与 NZ 两条原生路径数值相同；不外推其他形状。
+
+### 25.5 与自定义算子的对照（仅记录）
+
+原生 `Block Num = 24`；自定义 E 算子 `diag[5]`（`cubeTiling.usedCoreNum`）在 ND/NZ 两次全量 run 中均为 **1**。多核切分切 M/N 不切 K，**不据此推断数值因果**。
