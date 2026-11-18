@@ -700,3 +700,28 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 
 - **不做**：baseK/shape 扫描，不一次跑多个 `usedCoreNum`。
 - 本包**未安装、未上板**；①的改法属代码改动，需另行授权。
+
+## 28. GDN BLOCK_M 方向关闭（2026-11-18 22:36 CST）
+
+### 28.1 run4 汇总（24 号）
+
+- 阶段：ENV / CHECK / APPLY / PROBE / REVERT **全 0**；目标已回 preimage。
+- 可执行臂：**BM16 / BM32 / BM64**；**BM128 = warmup 期 `MLIRCompilationError` / UB overflow**（完整 traceback 4,985 B 存于 `run4/probe.json.arm-128.traceback.txt`）。
+- 正确性：三臂对同输入 BM64 的 `out`（2,970,624 元素）与 `rstd`（23,208）**全部逐位一致**、finite、0 NaN/Inf、`max_abs 0`。
+- metadata：`warps32/stages2/coalesce1/axis-1/shared1` 无缺失；三臂 kernel hash 不同且 `BLOCK_M` constexpr 与请求臂匹配。
+- **48 调用批 3 轮 device 配对差**：BM16 `+0.1798 / −0.2302 / −0.0418 ms`；BM32 `+0.0659 / −0.2418 / −0.0141 ms` → **正负翻转，无稳定优于 BM64**；`per_call=null`，不报单次 max。
+
+### 28.2 决定
+
+**保持默认 BM64；BLOCK_M 方向关闭；不启动服务 A/B，不开新窗口。**
+
+### 28.3 证据
+
+| 项 | 值 |
+| --- | --- |
+| 分支/提交 | `perf/wave3-gdn-block-m-prep` @ `dd1f7539d2beddcaae75f389de81d4a2cfc4b651` |
+| `run4/probe.json` | `552c00e8…1ec94` |
+| `run-gdn4.log` | `719d6182…d4d5` |
+| 缺口 | run4 **无 PID 树记录**，保留 |
+
+- 冻结目录 `/workspace/yangchen/logs/gdn-norm-block-m-20261118-run4-freeze/`（`SHA256SUMS` 10/10 OK，含 `provenance.txt` 记录 PID 树缺项）。
