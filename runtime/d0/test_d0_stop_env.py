@@ -87,6 +87,17 @@ def main() -> int:
     finally:
         d0_stop.identity = orig
 
+    # 6 real fixture: TERM is enough, the kill loop must not report it
+    import subprocess
+    child = subprocess.Popen(["sleep", "60"])
+    ident = d0_stop.identity(child.pid)
+    log = {}
+    rec = d0_stop.stop(child.pid, log, saved=ident, term_wait=3, kill_wait=2)
+    child.wait(timeout=5)
+    check("clean term exits with rc0 semantics",
+          rec["termed"] and not rec["killed"] and not rec["refused"]
+          and not rec["survivors"] and child.returncode == -15, rec)
+
     print("RESULT:", "ALL PASS" if not fails else f"FAILURES: {fails}")
     return 0 if not fails else 1
 

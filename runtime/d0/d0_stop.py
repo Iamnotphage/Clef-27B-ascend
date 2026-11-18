@@ -29,6 +29,7 @@ def identity(pid: int) -> dict | None:
     try:
         stat = Path(f"/proc/{pid}/stat").read_text()
         fields = stat.split(") ", 1)[1].split()
+        state = fields[0]
         ppid, pgrp = int(fields[1]), int(fields[2])
         starttime = fields[19]
     except (OSError, IndexError):
@@ -42,7 +43,7 @@ def identity(pid: int) -> dict | None:
                    .replace(b"\0", b" ").decode(errors="replace").strip())
     except OSError:
         cmdline = ""
-    return {"pid": pid, "ppid": ppid, "pgid": pgrp,
+    return {"pid": pid, "ppid": ppid, "pgid": pgrp, "state": state,
             "starttime": starttime, "boot_id": boot, "cmdline": cmdline}
 
 
@@ -78,6 +79,9 @@ def can_signal(target: dict) -> tuple[bool, str]:
     live = identity(pid)
     if live is None:
         return False, "unavailable: already gone"
+    if live.get("state") == "Z":
+        # A zombie has exited; its parent has not reaped it yet.
+        return False, "unavailable: already exited (zombie)"
     if live["starttime"] != target["starttime"] or live["boot_id"] != target["boot_id"]:
         return False, "refused: identity changed (pid likely reused)"
     return True, "ok"
@@ -146,7 +150,12 @@ def stop(api_pid: int, log: dict, *, saved: dict | None = None,
         # The same full gate used before TERM: start time, boot id and bounds.
         ok, why = can_signal(target)
         if not ok:
-            record["refused"].append({"pid": pid, "reason": why})
+            # A process that already exited after TERM is the normal outcome and
+            # must not be reported as a refusal; only a changed identity is one.
+            if why.startswith("unavailable"):
+                record["unavailable"].append({"pid": pid, "reason": why})
+            else:
+                record["refused"].append({"pid": pid, "reason": why})
             continue
         try:
             signaller(pid, signal.SIGKILL)
@@ -161,7 +170,9 @@ def stop(api_pid: int, log: dict, *, saved: dict | None = None,
         time.sleep(0.5)
 
     record["finished"] = now()
-    record["survivors"] = [t["pid"] for t in targets if identity(t["pid"]) is not None]
+    record["survivors"] = [t["pid"] for t in targets
+                           if (lambda i: i is not None and i.get("state") != "Z")(
+                               identity(t["pid"]))]
     log["stop"] = record
     return record
 
