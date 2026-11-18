@@ -57,8 +57,15 @@ kernel `.o` 的文件名 hash `b87a0f8f…` 与 nzguard 包相同（名字由 op
   本包中 AIC 在 `REGIST_MATMUL_OBJ` 内从 `Process()` 返回，这是它成立的前提。
 - `GetBlockIdx()` 在 AIV = `get_block_idx() * GetTaskRationImpl() + get_subblockid()`
   （`dav_c220/kernel_operator_sys_var_impl.h:67-68`），ratio 来自 `get_subblockdim()`（`:43-54`）；
-  `MIX_NUM` 在 `dav_c220/kfc/kfc_comm.h:93-97`：**有 `__MIX_CORE_AIC_RATION__` 宏则取该宏，否则 2**
-  ——**构建宏取值未落盘，属缺口**。
+  `MIX_NUM` 在 `dav_c220/kfc/kfc_comm.h:93-97`：有 `__MIX_CORE_AIC_RATION__` 则取该宏，否则 2
+  ——**取值取决于构建条件，未直接取得**。
+- **重载选择已从源内收窄**：`impl/adv_api/detail/matmul/utils/matmul_utils.h:26-38`
+  只在 `__NPU_ARCH__ == 3510` 下定义 `USE_SSBUF`（或 `KFC_C310_SSBUF==0` 时 `USE_WORKSPACE`），
+  **其他 arch 在 `:36-38` 无条件定义 `USE_WORKSPACE`**。本包 target 为 ascend910_93 / `__NPU_ARCH__ 2201`，
+  因此**源内默认走 `USE_WORKSPACE`**，即上文分析的 `matmul_client.h:931-977` 那个重载。
+  仍缺：**外部 `-DUSE_SSBUF` 覆写是否有直接证据**（build log 无 `-D` 既不能自动当源内宏未知，也不构成无覆写的证明）。
+- **"24 个 worker 落在 12 个 cube" 只是条件推导**：需 `get_subblockdim()` 在 AIV 返回 2
+  **且** launch 集合完整（2×AIC 个 AIV 都在）同时成立；任一条不成立，该结论不成立。
 - **未证**：`SYNC_AIV_ONLY_ALL` 是否把各 worker 的 fixpipe/GM 数据写序化到其他 AIV 的 GM 读之前；
   屏障参与者集合是否等于实际发起 matmul 的集合。
 
