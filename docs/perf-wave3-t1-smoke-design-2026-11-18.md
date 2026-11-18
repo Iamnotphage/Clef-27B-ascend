@@ -213,3 +213,21 @@
 | **E 完整流水** | p=2、p=4 两个候选对照 A | GEMM 写回 → AR 提交/完成 → q → rstd → 最终输出的时间线；扣除分块膨胀、搬运、同步；按两 rank 关键路径比较完整链 | 只有稳定改善才补 M=1595，并进入服务级交错 A/B 与 OD/ERQA ≤2 pp |
 
 **不在本轮执行**：以上全部需要 NPU 与 gate8 恢复确认；当前只做本地文档与证据整理。
+
+## 11. HCCL context 契约（2026-11-18，22 号随包源码核实）
+
+> 更正：此前「`HcclCombineOpParam` 在任何头文件中都没有定义」的表述有误。定义在**实现头**而非 `include` 树：
+> `/usr/local/Ascend/cann-9.2.1/aarch64-linux/asc/impl/adv_api/detail/hccl/common/hccl_inner_def.h`（arch=2201 走 `#else` 分支，字段含
+> `workSpace / workSpaceSize / rankId / rankNum / winSize / windowsIn[] / windowsOut[] / res[8328] / multiFlag / data`）。
+
+| 契约 | 源码依据 |
+| --- | --- |
+| `InitV2(context, initTiling)` 把 `context` 直接 `reinterpret_cast` 成 `__gm__ HcclCombineOpParam*`，随后只用 `hcclContext_->workSpace` 做 `InitInner(..., ONLINE_COMPILATION_TILING_VERSION)` | `impl/platform_v220/hccl_aicpu.h:146-157` |
+| `tilingBaseAddr_ = reinterpret_cast<uint64_t>(initTiling)` | 同上 |
+| `SetCcTilingV2(uint64_t offset)`：`opType = (Mc2CcTilingInner*)(tilingBaseAddr_ + offset)->opType`，即 **offset 相对 initTiling 的字节偏移**；要求 `curVersion_ == ONLINE_COMPILATION_TILING_VERSION`，**必须先 InitV2**；`opType < HCCL_CMD_ALL(21)` | `hccl_aicpu.h:182-195` |
+| 已废弃的 `SetCcTiling(__gm__ void* ccOpTilingData)` 仍可用，语义是直接给 cc 块的 GM 指针 | `hccl_aicpu.h:160-180` |
+| `offset` 由 host 侧 `Mc2CcTilingConfig::GetTiling` 写入 init 块的 `offset[]`（`Mc2InitTilingInner.mc2HcommCnt/offset[MAX_CC_TILING_NUM]`），**不要手工填**；两块在 device 侧必须连续 | `asc/include/adv_api/hccl/internal/hccl_tiling_msg.h:23-33`、`hccl_tilingdata.h:47-59` |
+| 正确的契约校验：`InitV2` 后立即调 `GetRankId()` / `GetRankDim()`（公开 getter，分别读 `rankId` / `rankNum`），期望 `∈{0,1}` 与 `2`；**不要盲解引用结构体** | `hccl_aicpu.h:196-201` |
+| 仍未证实：`HcclCreateOpResCtx` 返回的指针是否就是上述 device 缓冲；只能用 typed 运行（GetRankId/GetRankDim）判定 | 无静态结论 |
+
+**对 kernel 的含义**：`InitV2` 的 context 必须来自框架注入（`MC2().HcclGroup("group")` + `GetHcclContext<HCCL_GROUP_ID_0>()`，见 vllm-ascend 的 MC2 参考算子）或我们自己把合法缓冲送进 device；`SetCcTilingV2` 的 offset 从 init 块的 `offset[]` 读取，不要猜。
