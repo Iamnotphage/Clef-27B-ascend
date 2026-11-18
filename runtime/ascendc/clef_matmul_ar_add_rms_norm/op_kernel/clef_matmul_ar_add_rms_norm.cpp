@@ -23,10 +23,10 @@ using namespace AscendC;
 class ClefMatmulArAddRmsNormKernel {
 public:
     using AT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
-    // The service keeps the down-projection weight in FRACTAL_NZ
-    // (CLEF_MLP_BF16_NZ, one npu_format_cast(..., 29) at load time), so the
-    // operator contract is "input is already NZ" and nothing is converted here.
-    using BT = MatmulType<TPosition::GM, CubeFormat::NZ, bfloat16_t, false>;
+    // Diagnostic build: B stays ND so the block-dim sweep isolates a single
+    // variable.  The service contract is FRACTAL_NZ and moves back to
+    // CubeFormat::NZ once the block-dim / sub-block question is settled.
+    using BT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using CT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using BiasT = MatmulType<TPosition::GM, CubeFormat::ND, float, false>;
 
@@ -41,7 +41,9 @@ public:
         k_ = t->k;
         eps_ = t->eps;
         invN_ = t->invN;
-        useHccl_ = t->useHccl != 0;
+        // 0 = skip everything, 1 = full (lifecycle + AllReduce/Wait),
+        // 2 = lifecycle only (InitV2 / SetCcTilingV2 / Finalize, no AllReduce).
+        hcclMode_ = t->useHccl;
         mPad_ = t->mPad;
         repeat_ = static_cast<uint8_t>(t->repeat);
         wsGm_ = workspace;
@@ -101,7 +103,7 @@ public:
         PipeBarrier<PIPE_ALL>();
 
         // ---- 2) TP AllReduce partial -> reduced (out-of-place) ----------------
-        if (useHccl_ && arGm_ != nullptr) {
+        if (hcclMode_ >= 1u && arGm_ != nullptr) {
             __gm__ float* flagPtr = flagGm_;
             if (GetBlockIdx() == 0) {
                 Hccl hccl;
@@ -110,12 +112,18 @@ public:
                     offsetof(ClefMatmulArAddRmsNormTilingData, mc2CcTiling));
                 rankId = static_cast<int32_t>(hccl.GetRankId());
                 rankDim = static_cast<int32_t>(hccl.GetRankDim());
-                HcclHandle h = hccl.AllReduce<true>(partialGm_, arGm_,
-                                                    static_cast<uint64_t>(m_) * n_,
-                                                    HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM,
-                                                    repeat_);
-                PipeBarrier<PIPE_ALL>();
-                arRc = hccl.Wait(h) * 100 + setRc;
+                if (hcclMode_ == 1u) {
+                    HcclHandle h = hccl.AllReduce<true>(partialGm_, arGm_,
+                                                        static_cast<uint64_t>(m_) * n_,
+                                                        HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM,
+                                                        repeat_);
+                    PipeBarrier<PIPE_ALL>();
+                    arRc = hccl.Wait(h) * 100 + setRc;
+                } else {
+                    // Lifecycle-only arm: prove InitV2/Finalize pairing without
+                    // publishing any collective.
+                    arRc = setRc;
+                }
                 hccl.Finalize();
                 if (flagPtr != nullptr) {
                     LocalTensor<float> f = diagT_.Get<float>();
@@ -134,7 +142,7 @@ public:
         }
 
         // ---- 3) full-N Add + RMSNorm on the reduced partial -------------------
-        GM_ADDR srcGm = (useHccl_ && arGm_ != nullptr) ? arGm_ : partialGm_;
+        GM_ADDR srcGm = (hcclMode_ == 1u && arGm_ != nullptr) ? arGm_ : partialGm_;
         x_.SetGlobalBuffer((__gm__ bfloat16_t*)srcGm, static_cast<uint64_t>(m_) * n_);
         PipeBarrier<PIPE_ALL>();
         DataCacheCleanAndInvalid<bfloat16_t, CacheLine::ENTIRE_DATA_CACHE,
@@ -146,7 +154,7 @@ public:
             d.SetValue(0, static_cast<float>(rankId));
             d.SetValue(1, static_cast<float>(rankDim));
             d.SetValue(2, static_cast<float>(arRc));
-            d.SetValue(3, useHccl_ ? 1.0f : 0.0f);
+            d.SetValue(3, hcclMode_ == 1u ? 1.0f : (hcclMode_ >= 1u ? 2.0f : 0.0f));
             d.SetValue(4, static_cast<float>(mmRc));
             PipeBarrier<PIPE_ALL>();
             DataCopy(diag_[0], d, 8);
@@ -239,7 +247,7 @@ private:
     float invN_{0.0f};
     uint32_t mPad_{0};
     ClefMatmulArAddRmsNormTilingData* tiling_{nullptr};
-    bool useHccl_{false};
+    uint32_t hcclMode_{0};
     GM_ADDR xGm_{nullptr};
     GM_ADDR wGm_{nullptr};
     GM_ADDR wsGm_{nullptr};

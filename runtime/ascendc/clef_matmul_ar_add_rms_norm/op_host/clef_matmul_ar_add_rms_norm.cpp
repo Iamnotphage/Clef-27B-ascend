@@ -53,16 +53,21 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     t->repeat = (repeat == nullptr) ? 1u : static_cast<uint32_t>(*repeat);
     if (t->repeat == 0 || t->repeat > 255) { return ge::GRAPH_FAILED; }
 
-    // The group must be the real HCCL comm name; the op def marks it REQUIRED
-    // and binds it to MC2 via MC2().HcclGroup("group").
+    // use_hccl is tri-state: 0 = skip the whole HCCL section, 1 = full
+    // (lifecycle + AllReduce/Wait), 2 = lifecycle only (InitV2 /
+    // SetCcTilingV2 / Finalize, no collective).  Mode 2 exists to test whether
+    // the host-injected KFC service requires the device-side lifecycle to be
+    // paired even when nothing is published.
     const auto* useHccl = context->GetAttrs()->GetAttrPointer<int64_t>(3);
-    const bool wantHccl = (useHccl == nullptr) || (*useHccl != 0);
+    const int64_t hcclAttr = (useHccl == nullptr) ? 1 : *useHccl;
+    if (hcclAttr < 0 || hcclAttr > 2) { return ge::GRAPH_FAILED; }
+    const bool wantHccl = (hcclAttr >= 1);
     const char* group = context->GetAttrs()->GetAttrPointer<char>(2);
     if (wantHccl && (group == nullptr || group[0] == '\0')) { return ge::GRAPH_FAILED; }
     if (group == nullptr) group = "";
     t->commEngine = kEngineAicpu;
     t->opType = kOpTypeAllReduce;
-    t->useHccl = wantHccl ? 1u : 0u;
+    t->useHccl = static_cast<uint32_t>(hcclAttr);
 
     // mc2InitTiling is the first member and mc2CcTiling follows it, so the
     // kernel can use offsetof() as the SetCcTilingV2 offset.
@@ -81,8 +86,24 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     }
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    uint32_t cores = platform.GetCoreNumAiv();
-    if (cores == 0) cores = 8;
+    // block_dim: 0 = auto (AIV count, the value that crashed with
+    // "scalar access to the internal buffer of AICore is out of bounds"),
+    // -1 = AIC count, >0 = explicit.  The kernel's block count and the matmul
+    // split must be the same number; sweeping this isolates the
+    // Cube:Vector = 1:2 sub-block question.
+    const auto* blockDimAttr = context->GetAttrs()->GetAttrPointer<int64_t>(4);
+    const int64_t blockDimReq = (blockDimAttr == nullptr) ? 0 : *blockDimAttr;
+    uint32_t cores = 0;
+    if (blockDimReq == 0) {
+        cores = platform.GetCoreNumAiv();
+    } else if (blockDimReq == -1) {
+        cores = platform.GetCoreNumAic();
+    } else if (blockDimReq > 0) {
+        cores = static_cast<uint32_t>(blockDimReq);
+    } else {
+        return ge::GRAPH_FAILED;
+    }
+    if (cores == 0) cores = 1;
 
     // Cube tiling for X[M,K] x W[K,N] -> partial[M,N].  Cube/Vector are 1:2 on
     // this SoC, so the same block count drives both the matmul split and the
@@ -91,9 +112,10 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     mmTiling.SetDim(static_cast<int32_t>(cores));
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
-    // B is FRACTAL_NZ: the service already packs the down-projection weight
-    // with npu_format_cast(..., 29) at load time, so the op never converts.
-    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ,
+    // B is ND in this diagnostic build: the block-dim sweep must isolate a
+    // single variable.  The service contract is FRACTAL_NZ and the NZ build is
+    // produced once the block-dim / sub-block question is settled.
+    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16);
@@ -154,6 +176,7 @@ public:
         this->Attr("repeat").Int(1);
         this->Attr("group").String();
         this->Attr("use_hccl").Int(1);
+        this->Attr("block_dim").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");

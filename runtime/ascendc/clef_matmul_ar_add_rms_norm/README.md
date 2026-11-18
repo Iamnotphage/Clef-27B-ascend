@@ -63,31 +63,50 @@ bash build.sh
 - `Matmul::Init` 只接受**非 const** `TCubeTiling*`，所以 tiling 指针全程不能是 `const`。
 - aicore 内不允许 `static_cast<float>(uint32_t)`，diag 不再写 m/n/k。
 
-## W 布局：契约固定为 FRACTAL_NZ
+## 属性
+
+| 属性 | 语义 |
+| --- | --- |
+| `eps` | RMSNorm epsilon |
+| `repeat` | AllReduce 的 repeat（1..255） |
+| `group` | 真实 HCCL comm 名（opdef 已 `MC2().HcclGroup("group")`） |
+| `use_hccl` | **三态**：`0` = 整体跳过 HCCL 段；`1` = 全跑（生命周期 + AllReduce/Wait）；`2` = **只跑生命周期**（InitV2 / SetCcTilingV2 / Finalize，不发布 collective） |
+| `block_dim` | matmul 切分与核数：`0` = 自动取 AIV 数；`-1` = 取 AIC 数；`>0` = 显式值。**kernel 的 block 数与 `MultiCoreMatmulTiling::SetDim` 用同一个值** |
+
+`diag[0..4]` = rankId / rankDim / arRc / hcclMode / mmRc。
+
+## 上板首轮结果与当前诊断状态
+
+`E v1 (ND, b61e2836)` 上板：两 rank 在 synchronization 崩溃，device 报
+`fftsplus aivector error, core id 26`，extend info 为
+**"The address for the scalar to access the internal buffer of AICore is out of bounds"**
+（errcode 0x200000000000000, subErrType:4）。**不是 KFC 参数错误**，是 kernel 内标量访问
+AICore 内部缓冲越界，指向 matmul 的 block dim / SetDim / sub-block 语义
+（Cube:Vector = 1:2）。该次用的是 ND 权重，与 NZ 无关。
+
+因此当前这版是**诊断构建**：B 回到 ND、`block_dim` 可扫。建议顺序：先 `block_dim=1`
+跑到通并确认 matmul 数值，再逐步加（2/4/…/-1/0）记录崩溃阈值。
+
+## W 布局：最终契约是 FRACTAL_NZ（本诊断版暂为 ND）
 
 服务里的 down-projection 权重**已经是 FRACTAL_NZ**（`CLEF_MLP_BF16_NZ` 在加载期做一次
-`npu_format_cast(..., 29)`；隔离实测该形状 matmul 约 0.2963 ms）。因此：
-
-- 算子契约就是"**输入即 NZ**"，`BT = MatmulType<GM, CubeFormat::NZ, bfloat16_t, false>`；
-- **op 内不做任何权重格式转换**；
-- 预 pack 归 host / 模型加载侧负责。
-
-A 仍为 ND（`x[M,K]` 行主序），C 为 ND。NZ 要求 N 按 16 元素对齐，N=5120 与 K=8704 均满足。
+`npu_format_cast(..., 29)`；隔离实测该形状 matmul 约 0.2963 ms）。因此最终契约是
+"**输入即 NZ**"，`BT = MatmulType<GM, CubeFormat::NZ, ...>`，**op 内不做权重转换**，
+预 pack 归 host / 模型加载侧。为把 block-dim 问题单独隔离，当前提交暂用 ND；
+`block_dim` 定案后切回 NZ（`d4a4c43` 的 NZ 版本可作参照）。
+NZ 要求 N 按 16 元素对齐，N=5120 与 K=8704 均满足。
 
 ## 待与 21 确认并记录（v1 未决）
 
-1. **block dim 与 matmul 切分**：当前 `SetBlockDim(GetCoreNumAiv())` 且
-   `MultiCoreMatmulTiling::SetDim` 取同一数值。Cube:Vector = 1:2，该口径下的 matmul 切分
-   与 sub-block 语义**未在设备侧验证**。
-2. **数值正确性完全未验证** —— 本次只做到「纯编译通过」。AR 可见性、rstd 语义、
-   与 `npu_add_rms_norm(dist.all_reduce(partial))` 的逐元素比对都需 21 在设备上做。
+1. **block dim 与 matmul 切分**：见上，正在按 `block_dim` 扫描定位阈值。
+2. **数值正确性完全未验证**：AR 可见性、rstd 语义、与
+   `npu_add_rms_norm(dist.all_reduce(partial))` 的逐元素比对都需 21 在设备上做。
 3. **matmul 写出的 `partial` 对 AICPU 侧的可见性未验证**（目前只有 `SyncAll()` +
    `PipeBarrier<PIPE_ALL>`）。
 4. **host 注入路径当前仍被 KFC 参数/生命周期问题阻塞**：本算子声明了
-   `MC2().HcclGroup("group")`，会走与 `clef_ar_add_rms_norm` 相同的注入路径。
-   `use_hccl=0` 在本算子里的语义与 21 的版本一致（device 侧**整体跳过**
-   InitV2/SetCcTilingV2/AllReduce/Wait/Finalize）。21 正在验证"只跳过
-   AllReduce/Wait、保留 InitV2/Finalize 配对"的变体；若该变体成立，这里需要跟着改。
+   `MC2().HcclGroup("group")`，走与 `clef_ar_add_rms_norm` 相同的注入路径。
+   `use_hccl=2` 就是为验证"只保留生命周期、不发布 collective"这一假设而加的。
+
 
 ## 沿用的已验证细节（不可回退）
 
