@@ -49,6 +49,7 @@ def main() -> int:
     ap.add_argument("--probe-norm", action="store_true")
     ap.add_argument("--norm-from-residual", type=int, default=0)
     ap.add_argument("--norm-from-x", type=int, default=0)
+    ap.add_argument("--w-nz", action="store_true")
     ap.add_argument("--adapter-dir", type=Path, required=True)
     ap.add_argument("--op-api-dir", type=Path, required=True)
     ap.add_argument("--build-dir", type=Path, required=True)
@@ -114,7 +115,8 @@ def main() -> int:
     if a.probe_partial:
         r = torch.zeros_like(r)
         gamma = torch.ones_like(gamma)
-    out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step, a.norm_from_residual, a.norm_from_x)
+    w_op = torch_npu.npu_format_cast(w, 29) if a.w_nz else w
+    out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w_op, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step, a.norm_from_residual, a.norm_from_x)
     torch.npu.synchronize()
 
     # Reference A (fp32 reduce, as before) and Reference B (bf16 reduce, the
@@ -140,7 +142,7 @@ def main() -> int:
                "diag": [float(v) for v in diag.cpu()],
                "max_abs_y": float(dy.max().cpu()), "max_abs_residual_sum": float(dres.max().cpu()),
                "max_abs_rstd": float(drstd.max().cpu()), "y_gt_0.01": int((dy > 0.01).sum().cpu()),
-               "elements": int(dy.numel())}
+               "elements": int(dy.numel()), "w_format": "NZ" if a.w_nz else "ND"}
     if a.probe_partial:
         # res_out is z = partial + 0, i.e. the reduced matmul output itself.
         ref_p = torch.matmul(x, w)
