@@ -323,6 +323,12 @@ def main() -> int:
         except Exception as exc:                              # noqa: BLE001
             if not isinstance(wrapper_rc, int) or wrapper_rc == 0:
                 wrapper_rc = 3                                   # restore path failed
+            # The record must agree with the code we will return, including on
+            # this exception path.
+            rc_file = a.out_dir / "raw-rc.json"
+            prev = json.loads(rc_file.read_text()) if rc_file.exists() else {}
+            prev["wrapper_rc"] = wrapper_rc
+            rc_file.write_text(json.dumps(prev, ensure_ascii=False) + "\n")
             (a.out_dir / "restore.json").write_text(json.dumps(
                 {"test_rc": test_rc, "test_exception": test_exc,
                  "restore_ok": False, "verify_ok": False,
