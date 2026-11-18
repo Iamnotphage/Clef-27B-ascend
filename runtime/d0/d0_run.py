@@ -310,7 +310,19 @@ def main() -> int:
             (a.out_dir / "restore.json").write_text(
                 json.dumps(rlog, ensure_ascii=False, indent=1) + "\n")
             rlog_written = True
+            # A restore or verification that did not succeed is an overall
+            # failure even when the test itself passed, so the exit code cannot
+            # stay zero. The test and child codes keep their own meanings.
+            if not (restored and verified):
+                if not isinstance(wrapper_rc, int) or wrapper_rc == 0:
+                    wrapper_rc = 3
+                rc_file = a.out_dir / "raw-rc.json"
+                prev = json.loads(rc_file.read_text()) if rc_file.exists() else {}
+                prev["wrapper_rc"] = wrapper_rc
+                rc_file.write_text(json.dumps(prev, ensure_ascii=False) + "\n")
         except Exception as exc:                              # noqa: BLE001
+            if not isinstance(wrapper_rc, int) or wrapper_rc == 0:
+                wrapper_rc = 3                                   # restore path failed
             (a.out_dir / "restore.json").write_text(json.dumps(
                 {"test_rc": test_rc, "test_exception": test_exc,
                  "restore_ok": False, "verify_ok": False,
