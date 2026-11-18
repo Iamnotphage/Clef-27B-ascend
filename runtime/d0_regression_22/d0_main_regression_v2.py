@@ -48,6 +48,10 @@ def _argv_str(args) -> list:
 def allowed(argv: list) -> bool:
     """Only these external commands may be simulated; anything else fails closed."""
     joined = " ".join(argv)
+    # generic python -m torch.distributed.run is allowed (the supervised child)
+    if len(argv) >= 3 and argv[0].endswith("python3.12") or (len(argv) >= 2 and argv[0].endswith("python3")):
+        if "-m" in argv and "torch.distributed.run" in argv:
+            return True
     allow_prefixes = (
         "ps ", "ps", "npu-smi", "-m torch.distributed.run",
         "bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
@@ -77,17 +81,26 @@ def guard() -> None:
             self.pid = 424242
             self.returncode = 0
             # supply ONLY what the external child would have produced
-            self._emit_child_files(kw.get("cwd"))
+            self._emit_child_files(self.argv)
 
-        def _emit_child_files(self, cwd):
-            if not cwd:
+        def _emit_child_files(self, argv):
+            """Write only what the external child would write, into --out-dir."""
+            out_dir = None
+            for i, tok in enumerate(argv):
+                if tok == "--out-dir" and i + 1 < len(argv):
+                    out_dir = argv[i + 1]
+                elif tok.startswith("--out-dir="):
+                    out_dir = tok.split("=", 1)[1]
+            if not out_dir:
                 return
-            base = Path(cwd)
+            base = Path(out_dir)
             try:
                 base.mkdir(parents=True, exist_ok=True)
-                (base / "result-rank-0.json").write_text(json.dumps({"rank": 0, "ok": True}))
-                (base / "result-rank-1.json").write_text(json.dumps({"rank": 1, "ok": True}))
-                (base / "gate.json").write_text(json.dumps({"passed": True}))
+                for rank in (0, 1):
+                    (base / f"result-rank{rank}.json").write_text(json.dumps({
+                        "rank": rank, "rc": 0, "trace_ok": True,
+                        "trace": {"slots": 72, "fields": 8, "flat_u32_len": 72 * 8},
+                    }))
             except Exception:
                 pass
 
@@ -114,6 +127,8 @@ def guard() -> None:
 
     def guarded_kill(pid, sig):
         REC["kills"].append([pid, int(sig)])
+        # signals to real processes are a boundary we do not simulate: fail closed
+        raise AssertionError(f"signal to pid {pid} is not allowed")
 
     def no_net(*a, **kw):
         REC["net"].append(str(a)[:80])
@@ -136,10 +151,11 @@ def guard() -> None:
     import pathlib
     real_read_text = pathlib.Path.read_text
     state = {"stat_reads": 0, "boot_reads": 0}
-    SC = REC.setdefault("scenario", "happy")
+
 
     def fake_read_text(self, *a, **kw):
         p = str(self)
+        SC = REC.get("scenario", "happy")   # read dynamically, not at guard time
         if p.startswith("/proc/") and p.endswith("/stat"):
             state["stat_reads"] += 1
             # root_changed: a different starttime on the second read
