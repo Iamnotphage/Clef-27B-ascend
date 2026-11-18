@@ -354,13 +354,14 @@ public:
             PipeBarrier<PIPE_ALL>();
 
             Mul(tmp, z, z, n_);
-            float acc = 0.0f;
-            for (uint32_t off = 0; off < n_; off += 512) {
-                const uint32_t cnt = (n_ - off < 512) ? (n_ - off) : 512;
-                LocalTensor<float> part = bgst_.Get<float>();
-                ReduceSum<float>(part, tmp[off], work, cnt);
-                acc += part.GetValue(0);
-            }
+            // Single-pass reduction over the whole row.  The previous 512-element
+            // chunking split the summation tree arbitrarily on top of whatever
+            // tree ReduceSum already uses, adding divergence that the native
+            // reference does not have; the row is already resident in UB, so
+            // there is no reason to chunk it.
+            LocalTensor<float> part = bgst_.Get<float>();
+            ReduceSum<float>(part, tmp, work, n_);
+            const float acc = part.GetValue(0);
             const float rstd = 1.0f / sqrt(acc * invN_ + eps_);
             sums.SetValue(buffered, rstd);
             ++buffered;
