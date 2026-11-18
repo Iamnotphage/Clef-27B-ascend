@@ -300,3 +300,49 @@ CPU只读入口生成成功，旧owner21在parser以rc2拒绝。23已有限核�
   --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
   --run-dir /workspace/yangchen/logs/n1-v2-aron-c1-owner27-20261119T0230
 ```
+
+## ARon/cores1 实际闭合与 cores2 待排程格
+
+27实际运行：`/workspace/yangchen/logs/n1-v2-aron-c1-owner27-20261119T0230`。
+window SHA `2c968520017f19e14004901e8f3a525387a495e45182275c8631efa69cc2333e`，
+overall0、preflight/stop/apply/probe/revert/restore六步骤均RC0。
+restore SHA `f97217637f4ee952dcf5856c6fdfaa77371ad993ca25a43c06809cb57eec6399`，
+label `d0-restore-20261118T183704Z-b8572d6f`，root1195216，双worker1195493/1195494；
+23独立闭合health/workers/text/image四项RC0，卡7 chip0/1，vendor16原件退役且active消失。
+
+两rank x/w/r/gamma/partial元数据逐项同ARoff，r/gamma/partial原bytes相同。
+每rank12 raw文件大小/SHA全匹配；Y/residual/rstd/reduced候选与native参考原字节分别相同。
+四份reduced（两rank × cand/ref）SHA均为
+`02215064e0e393b3ab21a3bf0aca14c51281435ce74b3840e26647810adbfcd1`，
+与预先由两份真实partial做FP32相加→BF16的CPU可证伪预测吻合。
+固定门shape/dtype/双方finite通过，resfail0、所有max_abs/max_rel为0；Y近零域各4469元素，
+近零max_abs0。CPU用各自实际reduced/rstd重建res/Y逐字节等。
+diag首槽[0,967)、cores1、ARon、rank0或1/ranks2、set/wait0，31字段FNV过，余47槽全0。
+probe rc0/timeoutfalse/reapedtrue、unknown/residual空；记录的actual owner27与legacy tag21分列。
+此结论仅覆盖本输入cores1 ARon数值与生命周期，多核和性能另需实测。
+
+25 CPU结果：`/tmp/n1-aron-c1-cpu-analysis-rank0.json`
+SHA `c4ed939e6969465827f2c80f02fa90a9b58fc79984e0d6b141b27c4f1f670eb8`；
+rank1同前缀，SHA `84a27a6f91e4c213c6a3196b39eb69b48f81657382239b3c551e56a6ea68b55c`。
+逐项字节报告`/tmp/n1-v2-aron-c1-owner27-20261119T0230-byte-audit.json`
+SHA `fe302c32fdb7b121de925f325c9c9cbccf2bab9cd12f456862ad9e29d673e75c`。
+
+CPU准备的下一最小格仅将cores1→2：两段为[0,483)、[483,967)，用于检验第二核参与
+FFTS后的HCCL reduced可见性、不等长行分片及rstd4B行边界。包、核心实现、runner、输入、
+ARon、固定门、PGID监督与owner27均保持；接线CPU12/12通过。原c1包与计划保留。
+该格尚待20统一排程，25仅生成只读计划，当前无新设备结果或计时。
+
+bundle：`/workspace/yangchen/work/clef-n1-25-window-v2-aron-c2-owner27`；
+payload SHA `697a7538b218b6c059b6b6f162fc75266ac53fdb85e4e6ecfb27139e9415b478`；
+plan SHA `da35e14f150c84c799ebfa3373abb22a76366ff52d9d54f2e8e289e9b3428609`。
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v2-aron-c2-owner27/supervised_window.py \
+  --owner clef-27b-ascend-27 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha 697a7538b218b6c059b6b6f162fc75266ac53fdb85e4e6ecfb27139e9415b478 \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v2-aron-c2-owner27-20261119T0245
+```

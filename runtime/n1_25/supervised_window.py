@@ -75,7 +75,7 @@ def plan(a):
             "wrapper_sha256": a.wrapper_sha, "identity_sha256": IDENTITY_SHA,
             "env_scope": "OPP/opapi/devices on probe child; PYTHONPATH on torchrun child only",
             "revert": "rename isolated-opp to isolated-opp.retired; preserve all bytes",
-            "cell": {"rows": 967, "seed": 20261118, "cores": 1, "use_hccl": 1}}
+            "cell": {"rows": 967, "seed": 20261118, "cores": 2, "use_hccl": 1}}
 
 
 def main():

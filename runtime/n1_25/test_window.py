@@ -58,7 +58,7 @@ class WindowContractTests(unittest.TestCase):
 
     def test_reject_fixed_cell_change(self):
         cell = self.reports()
-        self.change(cell / "rank1/meta.json", lambda m: m.update(cores=2))
+        self.change(cell / "rank1/meta.json", lambda m: m.update(cores=3))
         with self.assertRaisesRegex(ValueError, "identity"):
             probe.aggregate(cell, self.identity)
 
@@ -96,7 +96,7 @@ class WindowContractTests(unittest.TestCase):
         self.assertIn("--run-path", cmd)
         self.assertIn("--start-method=spawn", cmd)
         self.assertIn("--max-restarts=0", cmd)
-        self.assertEqual(cmd[cmd.index("--cores") + 1], "1")
+        self.assertEqual(cmd[cmd.index("--cores") + 1], "2")
         self.assertEqual(cmd[cmd.index("--use-hccl") + 1], "1")
 
     def lifecycle(self, action):

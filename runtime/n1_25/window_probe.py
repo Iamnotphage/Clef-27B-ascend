@@ -18,7 +18,7 @@ def command(stage, run, python):
             "--identity", str(stage / "build_identity.json"),
             "--vendor-root", str(run / "isolated-opp/vendors" / VENDOR),
             "--adapter", str(stage / "n1_adapter.so"), "--output", str(run / "probe/cell"),
-            "--rows", "967", "--seed", "20261118", "--cores", "1", "--use-hccl", "1"]
+            "--rows", "967", "--seed", "20261118", "--cores", "2", "--use-hccl", "1"]
 
 
 def aggregate(cell, identity):
