@@ -367,12 +367,24 @@ public:
             ++buffered;
 
             PipeBarrier<PIPE_ALL>();
+            // Native AddRmsNorm sequence (add_rms_norm.h:233-244, same shape in
+            // add_rms_norm_single_n.h and add_rms_norm_multi_n.h): normalise in
+            // fp32, round to bf16, read back to fp32, multiply by gamma in
+            // fp32, then round to bf16 once more.  The intermediate bf16
+            // round-trip is part of the reference semantics; computing
+            // z*rstd*gamma entirely in fp32 and rounding once is a different
+            // evaluation and shifts elements that sit near a rounding
+            // boundary.
             Muls(z, z, rstd, n_);
             PipeBarrier<PIPE_ALL>();
-            Mul(z, z, gf, n_);
-            PipeBarrier<PIPE_ALL>();
             LocalTensor<bfloat16_t> ol = bout_.Get<bfloat16_t>();
-            Cast(ol, z, RoundMode::CAST_RINT, n_);
+            Cast(ol, z, RoundMode::CAST_RINT, n_);   // fp32 -> bf16 (native :236)
+            PipeBarrier<PIPE_ALL>();
+            Cast(z, ol, RoundMode::CAST_NONE, n_);   // bf16 -> fp32 (native :238)
+            PipeBarrier<PIPE_ALL>();
+            Mul(z, z, gf, n_);                       // * gamma in fp32 (native :242)
+            PipeBarrier<PIPE_ALL>();
+            Cast(ol, z, RoundMode::CAST_RINT, n_);   // fp32 -> bf16 final (native :244)
             PipeBarrier<PIPE_ALL>();
             DataCopy(o_[base], ol, n_);
             PipeBarrier<PIPE_ALL>();
