@@ -102,6 +102,30 @@ def main():
         path = source_dir / relative
         sources.append({**identity(path), 'text': path.read_text()})
     symbols = subprocess.check_output(['nm', '-D', '--defined-only', str(LIB)], text=True)
+    grouped_soc_names = []
+    for address in (0x2edd950, 0x2edd958):
+        pointer = struct.unpack('<Q', read(address, 8))[0]
+        grouped_soc_names.append(read(pointer, 64).split(b'\0', 1)[0].decode('ascii'))
+    if grouped_soc_names != ['ascend910_93', 'ascend910b']:
+        raise ValueError('Unexpected Grouped SoC list')
+    grouped_header = SDK / 'aarch64-linux/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h'
+    grouped_info = tbe / 'config/ascend910_93/aic-ascend910_93-ops-info-transformer.json'
+    grouped_index = tbe / 'kernel/config/ascend910_93/ops_transformer/grouped_mat_mul_all_reduce.json'
+    grouped_kernel_dir = tbe / 'kernel/ascend910_93/ops_transformer/grouped_mat_mul_all_reduce'
+    grouped = {
+        'api': 'aclnnGroupedMatMulAllReduce', 'has_add_rms_norm': False,
+        'device_execution': False,
+        'header': {**identity(grouped_header), 'text': grouped_header.read_text()},
+        'soc_list': {'array_va': '0x2edd950', 'call_va': '0x2645298', 'count': 2,
+                     'values': grouped_soc_names, 'disassembly': disassemble(0x2645260, 0x2645320)},
+        'opinfo': {**identity(grouped_info), 'entry': json.loads(grouped_info.read_text())['GroupedMatMulAllReduce']},
+        'binary_index': {**identity(grouped_index), 'content': json.loads(grouped_index.read_text())},
+        'kernels': [identity(path) for path in sorted(grouped_kernel_dir.glob('*')) if path.is_file()],
+        'stream_mode_check': disassemble(0x1e0d074, 0x1e0d0a8),
+        'group_count_limit_check': disassemble(0x1e09980, 0x1e099d8),
+        'input_group_check': disassemble(0x1e07598, 0x1e07d98),
+        'output_group_check': disassemble(0x1e09be0, 0x1e09c24),
+    }
     result = {
         'collected_utc': datetime.now(timezone.utc).isoformat(),
         'kind': 'static_read_only_audit', 'device_execution': False,
@@ -117,6 +141,7 @@ def main():
         'opinfo_files_scanned_all_socs': opinfo_count,
         'opinfo': records, 'a3_binary_indices': binaries, 'source_evidence': sources,
         'conclusion': 'Fixed library support list is ascend910b only; no A3 binding/device prescreen.',
+        'grouped_followup': grouped,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
