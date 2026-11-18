@@ -784,3 +784,48 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 - 只跑 `usedCoreNum=1` 与 `2` 各一次；
 - **停止条件**：`507014/0x25`、超时、或 `partial` 有未写行；
 - **只回答集合/比值/漏行，不判数值因果**；固定门仍为 mixed 容差。
+
+## 30. 编译期取证收尾（22，2026-11-18 22:46 CST，commit `02a2ee2`）
+
+**不再追加普通构建、不再静态重复检索。** 原件与 `873ef8fb` 包未被覆盖；算法/ABI/共享安装未改；未跑设备。
+
+### 30.1 本次定向捕获（`--debug-config=dump_cce` 同 TU 重跑，RC=0）
+
+driver 的 `working_dir = cwd/<opType>_<computeUnit>`（独立于 `--output-path`）：
+`build_out/op_kernel/ClefMatmulArAddRmsNorm_ascend910_93/`，6 个文件，其中冻结的关键文件：
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `bin_param/…-0.sh` | `e0fb4e87f4986c389f95883d3293bc787167613042c92e52cff4534f7cef56e6` |
+| `bin_param/…_param.json` | `9caf2d18153d57555d0f533bde6fdffbf90caec3cdbc637c80c3b1376de8b059` |
+| `/tmp/audit_build.log` | `150abca952e31bcae55ec1b513b150a8e36b0e8b50a3d9263a32988846919c45` |
+| `/tmp/dumpcce.log` | `eddb484566ad5a43cdf023ff8cf746b0d17dd1bbe64634842e50724220bc5232` |
+
+### 30.2 真实 pass 调用（`.sh` 原文）
+
+```
+asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
+  --soc_version=Ascend910_9391 --output=$2 \
+  --impl_mode=high_performance,optional --op_mode=dynamic --simplified_key_mode=0
+```
+
+三个名字**分别列、不作故障推断**：compute-unit `ascend910_93` / opc `--soc_version=Ascend910_9391` / 服务实机 `Ascend910_9382`。
+
+### 30.3 两处更正
+
+1. **外层 `--compile-options=""` ≠ 下游无 `-D`**：`dynamic/ClefMatmulArAddRmsNorm.py:259-302` **显式补** `DTYPE/ORIG_DTYPE/FORMAT`、`-DHIGH_PERFORMANCE=1`、`DETERMINISTIC_MODE` 等，`:327 get_code_channel`、`:332 compile_op`。此前那层推断**撤回**；`USE_SSBUF`/`USE_WORKSPACE` 最终取值须以该 `.py` + `asc_opc` 内部分支为准。
+2. **`taskRation=1:2` 只作本次生成元数据**：与 `get_subblockdim()` 运行返回值**无本次取得的直接契约**、**无设备实读**；**不得**写成"ratio 已证明"或"只剩一个条件"。
+
+### 30.4 D0 草案再收窄（仍未授权）
+
+- 两格写**请求的 `mm_dim` 预算** 1/2；`usedCoreNum` 与实际 launch **只记实测**、不预定；
+- 首末行 checksum **只验证采样位置**，不判全张量覆盖；要回答覆盖需**每参与者身份 + 区间记录 + 全范围检查**；
+- client 发 `End`/quit 与 server 收到**分别记观测可达性**，未采到一侧不可推定；
+- **180 s 与两格均未获授权**。
+
+### 30.5 明确缺项
+
+1. 逐 pass `-D` 宏表 / 预处理（宏在 `asc_opc` 内注入，今次未取得）；
+2. `__MIX_CORE_AIC_RATION__` 是否定义未知；
+3. `get_block_idx`/`get_subblockid`/`GetBlockNum` 运行值未取得；
+4. 本次重建**只证明本次构建**，不追证旧 E 装载。
