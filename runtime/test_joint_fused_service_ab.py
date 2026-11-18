@@ -228,9 +228,33 @@ def main() -> int:
         arm_blocked = True
     else:
         arm_blocked = False
+    arm_row = runner_arm.last_arm_row
     check("main arm cleanup on sampling error", arm_blocked
           and len(stopped) == 1 and stopped[0][0]["root"]["pid"] == 7
           and runner_arm.arm_identity is None)
+    check("failed arm row readable", arm_row.get("label") == "L"
+          and arm_row.get("error") == "AbError: sampling failed"
+          and arm_row.get("stop") == {"ok": True}
+          and arm_row.get("stop_error") is None
+          and arm_row.get("provenance", {}).get("root", {}).get("pid") == 7
+          and json.loads(json.dumps(arm_row))["error"])
+    runner_stop = object.__new__(mod.ServiceAB)
+    runner_stop.cleanup_unconfirmed = False
+    runner_stop.arm_identity = {"root": {"pid": 8}, "descendants": []}
+    runner_stop.start_arm = lambda flag, label: {"root": {"pid": 8}, "label": label}
+    runner_stop.run_inputs = lambda label: {"ok": True}
+    runner_stop.stop_tree = lambda identity, label: (_ for _ in ()).throw(
+        mod.AbError("stop failed"))
+    try:
+        runner_stop.run_arm(1, "S")
+    except mod.AbError:
+        stop_blocked = True
+    else:
+        stop_blocked = False
+    check("stop error row readable", stop_blocked
+          and runner_stop.last_arm_row.get("stop_error") == "AbError: stop failed"
+          and runner_stop.last_arm_row.get("samples") == {"ok": True}
+          and runner_stop.cleanup_unconfirmed is True)
 
     with tempfile.TemporaryDirectory(prefix="ab-restore-") as tmp:
         tree = Path(tmp) / "tree"

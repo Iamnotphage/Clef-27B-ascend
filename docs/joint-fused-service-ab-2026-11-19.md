@@ -6,8 +6,8 @@
 ## 身份
 
 - 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）；runner 通过 `Path(win.__file__)` 核 wrapper SHA，不依赖 wrapper 常量。
-- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `a87d809995d153f7a482c35b4158cd6e6f033d126a3c8c8182cbddddac7ea543`
-- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `481fb9284d5ca2bf6df2807094c046e92a6ead7eaee340df6d2cbf85c617f646`，8/8
+- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648`
+- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `197ba7cafa72e02a610f458c8593e03aa3679817bf291db1f2fefabc6850710d`，8/8
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 
 ## 命令（新不存在 run-dir）
@@ -42,14 +42,14 @@ runner 读取后重新计算 SHA，任一不符即中止；expect **由冻结请
   `CLEF_LAUNCH_CONFIG=s1`，`d0_restore.discover/verify` 四检（health/2 worker/text/image）。
 - 每请求即时写 raw JSONL（bodySHA/start/end/response/error），warmup 与正式样本分列；每臂完成即 append/flush `ab.json`。
 - start.sh 会 exec 成 vllm：wait 后只在同 PID/start/boot/PGID 连续且 argv 精确为 python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B，--served-model-name clef、--tensor-parallel-size 2、--port 18143、--host 127.0.0.1 时，才刷新运行期 root/后代快照；wait 异常同样先做该连续性刷新再精确清理，d0_stop 原字节不放宽。
-- 采样异常时逐臂 finally 先对已绑定 arm identity 精确 stop，再记录/抛错；stop 未确认阻断恢复。
+- 采样异常时逐臂 finally 先对已绑定 arm identity 精确 stop；run_arm 在 raise 前保存完整 arm_row（provenance/label/samples/error/stop_error），main 先 append+flush 再抛；stop 未确认阻断恢复。
 - 每臂固定 `CLEF_LAUNCH_CONFIG=s1`，记录实际 root env flag/source SHA/npu-smi 设备原件。
 - 候选 env 仅在两臂启动/probe child；生产恢复不继承候选键。
 - 任一必要步骤失败整体非 0；`ab.json` 分列 rounds/steps/error。
 
 ## CPU 测试范围
 
-20/20：schema expect、精确 argv token（错 port/TP/model 拒绝）、exec 连续性、main 采样异常逐臂 stop、main restore-only 未知源拒绝、ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
+22/22：失败臂记录可读回、schema expect、精确 argv token（错 port/TP/model 拒绝）、exec 连续性、main 采样异常逐臂 stop、main restore-only 未知源拒绝、ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
 真实服务启动/性能/质量由 27 现场执行、20 判定；本文件不报告服务收益。
 
 ## 服务启动 guard 适配（精确 aa3e）

@@ -387,12 +387,14 @@ class ServiceAB:
                 self.cleanup_unconfirmed = True
             if stop_error is None:
                 self.arm_identity = None
+        arm_row = {"label": label, "provenance": provenance, "samples": samples,
+                   "error": arm_error, "stop": stop_info, "stop_error": stop_error}
+        self.last_arm_row = arm_row
         if arm_error:
             raise AbError(arm_error)
         if stop_error:
             raise AbError(stop_error)
-        return {"label": label, "provenance": provenance, "samples": samples,
-                "error": None, "stop": stop_info, "stop_error": None}
+        return arm_row
 
     def start_arm(self, flag, label):
         try:
@@ -643,7 +645,17 @@ def main() -> int:
             ab.flush(f"round-{index}-start")
             for flag in order:
                 label = f"d0-ab-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{index}-{flag}-{uuid.uuid4().hex[:6]}"
-                arm_row = ab.run_arm(flag, label)
+                ab.last_arm_row = None
+                try:
+                    arm_row = ab.run_arm(flag, label)
+                except Exception as exc:
+                    partial = getattr(ab, "last_arm_row", None) or {
+                        "label": label, "provenance": None, "samples": None,
+                        "error": f"{type(exc).__name__}: {exc}",
+                        "stop": None, "stop_error": None}
+                    row["arms"][str(flag)] = partial
+                    ab.flush(f"round-{index}-flag-{flag}-error")
+                    raise
                 row["arms"][str(flag)] = arm_row
                 ab.flush(f"round-{index}-flag-{flag}")
     except Exception as exc:
