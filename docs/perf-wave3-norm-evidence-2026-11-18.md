@@ -829,3 +829,27 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 2. `__MIX_CORE_AIC_RATION__` 是否定义未知；
 3. `get_block_idx`/`get_subblockid`/`GetBlockNum` 运行值未取得；
 4. 本次重建**只证明本次构建**，不追证旧 E 装载。
+
+## 31. 冻结收口与 D0 设计（22，2026-11-18 22:53 CST，`58d6f30` / `d5fa324`）
+
+均只改文档/冻结件；**未改 kernel、未编译、未上板**。
+
+### 31.1 冻结与正文收口（`58d6f30`）
+
+- **两个 JSON 分阶段冻结**：`audit-frozen/kernel-json/kernel-bin-json.normalbuild.json`（`c3a4fbe4…e885a`，阶段 A）与 `…dumpcce.json`（`4a4fd9cb…dc58`，阶段 B）。
+- **pyc 明示未纳入**：`audit-frozen/EXCLUSIONS.txt` 记 `dynamic/__pycache__/*.pyc` 为字节码缓存，**不再写"6 件全有"**。
+- **§1 改两阶段**：阶段 A 普通构建 / 阶段 B 已完成定向 `dump_cce` 捕获。
+- **§3 End 改条件链**：`USE_WORKSPACE` 重载下 `isSyncGetC=sync=true` ⇒ `End()` 投 `MMFUN_END`；`USE_SSBUF` 分支需另判，**本次未取宏表**。
+- **清单非自含**：`MANIFEST.sha256` = `7e9d30b1ef6acaaeeab39ae24cbca97207da9ca960040c9b9d6a35fb36f3fc67`，8 条实测项 + 2 个 JSON + 5 行 `#` 链接记录；`liboptiling.so` 原链接文本、realpath、目标 419792 B / `de96a08d…3a1b79` 及本地相对链接的**目标副本**均已冻结。
+
+### 31.2 D0 设计（`d5fa324`，只设计，未实施）
+
+- **首候选只有一格**：请求 `mm_dim=1` + **AR 关闭**（`use_hccl=2`）；**预算 2 仅条件草案**，不写"已排两格"。
+- **trace 出口**：现有 `diag` 固定 8 float、`partial` 在 user workspace 非输出 ⇒ 设计**新增独立 `trace` 输出**（host 声明 shape、adapter 读取、workspace 显式分段、超界在 tiling 拒绝），**不复用 8 float、不与 workspace 重叠**。
+- **槽分域用原始值**：`domain(AIC/AIV) + get_block_idx() + get_subblockid()` 计算，**不用 `GetBlockIdx()` 推导**（ratio 未验证会造别名）；越界**停止并置 oob**，不截断不回绕。
+- **插桩表分两类**：kernel 可达点带本包行号（`:184` REGIST 前/后、`:221-222` worker 判定、`:249` IterateAll 后、`:255` End 前/后、`:308` 屏障前/后、作用域退出）；**SDK 内部点无钩子** —— `:184` 之后 **AIC 已从 `Process()` 返回**，End 只证调用/返回，析构只证范围退出；`MMFUN_END`/`SERVICE_QUIT` 实发与 **server 收到**一律记**缺项**，**client 发送与 server 接收分列**。
+- **三件事分开**：认领区间覆盖（host 检查 `Σ curSingleM == M` 且不交）≠ 实际写入覆盖（全量读 `partial` + 哨兵）≠ 消费点 GM 可见性（单列未观测）；`partial` 全量诊断与**固定数值门**（mixed 容差）分别记录；首末 checksum **仅采样范围**。
+- **超时**：单次有界（建议 180 s），到点杀进程、记录 `RAW_RC`/槽数/OOB、恢复服务；**超时不能单独归因 `SyncAll`**。
+- **未观测项 5 条**：MMFUN_END/quit 实发与 server 收到、消费点可见性、三个运行值、宏表、预算 2 的全部结论。
+
+**是否实现与执行由 20 决定。**
