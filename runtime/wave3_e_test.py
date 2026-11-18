@@ -45,6 +45,8 @@ def main() -> int:
     ap.add_argument("--norm-ub-late", type=int, default=1)
     ap.add_argument("--mm-btrans", type=int, default=0)
     ap.add_argument("--mm-step", type=int, default=0)
+    ap.add_argument("--probe-partial", action="store_true")
+    ap.add_argument("--probe-norm", action="store_true")
     ap.add_argument("--adapter-dir", type=Path, required=True)
     ap.add_argument("--op-api-dir", type=Path, required=True)
     ap.add_argument("--build-dir", type=Path, required=True)
@@ -68,6 +70,48 @@ def main() -> int:
     r = torch.randn(m, n, generator=g).to(torch.bfloat16).npu()
     gamma = torch.rand(n, generator=g).to(torch.bfloat16).npu()
 
+    if a.probe_norm:
+        # Same-partial Norm isolation: the op runs with mm_enable=0 (no cube)
+        # and receives this exact tensor as x, so both arms norm one identical
+        # partial; nothing re-computes a GEMM.
+        partial = torch.matmul(x, w)
+        if a.use_hccl == 1:
+            dist.all_reduce(partial, op=dist.ReduceOp.SUM)
+        torch.npu.synchronize()
+        # The host still validates w.shape[0] == K, so give it a dummy with
+        # the partial's own K; no cube runs in this arm.
+        w_dummy = torch.empty((partial.size(1), partial.size(1)), dtype=x.dtype,
+                              device=x.device)
+        out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(
+            partial, w_dummy, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim,
+            0, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step)
+        torch.npu.synchronize()
+        ry, rrs, rres = torch_npu.npu_add_rms_norm(partial, r, gamma, a.eps)
+        torch.npu.synchronize()
+        dy = (out.float() - ry.float()).abs()
+        dres = (res_out.float() - rres.float()).abs()
+        drstd = (rstd.float() - rrs.float().reshape(-1)).abs()
+        summary_n = {"rank": rank, "probe": "norm", "use_hccl": a.use_hccl,
+                     "same_partial": True,
+                     "max_abs_y": float(dy.max().cpu()),
+                     "max_abs_residual_sum": float(dres.max().cpu()),
+                     "max_abs_rstd": float(drstd.max().cpu()),
+                     "y_gt_0.02": int((dy > 0.02).sum().cpu()),
+                     "y_gt_0.01": int((dy > 0.01).sum().cpu()),
+                     "res_gt_0.01": int((dres > 0.01).sum().cpu()),
+                     "elements": int(dy.numel()),
+                     "max_abs_partial": float(partial.float().abs().max().cpu()),
+                     "max_abs_gamma": float(gamma.float().abs().max().cpu()),
+                     "diag": [float(v) for v in diag.cpu()]}
+        a.output.parent.mkdir(parents=True, exist_ok=True)
+        a.output.with_name(a.output.stem + f"-rank{rank}-norm.json").write_text(
+            json.dumps(summary_n, ensure_ascii=False, indent=1) + "\n")
+        print(json.dumps(summary_n, ensure_ascii=False), flush=True)
+        dist.barrier(); dist.destroy_process_group()
+        return 0
+    if a.probe_partial:
+        r = torch.zeros_like(r)
+        gamma = torch.ones_like(gamma)
     out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step)
     torch.npu.synchronize()
 
@@ -95,6 +139,38 @@ def main() -> int:
                "max_abs_y": float(dy.max().cpu()), "max_abs_residual_sum": float(dres.max().cpu()),
                "max_abs_rstd": float(drstd.max().cpu()), "y_gt_0.01": int((dy > 0.01).sum().cpu()),
                "elements": int(dy.numel())}
+    if a.probe_partial:
+        # res_out is z = partial + 0, i.e. the reduced matmul output itself.
+        ref_p = torch.matmul(x, w)
+        if a.use_hccl == 1:
+            # rank-local reference must stay rank-local when AR is off (A arm)
+            dist.all_reduce(ref_p, op=dist.ReduceOp.SUM)
+        dp = (res_out.float() - ref_p.float()).abs()
+        flat = dp.flatten()
+        k = min(5, flat.numel())
+        top = torch.topk(flat, k)
+        idx = [[int(i // n), int(i % n)] for i in top.indices.cpu().tolist()]
+        # Criterion 1: every mismatch must be an integer multiple of the bf16
+        # lsb of its own magnitude (bf16: 8 mantissa bits, lsb = 2^(e-7)).
+        mask = dp > 0
+        av = ref_p.float().abs()
+        expo = torch.floor(torch.log2(torch.clamp(av, min=2.0 ** -126)))
+        lsb = torch.pow(2.0, expo - 7.0)
+        ratio = torch.where(mask, dp / lsb, torch.zeros_like(dp))
+        bad = ((ratio - ratio.round()).abs() > 1e-3) & mask
+        rmax = ratio[mask]
+        summary_p = {"rank": rank, "probe": "partial",
+                     "criterion1": {"mismatch_count": int(mask.sum().cpu()),
+                                    "ratio_max": float(rmax.max().cpu()) if rmax.numel() else 0.0,
+                                    "non_integer_count": int(bad.sum().cpu())},
+                     "max_abs_partial": float(flat.max().cpu()),
+                     "gt_0.5": int((dp > 0.5).sum().cpu()), "gt_0.1": int((dp > 0.1).sum().cpu()),
+                     "top": [{"row": r_, "col": c_, "diff": float(v)} for (r_, c_), v in
+                             zip(idx, top.values.cpu().tolist())]}
+        a.output.parent.mkdir(parents=True, exist_ok=True)
+        a.output.with_name(a.output.stem + f"-rank{rank}-partial.json").write_text(
+            json.dumps(summary_p, ensure_ascii=False, indent=1) + "\n")
+        print(json.dumps(summary_p, ensure_ascii=False), flush=True)
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.with_name(a.output.stem + f"-rank{rank}" + a.output.suffix).write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n")
     print(json.dumps(summary, ensure_ascii=False), flush=True)
