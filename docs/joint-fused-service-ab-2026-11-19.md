@@ -96,3 +96,31 @@ AB runner 8/8。adapter 源码 diff 即上述两个常量与 `allowed_postimage`
 - finally 必须回 f810、revert service-check adapter、唯一 label 恢复四检；任一未知源/身份拒绝。
 - 质量结论仍需独立 OD/ERQA 真 f810 全量对照；固定三输入只作服务/概率一致性门，不替代质量门。
 - 该模式尚未实现，需 23 另核；不在当前 AB runner 默认路径，不改变现有两臂协议。
+
+## 独立 f810 source-control runner（已实现，待23核）
+
+新入口 `runtime/joint_fused_source_control.py`，不改变冻结的两臂 aa3e runner/证据。
+
+- A 臂：真实 f810 源码，`CLEF_JOINT_FUSED_ATTN=0`，不带 allow env。
+- B 臂：aa3e + flag1，带 exact `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e`。
+- 固定 od-0105/od-1534/erqa-0000，bodySHA 由基座 runner 校验；4 轮 ABBA、5 reps、3 warmup。
+- 每臂唯一 `d0-src-…` label；前臂精确 stop/端口 closed 后才切源：
+  - f810 用 installer `--check`，必要时 `--revert`；aa3e 用 `--check`，必要时 `--apply`；
+  - 每次 mutation 写 owned `source-<tag>-<source>.json` manifest，并核实际 target SHA。
+- 启动后同 PID/start/boot/PGID + final vllm argv、source SHA、root env 硬断言；A 无 allow env，
+  B allow 精确 aa3e。
+- finally 回 f810、revert service-check adapter、恢复原 guard `765956…` 与唯一 label 四检；
+  任一源/身份/guard 不清则阻断 restore。
+- 失败臂保留完整 arm_row（含两类 error）并即时 flush。
+
+CPU：`runtime/test_joint_fused_source_control.py` 10/10（ABBA、A/B env 隔离、no-op/apply/revert
+切源、unknown source/端口 open 拒绝、main 旧目录与非 f810 初始源拒绝）。23 核后由 27 执行：
+
+```bash
+PY=/workspace/yangchen/venvs/clef-py312/bin/python
+REPO=/workspace/yangchen/work/scratch-24/joint-fused-source-control-<fullSHA>
+RUN=/workspace/yangchen/logs/joint-fused-source-control-27-<fullSHA>-$(date -u +%Y%m%dT%H%M%SZ)
+$PY $REPO/runtime/joint_fused_source_control.py --run-dir "$RUN" --repo "$REPO" \
+  --tree /workspace/yangchen/work/src/vllm --python "$PY" \
+  --stop-script /tmp/d0cc/d0_stop.py --rounds 4 --reps 5 --warmup 3
+```
