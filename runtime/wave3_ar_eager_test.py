@@ -153,26 +153,79 @@ def main() -> int:
         and correctness["max_abs_residual_sum"] <= 0.01
         and correctness["max_abs_rstd"] <= 1e-3)
 
-    buf = torch.empty_like(x)
-
-    def arm_copy():
-        buf.copy_(x)
+    # Symmetric preparation: both arms copy their input into a private scratch
+    # buffer inside the timed region, so the harness restore cost is identical.
+    scratch_b = torch.empty_like(x)
+    scratch_c = torch.empty_like(x)
 
     def arm_baseline():
-        buf.copy_(x)
-        dist.all_reduce(buf, op=dist.ReduceOp.SUM)
-        torch_npu.npu_add_rms_norm(buf, r, g, args.eps)
+        scratch_b.copy_(x)
+        dist.all_reduce(scratch_b, op=dist.ReduceOp.SUM)
+        torch_npu.npu_add_rms_norm(scratch_b, r, g, args.eps)
 
     def arm_candidate():
-        torch.ops.clef_ar.ar_add_rms_norm(x, r, g, args.eps, 1, group_name)
+        scratch_c.copy_(x)
+        torch.ops.clef_ar.ar_add_rms_norm(scratch_c, r, g, args.eps, 1, group_name)
 
-    timings = {}
-    for name, fn in (("copy_only", arm_copy), ("baseline", arm_baseline), ("candidate", arm_candidate)):
-        wall, dev = timed(fn, args.warmup, args.iters)
-        timings[name] = {"wall_ms": stats(wall), "device_ms": stats(dev),
-                         "wall_samples": wall, "device_samples": dev}
+    # Primary comparison: input-ready. The restore copy and its completion sync
+    # run OUTSIDE the timed region for both arms; the copy inside arm_baseline /
+    # arm_candidate is therefore split out into arm_*_ready.
+    def arm_baseline_ready():
+        dist.all_reduce(scratch_b, op=dist.ReduceOp.SUM)
+        torch_npu.npu_add_rms_norm(scratch_b, r, g, args.eps)
 
+    def arm_candidate_ready():
+        torch.ops.clef_ar.ar_add_rms_norm(scratch_c, r, g, args.eps, 1, group_name)
+
+    def prepare(buf):
+        buf.copy_(x)
+        torch.npu.synchronize()
+
+    for _ in range(args.warmup):
+        prepare(scratch_b)
+        arm_baseline_ready()
+        prepare(scratch_c)
+        arm_candidate_ready()
+    torch.npu.synchronize()
+    run_id = time.strftime("%Y%m%dT%H%M%S")
+    rows = []
+    for it in range(args.iters):
+        order = (("baseline", arm_baseline_ready, scratch_b),
+                 ("candidate", arm_candidate_ready, scratch_c)) if it % 2 == 0 \
+            else (("candidate", arm_candidate_ready, scratch_c),
+                  ("baseline", arm_baseline_ready, scratch_b))
+        for arm, fn, buf in order:
+            prepare(buf)  # outside the timed region
+            start = torch.npu.Event(enable_timing=True)
+            end = torch.npu.Event(enable_timing=True)
+            begin = time.perf_counter()
+            start.record()
+            fn()
+            end.record()
+            torch.npu.synchronize()
+            rows.append({"run_id": run_id, "pair_id": it, "arm": arm, "iter": it,
+                         "rank": rank,
+                         "wall_ms": (time.perf_counter() - begin) * 1000.0,
+                         "event_ms": start.elapsed_time(end)})
+    by_arm = {"baseline": [], "candidate": []}
+    by_arm_dev = {"baseline": [], "candidate": []}
+    for row in rows:
+        by_arm[row["arm"]].append(row["wall_ms"])
+        by_arm_dev[row["arm"]].append(row["event_ms"])
+    timings = {arm: {"wall_ms": stats(by_arm[arm]), "device_ms": stats(by_arm_dev[arm]),
+                     "wall_samples": by_arm[arm], "device_samples": by_arm_dev[arm]}
+               for arm in ("baseline", "candidate")}
+    del scratch_b, scratch_c
+
+    import hashlib
+    script_sha = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    adapter_so = args.build_dir / "clef_ar_adapter.so"
+    adapter_sha = hashlib.sha256(adapter_so.read_bytes()).hexdigest() if adapter_so.is_file() else None
     rank_summary = {
+        "run_id": run_id,
+        "script_sha256": script_sha,
+        "adapter_sha256": adapter_sha,
+        "op_api_dir": str(args.op_api_dir),
         "rank": rank,
         "group_name": group_name,
         "rows": m,
@@ -185,6 +238,9 @@ def main() -> int:
     }
     out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
+    with (out_dir / f"rank{rank}.rows.jsonl").open("w") as handle:
+        for row in rows:
+            handle.write(json.dumps(row, ensure_ascii=False) + "\n")
     (out_dir / f"rank{rank}.json").write_text(
         json.dumps(rank_summary, ensure_ascii=False, indent=1) + "\n")
     print(json.dumps({"rank": rank, "correctness": correctness,

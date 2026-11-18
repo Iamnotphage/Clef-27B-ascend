@@ -159,3 +159,24 @@
   AR+Add+RMSNorm 子链上仍接近于零 —— 真正的收益必须来自把 MatMul 一起融合（去掉中间写回/读回并让 AR 与
   GEMM 重叠），即 A–E 的 E 组。
 - 仍未做服务级或质量结论；单形状数据不外推 S1 P95。
+
+## 8. 计时口径修正与输入就绪主对照（2026-11-18 13:35 CST）
+
+按 23 的审计要求修正：
+
+- **主对照（input-ready）**：两臂的输入恢复 `copy_` 与完成同步都放在**计时区外**；计时区内 baseline 只做
+  `dist.all_reduce + npu_add_rms_norm`，candidate 只做融合算子。AB/BA **逐轮交错**。
+- **辅助臂**：两臂各含一次对称恢复拷贝（用于对照“含准备”的口径），保留但不用于净收益结论。
+- 原始行保存 `run_id / pair_id / arm / iter / rank / wall_ms / event_ms`，脚本与 adapter SHA 写入 JSON；
+  copy-only 仅作诊断，**不做减法**；`max(local duration)` 只是慢 rank 代理，不是严格 makespan。
+
+主对照结果（中位，warmup 5 / 20 次，两 rank 均 `numeric_pass=true`）：
+
+| 臂 | rank0 墙钟（event） | rank1 墙钟（event） |
+| --- | ---: | ---: |
+| baseline：`all_reduce` + `npu_add_rms_norm`（输入已就绪） | 0.4594（0.3672） | 0.4530（0.3424） |
+| candidate：融合 AR+Add+RMSNorm（输入已就绪） | **0.4958（0.4081）** | **0.4895（0.3821）** |
+
+- 辅助臂（两侧都含拷贝）：baseline 0.5098、candidate 0.5150 ms（交错）。
+- **结论：在该实现下，融合子链比 native 路径慢约 8–11%**（墙钟与 device 同向）。这是当前 kernel 实现的结果，
+  不是 T1 整体的结论；收益只能从更大的融合范围（MatMul）或其他路径取得，需由 B/E 实测判定。
