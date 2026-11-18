@@ -117,3 +117,22 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 
 
 单轮基线转发 v5 经23有限核通过：supervisor SHA `172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876`、test `044a4ef7033a8a2d7929aa3ea3413a0b1f0b1883274a18ba3cd70fada82e3ff0`。本体只更新28单轮runner pin为 `7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab` 并显式转发仅s1的 `--single-baseline-round`；所有监督/清理函数AST保持v4。新增3项CLI CPU测试通过。默认完整phase与最终S1≥3轮门保持，单轮输出单独标记 baseline_single_round/final_s1_complete=false。旧v4独立stage与commit保留。单轮仍待合法clean恢复和严格env检查通过后执行。
+
+
+## smallQ B/D：元数据去重取得局部收益
+
+来源 `9b803fefba4d1aa3beab1125bb4cbc7a3daae12f`，profile71f7e7a1…51bf3b；D只在每调用内复用shape/device/stride，同一KV对象校验一次，动态env/training/grad/参数dtype-device/原domain继续检查。kernel/tile/projection不变、无跨调用缓存。原11gate与额外D/B bitwise、defaultoff、fallback通过，single_variable/storage/frozen verified均为true。
+
+9格×4轮×2臂×20共1440条正式raw，BD/DB/DB/BD。完整head D−B四轮配对中位wall：L307 −0.0458875 ms、L967 −0.0369825 ms、L1595 −0.0495500 ms；device分别 −0.0439849/−0.0390600/−0.0471551 ms，各4/4更快。范围仅相对冻结B的局部改善，生产f810总路径差待同窗A/D直接对照，暂不升级服务。
+
+远端 `/workspace/yangchen/logs/joint-smallq-bd-27-v1-first/`，外层rc0；probe8aea817c…dfcd，window862af0c0…f136 overall0、cleanup reaped/unknown0/residual0，revert f810、删除kernel，四检恢复通过。label `d0-restore-20261118T193157Z-1b3839a2`，root1220123，workers1220262/1220263。原件：[probe gzip](../Clef-27B/logs/overnight-20261119-owner27/smallq-bd/probe/head-probe.json.gz)、[配对重算](../Clef-27B/logs/overnight-20261119-owner27/smallq-bd/paired-summary.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/smallq-bd/restore.json)。
+
+## Grouped API首格超时与独立clean恢复
+
+来源 `e529a5ec858273482a14355a7e36d456d0935b34`，仅固定rows967、seed20261118，两rank，合法streamMode1与冻结NZ生产参考。远端 `/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/`。NZ baseline和ND diagnostic原始输出均已落盘；candidate未产生输出。240s边界触发原5c监管清理，probe rc−9/timed_out=true/reaped=true。原saved只有leader1221671，清理记录unknown成员1221672/1221680/1221681，residual为空；恢复按unknown门被阻断。原window overall1及所有错误保留，不将本窗标为成功。
+
+03:42:39 CST strict全/proc、端口和npu查询证明四PID与PGID1221671全部gone、无候选runner、18143=111、卡7无运行进程；sourcef810/guard765956，smallQ不存在。该fresh证据与原record/window分别绑定SHA，恢复没有新增signal。23核准一次脚本17f8d804…9826后，27调用已核ebca clean restore_prod及原六d0四检，外层fresh核activate3b363、历史expected12933B/fcbdcb及OPP/LD value SHA；原失败窗口不覆盖。
+
+恢复远端 `/workspace/yangchen/logs/handoff27-grouped-recover-20261118T194732Z-e36660ba/`，外层rc0，complete.ok=true/signals=[]；label `d0-restore-20261118T194732Z-3e31e017`，root1222521，workers1222677/1222678，五PID同PGID/SID1222521及boot393ecc。四检均rc0/oktrue，OPP9项、LD12项与历史expected逐字节相等，23独立闭合。原件：[失败window](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-timeout/window.json)、[失败record](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-timeout/probe/record.json)、[fresh gone](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/earlier-fresh-gone.json)、[恢复complete](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/complete.json)、[四检](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/restore.json)、[env严格比对](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/restore-env-compare.json)。
+
+结论限于固定首调用未完成，prepare/launch/sync尚未定位；没有Grouped候选精度、timing或profile证据。ND/NZ诊断差异单独记录，保持原NZ参考与冻结门。后续不直接重试；当前先按20队列执行ebca真f810 source-control，随后rstd8和A/D。

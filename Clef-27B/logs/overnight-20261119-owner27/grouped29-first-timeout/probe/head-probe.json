@@ -1,0 +1,53 @@
+{
+  "schema": "n1-probe/1",
+  "protocol": "grouped29-window/1",
+  "gate_passed": false,
+  "cell": {
+    "rows": 967,
+    "seed": 20261118,
+    "eps": 1e-06
+  },
+  "parameters": {
+    "splitItem": 0,
+    "groupList": null,
+    "reduceOp": "sum",
+    "commTurn": 0,
+    "streamMode": 1,
+    "groups": 1,
+    "bias": "FP32 zero [5120]"
+  },
+  "error": null,
+  "argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "-m",
+    "torch.distributed.run",
+    "--standalone",
+    "--nnodes=1",
+    "--nproc-per-node=2",
+    "--max-restarts=0",
+    "--run-path",
+    "--start-method=spawn",
+    "/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/stage/runtime/grouped29/run_probe.py",
+    "--owner",
+    "clef-27b-ascend-27",
+    "--identity",
+    "/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/stage/runtime/grouped29/identity.json",
+    "--adapter",
+    "/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/stage/runtime/grouped29/clef_grouped29.so",
+    "--gate",
+    "/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/stage/runtime/grouped29/fixed_gate.py",
+    "--output",
+    "/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v3/probe/cell",
+    "--rows",
+    "967",
+    "--seed",
+    "20261118",
+    "--n1-cell",
+    "/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310/probe/cell",
+    "--timing",
+    "--profile"
+  ],
+  "pgid": 1221671,
+  "identity_sha256": "4ac530a31861fadc3cd6006306a254b95ee5bb6580a411f04734617a75b55bb6",
+  "adapter_sha256": "4d9e7d2b82dd45741d72732974eabaf1569896792535ecfb9ca0e4881bd6619d"
+}

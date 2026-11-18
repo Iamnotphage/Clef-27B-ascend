@@ -1,0 +1,205 @@
+{
+  "schema": "grouped29-probe/1",
+  "owner": "clef-27b-ascend-27",
+  "rank": 1,
+  "rows": 967,
+  "seed": 20261118,
+  "eps": 1e-06,
+  "stage": "loaded_and_inputs_fixed",
+  "identity_sha256": "4ac530a31861fadc3cd6006306a254b95ee5bb6580a411f04734617a75b55bb6",
+  "identity": {
+    "schema": "grouped29-aot/2",
+    "pinned": {
+      "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so": "eb1c788e39b7a02f0694450e917a3771c7e65d7d8fb9ea2e03f78c4a5313c456",
+      "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libnnopbase.so": "72cd43b4af1c9c451b566ccb7b32071793402949578f838d8345e369b056477c",
+      "/usr/local/Ascend/cann-9.2.1/aarch64-linux/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h": "c015a1eb0e28e8137240f34ad2695e77ef720a00509ba495020dbbe6ced91339"
+    },
+    "n1_cell": {
+      "path": "/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310/probe/cell",
+      "meta_shas": [
+        "5b2261c6fe4fa2e0b5e948ee341186137ec07c312da493b7cb1e2ebeee0aeec6",
+        "a14f9649e63f6d4f2d4b45dd650c905b77c6591443823cb1100ef590f2a8e499"
+      ]
+    },
+    "adapter": {
+      "build_path": "/workspace/yangchen/work/grouped29-20261119-v3/clef_grouped29.so",
+      "sha256": "4d9e7d2b82dd45741d72732974eabaf1569896792535ecfb9ca0e4881bd6619d"
+    },
+    "gate_sha256": "041a66aa81c52d2a53bd825cf406323d7185759242669dff64b3551f86eba849",
+    "sources": {
+      "binding.cpp": "c16b33ac2e775b84f50920040b7990197afbc110ef342841e63ad965708fa88d",
+      "compile.sh": "b7c5c0d2b2faefb4c79d0a1130be6baeeddf8c3af34d9fe68fe769df2873257d",
+      "contract.py": "e14c3d7c97be7141cd79a4b743fd7afdd458167708c2533d10d76550c04b9dd0",
+      "run_probe.py": "8b9b125538470163fda7117fa956e658f9603896a936ba3a1c410aa85456fece",
+      "timing_contract.py": "8435a3e9d537f23eaea6c4c74113c4f0b05bd743cf5dda505fa2860b1a2466ac",
+      "aggregate.py": "bf56b7db1d4fa0edc65e455ca7f347dde8adc65b062671d7d10d5c1780c74632",
+      "window_common.py": "773a283fc7581b22959474f0a6bdfdee8844e4c9b8766f3cf4a0c3215299fdba",
+      "window_hook.py": "fcdc2d7b9a38d18843df9111c100f4931ee2b10d105cbdcaee459ba04d05ee7f",
+      "window_probe.py": "cbc54b0c5ef855dd316205c5c6188abbe2ff1cc6b6839490461aedd59d188d2c",
+      "supervised_window.py": "4dc2b059fa233598960deba9d319fee8671c7862e6a6854573c2113ed63ce9be"
+    }
+  },
+  "inputs": {
+    "x": {
+      "shape": [
+        967,
+        8704
+      ],
+      "dtype": "torch.bfloat16",
+      "bytes": 16833536,
+      "sha256": "220586f0b0d5edab9e8f2e5cfe6da8a81bf444ecc90f0b5c0ddc8206566d4b35"
+    },
+    "w": {
+      "shape": [
+        8704,
+        5120
+      ],
+      "dtype": "torch.bfloat16",
+      "bytes": 89128960,
+      "sha256": "12539641fe24794c9e17cac3c83c0147705ff04f8afe93fd58ef1405d0926785"
+    },
+    "r": {
+      "shape": [
+        967,
+        5120
+      ],
+      "dtype": "torch.bfloat16",
+      "bytes": 9902080,
+      "sha256": "62a80d252e84ffcf82c8ca613e0158dc0bf6b90ca06d55802c61b73c8ebb955f"
+    },
+    "gamma": {
+      "shape": [
+        5120
+      ],
+      "dtype": "torch.bfloat16",
+      "bytes": 10240,
+      "sha256": "5cadbc9f2438a7db5712c8cc7d3ac9ecfd3b68c90b5d1dac35401d3bbaecddfb"
+    }
+  },
+  "files": {},
+  "performance_valid": false,
+  "hostname": "25e6d0590726",
+  "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+  "clock": {
+    "implementation": "clock_gettime(CLOCK_MONOTONIC)",
+    "monotonic": true,
+    "adjustable": false,
+    "resolution": 1e-09
+  },
+  "pid": 1221681,
+  "pgid": 1221671,
+  "n1_cell": "/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310/probe/cell",
+  "parameters": {
+    "splitItem": 0,
+    "groupList": null,
+    "reduceOp": "sum",
+    "commTurn": 0,
+    "streamMode": 1,
+    "groups": 1,
+    "bias": "FP32 zero [5120]"
+  },
+  "boundary": "GroupedMatMulAllReduce followed by native AddRMSNorm",
+  "reference": "service-format BF16 NZ F.linear -> BF16 dist.all_reduce -> native AddRMSNorm",
+  "native_grouped_rstd": null,
+  "rstd_source": "actual output of subsequent native AddRMSNorm",
+  "versions": {
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0.post7"
+  },
+  "weight": {
+    "key": "model.language_model.layers.0.mlp.down_proj.weight",
+    "shard": "model-00002-of-00012.safetensors",
+    "slice": [
+      8704,
+      17408
+    ]
+  },
+  "n1_input_match": true,
+  "group": "group_name_0",
+  "both_rank_inputs": [
+    {
+      "x": {
+        "shape": [
+          967,
+          8704
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 16833536,
+        "sha256": "220586f0b0d5edab9e8f2e5cfe6da8a81bf444ecc90f0b5c0ddc8206566d4b35"
+      },
+      "w": {
+        "shape": [
+          8704,
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 89128960,
+        "sha256": "1fd0e09d01aa862184076b0313a3566c697d644610e62dae902e09a4e8e6e72b"
+      },
+      "r": {
+        "shape": [
+          967,
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 9902080,
+        "sha256": "62a80d252e84ffcf82c8ca613e0158dc0bf6b90ca06d55802c61b73c8ebb955f"
+      },
+      "gamma": {
+        "shape": [
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 10240,
+        "sha256": "5cadbc9f2438a7db5712c8cc7d3ac9ecfd3b68c90b5d1dac35401d3bbaecddfb"
+      }
+    },
+    {
+      "x": {
+        "shape": [
+          967,
+          8704
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 16833536,
+        "sha256": "220586f0b0d5edab9e8f2e5cfe6da8a81bf444ecc90f0b5c0ddc8206566d4b35"
+      },
+      "w": {
+        "shape": [
+          8704,
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 89128960,
+        "sha256": "12539641fe24794c9e17cac3c83c0147705ff04f8afe93fd58ef1405d0926785"
+      },
+      "r": {
+        "shape": [
+          967,
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 9902080,
+        "sha256": "62a80d252e84ffcf82c8ca613e0158dc0bf6b90ca06d55802c61b73c8ebb955f"
+      },
+      "gamma": {
+        "shape": [
+          5120
+        ],
+        "dtype": "torch.bfloat16",
+        "bytes": 10240,
+        "sha256": "5cadbc9f2438a7db5712c8cc7d3ac9ecfd3b68c90b5d1dac35401d3bbaecddfb"
+      }
+    }
+  ],
+  "layout": {
+    "candidate_weight_cpu_layout_wall_ms": 270.58965,
+    "candidate_weight_upload_wall_ms": 1.84036,
+    "candidate_weight_format": 2,
+    "service_weight_format": 29,
+    "service_nz_setup_wall_ms": 11.32674,
+    "candidate_static_weight_bytes": 89128960,
+    "scope": "separate CPU ND layout, ND weight upload, and device transpose/NZ reference setup; excluded from timing"
+  },
+  "provider": "prepare/launch=/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so;metadata=/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libnnopbase.so"
+}
