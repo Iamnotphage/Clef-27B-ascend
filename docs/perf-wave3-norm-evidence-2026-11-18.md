@@ -498,3 +498,27 @@
 
 - 身份：seed **20261119**、script 与包同 §21（`ndrt 2ee1c9ce`）；运行 `RAW_RC=0`，独立新输出路径 `e-full-2119.json`。
 - **可比范围**：以上仅为**本 run 的实际值**。此前 seed 20261119 的 78 项来自 **FP32 SUM 参考**，摘要数字相同**不能**证明失败集合或协议可复现；两者不合并、不互相追认。
+
+## 23. NZ 格契约失败（2026-11-18 21:39 CST）
+
+### 23.1 结果：在 OpDef 前置被拒，未进入 tiling/kernel
+
+- 运行：`nzguard_9a1c20cc`（`wave3 @ 65399e6`），实际 vendor **`wave3-e-install18`**（runner stdout 静态头写 `nzfmt_11eda865/install17`，**以本行为准**，原 stdout 不改）。
+- adapter 实读描述符：`format=2`、`storage=[8704,5120,-1,-1]`、`strides=[5120,1]`、`offset=0`（两 rank 一致）。
+- 最早异常：**`GetWorkspaceSize` 161002 / EZ1009**，`actual w BF16 ND` 与 `OpDef w FRACTAL_NZ` 不匹配 → **只支持在 OpDef 格式前拒绝**。
+- 因此：**host 自定义 tiling 未执行、无有效 `diag` 输出**，`diag[7]` 无值；不得写成"tiling 已执行/已校验"。
+
+### 23.2 直接线索（23 独立实读，冻结目录内可复现）
+
+`run-nzguard.log` 开头两 rank 均有：
+
+- `FormatCastKernelNpu.cpp:167`：**"Cannot create tensor with internal format while allow_internal_format=False, tensor will be created with base format"**
+- `TensorFactories.cpp:437` 重复同一警告
+
+即 `npu_format_cast(w, 29)` 在 `allow_internal_format=False` 的创建路径下**静默回落到 base format（ND）**，与 adapter 实读的 `format=2` 完全一致。
+
+### 23.3 边界
+
+- 该配置分支是**可核实的直接线索**，但尚未由我方独立确认修复路径；
+- 不据 4D 文档示例推断"2D 不支持"，也不以手写 29 伪装 NZ；
+- 冻结目录：`/workspace/yangchen/logs/perf-wave3-20261118/nz-contract-fail-20261118/`（`SHA256SUMS` 校验 2/2 OK）。
