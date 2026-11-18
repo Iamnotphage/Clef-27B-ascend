@@ -1,0 +1,94 @@
+# Joint head 跨注意力内核化候选（2026-11-19）
+
+状态：**CPU 实现/安装器/数学等价检查完成，未上板**。真实收益由 21 在同一窗口 ABBA 验证；本文不报告未实测收益。
+
+## 1. 基线与闭题边界
+
+- 远端工程 HEAD `3e83ae17df7b559e`；vLLM-Ascend `89eb8a5e`；21 服务分支 `0bd6f6a`（`perf/wave2-npu-wave3`）。
+- 当前安装的 head postimage：`vllm/model_executor/models/clef_joint_schema.py`
+  SHA-256 `f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863`（23 只读确认与 preimage 一致）。
+- T3「head/pooler 与前端去同步/序列化/简单向量化」已服务内打点关闭（`docs/perf-wave2-research.md` §3）：
+  967 token 4 候选 pooler 5.90–6.25 ms、head 4.78–5.05 ms；CPU 卸载、跨请求批处理、tolist/D2H 均无收益。
+- 本候选不重做上述路径；只改 **kernel 边界**：单字段路径的 6 处跨注意力（4 个 decoder 层 + 2 个
+  evidence routing 层）由 `nn.MultiheadAttention` 改为 `npu_fusion_attention`，保留 q/k/v 与 out 投影。
+
+## 2. 候选实现
+
+新 postimage：`runtime/joint_fused_attention/clef_joint_schema.py`
+SHA-256 `4e5c450f481579c30bbf892d6fac7c10c9aaa22c4841d0965665273760a25189`。
+
+- 环境开关 `CLEF_JOINT_FUSED_ATTN`，默认 **0**；为 1 且 `CLEF_JOINT_SINGLE_FIELD=1` 时，6 处
+  cross-attention 使用 `torch_npu.npu_fusion_attention(..., "BSH", scale=1/sqrt(64), keep_prob=1.0)`。
+- 融合仅替换 attention 内部的 softmax + 两次 bmm；q/k/v、out_proj、LayerNorm、FFN、残差和最终打分不变。
+- Q>1 或多字段路径不启用该融合；`in_proj_weight` 缺失时回退原 MHA。
+- 默认关闭时行为与 `f8101b98` 完全一致；安装器只换文件，不改变默认配置。
+
+## 3. 收益预算与关闭条件
+
+- 预算（假设，未实测）：6 个 attention 块，每块减少 2–3 次下发/中间读写；head 5 ms 中的
+  **0.3–0.8 ms/请求**；S1 967 p95 影响约 ≤0.5%。
+- 关闭条件：head probe 三轮交错中 device 或 wall 中位收益 `<0.3 ms`，或方向不一致；关闭后不启服务 A/B。
+
+## 4. 安装/回退
+
+```bash
+PY=/workspace/yangchen/venvs/clef-py312/bin/python
+TREE=/workspace/yangchen/work/src/vllm
+MAN=/workspace/yangchen/logs/joint-fused-attention-20261119
+$PY runtime/apply_joint_fused_attention.py --tree "$TREE" --check
+$PY runtime/apply_joint_fused_attention.py --tree "$TREE" --apply --manifest "$MAN/apply.json"
+# 回退到 f8101b98
+$PY runtime/apply_joint_fused_attention.py --tree "$TREE" --revert --manifest "$MAN/revert.json"
+```
+
+安装器只接受 preimage `f8101b98`/postimage `4e5c450f`，拒绝未知内容；`CLEF_JOINT_FUSED_ATTN` 默认 0。
+
+## 5. CPU 检查（已完成）
+
+- `python3 -I -m py_compile` 三个脚本通过。
+- 数学等价测试（fake `torch_npu.npu_fusion_attention`，CPU torch，`TORCH_DEVICE_BACKEND_AUTOLOAD=0`）：
+  `shape=True, close=True, max_abs=0.0, mean_abs=0.0, off_returns_none=True, q2_falls_back=True`。
+- 安装器在临时树对 `f8101b98` 做 check→apply→check→revert，最终恢复 `f8101b98`，全部 RC0。
+
+## 6. 21 执行：head probe（第一道 A/B）
+
+服务停止、单逻辑 NPU、三检后：
+
+```bash
+PY=/workspace/yangchen/venvs/clef-py312/bin/python
+MAN=/workspace/yangchen/logs/joint-fused-attention-20261119
+$PY runtime/joint_fused_attention_probe.py \
+  --tree /workspace/yangchen/work/src/vllm --device 0 \
+  --output "$MAN/head-probe.json"
+```
+
+- 输入：随机 BF16 `hidden[967,5120]`、`lexical[4,5120]`、固定 schema；probe 记录两输入的 SHA-256。
+- 两臂共用权重/输入/`CLEF_JOINT_SINGLE_FIELD=1`，仅 `CLEF_JOINT_FUSED_ATTN=0/1`；每臂 5 warmup +
+  50 次逐调用 NPU event，报告 mean/median/p95 device 与 wall、`bit_equal/finite/max_abs`。
+- 判读：先看 `candidate_error` 为空、correctness finite；再看 device/wall 中位收益是否 ≥0.3 ms。未过则关闭。
+
+## 7. 21 执行：服务 A/B（probe 通过后）
+
+固定输入：`od-1534`，canonical body 2,835 B，SHA-256
+`568ea1583377dcc6044d3fcd4a099c3beb4cd0e118155f95b595bda72b1c76bf`。
+
+```bash
+# A 臂：CLEF_JOINT_FUSED_ATTN=0 启动 s1 服务（21 的标准 start.sh）
+CLEF_JOINT_FUSED_ATTN=0 bash start.sh --model-dir /workspace/yangchen/models/Clef-27B \
+  --output-dir <run-A> --config s1
+$PY runtime/joint_fused_attention_client.py --output "$MAN/client-A.json" --iters 20
+# 精确 PID 停止 A；B 臂同一命令改 CLEF_JOINT_FUSED_ATTN=1
+CLEF_JOINT_FUSED_ATTN=1 bash start.sh --model-dir /workspace/yangchen/models/Clef-27B \
+  --output-dir <run-B> --config s1
+$PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iters 20
+```
+
+- 客户端校验 `body_sha256` 必须等于上述值；每臂 3 warmup + 20 次，ABBA 至少 3 轮，记录每请求墙钟。
+- 服务级通过后再由 21 跑同窗口 S1 ≥3 轮、S2、完整 OpenDecisions+ERQA；质量仍按 ≤2pp，未通过不采用。
+- 若 head probe 收益不足或服务 A/B 不同向，关闭候选并回退 `f8101b98`。
+
+## 8. 未做与边界
+
+- 24 未触 NPU/真实服务/安装/加载；未在真实设备上运行 probe 或客户端。
+- 未改输入、参考、容差、协议、token/span 或多字段语义；未缓存答案。
+- 未测质量；fused attention 的 BF16 数值差异需完整 OD/ERQA 2pp 判定。

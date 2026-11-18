@@ -41,6 +41,7 @@
 | [conv+QKV 融合算子](gdn-conv-qkv-2026-11-17.md) | conv 与 QKV norm 合一、packed QKVZ 免拷贝、逐位探针与服务级对照 |
 | [Wave 2 攻关](perf-wave2-20261118.md) | 默认栈重新 profile、S2 预算复测、GDN chunk 扩展扫描、joint head 分解与最终三轮验证 |
 | [Wave 2 调研](perf-wave2-research.md) | 只读调研：T1 allreduce+RMSNorm 融合、T2 K 维流水、T4 ATB cache、T5 分桶 graph；T3 已实测关闭 |
+| [Joint head 融合注意力](joint-fused-attention-2026-11-19.md) | 单字段 6 处跨注意力改 npu_fusion_attention 的内核化候选、安装/回退、head probe 与服务 A/B 命令（待 21 上板） |
 | [Wave 3 通信探针](perf-wave3-comm-probes-2026-11-18.md) | allreduce 载荷曲线（fixed 30 µs / 110 GB/s）、单层串行基线 13.3 ms 天花板、T2 与 K-reduction 切分关闭 |
 | [T1 smoke 设计](perf-wave3-t1-smoke-design-2026-11-18.md) | AllReduce+Add+RMSNorm plumbing smoke 的契约、三道门、失败判据与 tiling/同步审计清单（未启动） |
 | [交接文档 11-17](handoff-11-17.md) | 当前状态、baseline 对比、已采用优化、负结果、profile、复现与开放问题 |
