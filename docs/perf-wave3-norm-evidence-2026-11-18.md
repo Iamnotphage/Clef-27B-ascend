@@ -947,9 +947,11 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 - 链接使用的 `libcust_opapi.so`：`/workspace/yangchen/work/wave3-e-d0-22/runtime/ascendc/clef_d0_trace_22/build_out/op_host/libcust_opapi.so`，SHA `3c1728432a76a1a1…`；
 - 生成头 `aclnn_clef_d0_trace.h` SHA `146daf7f29a7a835…`。
 
-**结论边界**：`-z defs` 对本类产物不适用，失败原因已逐类归因；`LINK_RC0` 只证明 `.so` 可生成，**不证明运行可用**。**未加载、未 dlopen、未执行**。
+**结论边界（2026-11-19 更正）**：此前"`-z defs` 对本类产物不适用"的说法**撤回**——那只是首次失败后的推断。**完整依赖解析尚未验证**，`LINK_RC0` 仅证明 `.so` 可生成，**不证明运行可用**。**未加载、未 dlopen、未执行**。
 
-### 34.2 仍未接线（明确未完成，不宣称齐全）
+### 34.2 仍未接线（**历史快照 `fb466da` 的清单；当前状态以 §35 与最终代码提交 `a0e19bd` 为准**）
+
+> 下列 ①–⑦ 记录的是 `fb466da` 时点的缺口。其中 Python 接线（两 rank 启动、metadata flush、BF16 hash 顺序、rank 独立失败文件、trace shape/numel、parser `SystemExit`）**已在 `cafa5f9` → `557176d` → `a0e19bd` 完成**；C++ RAII 与输入前置已在 `92db63d` 完成；进程树夹具已在 `8c03cc0`/`a0e19bd` 完成。**仅余「恢复三检 wrapper」与「固定 mixed 数值门」仍未完成**。
 
 1. **两 rank 启动**：`d0_run` 启动单 child，而 executor 用 `env://` 需要 `RANK`/`WORLD_SIZE`/`MASTER_ADDR`；应改为 `torch.distributed.run --standalone --nproc-per-node=2` 或等价，并前置 `WORLD_SIZE=2`、固定 rank 0/1。
 2. **metadata 增量未 flush**：`meta` 仅在开头写一次，之后补入的 adapter 实 SHA、weight、inputs **未再落盘**；应在调用前完整 flush。
@@ -967,16 +969,20 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 
 ### 35.1 编译与链接身份（远端实读）
 
-| 项 | 值 |
+| 项 | SHA-256（完整 64 位） |
 | --- | --- |
-| 编译源（远端 `/tmp/d0cc/d0_adapter.cpp`） | SHA `cb816029d83f88d3…` |
-| 对象 `d0_adapter.o` | SHA `8edf909bf8f8475c…` |
-| 共享库 `d0_final.so` | SHA `e3a29db20ab8ea7f…` |
-| 生成头 `aclnn_clef_d0_trace.h`（autogen） | SHA `146daf7f29a7a835…`（与包内 header **完全相同**） |
-| 链接所用 `libcust_opapi.so`（**包内** `op_api/lib/`） | SHA `3314922677b7b781…`（与交付包 `b7190e96` 对应） |
-| `build_out/op_host/libcust_opapi.so` | SHA `3c1728432a76a1a1…` —— **不同身份，仅列来源，不作最终依赖** |
+| 编译源 `d0_adapter.cpp`（远端 `/tmp/d0cc/`） | `cb816029d83f88d389a9e5058211dc097e4dc51a2c95db14bbe75b7455762454` |
+| 对象 `d0_adapter.o` | `8edf909bf8f8475caac39c7570e0bcc764cca8bb3734a82b010b955c91a8978d` |
+| 共享库 `d0_final.so` | `e3a29db20ab8ea7fee71e71c8fafb2747c4573d74bf3f7634261c245caca520e` |
+| 生成头 `aclnn_clef_d0_trace.h`（autogen，与包内 **完全相同**） | `146daf7f29a7a8359217889949110d21cc2de2cafcf200680206712f42b0a395` |
+| 链接所用 `libcust_opapi.so`（**包内** `op_api/lib/`） | `3314922677b7b78164628f1bc22c7339ac63d59cf537c261533cbf740ac948ec` |
+| `build_out/op_host/libcust_opapi.so` | `3c1728432a76a1a1…` —— **不同身份，仅列来源，不作最终依赖** |
 
-**编译命令**（原始，未经 head 截断）：
+**DT_NEEDED 原值为 `libcust_opapi.so`**；`-lcust_opapi` 是链接参数，不是产物字段的值。
+
+**命令中的 `<...>` 均为重构模板占位，非逐字原命令**；各占位对应的绝对路径来源见下。
+
+**编译命令**（模板，未经 head 截断）：
 
 ```
 g++ -std=c++17 -c -O0 -fPIC -I<autogen> -I<python-inc> \
@@ -1003,7 +1009,7 @@ g++ -shared -o d0_final.so d0_adapter.o \
 - `nm -D --undefined-only` 仍含 2 个 `aclnnClefD0*` 动态引用；包内 opapi **导出 2 项**且 `DT_NEEDED` 含 `-lcust_opapi`，二者相容；
 - **不以 U 计数 0 判成功，也不以 acln U=2 判失败**；仅完成「共享库生成 + 依赖声明」。
 
-### 35.3 幸存者查询语义（`557176d` 修正）
+### 35.3 幸存者查询语义（最终形态见 **`a0e19bd`**；`557176d` 为首次提取，语义在 `a0e19bd` 收紧）
 
 | 情形 | `survivor_check` | `members` |
 | --- | --- | --- |
