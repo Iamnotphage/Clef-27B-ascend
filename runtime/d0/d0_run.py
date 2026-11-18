@@ -30,25 +30,52 @@ def refuse_existing(path: Path) -> None:
         raise SystemExit(f"refusing to reuse an existing run directory: {path}")
 
 
+def _read_stat(pid: str):
+    try:
+        raw = Path(f"/proc/{pid}/stat").read_text()
+    except OSError:
+        return None
+    head, rest = raw.split(") ", 1)
+    fields = rest.split()
+    return {"comm": head.split("(")[-1], "state": fields[0], "ppid": int(fields[1]),
+            "pgrp": int(fields[2]), "session": int(fields[3])}
+
+
 def snapshot_tree(root_pid: int) -> dict:
-    """Capture the process tree once, so a later claim of exclusivity has evidence."""
-    out = {}
+    """Capture root identity plus its full descendant set.
+
+    Each entry keeps PID, PPID, PGID and session so exclusivity claims rest on
+    the tree rather than on a flat command list.
+    """
     if not Path("/proc").is_dir():
-        # macOS host here; the tree snapshot only has meaning on the Linux target.
         return {"root_pid": root_pid, "unavailable": "/proc not present on this host",
-                "processes": {}}
+                "processes": {}, "descendants": []}
+    procs = {}
     for pid_dir in Path("/proc").iterdir():
         if not pid_dir.name.isdigit():
             continue
+        st = _read_stat(pid_dir.name)
+        if st is None:
+            continue
         try:
-            cmd = (pid_dir / "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace")
+            cmd = (pid_dir / "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace").strip()
         except OSError:
-            continue
-        if not cmd:
-            continue
-        out[pid_dir.name] = cmd.strip()
-    return {"root_pid": root_pid, "captured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "processes": out}
+            cmd = ""
+        st["cmdline"] = cmd
+        procs[pid_dir.name] = st
+    kids = {}
+    for pid, st in procs.items():
+        kids.setdefault(str(st["ppid"]), []).append(pid)
+    desc, stack = [], [str(root_pid)]
+    while stack:
+        cur = stack.pop()
+        for child in kids.get(cur, []):
+            desc.append({"pid": int(child), **procs[child]})
+            stack.append(child)
+    return {"root_pid": root_pid,
+            "root": procs.get(str(root_pid)),
+            "captured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "processes": procs, "descendants": desc}
 
 
 def main() -> int:
@@ -57,8 +84,11 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=180, help="bounded window in seconds")
     ap.add_argument("--rows", type=int, default=967)
     ap.add_argument("--seed", type=int, default=20261118)
-    ap.add_argument("--mm-dim", type=int, default=1, help="requested budget (first candidate: 1)")
-    ap.add_argument("--use-hccl", type=int, default=2, help="first candidate: 2 (AR off)")
+    # First candidate is fixed; the CLI cannot widen it.
+    ap.add_argument("--mm-dim", type=int, default=1, choices=(1,),
+                    help="first candidate is fixed at 1")
+    ap.add_argument("--use-hccl", type=int, default=2, choices=(2,),
+                    help="first candidate is fixed at 2 (AR off)")
     ap.add_argument("--dry-run", action="store_true", help="print the plan only; touches no device")
     a = ap.parse_args()
 
@@ -85,18 +115,33 @@ def main() -> int:
 
     # Real execution path. Kept explicit so the failure modes are visible:
     # a timeout kills the child and still writes a trace-unavailable record.
-    child = subprocess.Popen([sys.executable, "-c", "raise SystemExit('d0 executor not wired')"])
+    # Real executor lives in its own module; this process only supervises it.
+    child = subprocess.Popen(
+        [sys.executable, str(Path(__file__).with_name("d0_launch.py")),
+         "--out-dir", str(a.out_dir), "--rows", str(a.rows), "--seed", str(a.seed),
+         "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl)],
+        start_new_session=True,                       # own session and process group
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    (a.out_dir / "process-tree.json").write_text(
+        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
     try:
-        rc = child.wait(timeout=a.timeout)
+        out, err = child.communicate(timeout=a.timeout)
+        rc = child.returncode
     except subprocess.TimeoutExpired:
-        child.send_signal(signal.SIGKILL)
-        child.wait()
+        # Kill the whole group, not just the direct child, then drain pipes.
+        try:
+            os.killpg(os.getpgid(child.pid), signal.SIGKILL)
+        except OSError:
+            child.kill()
+        out, err = child.communicate()
         (a.out_dir / "trace-unavailable.json").write_text(json.dumps(
             {"reason": "timeout", "timeout_s": a.timeout,
              "note": "trace could not be copied back; slot count is not recoverable"},
             ensure_ascii=False) + "\n")
-        return 2
-    (a.out_dir / "exit.json").write_text(json.dumps({"rc": rc}, ensure_ascii=False) + "\n")
+        rc = 2
+    (a.out_dir / "raw-rc.json").write_text(json.dumps({"raw_rc": rc}, ensure_ascii=False) + "\n")
+    (a.out_dir / "stdout.log").write_text(out or "")
+    (a.out_dir / "stderr.log").write_text(err or "")
     return rc
 
 

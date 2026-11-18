@@ -16,6 +16,7 @@
 #include <torch/extension.h>
 #include <acl/acl.h>
 #include <torch_npu/csrc/core/npu/NPUStream.h>
+#include <torch_npu/csrc/core/NPUStorageImpl.h>
 #include <torch_npu/csrc/framework/OpCommand.h>
 
 #include <string>
@@ -30,12 +31,31 @@ namespace {
 constexpr int64_t kTraceSlots = 72;
 constexpr int64_t kTraceFields = 8;
 
-aclTensor* mk(const at::Tensor& t, aclDataType dt) {
+// Same descriptor read the E adapter uses: logical view dims and strides are
+// kept while format and storage dims come from the tensor's real NPU storage.
+// Nothing is forced to ND here.
+aclTensor* mk(const at::Tensor& t, aclDataType dt, bool require_nz = false) {
     std::vector<int64_t> d(t.sizes().begin(), t.sizes().end());
     std::vector<int64_t> s(t.strides().begin(), t.strides().end());
-    return aclCreateTensor(d.data(), static_cast<uint64_t>(d.size()), dt, s.data(), 0,
-                           ACL_FORMAT_ND, d.data(), static_cast<uint64_t>(d.size()),
-                           const_cast<void*>(t.data_ptr()));
+    const auto* storage = static_cast<const torch_npu::NPUStorageImpl*>(
+        t.storage().unsafeGetStorageImpl());
+    const auto& desc = storage->npu_desc_;
+    std::vector<int64_t> st(desc.storage_sizes_.begin(), desc.storage_sizes_.end());
+    aclFormat fmt = static_cast<aclFormat>(desc.npu_format_);
+    if (require_nz) {
+        // W is NZ-only here: a base-format descriptor is refused before launch.
+        TORCH_CHECK(fmt == ACL_FORMAT_FRACTAL_NZ,
+                    "D0 requires an FRACTAL_NZ weight, got descriptor format=", (int)fmt);
+        fprintf(stderr, "[d0] w descriptor format=%d storage=[", (int)fmt);
+        for (size_t i = 0; i < st.size(); ++i)
+            fprintf(stderr, "%lld%s", (long long)st[i], i + 1 < st.size() ? "," : "");
+        fprintf(stderr, "] strides=[%lld,%lld] offset=%lld\n",
+                (long long)s[0], (long long)s[1], (long long)t.storage_offset());
+    }
+    return aclCreateTensor(d.data(), static_cast<uint64_t>(d.size()), dt, s.data(),
+                           t.storage_offset(), fmt, st.data(),
+                           static_cast<uint64_t>(st.size()),
+                           const_cast<void*>(t.storage().data()));
 }
 
 }  // namespace
@@ -50,19 +70,22 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
     auto res_out = at::empty_like(out);
     auto rstd = at::empty({x.size(0)}, x.options().dtype(at::kFloat));
     auto diag = at::empty({8}, x.options().dtype(at::kFloat));
-    // One allocation, never reused for anything else.
-    auto trace = at::zeros({kTraceSlots, kTraceFields},
+    // One allocation, never reused for anything else. The container dtype is
+    // int32 because that is what this stack offers, but the aclTensor view below
+    // is ACL_UINT32; the readback normalises through & 0xFFFFFFFF so values such
+    // as magic 0xD0D0C0DE and seal 0xC0FFEE00 never appear negative.
+    auto trace = at::empty({kTraceSlots, kTraceFields},
                            x.options().dtype(at::kInt).device(x.device()));
 
     aclTensor* tx = mk(x, ACL_BF16);
-    aclTensor* tw = mk(w, ACL_BF16);
+    aclTensor* tw = mk(w, ACL_BF16, /*require_nz=*/true);
     aclTensor* tr = mk(residual, ACL_BF16);
     aclTensor* tg = mk(gamma, ACL_BF16);
     aclTensor* to = mk(out, ACL_BF16);
     aclTensor* tro = mk(res_out, ACL_BF16);
     aclTensor* trs = mk(rstd, ACL_FLOAT);
     aclTensor* td = mk(diag, ACL_FLOAT);
-    aclTensor* ttr = mk(trace, ACL_UINT32);
+    aclTensor* ttr = mk(trace, ACL_UINT32);   // int32 storage seen as uint32
 
     uint64_t ws_size = 0;
     aclOpExecutor* ex = nullptr;
@@ -96,12 +119,17 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
         ws = cached_ws;
     }
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream();
+    fprintf(stderr, "[d0] stream=%p trace_bytes=%lld\n", (void*)stream,
+            (long long)(kTraceSlots * kTraceFields * 4));
 
-    // The clear above ran when the tensor was zero-filled; both it and the
-    // launch sit on this one stream, so the order is clear -> launch.
+    // Clear and launch are issued inside the same handler on the same explicit
+    // stream, so the order clear -> launch cannot be reordered away.
     at_npu::native::OpCommand cmd;
     cmd.Name("ClefD0Trace");
-    cmd.SetCustomHandler([ws, ws_size, ex, stream]() -> int {
+    cmd.SetCustomHandler([ws, ws_size, ex, stream, trace]() -> int {
+        aclError clr = aclrtMemsetAsync(trace.data_ptr(), kTraceSlots * kTraceFields * 4,
+                                        0, stream);
+        if (clr != ACL_SUCCESS) return static_cast<int>(clr);
         return static_cast<int>(aclnnClefD0Trace(ws, ws_size, ex, stream));
     });
     cmd.Run();
