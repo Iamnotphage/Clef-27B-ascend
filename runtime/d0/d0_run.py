@@ -290,6 +290,11 @@ def main() -> int:
                 rlog["service_discovery"] = disc
                 service_pids = set(disc.get("pids") or [])
                 rlog["service_pids"] = sorted(service_pids)
+                if disc.get("error") or not service_pids:
+                    # Without a provable tree the restore cannot be verified,
+                    # so it fails rather than passing on an empty set.
+                    rlog["verify_blocked"] = disc.get("error") or "no attributable service pids"
+                    restored = False
                 verified = verify(build_commands(render_request), rlog,
                                   service_pids=service_pids) if restored else False
                 rlog["verify_ok"] = verified

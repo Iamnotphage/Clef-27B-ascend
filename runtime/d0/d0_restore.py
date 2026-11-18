@@ -222,6 +222,7 @@ def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
     if ident is None:
         info["error"] = "api pid not alive"
         return info
+    boot_before = ident.get("boot_id")
     if before is not None and root in before:
         # The pid existed before this restore: it cannot be the new service.
         info["error"] = "api pid predates the restore; not attributing it"
@@ -255,12 +256,18 @@ def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
     # The root identity must be unchanged after the walk, otherwise the tree
     # may have been rebuilt underneath us.
     after = _identity(root)
-    info["root_identity_stable"] = (after is not None
-                                    and after["starttime"] == ident["starttime"]
-                                    and after["boot_id"] == ident["boot_id"])
+    boot_after = (after or {}).get("boot_id")
+    # A missing boot id can never establish a stable identity.
+    info["root_identity_stable"] = bool(
+        after is not None and boot_before and boot_after
+        and after["starttime"] == ident["starttime"]
+        and boot_after == boot_before)
     if not info["root_identity_stable"]:
-        info["error"] = "root identity changed during collection"
-    info["pids"] = sorted({root} | descendants)      # JSON-serialisable
+        info["error"] = "root identity changed or unprovable during collection"
+    # A failed identity check yields no attributable pids at all, so a caller
+    # cannot accidentally verify against a tree we cannot vouch for.
+    info["pids"] = (sorted({root} | descendants)
+                    if info["root_identity_stable"] else [])
     info["descendant_count"] = len(descendants)
     info["tree"] = [r for r in tree_rows if r["pid"] == root or r["pid"] in descendants]
     return info
@@ -332,9 +339,25 @@ def main() -> int:
         a.out.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
         print(json.dumps({"dry_run": True, "stages": list(STAGES)}))
         return 0
-    cleanup([{"pid": p} for p in a.pid], log)
+    targets = [{"pid": p, "starttime": None, "boot_id": None} for p in a.pid]
+    cleaned = cleanup(targets, log)
+    if cleaned["refused"] or cleaned["unavailable"]:
+        # Incomplete identity means we cannot prove what we are cleaning, so the
+        # restore refuses rather than launching over an unknown process.
+        log["restore_blocked"] = "cleanup targets lack a provable identity"
+        log["restore_ok"] = log["verify_ok"] = False
+        a.out.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
+        return 1
     restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, log)
-    verified = verify({"health": [], "workers": [], "text": [], "image": []}, log)
+    verified = False
+    if restored:
+        disc = discover_service_pids(SERVICE_LABEL)
+        log["service_discovery"] = disc
+        if not disc.get("error") and disc.get("pids"):
+            verified = verify(build_commands(lambda k: Path(
+                IMAGE_SOURCE if k == "image" else TEXT_SOURCE).read_text() if k == "image"
+                else ""), log, service_pids=set(disc["pids"]))
+    log["restore_ok"], log["verify_ok"] = restored, verified
     log["restore_ok"] = restored
     log["verify_ok"] = verified
     log["finished"] = _now()
