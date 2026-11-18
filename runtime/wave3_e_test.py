@@ -71,20 +71,32 @@ def main() -> int:
     out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step)
     torch.npu.synchronize()
 
+    # Reference A (fp32 reduce, as before) and Reference B (bf16 reduce, the
+    # same rounding path as the op: bf16 partial, bf16 all-reduce).
     partial = torch.matmul(x, w).float()
     dist.all_reduce(partial, op=dist.ReduceOp.SUM)
     ref_y, ref_rstd, ref_res = torch_npu.npu_add_rms_norm(partial.to(torch.bfloat16), r, gamma, a.eps)
+    partial_bf = torch.matmul(x, w)
+    dist.all_reduce(partial_bf, op=dist.ReduceOp.SUM)
+    refb_y, refb_rstd, refb_res = torch_npu.npu_add_rms_norm(partial_bf, r, gamma, a.eps)
     torch.npu.synchronize()
     dy = (out.float() - ref_y.float()).abs()
     dres = (res_out.float() - ref_res.float()).abs()
     drstd = (rstd.float() - ref_rstd.float().reshape(-1)).abs()
+    dyb = (out.float() - refb_y.float()).abs()
+    dresb = (res_out.float() - refb_res.float()).abs()
+    drstdb = (rstd.float() - refb_rstd.float().reshape(-1)).abs()
     summary = {"rank": rank, "group": group, "m": m, "k": k, "n": n,
+               "bf16_ar_ref": {"max_abs_y": float(dyb.max().cpu()),
+                               "max_abs_residual_sum": float(dresb.max().cpu()),
+                               "max_abs_rstd": float(drstdb.max().cpu()),
+                               "y_gt_0.02": int((dyb > 0.02).sum().cpu())},
                "diag": [float(v) for v in diag.cpu()],
                "max_abs_y": float(dy.max().cpu()), "max_abs_residual_sum": float(dres.max().cpu()),
                "max_abs_rstd": float(drstd.max().cpu()), "y_gt_0.01": int((dy > 0.01).sum().cpu()),
                "elements": int(dy.numel())}
     a.output.parent.mkdir(parents=True, exist_ok=True)
-    a.output.write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n")
+    a.output.with_name(a.output.stem + f"-rank{rank}" + a.output.suffix).write_text(json.dumps(summary, ensure_ascii=False, indent=1) + "\n")
     print(json.dumps(summary, ensure_ascii=False), flush=True)
     dist.barrier(); dist.destroy_process_group()
     return 0
