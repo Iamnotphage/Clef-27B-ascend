@@ -34,12 +34,17 @@
 4. 实际 kernel 实现与 tiling（未加载、未 profile）；
 5. 正确性与性能：**零证据**，不声明收益。
 
+## 4.1 **撤回**「deprecated 与本轮性能目标相冲突」
+本轮**固定 CANN 9.2.1**，现在是 **2026-11-19**；"post-December 2026 更新中废弃"
+属**兼容背景**，**不能**代替对本机**可用性与性能**的判定。该结论**撤回**。
+是否投入由 20 依"本机支持 + 是否真融合 + 实测收益"决定，**不以 deprecated 属性作否决理由**。
+
 ## 5) 若后续要用（不由我实现）
 最小可编译 binding 需：`aclnn_matmul_all_reduce_add_rms_norm.h` + `libopapi.so` 导出，
-自定义 op 名注册，`group` 为真实 HCCL comm；**但 deprecated 属性意味着长期风险**，
-与官方建议（拆成 `aclnnMatmulAllReduce` + `aclnnAddRmsNorm`）方向相反，需 20 决定是否投入。
+自定义 op 名注册，`group` 为真实 HCCL comm；deprecated 属**兼容背景**（见 §4.1，已撤回"与目标冲突"的判断）。
 
-## 6) 头与库 SHA
-- 头：`include/aclnnop/aclnn_matmul_all_reduce_add_rms_norm.h`（SHA 未取，本次只读声明层面）
-- 库：`aarch64-linux/lib64/libopapi.so`（SHA 未取）
-> 若进入实现阶段，需补这两个文件的 SHA-256 作为证据基线。
+## 6) 头与库**实际路径**（SHA 未取，需实现 owner 补）
+- 头（非 inplace）：`/usr/local/Ascend/cann-9.2.1/aarch64-linux/include/aclnnop/aclnn_matmul_all_reduce_add_rms_norm.h`
+- 头（inplace）：`/usr/local/Ascend/cann-9.2.1/aarch64-linux/include/aclnnop/aclnn_inplace_matmul_all_reduce_add_rms_norm.h`
+- 库：`/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so`（17 个导出符号）
+- **三个文件的 SHA-256 本次未取**，属缺项。
