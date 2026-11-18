@@ -1,5 +1,6 @@
 #include "../op_kernel/clef_ar_add_rms_norm_tiling.h"
 #include "register/op_def_registry.h"
+#include "tiling/platform/platform_ascendc.h"
 #include <hccl/hccl_mc2.h>
 #include <adv_api/hccl/hccl_tiling.h>
 #include <cstring>
@@ -13,7 +14,7 @@ constexpr uint8_t kOpTypeAllReduce = 2;   // HCCL_CMD_ALLREDUCE
 constexpr uint8_t kReduceSum = 0;         // HCCL_REDUCE_SUM
 constexpr uint8_t kBf16 = 11;             // HCCL_DATA_TYPE_BFP16
 constexpr uint8_t kEngineAicpu = 2;       // COMM_ENGINE_AICPU
-constexpr uint32_t kCores = 24;
+// core count comes from the platform at tiling time
 }  // namespace
 
 namespace optiling {
@@ -24,10 +25,13 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
         return ge::GRAPH_FAILED;
     }
     auto* t = context->GetTilingData<ClefArAddRmsNormTilingData>();
+    context->GetRawTilingData()->SetDataSize(sizeof(ClefArAddRmsNormTilingData));
     t->m = static_cast<uint32_t>(x.GetDim(0));
     t->n = static_cast<uint32_t>(x.GetDim(1));
+    t->mPad = (t->m + 7u) / 8u * 8u;
     const auto* eps = context->GetAttrs()->GetAttrPointer<float>(0);
     t->eps = eps == nullptr ? 1e-6f : *eps;
+    t->invN = 1.0f / static_cast<float>(t->n);
     const auto* repeat = context->GetAttrs()->GetAttrPointer<int64_t>(1);
     t->repeat = repeat == nullptr ? 1u : static_cast<uint32_t>(*repeat);
     if (t->repeat == 0 || t->repeat > 255) { return ge::GRAPH_FAILED; }
@@ -48,7 +52,10 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     t->ccTilingRc = cfg.GetTiling(*ccTiling);
     t->initTilingBytes = sizeof(::Mc2InitTiling);
     t->ccTilingBytes = sizeof(::Mc2CcTiling);
-    context->SetBlockDim(kCores);
+    auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    uint32_t cores = platform.GetCoreNumAiv();
+    if (cores == 0) cores = 8;
+    context->SetBlockDim(cores);
     context->GetWorkspaceSizes(1)[0] = 0;
     return ge::GRAPH_SUCCESS;
 }

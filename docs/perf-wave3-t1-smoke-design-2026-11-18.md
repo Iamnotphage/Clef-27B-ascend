@@ -231,3 +231,33 @@
 | 仍未证实：`HcclCreateOpResCtx` 返回的指针是否就是上述 device 缓冲；只能用 typed 运行（GetRankId/GetRankDim）判定 | 无静态结论 |
 
 **对 kernel 的含义**：`InitV2` 的 context 必须来自框架注入（`MC2().HcclGroup("group")` + `GetHcclContext<HCCL_GROUP_ID_0>()`，见 vllm-ascend 的 MC2 参考算子）或我们自己把合法缓冲送进 device；`SetCcTilingV2` 的 offset 从 init 块的 `offset[]` 读取，不要猜。
+
+## 12. Norm 线设备侧结果（2026-11-18 11:52 CST）
+
+**结论：不带 HCCL 的 `Add + RMSNorm`（全 N FP32 sumsq、`residual_sum` 输出）已在设备上通过数值验证。**
+
+- 实现：`runtime/ascendc/clef_ar_add_rms_norm/op_kernel/clef_ar_add_rms_norm.cpp`（norm-only 变体，不做 AR）。
+- 启动方式：官方 `npu_op_package` → 安装到独立 vendor 目录 → 独立 launcher（`runtime/wave3_norm_launcher.cpp`，ACL + 生成的 `aclnnClefArAddRmsNorm` 两段式）→ 单卡执行，与 CPU FP32 参考逐元素比较。
+- 结果（M=967、N=5120、BF16、eps=1e-6、repeat=1）：
+
+| 输入 | max_abs out | max_abs residual_out | max_abs rstd | >0.01 的元素 |
+| --- | ---: | ---: | ---: | ---: |
+| 8×5120 | 0.003904 | 0.003906 | 4.77e-7 | 0/40960 |
+| 64×5120 | 0.003906 | 0.003906 | 4.77e-7 | 0/327680 |
+| **967×5120** | **0.007807** | **0.003906** | **9.54e-7** | **0/4951040** |
+
+- 关键实现教训（已写入 kernel）：TBuf + `DataCopy` 与向量指令之间必须显式 `PipeBarrier<PIPE_ALL>()`，否则会出现大范围垃圾与「只有部分 block 写入」的假象；`rstd` 的 `DataCopy` 必须按 8 个 float（32 B）对齐批次写；`reduce` 的 work buffer 必须独立且 ≥ 一个 tile（512 float）；禁止在 `__aicore__` 内做 float↔unsigned 的 `static_cast`（1/N 由 host tiling 提供）。
+- 该结果**只证明 Add+RMSNorm 语义**，不证明 AR 或性能；单独耗时不计入 T1 收益。
+
+## 13. KFC 接线（待执行，证据已齐）
+
+按 23 号只读核实，官方同版 eager 链路为：
+
+1. op def：`Attr("group").String(); this->MC2().HcclGroup("group");`（范本 `vllm_ascend/csrc/mc2/dispatch_ffn_combine/op_host/dispatch_ffn_combine_def.cpp:76,95`）。
+2. 生成侧：`aclnnInner*GetWorkspaceSize` 在 eager 中生成 `AddAttr(group)` + `NnopbaseSetMc2` + `NnopbaseSetHcomGroup`；`libopapi.so` 对 `MatmulAllReduce`/`MatmulAllReduceAddRmsNorm` 有直接二进制证据。
+3. kernel 侧契约（`opp/built-in/.../ops_transformer/ascendc/common/op_kernel/mc2_templates/communication/communicator/hccl_communicator.h:98-99`）：
+   `InitV2(GetHcclContext<HCCL_GROUP_ID_0>(), &tiling->mc2InitTiling); SetCcTilingV2(offsetof(TilingDataType, mc2CcTiling));`
+   且 `offset` 相对 `initTiling` 指针，两段必须在同一连续 tiling 对象中。
+4. group 必须来自实际 comm（`ProcessGroupHCCL.hpp:807 getHcclCommName`，`vllm_ascend/ops/linear_op.py:204-206`），**不得硬编码 `hccl_world_group`**；下一步把硬编码常量改为 attr。
+
+**未执行**：带 HCCL 的 kernel（InitV2/AllReduce/Wait）与 2-rank 数值比对；producer 返回值的地址空间与布局仍属 runtime 待验，不得把 gate8 的直接 producer 与 eager 注入链交叉喂。

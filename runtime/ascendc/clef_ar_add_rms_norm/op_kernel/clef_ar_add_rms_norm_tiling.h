@@ -11,6 +11,7 @@ static const uint32_t kMc2TilingBytes = 4096;
 struct ClefArAddRmsNormTilingData {
     uint32_t m;                 // rows (967)
     uint32_t n;                 // hidden (5120)
+    uint32_t mPad;              // ceil(m/8)*8, rstd batch alignment
     uint32_t repeat;            // Hccl repeat (uint8 range, 1..255)
     uint32_t commEngine;        // 2 = AICPU
     uint32_t opType;            // 2 = HCCL_CMD_ALLREDUCE
@@ -19,6 +20,7 @@ struct ClefArAddRmsNormTilingData {
     uint32_t initTilingBytes;
     uint32_t ccTilingBytes;
     float eps;
+    float invN;                 // 1.0/N, host-computed (no float<->uint cast in aicore)
     uint8_t mc2InitTiling[kMc2TilingBytes];
     uint8_t mc2CcTiling[kMc2TilingBytes];
 };
