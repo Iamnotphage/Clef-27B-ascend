@@ -6,7 +6,7 @@
 ## 身份
 
 - 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）；runner 通过 `Path(win.__file__)` 核 wrapper SHA，不依赖 wrapper 常量。
-- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `8638224f51e56a4b89c16f5d1d29a386278f0a7dd7b12beaa320c0fa2a6fde7f`
+- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `e8092397c5d1ebb51cbeb875a1a08f8e3a880cf5c8c5be12b49cc5fe8cb2a9a9`
 - runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `1c03c4cfb654bffddb106c5f19a027c9cffce03c45808278ee2212fb727682a9`，8/8
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 

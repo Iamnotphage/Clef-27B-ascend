@@ -66,6 +66,8 @@ class ServiceAB:
         self.args = args
         self.win = load_window()
         self.run_dir = Path(args.run_dir).expanduser().resolve()
+        self.attribution_unknown = False
+        self.cleanup_unconfirmed = False
 
     def flush(self, phase):
         self.state["phase"] = phase
@@ -252,18 +254,19 @@ class ServiceAB:
         try:
             return self._start_arm(flag, label)
         except Exception as exc:
-            # Only a root whose identity came from this label's api.pid may be
-            # signalled.  A bare listener of unknown provenance is never killed.
             identity = getattr(self, "arm_identity", None)
-            if identity is None:
+            if identity is None or self.attribution_unknown:
                 self.state["start_cleanup_error"] = (
                     f"{type(exc).__name__}: no label-bound identity; no signal sent")
+                self.cleanup_unconfirmed = True
                 raise
             try:
                 self.stop_tree(identity, f"failed-{label}")
+                self.arm_identity = None
             except Exception as stop_exc:
                 self.state["start_cleanup_error"] = (
                     f"{type(stop_exc).__name__}: {stop_exc}")
+                self.cleanup_unconfirmed = True
             raise
 
     def _start_arm(self, flag, label):
@@ -274,32 +277,48 @@ class ServiceAB:
             env["CLEF_JOINT_FUSED_ATTN"] = str(flag)
         env["CLEF_LAUNCH_CONFIG"] = "s1"
         before = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
+        self.arm_identity = None
+        self.arm_label = label
         launch = subprocess.run(["bash", self.args.launch, label], env=env,
                                 capture_output=True, text=True, timeout=60)
         (self.run_dir / f"launch-{label}.log").write_text(launch.stdout + launch.stderr)
         if launch.returncode != 0:
+            if self.win.port_open(self.args.port) != "closed":
+                self.attribution_unknown = True
             raise AbError(f"launch failed: {label}")
+        # Bind this label's ownership immediately, before wait/inputs.
+        pid_file = Path(self.args.service_log_root) / label / "api.pid"
+        if not pid_file.is_file():
+            self.attribution_unknown = True
+            raise AbError(f"api.pid missing immediately after launch: {pid_file}")
+        root_pid = int(pid_file.read_text().strip())
+        identity = self.win.proc_identity(root_pid)
+        after = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
+        if identity is None or root_pid not in (after - before):
+            self.attribution_unknown = True
+            raise AbError(f"root {root_pid} is not a new label-bound process")
+        self.arm_identity = {"root": identity,
+                             "descendants": self.win.descendants(root_pid)}
         wait = subprocess.run(["bash", self.args.wait], capture_output=True, text=True,
                               timeout=self.args.wait_timeout)
         (self.run_dir / f"wait-{label}.log").write_text(wait.stdout + wait.stderr)
         if wait.returncode != 0:
             raise AbError(f"wait failed: {label}")
-        pid_file = Path(self.args.service_log_root) / label / "api.pid"
-        if not pid_file.is_file():
-            raise AbError(f"api.pid missing: {pid_file}")
-        root_pid = int(pid_file.read_text().strip())
-        identity = self.win.proc_identity(root_pid)
-        if identity is None:
-            raise AbError(f"root identity missing: {root_pid}")
-        self.arm_identity = {"root": identity,
-                             "descendants": self.win.descendants(root_pid)}
-        after = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
-        if root_pid not in (after - before):
-            raise AbError(f"root {root_pid} predates this launch")
+        live = self.win.proc_identity(root_pid)
+        if (live is None or live["starttime"] != identity["starttime"]
+                or live["boot_id"] != identity["boot_id"]):
+            self.attribution_unknown = True
+            raise AbError(f"root identity changed during wait: {root_pid}")
         root_env = self.win.parse_environ(
             (self.win.PROC_ROOT / f"{root_pid}/environ").read_bytes())
         source_sha = self.win.sha256(Path(self.args.tree) /
                                      "vllm/model_executor/models/clef_joint_schema.py")
+        if root_env.get("CLEF_JOINT_FUSED_ATTN") != str(flag):
+            raise AbError(f"arm {label} root env flag mismatch: {root_env.get('CLEF_JOINT_FUSED_ATTN')}")
+        if root_env.get("CLEF_LAUNCH_CONFIG") != "s1":
+            raise AbError(f"arm {label} launch config mismatch: {root_env.get('CLEF_LAUNCH_CONFIG')}")
+        if source_sha != POSTIMAGE_SHA:
+            raise AbError(f"arm {label} source SHA mismatch: {source_sha}")
         npu = subprocess.run(["npu-smi", "info"], capture_output=True, text=True,
                              timeout=30)
         (self.run_dir / f"npu-{label}.txt").write_text(npu.stdout + npu.stderr)
@@ -383,6 +402,8 @@ def main() -> int:
     applied = False
     arm = None
     initial_stopped = False
+    candidate_started = False
+    stop_attempted = False
     try:
         ab.run_dir.mkdir(parents=True, exist_ok=False)
         ab.stage_d0()
@@ -404,6 +425,8 @@ def main() -> int:
         ab.state["prod_env_keys"] = sorted(ab.win.selected_env(ab.prod_env))
         ab.inputs = ab.input_bodies()
         ab.flush("preflight")
+        candidate_started = True
+        stop_attempted = True
         ab.stop_tree(current, "initial")
         initial_stopped = True
         ab.state["steps"]["initial_stop"] = {"ok": True}
@@ -434,8 +457,18 @@ def main() -> int:
         target = Path(args.tree) / "vllm/model_executor/models/clef_joint_schema.py"
         target_sha = ab.win.sha256(target) if target.is_file() else None
         revert_ok = True
+        if not candidate_started:
+            ab.state["steps"]["finish"] = {"ok": True, "action": "read_only_noop",
+                                           "finished_at": now()}
+            ab.state["finished_at"] = now()
+            ab.state["overall_rc"] = 1
+            ab.flush("read-only-noop")
+            print(json.dumps({k: ab.state.get(k) for k in (
+                "schema", "at", "error", "steps", "overall_rc")},
+                ensure_ascii=False, indent=1))
+            return 1
         stopped = initial_stopped
-        if not stopped:
+        if stop_attempted and not stopped:
             try:
                 ab.stop_tree(initial_identity, "cleanup-initial")
                 stopped = True
@@ -450,8 +483,15 @@ def main() -> int:
             except Exception as exc:
                 ab.state["cleanup_stop_error"] = f"{type(exc).__name__}: {exc}"
                 stopped = False
+                ab.cleanup_unconfirmed = True
             arm = None
             ab.arm_identity = None
+        if ab.attribution_unknown or ab.cleanup_unconfirmed:
+            stopped = False
+            ab.state["service_attribution"] = {
+                "unknown": ab.attribution_unknown,
+                "cleanup_unconfirmed": ab.cleanup_unconfirmed,
+            }
         if applied:
             try:
                 ab.revert_postimage()
