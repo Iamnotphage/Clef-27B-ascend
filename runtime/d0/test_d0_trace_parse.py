@@ -163,6 +163,34 @@ def main() -> int:
     check("aiv non-worker identity kept", not aiv0.get("incomplete")
           and not r["claim_ranges"])
 
+    # 8c K2 without K1 is an order violation
+    raw = blank()
+    put(raw, AIC, 0, 0, 1, bits=K2_B, bits2=K8_B2 | W)
+    r = run(raw)
+    inc = str([x.get("incomplete") for x in r["incomplete"]])
+    check("K2 without K1", ("order:K2->K1" in inc or "missing:K1" in inc), inc)
+
+    # 8d valid cover plus one out-of-range worker claim voids coverage
+    raw = blank()
+    for b in range(AIC):
+        for s_ in range(SUB):
+            idx = b * SUB + s_
+            span = M // (AIC * SUB)
+            length = span + (M - span * (AIC * SUB) if idx == AIC * SUB - 1 else 0)
+            put(raw, AIC + idx, b, s_, 1, start=idx * span, length=length,
+                bits=DONE_B | K2_B | K3_B, bits2=DONE_B2)
+    put(raw, AIC + 1, 0, 1, 1, start=M, length=10,      # overwrite one slot
+        bits=DONE_B | K2_B | K3_B, bits2=DONE_B2)
+    r = run(raw)
+    check("bad range voids coverage", bool(r["bad_ranges"]) and r["observed_coverage"] is False)
+
+    # 8e magic zero with other words set is damaged, not absent
+    raw = blank()
+    raw[AIC * 8 + 3] = 7                        # a stray claim_start_m
+    r = run(raw)
+    check("torn write damaged", len(r["damaged_slots"]) == 1
+          and (AIC not in r["absent_slots"]))
+
     # 9 coercion refusals
     for bad in (1.5, -1, 0x1_0000_0000):
         raw = blank()

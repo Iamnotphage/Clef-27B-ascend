@@ -92,12 +92,16 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
     if len(raw) != n * FIELDS:
         raise SystemExit(f"trace length {len(raw)} != {n * FIELDS} (slots={n})")
 
-    observations, identity_rejected, incomplete, absent, partial = [], [], [], [], []
+    observations, identity_rejected, incomplete, absent, partial, damaged = [], [], [], [], [], []
     for s_ in range(n):
         f = [_as_uint32(v, f"slot{s_}") for v in raw[s_ * FIELDS:(s_ + 1) * FIELDS]]
         got_magic, pid, domain, start_m, claim_m, bits, bits2, seal = f
         if got_magic == 0:
-            absent.append(s_)                       # never recorded, not "missing participant"
+            if not any(f):
+                absent.append(s_)                   # all eight words zero: never recorded
+            else:
+                # magic never landed but other words did: a torn write, not absent.
+                damaged.append({"slot": s_, "words": f})
             continue
         block, sub = pid >> 8, pid & 0xFF
         sealed = seal == (SEAL_SEED ^ pid)
@@ -186,7 +190,7 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
         # Bitmaps carry no order, so only dependency violations are checked:
         # a later marker present without its prerequisite.
         have = set(stages)
-        dep = [("K3", "K2"), ("K3", "K1"), ("K4", "K3"),
+        dep = [("K3", "K2"), ("K3", "K1"), ("K2", "K1"), ("K4", "K3"),
                ("K5_return", "K5_enter"),
                ("K6_end_after", "K6_end_before"),
                ("K7b", "K7a")]
@@ -214,7 +218,8 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
         cursor = max(cursor, end)
     if good and cursor < m:
         gaps.append({"from": cursor, "to": m, "tail": True})
-    covered = bool(good) and not overlap and not gaps and cursor == m
+    covered = (bool(good) and not overlap and not gaps and cursor == m
+               and not bad_ranges)                 # a bad range voids coverage
 
     return {
         "aic_cap": aic_cap, "sub_cap": sub_cap, "slots": n, "m": m,
@@ -223,6 +228,7 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
         "partial_unsealed": partial,
         "identity_rejected": identity_rejected,
         "absent_slots": absent,
+        "damaged_slots": damaged,
         "claim_ranges": [{"start": a, "end": b, "slot": c} for a, b, c in good],
         "bad_ranges": bad_ranges,
         "claim_overlap": overlap, "claim_gaps": gaps,
