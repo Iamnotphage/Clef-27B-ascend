@@ -740,3 +740,45 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 | 缺口 | run4 **无 PID 树记录**，保留 |
 
 - 冻结目录 `/workspace/yangchen/logs/gdn-norm-block-m-20261118-run4-freeze/`（`SHA256SUMS` 10/10 OK，含 `provenance.txt` 记录 PID 树缺项）。
+
+## 29. 编译期契约取证（22，2026-11-18 22:43 CST，commit `6532f01`）
+
+基线包 `873ef8fb` / 源提交 `85b3028`；文档 `AUDIT-COMPILE-CONTRACT.md`。**现包与构建目录未被覆盖，本次重建只证明本次构建。**
+
+### 29.1 生成 JSON 实读（`ClefMatmulArAddRmsNorm_b87a0f8f….json`）
+
+| 字段 | 值 |
+| --- | --- |
+| `coreType` | **`MIX`**（AIC+AIV 双 pass） |
+| **`taskRation`** | **`1:2`** |
+| `blockDim` | `-1`（运行时由 launch 决定） |
+| `intercoreSync` | `1` |
+| `magic` | `RT_DEV_BINARY_MAGIC_ELF` |
+
+- **`taskRation=1:2` 是本包产物写死的元数据**，不是从 `MIX_NUM` 推的 ⇒ §27.2 的"24→12"只剩**一个**未定条件：`get_block_idx()` 实际取值与 launch 集合是否完整。
+- `MIX_NUM` 仍取决于 `__MIX_CORE_AIC_RATION__` 是否定义 —— **两者来源不同，不能互相代替**。
+
+### 29.2 宏与分支（可证范围）
+
+| 项 | 结论 | 依据 |
+| --- | --- | --- |
+| `USE_SSBUF` | **未定义** | `matmul_utils.h:26-38`，仅 3510 定义 |
+| `USE_WORKSPACE` | **定义** | 同处 `:36-38` 非 3510 分支 |
+| 选中重载 | `matmul_client.h:931-977`（非 SSBUF GM） | 上两行 + `--compile-options=""`（无外部 `-D`） |
+| `End()` 投 `MMFUN_END` | **投**（`isSyncGetC = sync = true`，默认模板实参） | `:963/966/968-975/977`、`:695-701` |
+| quit 来源 | `KfcCommClient` 析构，**独立于 End** | `kfc_comm_client.h:100-118` |
+| 无参 `SyncAll` | `SyncAllImpl<true>` → FFTS `SYNC_AIV_ONLY_ALL` | `kernel_operator_sync_impl.h:363-403` |
+
+### 29.3 缺口（明确）
+
+- 构建系统 `opc` 是**进程内**调用，**不落盘 pass 级 `ccec` 命令行** ⇒ **无法**用真实 flags 复放 `-E -dM` 取得逐 pass 宏表；上表结论是**源内条件 × 构建元数据**的交叉，**不是**伪造的预处理输出。
+- `__MIX_CORE_AIC_RATION__` 是否定义，产物里**查不到**。
+- 仍需**运行时**确认：`get_block_idx()`/`get_subblockid()`/`GetBlockNum()` 实值；launch 集合是否完整（2×AIC）；每 AIC 的 client/quit 是否达 `MIX_NUM`；`SYNC_AIV_ONLY_ALL` 是否序化 GM 数据写。
+
+### 29.4 D0 诊断草案（只写，未实施，需 20 显式授权设备时间）
+
+- 一次运行 **180 s 有界超时**；
+- 每 block 采 `GetBlockIdx/GetSubBlockIdx/GetBlockNum/GetTaskRationImpl` + `diag[5..7]` + `partial` 首末行校验和；
+- 只跑 `usedCoreNum=1` 与 `2` 各一次；
+- **停止条件**：`507014/0x25`、超时、或 `partial` 有未写行；
+- **只回答集合/比值/漏行，不判数值因果**；固定门仍为 mixed 容差。
