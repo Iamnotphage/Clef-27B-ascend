@@ -16,14 +16,21 @@
   （其余为 torch/torch_npu C++ 符号）
 - 弱符号：`__cxa_pure_virtual`（虚函数纯虚桩，弱）
 
-## 2) 提供者逐类
-| 类 | 提供者 | 依据 | 状态 |
-| --- | --- | --- | --- |
-| `Py*` / `_Py*`（**102**） | **宿主 Python 解释器** | 只能由 `libpython3.12.so.1.0` 提供；21 未链、`-z defs` 下必然未解析 | **仅宿主可提供，保留未闭合** |
-| `at::_ops`（2）、`c10::`（19） | `torch/lib/libtorch.so`、`libc10.so` | 严格链接中**已解析**（无相关报错） | **闭合** |
-| 其余 `_Z*`（142） | `torch_npu/lib` + `torch/lib` | 同上，**已解析** | **闭合** |
-| `acl*`（8） | `cann-9.2.1/aarch64-linux/lib64/libascendcl.so` | 显式 `-lascendcl` 后**已解析** | **闭合** |
-| `Nnopbase*`（opapi 的 32 个） | `cann-9.2.1/aarch64-linux/lib64/libnnopbase.so` | 显式 `-lnnopbase` 后**已解析** | **闭合** |
+## 2) 提供者逐类（**已按 §3/§6 更正，替换旧表**）
+
+首次严格链接 **RC=1**（缺 `libtorch_cpu`、`libpython3.12`）；补这两项后 **RC=0**（见 §6）。
+
+| 类 | 数量 | 实际提供者 | 首次 RC1 | 修正后 RC0 |
+| --- | --- | --- | --- | --- |
+| `Py*` / `_Py*` | 102 | `/workspace/yangchen/python/cpython-3.12.16+20261110/lib/libpython3.12.so.1.0`（102/102 命中） | **未解析** | **已解析** |
+| `at::_ops` / `c10::` / `torch::` 等具名非 Py | 13 | `…/torch/lib/libtorch_cpu.so`（按完整签名 13/13） | **未解析** | **已解析** |
+| 其余 `_Z*`（torch/torch_npu C++） | 142 | 由所给输入**整体满足**；**逐符号 provider 未核**（不整类背书） | 已满足 | 已满足 |
+| `acl*` | 8 | `cann-9.2.1/aarch64-linux/lib64/libascendcl.so` | 已解析 | 已解析 |
+| `Nnopbase*`（opapi 的 32 项） | 32 | 同目录 `libnnopbase.so`（`72cd43b4…477c`，**未用 devlib 版**） | 已解析 | 已解析 |
+
+**已删除的错误表述**（原 §2 曾写）：
+- ❌ "`Py*` 仅宿主提供、取不到提供者" —— **已由 §3.2 否证**（实际库 102/102）；
+- ❌ "`at/c10` 已闭合为 torch 提供" —— **在首次 RC1 中并未闭合**，需 `libtorch_cpu`。
 
 ## 3) 严格链接复核（**一次**，逐字记录）——结论已更正
 ```
