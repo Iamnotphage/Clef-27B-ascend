@@ -289,6 +289,7 @@ class Window:
         }
         (self.run_dir / "env-prod-selected.json").write_text(
             json.dumps(selected, ensure_ascii=False, indent=1) + "\n")
+        self._loader_check(self.prod_env, "prod")
         npu = subprocess.run(["npu-smi", "info"], capture_output=True, text=True,
                              timeout=30)
         (self.run_dir / "npu-before.txt").write_text(npu.stdout + npu.stderr)
@@ -312,8 +313,8 @@ class Window:
              "CLEF_VENV", "LD_LIBRARY_PATH")}
         return env
 
-    def _loader_check(self):
-        env = dict(self.source_env)
+    def _loader_check(self, env: dict | None = None, label: str = "activate"):
+        env = dict(self.source_env if env is None else env)
         paths = [p for p in env.get("LD_LIBRARY_PATH", "").split(":") if p]
         hccl = next((p for p in paths if Path(p, "libhccl.so").is_file()), None)
         if not hccl:
@@ -334,8 +335,8 @@ class Window:
                             (result.stdout + result.stderr)[-1000:])
         if "libhccl.so" not in result.stdout:
             raise StepError("libhccl.so is not resolved")
-        self.state["preflight"]["loader"] = {"hccl_dir": hccl,
-                                             "extension": str(ext), "ok": True}
+        self.state["preflight"].setdefault("loader", {})[label] = {
+            "hccl_dir": hccl, "extension": str(ext), "ok": True}
 
     def _installer(self, action: list) -> dict:
         cmd = [self.args.python, str(self.stage / INSTALLER_REL),
@@ -388,10 +389,21 @@ class Window:
         probe_dir = self.run_dir / "probe"
         probe_dir.mkdir()
         output = probe_dir / "head-probe.json"
-        env = dict(self.source_env)
-        env.update(self.prod_env)
+        env = dict(self.prod_env)
         for key in CANDIDATE_KEYS:
             env.pop(key, None)
+        if self.args.candidate_opp_prepend:
+            existing = env.get("ASCEND_CUSTOM_OPP_PATH", "")
+            env["ASCEND_CUSTOM_OPP_PATH"] = (
+                self.args.candidate_opp_prepend + (":" + existing if existing else ""))
+        if self.args.candidate_lib_prepend:
+            existing = env.get("LD_LIBRARY_PATH", "")
+            env["LD_LIBRARY_PATH"] = (
+                self.args.candidate_lib_prepend + (":" + existing if existing else ""))
+        self.state["steps"].setdefault("probe", {})["env_prepend"] = {
+            "ASCEND_CUSTOM_OPP_PATH": self.args.candidate_opp_prepend,
+            "LD_LIBRARY_PATH": self.args.candidate_lib_prepend,
+        }
         env["CLEF_JOINT_SINGLE_FIELD"] = "1"
         env["CLEF_JOINT_FUSED_ATTN"] = "1"
         env["PYTHONUNBUFFERED"] = "1"
@@ -521,6 +533,10 @@ def main() -> int:
     ap.add_argument("--device", type=int, default=0)
     ap.add_argument("--stop-timeout", type=float, default=120.0)
     ap.add_argument("--probe-timeout", type=float, default=900.0)
+    ap.add_argument("--candidate-opp-prepend", default="",
+                    help="optional D0/candidate vendor OPP path, child only")
+    ap.add_argument("--candidate-lib-prepend", default="",
+                    help="optional D0/candidate op_api/lib path, child only")
     ap.add_argument("--wait-timeout", type=float, default=900.0)
     ap.add_argument("--preflight-only", action="store_true")
     ap.add_argument("--dry-run", action="store_true")

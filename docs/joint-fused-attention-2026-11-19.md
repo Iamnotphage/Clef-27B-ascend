@@ -102,7 +102,7 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `069d16e08e2d34842613634c2e5208a8bc12c68b8c8758bef0e6ac4b7ead8157`。
+SHA-256 `dc9db18dd3a1241aaee0a2a5c59618720f87d822868f1024f4522acdaa3effd7`。
 CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `da928dda20c0b363e7caa38db6cfe8eb2fd5bfafc0984cc939654a07080aa9cd`），
 8/8 通过（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
@@ -117,6 +117,8 @@ $PY "$REPO/runtime/joint_fused_attention_window.py" \
   --stop-script /tmp/d0cc/d0_stop.py \
   --expect-stop-sha <21 修好后的 stop SHA> \
   --tree /workspace/yangchen/work/src/vllm --device 0
+# 若候选需要 D0 vendor，只给 probe 子进程前插；默认空
+#  --candidate-opp-prepend <vendor opp> --candidate-lib-prepend <op_api/lib>
 ```
 
 - preflight：stage installer+postimage+probe+client+stop，逐文件 SHA；activate/launch/wait SHA；
@@ -131,4 +133,5 @@ $PY "$REPO/runtime/joint_fused_attention_window.py" \
   健康则保留旧服务，不再启动第二个。
 - 每步 RC 与阶段 flush 在 `window.json`；test/probe/apply/revert/restore 分列，任一必要失败整体非 0。
 - env：无独立备份文件声明；运行时从 `/proc/<root>/environ` 只保存选定性能/库键到
-  `env-prod-selected.json`，与 activate clean env 比较；候选键不进入 restore。公开日志不展开无关变量。
+  `env-prod-selected.json`，与 activate clean env 比较；probe 只用生产 env（可选前插候选 vendor 路径，仅子进程），
+  restore 复用 launch.sh，候选键不进入 restore。公开日志不展开无关变量。
