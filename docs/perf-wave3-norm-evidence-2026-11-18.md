@@ -448,3 +448,40 @@
 - GEMM 跨臂关联应核 **`x_sha256` 与 `w_sha256`**（A 与 B 已确认一致：`x 220586f0…`，`w 1fd0e09d…` / `12539641…`）。
 - 完整链若使用随机 `gamma` 与真实 `residual`，**不能**声称与 A 臂 gamma 同 hash；完整链需另存自己的 `r`/`gamma` 实际 hash，且候选与参考使用同一份张量。
 - 记录范围已定：**完整链保留原随机 `r`/`gamma`**，另存其自身的 `r`/`gamma`/`eps` 实际 hash；候选与参考使用**同一份**张量。**不得为凑同 hash 而静默修改完整链输入**。
+
+## 21. 同 x/w 完整链与 CPU 传播对照（2026-11-18 21:34 CST）
+
+### 21.1 冻结证据目录
+
+`/workspace/yangchen/logs/perf-wave3-20261118/e-full-final-20261118-s20261118/`
+（含 `run-full-final.log` `24c9629c…`、`e-full-rt-rank0.json` `390b31d4…`、`e-full-rt-rank1.json` `d701802e…`、
+两份 union76、`runner.sh`、`SHA256SUMS`）。身份：seed **20261118**、script **`c71ad736`**、包 **ndrt `2ee1c9ce`**。
+
+### 21.2 该 run 的数值（random r/gamma，候选参考同份）
+
+| 输出 | 值 | 门 | 判定 |
+| --- | --- | --- | --- |
+| `residual_sum` | fail 68，max_abs 0.03125 | mixed BF16 | fail |
+| `Y` | max_abs 0.015625，**max_rel 1.0** | `≤0.02` 且 `≤1%` | fail |
+| `rstd` | max_abs 6.08e-6 | `≤1e-3` | pass |
+| finite/shape/dtype | 两 rank true | — | pass |
+
+`r_sha256 62a80d25…`、`gamma_sha256 5cadbc9f…`、`eps 1e-6`；每 rank `x`/`w` 与 A/B 哈希一致。
+
+### 21.3 CPU 传播对照（22，仅限 76 点）
+
+| 检验 | rank0 | rank1 |
+| --- | ---: | ---: |
+| `RNE(B.cand + r)` == `residual.actual` | 76/76 | 76/76 |
+| `RNE(B.native + r)` == `residual.ref` | 76/76 | 76/76 |
+| `Y` 链（候选）复现 | 76/76 | 76/76 |
+| `Y` 链（原生）复现 | 76/76 | 76/76 |
+| `rstd.cand == rstd.ref` | **12/76** | **12/76** |
+
+- 使用 B 臂 **r=0 的真实 post-AR partial**，`z = fp32(B.cand) + fp32(r)`，**未**把 BF16 `residual_out` 当未舍入 z，**未**用 `z − r` 派生值。
+- 结论：**加法与缩放两步在 76 点上无额外分歧**；唯一未闭合环节是 **`rstd`**（`|Δrstd|` 中位 1.19e-7、最大 9.54e-7）。
+
+### 21.4 明确缺口
+
+`rstd` 依赖整行 `mean(z²)`，当前只有点值。需要按 row 导出**整行未舍入 z**（FP32 或整行 BF16），才能判断 rstd 的差是否完全由 z 的差驱动。
+
