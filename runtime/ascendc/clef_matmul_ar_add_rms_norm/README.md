@@ -63,19 +63,41 @@ bash build.sh
 - `Matmul::Init` 只接受**非 const** `TCubeTiling*`，所以 tiling 指针全程不能是 `const`。
 - aicore 内不允许 `static_cast<float>(uint32_t)`，diag 不再写 m/n/k。
 
+## W 布局：契约固定为 FRACTAL_NZ
+
+服务里的 down-projection 权重**已经是 FRACTAL_NZ**（`CLEF_MLP_BF16_NZ` 在加载期做一次
+`npu_format_cast(..., 29)`；隔离实测该形状 matmul 约 0.2963 ms）。因此：
+
+- 算子契约就是"**输入即 NZ**"，`BT = MatmulType<GM, CubeFormat::NZ, bfloat16_t, false>`；
+- **op 内不做任何权重格式转换**；
+- 预 pack 归 host / 模型加载侧负责。
+
+A 仍为 ND（`x[M,K]` 行主序），C 为 ND。NZ 要求 N 按 16 元素对齐，N=5120 与 K=8704 均满足。
+
 ## 待与 21 确认并记录（v1 未决）
 
-1. **W 的布局**：v1 用 **ND**（`w[K,N]` 行主序，`CubeFormat::ND`）。真实服务中 MLP 权重是
-   FRACTAL_NZ（`CLEF_MLP_BF16_NZ=1`），若要直接吃已 NZ 的权重，需把 `BT` 改成
-   `CubeFormat::NZ` 并确认内轴/外轴顺序与对齐。
-2. **预 pack 边界**：权重转换在 host 侧一次完成，还是由外部传入已 NZ 的权重。
-3. **block dim 与 matmul 切分**：当前 `SetBlockDim(GetCoreNumAiv())` 且
-   `MultiCoreMatmulTiling::SetDim(agent cores)` 取同一数值。Cube:Vector = 1:2，
-   该口径下的 matmul 切分与 sub-block 语义**未在设备侧验证**。
-4. **数值正确性完全未验证** —— 本次只做到「纯编译通过」。AR 可见性、rstd 语义、
+1. **block dim 与 matmul 切分**：当前 `SetBlockDim(GetCoreNumAiv())` 且
+   `MultiCoreMatmulTiling::SetDim` 取同一数值。Cube:Vector = 1:2，该口径下的 matmul 切分
+   与 sub-block 语义**未在设备侧验证**。
+2. **数值正确性完全未验证** —— 本次只做到「纯编译通过」。AR 可见性、rstd 语义、
    与 `npu_add_rms_norm(dist.all_reduce(partial))` 的逐元素比对都需 21 在设备上做。
-5. `SyncAll()` + `PipeBarrier<PIPE_ALL>` 只保证核内顺序，matmul 写出的 `partial` 对
-   AICPU 侧的可见性未验证。
+3. **matmul 写出的 `partial` 对 AICPU 侧的可见性未验证**（目前只有 `SyncAll()` +
+   `PipeBarrier<PIPE_ALL>`）。
+4. **host 注入路径当前仍被 KFC 参数/生命周期问题阻塞**：本算子声明了
+   `MC2().HcclGroup("group")`，会走与 `clef_ar_add_rms_norm` 相同的注入路径。
+   `use_hccl=0` 在本算子里的语义与 21 的版本一致（device 侧**整体跳过**
+   InitV2/SetCcTilingV2/AllReduce/Wait/Finalize）。21 正在验证"只跳过
+   AllReduce/Wait、保留 InitV2/Finalize 配对"的变体；若该变体成立，这里需要跟着改。
+
+## 沿用的已验证细节（不可回退）
+
+除上面的 AR 契约外，归一化段严格保持 21 已验证的写法：
+
+- `gamma` 的 `DataCopy` 与 `Cast` 之间**必须有 `PipeBarrier`**；
+- `rstd` 按 **8-float 对齐批次**写出；
+- `ReduceSum` 的 work 缓冲 ≥ 2KB，且 dst 与 work 相互独立；
+- `residual_out` 写的是 `z = reduced + residual`（服务要接着传的那条流）。
+
 
 ## 集成步骤（交给 21）
 

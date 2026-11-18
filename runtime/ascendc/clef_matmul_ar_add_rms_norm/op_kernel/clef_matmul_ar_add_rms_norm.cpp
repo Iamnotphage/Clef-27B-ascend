@@ -23,7 +23,10 @@ using namespace AscendC;
 class ClefMatmulArAddRmsNormKernel {
 public:
     using AT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
-    using BT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
+    // The service keeps the down-projection weight in FRACTAL_NZ
+    // (CLEF_MLP_BF16_NZ, one npu_format_cast(..., 29) at load time), so the
+    // operator contract is "input is already NZ" and nothing is converted here.
+    using BT = MatmulType<TPosition::GM, CubeFormat::NZ, bfloat16_t, false>;
     using CT = MatmulType<TPosition::GM, CubeFormat::ND, bfloat16_t, false>;
     using BiasT = MatmulType<TPosition::GM, CubeFormat::ND, float, false>;
 

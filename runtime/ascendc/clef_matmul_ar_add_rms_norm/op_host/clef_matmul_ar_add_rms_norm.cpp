@@ -91,7 +91,9 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     mmTiling.SetDim(static_cast<int32_t>(cores));
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
-    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
+    // B is FRACTAL_NZ: the service already packs the down-projection weight
+    // with npu_format_cast(..., 29) at load time, so the op never converts.
+    mmTiling.SetBType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::NZ,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
     mmTiling.SetCType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16);
