@@ -1,6 +1,6 @@
 # Joint head 小 Q 自定义融合核（候选，默认关闭）
 
-2026-11-19 首阶段：已完成实际源码核对、独立 Triton Ascend kernel、hash-lock 安装器、真实权重设备 probe、CPU 检查与 A3 离线编译。当前无设备精度/性能结论；设备执行与恢复统一由 21 使用 24/23 核验的完整 wrapper 完成。禁止与 24 的 head postimage 混装。
+2026-11-19 首阶段：已完成实际源码核对、独立 Triton Ascend kernel、hash-lock 安装器、真实权重设备 probe、CPU 检查与 A3 离线编译。首设备窗口现由唯一 owner 27 完成：冻结数值门全部通过，整头三长度全部退化，维持默认关闭；源码回退和恢复四检已闭合。早期协调由 21 完成，交接后设备执行统一归 27，使用 24/23 核验的完整 wrapper。禁止与 24 的 head postimage 混装。
 
 ## 实际接口与数值语义
 
@@ -54,4 +54,77 @@ routing 原实现两次 memory LayerNorm 产生不同 K/V 对象，走独立 K/V
 
 所有 gate 先于 timing。通过后测 core 与完整 head，AB/BA/BA/AB，每轮每臂 20 个逐调用 wall/device 样本，inference_mode，预热 5 次；首调用含 JIT 的时间独立列出。报告保存真实权重、输入与源码 hash、dtype/stride、max/mean/RMS/relative 差异、逐位变化数、模块路径和 SDPA 配置。任何编译/执行/精度错误落盘且返回非零。`schema=joint-smallq-probe/1`、`gate_passed=true` 且无 `error` 才通过。
 
-S1/S2、全量 OD/ERQA 及恢复验证待设备窗口完成后补充。06:30 CST 停止新候选，后续用于最终验证和恢复。
+S1/S2 与全量 OD/ERQA 尚未运行，当前整头负收益不进入服务 AB/全量质量。06:30 CST 停止新候选，后续用于最终验证和恢复。
+
+
+## 2026-11-19 02:34–02:36 CST 首设备窗口：整头负收益
+
+冻结候选 `2e8af5d59fc88de8922276ed4f55db187b7e2fea`，27 使用 5c wrapper 执行，23 与 26 均从原始样本独立重算。原始目录 `/workspace/yangchen/logs/joint-smallq-27-2e8af5d-first/`。仓库保存 [原件 manifest](../Clef-27B/logs/joint-smallq-20261119/first/manifest.json)、[完整 probe](../Clef-27B/logs/joint-smallq-20261119/first/head-probe.json.gz) 和 [配对重算结果](../Clef-27B/logs/joint-smallq-20261119/first/paired-summary.json)。gzip 解压后字节保持原件，probe SHA-256 `25686c9de1f1f5eb20c9a5be5b16eb1b2688a1aa15519be6ef19870f63dc6cad`。
+
+### 数值与触达
+
+- 6 个 core 格全部 finite，max_abs ≤0.001953125；18 个真实投影后 attention 调用均触达，三个长度各 `[4,4,1,1,1,1]`，BF16，q/k/v stride 均 `[1024,1024,1]`。
+- 307/967 的完整 head logits 与概率逐位一致；1595 的 4 个 logit 中 1 个变化，max_abs=0.0009765625，概率 max_abs=0.00019699335098266602，全部通过冻结门。
+- 多字段 L307/Q2/O8 与长序列 L2049/Q1/O4 均零 kernel 触达、ON/OFF 逐位一致。
+- 真实 checkpoint SHA `a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953`；输入是固定 seed 的合成 hidden/lexical。质量结论限于此次预筛。
+- 模块记录 torch `2.10.0+cpu`、torch_npu `2.10.0.post7`、triton `3.6.0`；flash/math/mem-efficient SDPA 开关均 true，COMPATIBLE_IMPL/NPU_COMPATIBLE_IMPL 均未设置。只读 dist-info 另确认 triton-ascend 发行包为 `3.6.0.post2`，固定环境保持原样。
+- 首次 JIT wall=3714.304550 ms 单列；后续不同 L 首调用 0.241–0.278 ms，未混入稳态样本。该证据支持运行时 L 未逐长度再次产生秒级编译。
+
+### 配对原始计时
+
+每格四轮 AB/BA/BA/AB，每轮每臂 20 样本、每臂共 80；全部 raw 样本有限且为正。以下每个 delta 先从同轮原始 20 样本求 A/B 各自中位数，再算 B−A，最后报告四个配对 delta 的中位数与 min/max；百分比同样逐轮配对。单位 ms，负数表示加速。此处的 device 是 NPU event 之间的流时间，包含主机未及时提交产生的空隙，不能当成纯 kernel compute。
+
+| 范围 | L | Q | device Δ中位 [min,max] | wall Δ中位 [min,max] | device / wall 配对变化 | 同向轮数 |
+|---|---:|---:|---|---|---|---|
+| core | 307 | 1 | -0.029190 [-0.034410,-0.026330] | -0.036215 [-0.041300,-0.032210] | -23.46% / -16.19% | 快4/4 |
+| core | 307 | 4 | -0.063095 [-0.065840,-0.061790] | -0.059882 [-0.062310,-0.058815] | -41.15% / -24.47% | 快4/4 |
+| core | 967 | 1 | -0.042280 [-0.043260,-0.040490] | -0.043498 [-0.045830,-0.041770] | -32.86% / -19.16% | 快4/4 |
+| core | 967 | 4 | -0.054865 [-0.056240,-0.053760] | -0.052645 [-0.053840,-0.050850] | -34.24% / -21.24% | 快4/4 |
+| core | 1595 | 1 | -0.037155 [-0.037880,-0.036180] | -0.027660 [-0.031420,-0.026415] | -28.42% / -12.78% | 快4/4 |
+| core | 1595 | 4 | -0.031550 [-0.033370,-0.030080] | -0.026165 [-0.031195,-0.025590] | -19.43% / -10.45% | 快4/4 |
+| head | 307 | O4→Q1 | +0.162455 [+0.145580,+0.175460] | +0.163127 [+0.139740,+0.191010] | +3.15% / +3.10% | 慢4/4 |
+| head | 967 | O4→Q1 | +0.140460 [+0.068330,+0.306680] | +0.154033 [+0.052570,+0.294230] | +2.73% / +2.93% | 慢4/4 |
+| head | 1595 | O4→Q1 | +0.119930 [+0.099700,+0.170420] | +0.122842 [+0.099050,+0.177340] | +2.36% / +2.37% | 慢4/4 |
+
+完整 head 各轮 wall A→B 中位数依时间顺序为：
+
+- L307 wall：5.262000→5.453010, 5.284630→5.441635, 5.282510→5.422250, 5.251790→5.421040；device：5.158250→5.333710, 5.170860→5.320870, 5.161240→5.306820, 5.131780→5.306680。
+- L967 wall：5.275545→5.413725, 5.380230→5.432800, 5.263190→5.557420, 5.242425→5.412310；device：5.168410→5.295130, 5.245640→5.313970, 5.142500→5.449180, 5.136130→5.290330。
+- L1595 wall：5.269255→5.391450, 5.081585→5.258925, 5.072920→5.171970, 5.111665→5.235155；device：5.159360→5.278120, 4.968290→5.138710, 4.963520→5.063220, 5.003880→5.124980。
+
+967 的配对范围最宽，wall +0.052570～+0.294230 ms、device +0.068330～+0.306680 ms；四轮仍全部退化。307/1595 也各 4/4 退化。以配对轮次判断，当前结果不支持把差异归为随机正负波动。
+
+### 归因边界与最小可证伪下一步
+
+已证事实：core 六格全部加速，整头三长度全部变慢；首编译已排除，六处触达与回退正确，原始投影/norm/残差计算保留。将 4×Q1+2×Q4 的隔离 core delta 直接相加，会预测约 −0.243/−0.279/−0.212 ms，实际整头为 +0.162/+0.140/+0.120 ms。这种差别说明每调用 synchronize 的独立 core 基准无法直接相加预测完整 head 的关键路径。
+
+源码层面可提出两个待证假设：
+
+1. 当前 helper 每次重复检查 module 配置、三组 tensor metadata、四个投影参数，执行多次视图变换，再进入通用 Triton JIT launcher；完整 head 每请求重复 6 次。额外主机调度可能抵消已经被其它操作提交掩盖的 core 节省。
+2. Triton AIV kernel 与前后投影/FFN 的排队、资源使用或缓存交互可能改变整头流时间。当前 event 数据无法把这些因素与 host gap 分开，不能宣称已经证明单一 guard 或 tiling 根因。
+
+有限建议只安排一个诊断改动，冻结 kernel/数值门不动：在独立诊断 probe 增加 C 臂，沿用现有 helper 的所有 guard、投影和输出投影，仅将 smallq core 切回相同 projected Q/K/V 上的原 SDPA。A=原 MHA、B=当前 smallQ、C=当前 adapter+原 SDPA，同一权重/输入、三长度、交错成对计时，先过原精度门。A↔C 估计接入路径的净影响，C↔B 检查同一 adapter 下 kernel/布局替换在整头的净影响。
+
+- 若 C 相对 A 也稳定变慢，才针对已定位部分提出把静态 module 检查前移、每请求域检查合并的候选；保留动态 dtype/device/training/fallback 安全检查。
+- 若 C≈A 且 B>C，优先检查 Triton 启动与整头流的交互，再决定是否改变 tile/分工；当前数据没有支持先改 BLOCK 或 split-K 的证据。
+- 当前三个完整 head 长度都慢，生产采用全域原路径（默认 off）。Q1-only、routing-only、短 L 子域均没有完整 head 消融实测，保持待验证状态；core 的正收益不用于放行这些域。
+- 由 20 排程后仍仅由 27 执行新诊断；当前按计划转 N1，不重跑首格。只有整头同窗口稳定收益及冻结门通过后才考虑服务 AB，S1/S2 与全量 OD/ERQA≤2pp 必须另行实测。
+
+### 与 24 预筛的对照范围
+
+26 使用真实 joint_head.safetensors；24 probe 使用 normal(0,0.02) 随机 head 参数。26 OFF 保持 f810 的 routing 两次 memory LayerNorm、不同 K/V 对象及 unpacked projection；24 aa3e postimage 的 OFF 路径先共享一次 memory norm 的 kv_in，MHA 会选择 packed KV。两套 OFF 的工作量与权重范围不同，绝对 head 耗时和百分比不能跨窗口直接归并。两套方法均需各自同窗口 A/B，服务级对照统一回 f810 后再评估。
+
+### 生命周期闭合
+
+window overall_rc=0，probe rc=0、gate_passed=true、error缺失；cleanup reaped=true，unknown/residual/killed 均空。revert 原件恢复 f810，smallQ kernel 移除；restore 四项 health/workers/text/image 均 rc0、ok=true。最终 label `d0-restore-20261118T183442Z-d3301487`，root1193641/start394386882，workers1193787/1193788 属恢复树且使用卡7两个逻辑设备。
+
+原件 SHA：window `4d4f99f5d5bf0bd0b39c4cb56cc10d1ced8285e4c861e9631fe0270b45ad3f18`；record `b943da38d7025b8ff332fee60308e3694e7f27471ecc13ab30ecd434cad2733d`；revert `d500245a137a48be3ce53cbe12e119e86de38b9703dda8966874b6a9aa3ee64f`；restore `a0b953c2577bc611f3896a4863b5abaebfd775bfa7f32e32a511534e089ebafc`。完整压缩副本与哈希清单位于同一日志目录。
+
+纯 CPU 重算命令：
+
+```bash
+python3 runtime/analyze_joint_smallq_probe.py \
+  Clef-27B/logs/joint-smallq-20261119/first/head-probe.json.gz \
+  --expect-sha 25686c9de1f1f5eb20c9a5be5b16eb1b2688a1aa15519be6ef19870f63dc6cad \
+  --output /tmp/smallq-paired-summary.json
+```
