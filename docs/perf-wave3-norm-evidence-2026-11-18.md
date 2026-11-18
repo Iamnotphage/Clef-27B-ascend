@@ -660,3 +660,43 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 - vendor 名 `clef_matmul_ar_add_rms_norm_mc`、op 名仍 `ClefMatmulArAddRmsNorm`。**安装目录共存**与**运行时实际选用**必须分开记录；**不得**仅据同名自行卸载既有包，也不**推断**唯一装载方式。
 - **授权状态**：新包仅 CPU 准备，**20 尚未放行任何 E 设备格**；GDN 完成后亦须有明确排队消息才可执行——**队列顺序不等于上板授权**。
 - 源提交 `aacf371`，MANIFEST 在 `836b8b6`；已归档的 nzguard/ND 包与单核对照**未动**。
+
+## 27. 多核包 2201 契约核准：两个高优先问题（22 只读，2026-11-18 22:34 CST）
+
+### 27.1 关键对应表（每项带 SDK 直接依据）
+
+| # | 项 | 本包位置 | 依据 |
+| --- | --- | --- | --- |
+| 1 | **AIV 的 `GetBlockIdx()` = `aicIdx*2 + subBlockId`**，AIC 的是 `aicIdx` | `op_kernel:220` | `dav_c220/kernel_operator_sys_var_impl.h:56-72` |
+| 2 | `GetSubBlockIdx()`：AIV 0~1，AIC 0 | 未使用 | 同上 `:31-42` |
+| 3 | `MIX_NUM = 2` | — | `dav_c220/kfc/kfc_comm.h:94-96` |
+| 4 | AIC↔AIV 分组 `aicId = blockIdx / MIX_NUM` | — | `dav_c220/core_mng/roc/kernel_operator_cube_group_handle_impl.h:53-69` |
+| 5 | 本包 worker 判据用 **AIV 下标** `myBlock < usedCoreNum` | `op_kernel:221-238` | 由 #1 推导；**实际 launch 数未记录** |
+| 6 | `REGIST_MATMUL_OBJ` 在所有 block 执行 | `op_kernel:180` | `kfc_register_obj.h:210/250/297/321` |
+| 7 | server 退出 `quitSize < MIX_NUM` | — | `kernel_kfc.h:60-63`、`:123-128`、`:199-218` |
+| 8 | `End()` 仅 `isSyncGetC` 时投 `MMFUN_END` | `op_kernel:229` 附近 | `matmul_client.h:695-701` |
+| 9 | `WaitIterateAll()` 断言 `!isSyncGetC` | `IterateAll(...,true)` | `matmul_client.h:772-773` |
+| 10 | **`SyncAll<true>` 是 AIC 直接返回的 AIV-only 屏障** | `op_kernel:246` | `dav_c220/kernel_operator_sync_impl.h:63-83` |
+| 11 | GM 生产→消费的**内存序** | `op_kernel:246-265` | **SDK 未给契约** |
+
+### 27.2 问题 ①：worker 用 AIV 下标 ⇒ 24 worker 只落 12 个 cube
+
+- `GetBlockIdx()` 在 AIV 为 `aicIdx*2+subBlockId`；`usedCoreNum=24` 时参与的是 AIV 0..23 ⇒ **aicIdx 0..11**，每 AIC 两个 client 各认领不同 M 段。
+- **不漏行、不重复写**（M 段互斥且覆盖全区间；CPU 140 例只证这一点），但**不是 24 路 cube 并行**，只是 12 个 cube 各做两段。
+- 若要 `usedCoreNum` 路 cube，worker 判据应改为 `subBlockId==0 && aicIdx<usedCoreNum`（`aicIdx = GetBlockIdx()/MIX_NUM`）——**需改代码，本轮未做**。
+
+### 27.3 问题 ②：`SyncAll<true>` 两 AIV 子块共用同一 GM 槽 ⇒ 可能永久等待
+
+- `:77` 在 `isAIVOnly` 时用 `get_block_idx()`（AIC 下标 0..23）算槽位，`:72` 总块数用 `GetBlockNum()`。
+- 若 `GetBlockNum()` 在 AIV 返回 **AIV 数（48）**，则 48 个到达者只写 24 个槽 ⇒ **屏障永不满足 → 挂死**。
+- `:66-68` 明确 **AIC 直接 return**，所以旧注释"AIC 已退出导致超时"不成立；但**新屏障有另一种挂死路径**，`GetBlockNum()` 的 AIV 语义未定。
+
+### 27.4 拟议的最小可证伪诊断（只准备，未执行，待 20 决定）
+
+| 格 | 配置 | 通过判据 | 停止条件 |
+| --- | --- | --- | --- |
+| **D1**（判 ②，风险最高，先跑） | `usedCoreNum=1`，保留新增 `SyncAll<true>` | `RAW_RC=0` 且三输出与归档单核对照差 0 | 出现 `507014 / 0x25` 或超时 ⇒ **判定 `SyncAll<true>` 在本包范式下不可用**，立即停，回到 GM flag 手工屏障方案 |
+| **D2**（判 ①） | `mm_dim=2`（最小偶数 worker） | `RAW_RC=0`；`partial` 与单核对照全元素差 0；diag[5] 报 `usedCoreNum` | `partial` 未写行 ⇒ 漏行；两段相同 ⇒ 重复写；超时 ⇒ 集合问题 |
+
+- **不做**：baseK/shape 扫描，不一次跑多个 `usedCoreNum`。
+- 本包**未安装、未上板**；①的改法属代码改动，需另行授权。
