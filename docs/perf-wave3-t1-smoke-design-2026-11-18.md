@@ -60,7 +60,21 @@
 链接集合：`-L$H/lib64 -L$H/aarch64-linux/lib64 -lhccl -lhcomm -lascendcl -Wl,--allow-shlib-undefined`；
 缺 `hcomm/ascendcl` 会出现 `aclrt*`/`Hcomm*` 未定义。
 
-### 门 B：MC2 tiling API —— **未证实（需走官方 op 构建）**
+### 门 B：MC2 tiling API —— **通过（官方构建，链接级）**
+
+**2026-11-18 实测**：在 `runtime/ascendc/clef_ar_add_rms_norm/` 搭官方 `npu_op_package` 脚手架（op_host 内真实调用
+`AscendC::Mc2CcTilingConfig` 与 `GetTiling`，op_kernel 为占位实现），`bash build.sh` **构建成功**并产出
+`custom_opp_ubuntu_aarch64.run`（247,090 B，sha256 `d8851ed7…c819`）：
+
+- `cust_optiling` / `cust_opapi` / `cust_op_proto` 三个 target 全部 Built；
+- 安装后的 `op_impl/.../op_tiling/liboptiling.so`（符号链接）内可检索到我们硬编码的
+  `AllReduce=level0:ring` 与 `hccl_world_group` → tiling 代码确实进入产物；符号被 `-fvisibility=hidden` 隐藏属预期；
+- `aic-ascend910_93-ops-info.json` 含 `ClefArAddRmsNorm`，kernel `.o` 已生成。
+
+所需 CMake 适配仅两处（不改官方 target 结构）：`npu_op_code_gen(... COMPILE_OPTIONS -I<CANN>/asc/include -I<CANN>/aarch64-linux/include)`
+与给三个 host target 加同名 `target_include_directories`。**运行时 GetTiling 返回码仍需在算子实际执行时验证**（下一步 kernel smoke）。
+
+### （原）门 B 背景：为什么必须走官方构建
 
 - 头文件在 `asc/include/adv_api/hccl/hccl_tiling.h`（`AscendC::Mc2CcTilingConfig`，含 `GetTiling(Mc2InitTiling&)` / `GetTiling(Mc2CcTiling&)` 与 `SetCommEngine/SetAlgConfig/SetStepSize`）。
 - 实现位于 `aarch64-linux/lib64/libtiling_api.a`；`optiling::TilingDef` 的依赖在 `aarch64-linux/lib64/device/lib64/libtilingdata_base.a`。
