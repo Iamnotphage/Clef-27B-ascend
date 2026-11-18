@@ -74,90 +74,130 @@ def check_derivation(block: int, sub: int, ratio: int, aiv_blocks: int) -> list:
     return why
 
 
+REQUIRED_FOR_CLAIM = ("K1", "K4", "K8_final")   # prerequisites before a claim counts
+STAGE_ORDER = ["K1", "K2", "K3", "K4", "K5_enter", "K5_return",
+               "K6_end_before", "K6_end_after", "K7a", "K7b", "K8_final"]
+ENTER_RETURN = ("K5_enter", "K5_return")
+
+
 def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
            ratio: int | None = None, aiv_blocks: int | None = None) -> dict:
     n = slots_for(aic_cap, sub_cap)
     if len(raw) != n * FIELDS:
         raise SystemExit(f"trace length {len(raw)} != {n * FIELDS} (slots={n})")
-    present, rejected, partial = [], [], []
-    for s in range(n):
-        f = [_as_uint32(v, f"slot{s}") for v in raw[s * FIELDS:(s + 1) * FIELDS]]
+
+    observations, identity_rejected, incomplete, absent, partial = [], [], [], [], []
+    for s_ in range(n):
+        f = [_as_uint32(v, f"slot{s_}") for v in raw[s_ * FIELDS:(s_ + 1) * FIELDS]]
         got_magic, pid, domain, start_m, claim_m, bits, bits2, seal = f
         if got_magic == 0:
-            continue                                   # never recorded
+            absent.append(s_)                       # never recorded, not "missing participant"
+            continue
+        block, sub = pid >> 8, pid & 0xFF
+        sealed = seal == (SEAL_SEED ^ pid)
         why = []
         if got_magic != magic:
             why.append("magic")
-        sealed = seal == (SEAL_SEED ^ pid)
-        if not sealed:
-            why.append("seal")
         if domain not in (0, 1):
             why.append("domain")
-        block, sub = pid >> 8, pid & 0xFF
         if domain == 0 and (block >= aic_cap or sub != 0):
             why.append("id_bounds")
         if domain == 1 and (block >= aic_cap or sub >= sub_cap):
             why.append("id_bounds")
         expect = slot_of(domain, block, sub, aic_cap, sub_cap) if domain in (0, 1) else None
-        if expect != s:
+        if expect != s_:
             why.append(f"slot_mismatch(expect={expect})")
         if domain == 1 and ratio is not None and aiv_blocks is not None:
             why.extend(check_derivation(block, sub, ratio, aiv_blocks))
-        rec = {"slot": s, "id": pid, "block": block, "sub": sub,
+
+        stages = [STAGE1[i] for i in range(8) if bits >> i & 1]
+        stages += [STAGE2[i] for i in range(5) if bits2 >> i & 1]
+        rec = {"slot": s_, "id": pid, "block": block, "sub": sub,
                "domain": "aic" if domain == 0 else ("aiv" if domain == 1 else "bad"),
                "claim_start_m": start_m, "claim_m": claim_m,
-               "stages": [STAGE1[i] for i in range(8) if bits >> i & 1],
-               "stages2": [STAGE2[i] for i in range(5) if bits2 >> i & 1],
-               "is_worker": bool(bits2 >> 3 & 1)}
+               "stages": stages, "is_worker": bool(bits2 >> 3 & 1),
+               "sealed": seal == (SEAL_SEED ^ pid)}
+
         if why:
-            rec["rejected"] = why
-            # An unsealed record is a stage record that never completed: it is
-            # listed on its own and never enters the valid set.
-            (partial if why == ["seal"] else rejected).append(rec)
+            rec["identity_errors"] = why
+            identity_rejected.append(rec)
             continue
-        if not rec["is_worker"]:
-            # Identity is fine but the record does not claim worker duty: its
-            # range must not count toward coverage, and the mismatch is noted.
-            rec["inconsistent"] = ["not_worker_but_has_claim"] if rec["claim_m"] else ["not_worker"]
-            rejected.append(rec)
+        if not sealed:
+            # only the seal is missing: a stage record that never completed.
+            rec["incomplete"] = ["unsealed"]
+            partial.append(rec)
             continue
-        present.append(rec)
 
-    claims, bad_ranges = {"aic": [], "aiv": []}, []
-    for r in present:
-        start, length = r["claim_start_m"], r["claim_m"]
-        end = start + length
-        if not (0 <= start <= end <= m):
-            bad_ranges.append({"slot": r["slot"], "start": start, "len": length, "end": end, "m": m})
-            continue
-        if length:
-            claims[r["domain"]].append((start, end, r["slot"]))
+        # contract anomalies: AIC returns inside REGIST, so it can neither be a
+        # worker nor carry a claim, and it never reaches the later stages.
+        anomaly = []
+        if rec["domain"] == "aic":
+            if rec["is_worker"]:
+                anomaly.append("aic_worker_bit")
+            if rec["claim_m"]:
+                anomaly.append("aic_claim")
+            if any(x in stages for x in STAGE_ORDER[3:]):
+                anomaly.append("aic_beyond_k3")
+        if anomaly:
+            rec["contract_anomaly"] = anomaly
 
-    # AIC and AIV are MIX pairs: the same M range is reported by both domains,
-    # so ranges are merged per domain and never across domains.
-    per_domain = {}
-    for dom, lst in claims.items():
-        lst.sort()
-        overlap, gaps, cursor = [], [], 0
-        for start, end, slot in lst:
-            if start < cursor:
-                overlap.append({"slot": slot, "start": start, "prev_end": cursor})
-            elif start > cursor:
-                gaps.append({"from": cursor, "to": start})
-            cursor = max(cursor, end)
-        if lst and cursor < m:
-            gaps.append({"from": cursor, "to": m, "tail": True})
-        per_domain[dom] = {"ranges": [{"start": a, "end": b, "slot": c} for a, b, c in lst],
-                           "overlap": overlap, "gaps": gaps, "covered_to": cursor}
+        missing = [x for x in REQUIRED_FOR_CLAIM if x not in stages]
+        if not rec["sealed"]:
+            rec["incomplete"] = ["unsealed"]
+        elif missing:
+            rec["incomplete"] = [f"missing:{','.join(missing)}"]
+        if rec.get("incomplete") or anomaly:
+            # never qualifies for claims; kept as an observation only
+            if not anomaly:
+                incomplete.append(rec)
+            else:
+                observations.append(rec)
+            if rec["domain"] == "bad":
+                observations.append(rec)
+            continue
+
+        # enter must precede its return when both are present
+        if all(x in stages for x in ENTER_RETURN) and stages.index("K5_enter") > stages.index("K5_return"):
+            rec["incomplete"] = ["k5_order"]
+            incomplete.append(rec)
+            continue
+        observations.append(rec)
+
+    # claims come only from valid AIV worker records
+    claims = []
+    for r in observations:
+        if r["domain"] == "aiv" and r["is_worker"] and not r.get("contract_anomaly"):
+            claims.append((r["claim_start_m"], r["claim_start_m"] + r["claim_m"], r["slot"]))
+    bad_ranges = [{"slot": c, "start": a, "end": b, "m": m}
+                  for a, b, c in claims if not (0 <= a <= b <= m)]
+    good = sorted(c for c in claims if 0 <= c[0] <= c[1] <= m and c[1] > c[0])
+    overlap, gaps, cursor = [], [], 0
+    for start, end, slot in good:
+        if start < cursor:
+            overlap.append({"slot": slot, "start": start, "prev_end": cursor})
+        elif start > cursor:
+            gaps.append({"from": cursor, "to": start})
+        cursor = max(cursor, end)
+    if good and cursor < m:
+        gaps.append({"from": cursor, "to": m, "tail": True})
+    covered = bool(good) and not overlap and not gaps and cursor == m
+
     return {
         "aic_cap": aic_cap, "sub_cap": sub_cap, "slots": n, "m": m,
-        "present": present, "partial_unsealed": partial, "rejected": rejected,
+        "observations": observations,
+        "incomplete": incomplete,
+        "partial_unsealed": partial,
+        "identity_rejected": identity_rejected,
+        "absent_slots": absent,
+        "claim_ranges": [{"start": a, "end": b, "slot": c} for a, b, c in good],
         "bad_ranges": bad_ranges,
-        "claims_by_domain": per_domain,
-        "coverage_basis": "fully valid worker records only",
+        "claim_overlap": overlap, "claim_gaps": gaps,
+        "observed_coverage": covered,
+        "unclaimed_span": None if covered else {"from": 0, "to": m},
+        "coverage_basis": "valid sealed AIV worker records only (AIC cannot claim)",
         "scope": ("capacity-internal observations only; capacity is not an expected "
                   "count and an absent slot is not a missing participant; AIV block is "
-                  "a derived value (identity_provenance=derived), no raw linear/ratio "
+                  "derived (identity_provenance=derived) with no raw linear/ratio "
                   "readback; launch set, SDK receipt, partial writes and consumer "
                   "visibility are outside this trace"),
     }
