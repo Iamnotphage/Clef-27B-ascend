@@ -221,3 +221,32 @@
   CANN 9.2.1 / torch_npu 2.10.0.post7；**每臂实际解析到的 num_warps/num_stages** 必须从编译产物读出；eps 取模型实际值；
   实施时按仓库惯例做成带 `--check` 的 `runtime/apply_*.py` 安装器。
 - 状态：**排队，待 E 组阶段完成后由 20/22 择时执行**；不占当前 NPU 窗口。
+
+## 11. C 组部分结果与可复现阻塞（2026-11-18 13:58 CST）
+
+**已获得**（分进程单臂，N=1280，与 on 臂同构建）：
+
+| 臂 | rank0 墙钟（device） | rank1 墙钟（device） |
+| --- | ---: | ---: |
+| AR + Add + RMSNorm（use_hccl=1） | 0.4026（0.3141）ms | 0.4021（0.3132）ms |
+
+- 测法变化：因同进程混跑两模式触发 AICPU 异常，C 改为**分进程单臂**；两臂中位差**不能**当作纯 AR 单 task 时长，
+  也与原 AB/BA 交错条件不同。
+
+**阻塞（可复现，日志已保留）**：
+
+1. ON 臂在 N=1280 成功后，N=2560 触发 **AIV 故障**：`aivec error`，core id 4/22/36（两 rank 不同），
+   `error code = 0`，vec error info 两 rank 不同；发生在 norm/轮询路径（ON/OFF 两臂均出现，**与 HCCL 未必相关**）。
+2. 同一窗口另见 **KFC 参数故障**：`ProcLogicCqReport ... task exception`、`execute kernel param invalid`、
+   `retCode=0x2a`、`kernel_type=TS_AICPU_KERNEL_AICPU_KFC(5)`、`argsSize=852`；host 侧 `GetWorkspaceSize` 与
+   `OpCommand.Run` 均返回 0，错误在 `synchronize` 暴露。
+3. 两类故障互相独立；失败时具体 N 无日志标记（已给 adapter 增加 `N`/`use_hccl` 打印，下个窗口生效）。
+
+**下一步最小判别**（未执行）：
+
+1. 用新标记单 N 单次跑 OFF 臂，仅 N=1280：若也挂 → 与 shape 无关；若过 → 故障在更大 N。
+2. 每臂独立 `ASCEND_PROCESS_LOG_PATH`，抓第一条 `ProcLogicCqReport` 与 `[AICPU_INFO]` 段。
+3. 核对 AIV core id（4/22/36）与实际 block dim 是否匹配；按官方 AI Core Error 文档解 `vec error info`。
+4. 确认 `use_hccl=0` 是否仍走 KFC ctx（当前未证实）。
+
+**E 组状态**：E 的 cube GEMM 实现依赖上述 kernel 缺陷先定位；C 的完整 2/4 块/尾部与 ready 粒度仍未测。
