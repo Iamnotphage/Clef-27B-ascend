@@ -88,6 +88,27 @@ def launch_cmd(a) -> list:
             "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)]
 
 
+def query_group(pgid: int) -> dict:
+    """List members of a process group, or say why the listing is unavailable."""
+    try:
+        # Full listing then filter on the captured pgid: ps -g has different
+        # meanings across implementations.
+        p = subprocess.run(["ps", "-eo", "pid=,pgid="], capture_output=True,
+                           text=True, timeout=10)
+    except Exception as exc:                              # noqa: BLE001
+        return {"survivor_check": "unavailable", "members": None,
+                "query_exception": f"{type(exc).__name__}: {exc}"}
+    if p.returncode != 0:
+        return {"survivor_check": "unavailable", "members": None,
+                "query_returncode": p.returncode, "query_stderr": p.stderr[-500:]}
+    members = []
+    for line in p.stdout.splitlines():
+        parts = line.split()
+        if len(parts) == 2 and all(x.isdigit() for x in parts) and int(parts[1]) == pgid:
+            members.append(int(parts[0]))
+    return {"survivor_check": "ok", "members": members, "query_returncode": 0}
+
+
 def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -> int:
     """Supervise one child tree. Reused by the cpu fixture, so it takes cmd."""
     env = dict(os.environ if env is None else env)
@@ -128,18 +149,12 @@ def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -
         ensure_ascii=False) + "\n")
     (out_dir / "stdout.log").write_text(out or "")
     (out_dir / "stderr.log").write_text(err or "")
-    # Survivors are judged against the PGID actually created, not a fresh scan.
-    survivors = []
-    try:
-        out_pg = subprocess.run(["ps", "-o", "pid=", "-g", str(pgid)],
-                                capture_output=True, text=True, timeout=10)
-        survivors = [int(x) for x in out_pg.stdout.split() if x.isdigit()]
-    except Exception:                                     # noqa: BLE001
-        survivors = []                                    # recorded as a gap below
+    # Survivors are judged against the PGID actually created. A failed query is
+    # reported as unavailable with members null; only a complete, successful
+    # listing may yield an empty list.
+    q = query_group(pgid)
     (out_dir / "tree-after.json").write_text(json.dumps(
-        {"tree": snapshot_tree(os.getpid()), "pgid": pgid,
-         "surviving_members": survivors,
-         "survivor_check": "ps -g" if survivors else "empty"},
+        {"tree": snapshot_tree(os.getpid()), "pgid": pgid, **q},
         ensure_ascii=False) + "\n")
     return 2 if timed_out else child_raw_rc
 

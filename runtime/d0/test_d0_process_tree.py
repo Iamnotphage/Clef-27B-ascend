@@ -67,7 +67,8 @@ def main() -> int:
               and meta["child_raw_rc"] == 0, meta)
         check("leader-first grandchild exited", gpid and not alive(gpid), f"pid={gpid}")
         after = json.loads((d / "tree-after.json").read_text())
-        check("survivors judged by captured pgid", "surviving_members" in after, after.keys())
+        check("survivor query reports ok with members",
+              after["survivor_check"] == "ok" and isinstance(after["members"], list), after)
 
     # 3 nonzero child rc is kept separate from the wrapper rc
     with tempfile.TemporaryDirectory() as td:
@@ -82,6 +83,48 @@ def main() -> int:
         d = Path(td)
         rc = run_child(["sh", "-c", "echo hi"], d, timeout=10)
         check("clean exit", rc == 0 and (d / "stdout.log").read_text().strip() == "hi")
+
+    # 5 query failure is unavailable with null members, never an empty list
+    import d0_run as _r
+    orig = _r.subprocess.run
+    class Boom:
+        @staticmethod
+        def run(*a, **k):
+            raise OSError("ps missing")
+    _r.subprocess.run = Boom.run
+    try:
+        q = _r.query_group(12345)
+    finally:
+        _r.subprocess.run = orig
+    check("query exception -> unavailable/null",
+          q["survivor_check"] == "unavailable" and q["members"] is None
+          and "query_exception" in q, q)
+
+    # 6 nonzero return code is unavailable too
+    class NonZero:
+        returncode = 1
+        stdout = ""
+        stderr = "ps: bad flag"
+    _r.subprocess.run = lambda *a, **k: NonZero()
+    try:
+        q = _r.query_group(12345)
+    finally:
+        _r.subprocess.run = orig
+    check("query nonzero -> unavailable/null",
+          q["survivor_check"] == "unavailable" and q["members"] is None
+          and q["query_returncode"] == 1, q)
+
+    # 7 successful complete query with no members yields an empty list
+    class Empty:
+        returncode = 0
+        stdout = "  1     1\n  2     2\n"
+        stderr = ""
+    _r.subprocess.run = lambda *a, **k: Empty()
+    try:
+        q = _r.query_group(99999)
+    finally:
+        _r.subprocess.run = orig
+    check("query ok empty -> []", q["survivor_check"] == "ok" and q["members"] == [], q)
 
     print("RESULT:", "ALL PASS" if not fails else f"FAILURES: {fails}")
     return 0 if not fails else 1
