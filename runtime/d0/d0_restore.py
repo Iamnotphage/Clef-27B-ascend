@@ -27,25 +27,63 @@ def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def cleanup(pids: list[int], pgids: list[int], log: dict) -> dict:
-    """Kill only recorded identities; report each one."""
-    result = {"killed": [], "already_gone": [], "errors": []}
-    for pgid in pgids:
+def _identity(pid: int) -> dict | None:
+    """Start time and boot id, so a recycled pid is never mistaken for ours."""
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+        starttime = stat.split(") ", 1)[1].split()[19]
+    except (OSError, IndexError):
+        return None
+    boot = ""
+    try:
+        boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    except OSError:
+        pass
+    return {"pid": pid, "starttime": starttime, "boot_id": boot}
+
+
+def _verify_identity(target: dict) -> tuple[bool, str]:
+    """A target is only killable when the recorded identity still matches."""
+    pid = target.get("pid")
+    if not isinstance(pid, int) or pid <= 1:
+        return False, "refused: pid missing, non-integer or <= 1"
+    if pid == os.getpid():
+        return False, "refused: target is the current process"
+    now = _identity(pid)
+    if now is None:
+        return False, "unavailable: process not present"
+    if target.get("starttime") and now["starttime"] != target["starttime"]:
+        return False, "refused: starttime mismatch (pid likely reused)"
+    if target.get("boot_id") and now["boot_id"] != target["boot_id"]:
+        return False, "refused: boot_id mismatch"
+    return True, "ok"
+
+
+def cleanup(targets: list[dict], log: dict, killer=None) -> dict:
+    """Kill only targets whose recorded identity still matches.
+
+    A target without a usable identity is never signalled; the outcome is
+    recorded as refused or unavailable rather than as cleaned.
+    """
+    killer = killer or (lambda kind, value: os.killpg(value, signal.SIGKILL)
+                        if kind == "pgid" else os.kill(value, signal.SIGKILL))
+    result = {"killed": [], "already_gone": [], "refused": [], "unavailable": [],
+              "errors": []}
+    for t in targets:
+        ok, why = _verify_identity(t)
+        if not ok:
+            bucket = "unavailable" if why.startswith("unavailable") else "refused"
+            result[bucket].append({**t, "reason": why})
+            continue
+        kind = "pgid" if t.get("pgid") else "pid"
+        value = t.get("pgid") or t["pid"]
         try:
-            os.killpg(pgid, signal.SIGKILL)
-            result["killed"].append({"pgid": pgid})
+            killer(kind, value)
+            result["killed"].append({**t, "signalled": kind})
         except ProcessLookupError:
-            result["already_gone"].append({"pgid": pgid})
+            result["already_gone"].append({**t})
         except OSError as exc:
-            result["errors"].append({"pgid": pgid, "error": str(exc)})
-    for pid in pids:
-        try:
-            os.kill(pid, signal.SIGKILL)
-            result["killed"].append({"pid": pid})
-        except ProcessLookupError:
-            result["already_gone"].append({"pid": pid})
-        except OSError as exc:
-            result["errors"].append({"pid": pid, "error": str(exc)})
+            result["errors"].append({**t, "error": str(exc)})
     log["cleanup"] = {"at": _now(), **result}
     return result
 
@@ -61,18 +99,46 @@ def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subproces
     return started.returncode == 0
 
 
-def verify(health_cmd: list, workers_cmd: list, text_cmd: list, image_cmd: list,
-           log: dict, runner=subprocess.run) -> bool:
+def _parse_health(text: str) -> bool:
+    try:
+        return json.loads(text).get("status") == "ready"
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
+def _count_workers(text: str) -> int:
+    return sum(1 for line in text.splitlines() if "VLLMWorker_TP" in line)
+
+
+def _parse_answer(text: str, expect: str) -> bool:
+    try:
+        return json.loads(text)["answers"]["answer"].get("type") == expect
+    except Exception:                                        # noqa: BLE001
+        return False
+
+
+def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120) -> bool:
+    """Each stage keeps its own rc, payload and timing; non-empty is not enough."""
     ok = True
-    for stage, cmd in (("health", health_cmd), ("workers", workers_cmd),
-                       ("text", text_cmd), ("image", image_cmd)):
+    for stage in ("health", "workers", "text", "image"):
+        cmd = cmds.get(stage)
+        started = _now()
         try:
-            r = runner(cmd, capture_output=True, text=True)
-            entry = {"at": _now(), "rc": r.returncode,
-                     "stdout": r.stdout[-2000:].strip(), "stderr": r.stderr[-500:]}
-            entry["ok"] = bool(r.returncode == 0 and r.stdout.strip())
+            r = runner(cmd, capture_output=True, text=True, timeout=timeout)
+            entry = {"started": started, "finished": _now(), "rc": r.returncode,
+                     "stdout": r.stdout, "stderr": r.stderr}
+            if stage == "health":
+                entry["ok"] = r.returncode == 0 and _parse_health(r.stdout)
+            elif stage == "workers":
+                entry["workers"] = _count_workers(r.stdout)
+                entry["ok"] = r.returncode == 0 and entry["workers"] == 2
+            elif stage == "text":
+                entry["ok"] = r.returncode == 0 and _parse_answer(r.stdout, "score")
+            else:
+                entry["ok"] = r.returncode == 0 and _parse_answer(r.stdout, "choice")
         except Exception as exc:                             # noqa: BLE001
-            entry = {"at": _now(), "ok": False, "exception": f"{type(exc).__name__}: {exc}"}
+            entry = {"started": started, "finished": _now(), "ok": False,
+                     "exception": f"{type(exc).__name__}: {exc}"}
         log[stage] = entry
         ok = ok and entry["ok"]
     return ok

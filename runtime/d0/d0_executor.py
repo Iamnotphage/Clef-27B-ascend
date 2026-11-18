@@ -165,6 +165,17 @@ def run(torch, torch_npu, args, out_dir: Path, dist=None, env=None) -> dict:
                         "mm_dim": args.mm_dim}
     flush(out_dir, meta)                                   # flush #3: complete, pre-call
 
+    # Reference on the same x/w_nd/r/gamma/eps with AR off: BF16 matmul then the
+    # established add/rmsnorm. ND protocol is kept; nothing is reformatted.
+    ref_partial = torch.matmul(x, w_nd)
+    ref_y, ref_rstd_raw, ref_res = torch_npu.npu_add_rms_norm(ref_partial, r, gamma, 1e-6)
+    ref_rstd = ref_rstd_raw.reshape(-1)
+    meta["reference"] = {"protocol": "ND bfloat16 matmul + npu_add_rms_norm",
+                         "ar": "off", "eps": 1e-6,
+                         "shapes": {"y": list(ref_y.shape), "rstd": list(ref_rstd.shape),
+                                    "residual": list(ref_res.shape)}}
+    flush(out_dir, meta)
+
     out, res_out, rstd, diag, trace = torch.ops.clef_d0.d0_trace(
         x, w_nz, r, gamma, 1e-6, 1, group_name, args.use_hccl, -1, 1,
         args.mm_dim, 2, 0, 1, 0, 0, 0, 0)
@@ -175,7 +186,13 @@ def run(torch, torch_npu, args, out_dir: Path, dist=None, env=None) -> dict:
     if int(trace.numel()) != TRACE_SLOTS * TRACE_FIELDS:
         raise RuntimeError(f"trace numel {int(trace.numel())} != {TRACE_SLOTS * TRACE_FIELDS}")
     rows = trace.cpu().tolist()
+    from d0_gate import evaluate
+    gate = evaluate({"residual": res_out, "y": out, "rstd": rstd.reshape(-1)},
+                    {"residual": ref_res, "y": ref_y, "rstd": ref_rstd})
+    (out_dir / f"gate-rank{rank}.json").write_text(
+        json.dumps(gate, ensure_ascii=False, indent=1) + "\n")
     record = {"rank": rank, "group": group_name, "raw_trace": rows,
+              "gate_pass": gate["pass"],
               "flat_u32": normalize_trace(rows),
               "diag": [float(v) for v in diag.cpu()],
               "trace_shape": list(trace.shape),
