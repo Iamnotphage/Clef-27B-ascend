@@ -10,7 +10,7 @@ module-level state cannot leak between cases.
 ```bash
 python3 -I runtime/d0_regression/d0_main_regression.py \
   --repo <21 worktree> \
-  --commit 5e85681ec09b37ec9ba951bde4ca4a38615ab34e \
+  --commit 0bd6f6a4789970728c341c282a88f39ce990cf76 \
   --json-out /tmp/d0-suite.json \
   --freeze-dir /tmp/d0-freeze
 ```
@@ -35,7 +35,7 @@ runs one case; `--keep-temp` preserves the temporary archive/run directory.
 
 ## Evidence
 
-`evidence/run-5642732/` and `evidence/run-5e85681/` hold the before/after suites,
-per-case JSON and raw artefacts.  `evidence/MANIFEST.json` records the script
-SHA, production SHAs, matrix, happy argv, module identity and failure-injection
+`evidence/run-5642732/`, `evidence/run-5e85681/` and `evidence/run-0bd6f6a/` hold the before/intermediate/final suites,
+per-case JSON and raw artefacts.  `evidence/MANIFEST.json` records the script SHA, three production SHAs, matrix,
+happy argv, loaded-module identity, frozen source hashes and failure-injection
 list; `evidence/SHA256SUMS` hashes every frozen file.

@@ -1,7 +1,7 @@
 {
  "schema": "d0-regression-suite/1",
  "target_commit": "56427329248f49490a87877f6a47d04239418bfe",
- "at": "2026-11-18T16:59:21Z",
+ "at": "2026-11-18T17:06:44Z",
  "cases": [
   {
    "scenario": "happy",
@@ -212,6 +212,96 @@
    "verify_blocked": null,
    "production_gap": null,
    "failed": []
+  },
+  {
+   "scenario": "restore_exception",
+   "case_ok": false,
+   "case_rc": 1,
+   "main_return": 0,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 0,
+   "restore_ok": false,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": {
+    "scenario": "restore_exception",
+    "main_return": 0,
+    "expected": 3,
+    "restore_ok": false,
+    "verify_ok": false,
+    "restore_blocked": null,
+    "verify_blocked": null
+   },
+   "failed": [
+    "dut_nonzero"
+   ]
+  },
+  {
+   "scenario": "child7_restore_exception",
+   "case_ok": true,
+   "case_rc": 0,
+   "main_return": 7,
+   "main_return_type": "int",
+   "test_rc": 7,
+   "wrapper_rc": 7,
+   "restore_ok": false,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": null,
+   "failed": []
+  },
+  {
+   "scenario": "workers_unrelated",
+   "case_ok": false,
+   "case_rc": 1,
+   "main_return": 0,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 0,
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": {
+    "scenario": "workers_unrelated",
+    "main_return": 0,
+    "expected": "non-zero",
+    "restore_ok": true,
+    "verify_ok": false,
+    "restore_blocked": null,
+    "verify_blocked": null
+   },
+   "failed": [
+    "dut_nonzero"
+   ]
+  },
+  {
+   "scenario": "workers_duplicate",
+   "case_ok": false,
+   "case_rc": 1,
+   "main_return": 0,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 0,
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": {
+    "scenario": "workers_duplicate",
+    "main_return": 0,
+    "expected": "non-zero",
+    "restore_ok": true,
+    "verify_ok": false,
+    "restore_blocked": null,
+    "verify_blocked": null
+   },
+   "failed": [
+    "dut_nonzero"
+   ]
   }
  ],
  "case_ok": false,
@@ -263,6 +353,33 @@
   },
   {
    "scenario": "verify_failure",
+   "main_return": 0,
+   "expected": "non-zero",
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null
+  },
+  {
+   "scenario": "restore_exception",
+   "main_return": 0,
+   "expected": 3,
+   "restore_ok": false,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null
+  },
+  {
+   "scenario": "workers_unrelated",
+   "main_return": 0,
+   "expected": "non-zero",
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null
+  },
+  {
+   "scenario": "workers_duplicate",
    "main_return": 0,
    "expected": "non-zero",
    "restore_ok": true,

@@ -1,7 +1,7 @@
 {
  "schema": "d0-regression-suite/1",
  "target_commit": "5e85681ec09b37ec9ba951bde4ca4a38615ab34e",
- "at": "2026-11-18T16:59:23Z",
+ "at": "2026-11-18T17:06:46Z",
  "cases": [
   {
    "scenario": "happy",
@@ -152,9 +152,83 @@
    "verify_blocked": null,
    "production_gap": null,
    "failed": []
+  },
+  {
+   "scenario": "restore_exception",
+   "case_ok": false,
+   "case_rc": 1,
+   "main_return": 3,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 0,
+   "restore_ok": false,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": {
+    "scenario": "restore_exception",
+    "issue": "raw_rc_wrapper_mismatch",
+    "main_return": 3,
+    "raw_rc_wrapper_rc": 0
+   },
+   "failed": [
+    "wrapper_rc_matches_main"
+   ]
+  },
+  {
+   "scenario": "child7_restore_exception",
+   "case_ok": true,
+   "case_rc": 0,
+   "main_return": 7,
+   "main_return_type": "int",
+   "test_rc": 7,
+   "wrapper_rc": 7,
+   "restore_ok": false,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": null,
+   "failed": []
+  },
+  {
+   "scenario": "workers_unrelated",
+   "case_ok": true,
+   "case_rc": 0,
+   "main_return": 3,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 3,
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": null,
+   "failed": []
+  },
+  {
+   "scenario": "workers_duplicate",
+   "case_ok": true,
+   "case_rc": 0,
+   "main_return": 3,
+   "main_return_type": "int",
+   "test_rc": 0,
+   "wrapper_rc": 3,
+   "restore_ok": true,
+   "verify_ok": false,
+   "restore_blocked": null,
+   "verify_blocked": null,
+   "production_gap": null,
+   "failed": []
   }
  ],
- "case_ok": true,
- "production_gaps": [],
- "suite_rc": 0
+ "case_ok": false,
+ "production_gaps": [
+  {
+   "scenario": "restore_exception",
+   "issue": "raw_rc_wrapper_mismatch",
+   "main_return": 3,
+   "raw_rc_wrapper_rc": 0
+  }
+ ],
+ "suite_rc": 1
 }

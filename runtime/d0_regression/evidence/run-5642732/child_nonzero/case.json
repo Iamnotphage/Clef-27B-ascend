@@ -2,7 +2,7 @@
  "schema": "d0-regression-case/1",
  "scenario": "child_nonzero",
  "target_commit": "56427329248f49490a87877f6a47d04239418bfe",
- "at": "2026-11-18T16:59:20Z",
+ "at": "2026-11-18T17:06:42Z",
  "checks": [
   {
    "check": "main_returned",
@@ -47,6 +47,12 @@
    "category": "common"
   },
   {
+   "check": "npu_smi_source",
+   "ok": true,
+   "detail": "{\"path\": \"/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-21/docs/evidence/npu-smi-snapshot-2026-11-12.txt\", \"expected_sha256\": \"308468003162edeb57bea1b532fed4d3371c2e4260fe5ae6bc25f7e4b0bf1ceb\", \"started_at_utc\": \"2026-11-12T10:10:51.017948+00:00\", \"sha256\": \"308468003162edeb57bea1b532fed4d3371c2e4260fe5ae6bc25f7e4b0bf1ceb\", \"header_matches\": true, \"returncode\": 0}",
+   "category": "common"
+  },
+  {
    "check": "wrapper_rc_matches_main",
    "ok": true,
    "detail": "wrapper=7 main=7",
@@ -85,7 +91,13 @@
   {
    "check": "label_dynamic",
    "ok": true,
-   "detail": "'d0-restore-20261118T165920Z-40287e20'",
+   "detail": "'d0-restore-20261118T170642Z-3f279af4'",
+   "category": "common"
+  },
+  {
+   "check": "launch_env_s1",
+   "ok": true,
+   "detail": "'s1'",
    "category": "common"
   },
   {
@@ -97,13 +109,13 @@
   {
    "check": "root_child_pid_separate",
    "ok": true,
-   "detail": "child=424200 service=424242 harness=52135",
+   "detail": "child=424200 service=424242 harness=77981",
    "category": "common"
   },
   {
    "check": "proc_before_empty",
    "ok": true,
-   "detail": "['52135']",
+   "detail": "['77981']",
    "category": "common"
   },
   {
@@ -147,6 +159,14 @@
   "test_d0_runner_cpu.py",
   "test_d0_trace_parse.py"
  ],
+ "npu_smi_source": {
+  "path": "/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-21/docs/evidence/npu-smi-snapshot-2026-11-12.txt",
+  "expected_sha256": "308468003162edeb57bea1b532fed4d3371c2e4260fe5ae6bc25f7e4b0bf1ceb",
+  "started_at_utc": "2026-11-12T10:10:51.017948+00:00",
+  "sha256": "308468003162edeb57bea1b532fed4d3371c2e4260fe5ae6bc25f7e4b0bf1ceb",
+  "header_matches": true,
+  "returncode": 0
+ },
  "expected_source_sha256": {
   "d0_run": "411a4c65812055b130c64bd0fa0661f6985d7f896dfc644b4578379aea3cae3e",
   "d0_restore": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
@@ -195,9 +215,9 @@
      "torch.distributed.run",
      "--standalone",
      "--nproc-per-node=2",
-     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_launch.py",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_launch.py",
      "--out-dir",
-     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/out",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/out",
      "--rows",
      "967",
      "--seed",
@@ -233,7 +253,7 @@
     "argv": [
      "bash",
      "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
-     "d0-restore-20261118T165920Z-40287e20"
+     "d0-restore-20261118T170642Z-3f279af4"
     ]
    },
    {
@@ -297,20 +317,20 @@
   "kill_simulated": [],
   "net": [],
   "unexpected": [],
-  "label": "d0-restore-20261118T165920Z-40287e20",
+  "label": "d0-restore-20261118T170642Z-3f279af4",
   "vfs_miss": [],
   "workspace_writes": [],
   "proc_before_launch": [
-   "52135"
+   "77981"
   ]
  },
  "artifacts": {
   "plan.json": {
-   "sha256": "9da1a86cbaed6b10599dc84dc33e7cf8904c5cfa2ea58d4ca677787f2bf8747c",
+   "sha256": "107fa918a881816fd8effc4b9475d3346cfbba417ff4644297a1a199b901cb8a",
    "size": 850,
    "json": {
-    "run_id": "d0-20261119T005920-out",
-    "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/out",
+    "run_id": "d0-20261119T010642-out",
+    "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/out",
     "cell": {
      "mm_dim": 1,
      "use_hccl": 2,
@@ -348,10 +368,10 @@
    }
   },
   "process-tree.json": {
-   "sha256": "1237728c46e280c22eabd3fda34ee70e19aaa99d3487cba5a58829fad10cdb4d",
+   "sha256": "43af7b764819930222c37e32b1f1f1d3eb6bc69d1b5f6bf739ee8413eec20ead",
    "size": 286,
    "json": {
-    "root_pid": 52135,
+    "root_pid": 77981,
     "root": {
      "comm": "python3",
      "state": "0",
@@ -360,9 +380,9 @@
      "session": 0,
      "cmdline": ""
     },
-    "captured_at": "2026-11-19T00:59:20+0800",
+    "captured_at": "2026-11-19T01:06:42+0800",
     "processes": {
-     "52135": {
+     "77981": {
       "comm": "python3",
       "state": "0",
       "ppid": 1,
@@ -385,13 +405,13 @@
    }
   },
   "restore.json": {
-   "sha256": "e69a17e23804a6144432e6c6d61b3c184550eb15f7a4f39f4de1f0f0c8b1293b",
-   "size": 2394,
+   "sha256": "e8acc1e3b077e75df14b09dd10041b57748454da7727f166d2dc464a1349d98b",
+   "size": 4514,
    "json": {
     "test_rc": 7,
     "test_exception": null,
-    "run_id": "d0-20261119T005920-out",
-    "service_label": "d0-restore-20261118T165920Z-40287e20",
+    "run_id": "d0-20261119T010642-out",
+    "service_label": "d0-restore-20261118T170642Z-3f279af4",
     "service_config": "s1",
     "prelaunch_group": {
      "survivor_check": "ok",
@@ -400,19 +420,19 @@
     },
     "restore_blocked": null,
     "restore": {
-     "launch_started": "2026-11-19T00:59:20+08:00",
-     "launch_finished": "2026-11-19T00:59:20+08:00",
+     "launch_started": "2026-11-19T01:06:42+08:00",
+     "launch_finished": "2026-11-19T01:06:42+08:00",
      "launch_rc": 0,
      "stdout": "",
      "stderr": "",
-     "wait_started": "2026-11-19T00:59:20+08:00",
-     "wait_finished": "2026-11-19T00:59:20+08:00",
+     "wait_started": "2026-11-19T01:06:42+08:00",
+     "wait_finished": "2026-11-19T01:06:42+08:00",
      "wait_rc": 0,
      "wait_stdout": "",
      "wait_stderr": ""
     },
     "service_discovery": {
-     "pid_file": "/workspace/yangchen/logs/perf-wave2-20261118/d0-restore-20261118T165920Z-40287e20/api.pid",
+     "pid_file": "/workspace/yangchen/logs/perf-wave2-20261118/d0-restore-20261118T170642Z-3f279af4/api.pid",
      "exists": true,
      "api_pid": 424242,
      "api_identity": {
@@ -454,18 +474,18 @@
      424302
     ],
     "health": {
-     "started": "2026-11-19T00:59:20+08:00",
-     "finished": "2026-11-19T00:59:20+08:00",
+     "started": "2026-11-19T01:06:42+08:00",
+     "finished": "2026-11-19T01:06:42+08:00",
      "rc": 0,
      "stdout": "{\"status\":\"ready\"}",
      "stderr": "",
      "ok": true
     },
     "workers": {
-     "started": "2026-11-19T00:59:20+08:00",
-     "finished": "2026-11-19T00:59:20+08:00",
+     "started": "2026-11-19T01:06:42+08:00",
+     "finished": "2026-11-19T01:06:42+08:00",
      "rc": 0,
-     "stdout": "+---+--------+----------------+\n| 0 | 424242 | python |\n| 0 | 424301 | VLLMWorker_TP |\n| 1 | 424302 | VLLMWorker_TP |",
+     "stdout": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 317.9                43                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 48                   0    / 0                60337/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    43                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 48                   0    / 0                59997/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 424242        | python             | 106                   | 424242                  |\n| 7       0                 | 424301        | VLLMWorker_TP      | 57172                 | 424301                  |\n| 7       1                 | 424302        | VLLMWorker_TP      | 57172                 | 424302                  |\n+===========================+===============+======================================================================+",
      "stderr": "",
      "workers": 2,
      "worker_pids": [
@@ -480,16 +500,16 @@
      "ok": true
     },
     "text": {
-     "started": "2026-11-19T00:59:20+08:00",
-     "finished": "2026-11-19T00:59:20+08:00",
+     "started": "2026-11-19T01:06:42+08:00",
+     "finished": "2026-11-19T01:06:42+08:00",
      "rc": 0,
      "stdout": "{\"answers\": {\"answer\": {\"type\": \"score\"}}}",
      "stderr": "",
      "ok": true
     },
     "image": {
-     "started": "2026-11-19T00:59:20+08:00",
-     "finished": "2026-11-19T00:59:20+08:00",
+     "started": "2026-11-19T01:06:42+08:00",
+     "finished": "2026-11-19T01:06:42+08:00",
      "rc": 0,
      "stdout": "{\"answers\": {\"answer\": {\"type\": \"choice\"}}}",
      "stderr": "",
@@ -500,7 +520,7 @@
    }
   },
   "root-child.json": {
-   "sha256": "92aca7c6edea16ecc958ad46a4707ff8176f38ba4a9a8353dcf169b9ad0525f5",
+   "sha256": "fbb4678d4f443260f14cb9cee8d82975733d8ef870d02449e226dc6fcf7db6bd",
    "size": 684,
    "json": {
     "child_pid": 424200,
@@ -509,7 +529,7 @@
     "boot_id": "BOOT-TEST-0001",
     "launch_source": "/opt/homebrew/opt/python@3.12/bin/python3.12 -m torch.distributed.run",
     "tree_at_start": {
-     "root_pid": 52135,
+     "root_pid": 77981,
      "root": {
       "comm": "python3",
       "state": "0",
@@ -518,17 +538,17 @@
       "session": 0,
       "cmdline": ""
      },
-     "captured_at": "2026-11-19T00:59:20+0800",
+     "captured_at": "2026-11-19T01:06:42+0800",
      "processes": {
       "424200": {
        "comm": "python3",
        "state": "0",
-       "ppid": 52135,
+       "ppid": 77981,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
       },
-      "52135": {
+      "77981": {
        "comm": "python3",
        "state": "0",
        "ppid": 1,
@@ -542,7 +562,7 @@
        "pid": 424200,
        "comm": "python3",
        "state": "0",
-       "ppid": 52135,
+       "ppid": 77981,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
@@ -562,11 +582,11 @@
    "text": ""
   },
   "tree-after.json": {
-   "sha256": "d3c23d0661e31300c61441d4822dbb9b6142fcd7d1903287d297c062fdf93f2b",
+   "sha256": "2b2b690ea4f450e0f1472595b55daeaa6469acc45d246613bef64cce30dad024",
    "size": 577,
    "json": {
     "tree": {
-     "root_pid": 52135,
+     "root_pid": 77981,
      "root": {
       "comm": "python3",
       "state": "0",
@@ -575,17 +595,17 @@
       "session": 0,
       "cmdline": ""
      },
-     "captured_at": "2026-11-19T00:59:20+0800",
+     "captured_at": "2026-11-19T01:06:42+0800",
      "processes": {
       "424200": {
        "comm": "python3",
        "state": "0",
-       "ppid": 52135,
+       "ppid": 77981,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
       },
-      "52135": {
+      "77981": {
        "comm": "python3",
        "state": "0",
        "ppid": 1,
@@ -599,7 +619,7 @@
        "pid": 424200,
        "comm": "python3",
        "state": "0",
-       "ppid": 52135,
+       "ppid": 77981,
        "pgrp": 0,
        "session": 0,
        "cmdline": ""
@@ -623,58 +643,56 @@
   "stdout.log",
   "tree-after.json"
  ],
+ "modules_loaded": [
+  "d0_run",
+  "d0_restore",
+  "d0_trace_parse"
+ ],
  "module_identity": {
   "d0_run": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_run.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_run.py",
+   "loaded": true,
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_run.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_run.py",
    "sha256": "411a4c65812055b130c64bd0fa0661f6985d7f896dfc644b4578379aea3cae3e",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_run.py",
-    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_run.py",
-    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_run.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_run.py",
+    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_run.py",
+    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_run.py"
    }
   },
   "d0_restore": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
-   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
+   "loaded": true,
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
    "sha256": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
    "functions": {
-    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
-    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
-    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
-    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py",
-    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_restore.py"
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
+    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
+    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
+    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py",
+    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_restore.py"
    }
   },
   "d0_launch": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_launch.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_launch.py",
-   "sha256": "779542c625e20b789ee74eaf04f58be6f0b24c5e5e558012737ba79e2ca07fc0",
-   "functions": {
-    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_launch.py"
-   }
+   "loaded": false,
+   "expected_sha256": "779542c625e20b789ee74eaf04f58be6f0b24c5e5e558012737ba79e2ca07fc0"
   },
   "d0_gate": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_gate.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_gate.py",
-   "sha256": "5dae02c2fa3e32e2a6500b831ad7029f368d9405bd2ea3df0ca4100d92ab1543",
-   "functions": {
-    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_gate.py"
-   }
+   "loaded": false,
+   "expected_sha256": "5dae02c2fa3e32e2a6500b831ad7029f368d9405bd2ea3df0ca4100d92ab1543"
   },
   "d0_executor": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_executor.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_executor.py",
-   "sha256": "1c91e0c4e35defcd315fc633e30432188336fa402bdf531208ebaa40008ff8f4",
-   "functions": {}
+   "loaded": false,
+   "expected_sha256": "1c91e0c4e35defcd315fc633e30432188336fa402bdf531208ebaa40008ff8f4"
   },
   "d0_trace_parse": {
-   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_trace_parse.py",
-   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_trace_parse.py",
+   "loaded": true,
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_trace_parse.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_trace_parse.py",
    "sha256": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f",
    "functions": {
-    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_trace_parse.py",
-    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-m_9qxrze/src/runtime/d0/d0_trace_parse.py"
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_trace_parse.py",
+    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-fv690jds/src/runtime/d0/d0_trace_parse.py"
    }
   }
  },

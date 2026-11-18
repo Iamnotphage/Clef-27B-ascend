@@ -65,17 +65,43 @@ ROOT_PID = 424242
 CHILD_PID = 424200
 WORKERS = (424301, 424302)
 BOOT = "BOOT-TEST-0001"
+NPU_SMI_SOURCE_REL = "docs/evidence/npu-smi-snapshot-2026-11-12.txt"
+NPU_SMI_JSON_REL = "docs/evidence/npu-smi-snapshot-2026-11-12.json"
+NPU_SMI_SOURCE_SHA = "308468003162edeb57bea1b532fed4d3371c2e4260fe5ae6bc25f7e4b0bf1ceb"
+NPU_SMI_STARTED = "2026-11-12T10:10:51.017948+00:00"
+NPU_SMI_HEADER = [
+    "+------------------------------------------------------------------------------------------------------------------+",
+    "| npu-smi 26.1.1                              Version: 26.1.1                                                      |",
+    "+---------------------------+---------------+----------------------------------------------------------------------+",
+    "| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |",
+    "| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |",
+    "+===========================+===============+======================================================================+",
+    "| 7     Ascend910           | OK            | 317.9                43                      0    / 0                |",
+    "| 0     14                  | 0000:81:00.0  | 48                   0    / 0                60337/ 65536            |",
+    "+------------------------------------------------------------------------------------------------------------------+",
+    "| 7     Ascend910           | OK            | -                    43                      0    / 0                |",
+    "| 1     15                  | 0000:83:00.0  | 48                   0    / 0                59997/ 65536            |",
+    "+===========================+===============+======================================================================+",
+    "+---------------------------+---------------+----------------------------------------------------------------------+",
+    "| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |",
+    "+===========================+===============+======================================================================+",
+]
+NPU_SMI_FOOTER = "+===========================+===============+======================================================================+"
 
 HAPPY = "happy"
 SCENARIOS = (
     "happy", "root_changed", "boot_missing", "boot_empty", "timeout",
     "child_nonzero", "query_unavailable", "cleanup_residue", "verify_failure",
-    "parse_failure",
+    "parse_failure", "restore_exception", "child7_restore_exception",
+    "workers_unrelated", "workers_duplicate",
 )
+RESTORE_EXCEPTION = ("restore_exception", "child7_restore_exception")
 NONZERO_SCENARIOS = {
     "root_changed": None, "boot_missing": None, "boot_empty": None,
     "timeout": 2, "child_nonzero": 7, "query_unavailable": None,
     "cleanup_residue": None, "verify_failure": None, "parse_failure": 5,
+    "restore_exception": 3, "child7_restore_exception": 7,
+    "workers_unrelated": None, "workers_duplicate": None,
 }
 
 REAL_RUN = subprocess.run
@@ -110,6 +136,25 @@ def valid_trace(rank: int) -> list:
     put(AIC_CAP + block * SUB_CAP, 1, block, 0, 0, M,
         0b1111, 0b1100)                               # AIV worker: K1,K4,K8_final
     return raw
+
+
+def npu_smi_text(state: dict) -> str:
+    root = state["root_pid"]
+    workers = state["workers"]
+    mode = state["npu_mode"]
+    rows = [f"| 7       0                 | {root:<13} | python             | 106                   | {root:<23} |"]
+    if mode == "normal":
+        for index, pid in enumerate(workers):
+            rows.append(f"| 7       {index}                 | {pid:<13} | VLLMWorker_TP      | 57172                 | {pid:<23} |")
+    elif mode == "one":
+        rows.append(f"| 7       0                 | {workers[0]:<13} | VLLMWorker_TP      | 57172                 | {workers[0]:<23} |")
+    elif mode == "unrelated":
+        rows.append(f"| 7       0                 | {workers[0]:<13} | VLLMWorker_TP      | 57172                 | {workers[0]:<23} |")
+        rows.append(f"| 7       1                 | {999999:<13} | VLLMWorker_TP      | 57172                 | {999999:<23} |")
+    elif mode == "duplicate":
+        rows.append(f"| 7       0                 | {workers[0]:<13} | VLLMWorker_TP      | 57172                 | {workers[0]:<23} |")
+        rows.append(f"| 7       1                 | {workers[0]:<13} | VLLMWorker_TP      | 57172                 | {workers[0]:<23} |")
+    return "\n".join(NPU_SMI_HEADER + rows + [NPU_SMI_FOOTER])
 
 
 def expected_commands(out_dir: Path, mod_dir: Path) -> dict:
@@ -268,7 +313,8 @@ def install_guard(state: dict) -> None:
     put_proc(os.getpid(), 1, "900")          # the harness process itself
     if state["scenario"] != "boot_missing":
         vfs_put("/proc/sys/kernel/random/boot_id", "" if state["scenario"] == "boot_empty" else BOOT)
-    vfs_put(TEXT_SOURCE, json.dumps({"samples": [{"name": "od-1534", "request": TEXT_REQUEST}]}))
+    if not state["missing_text"]:
+        vfs_put(TEXT_SOURCE, json.dumps({"samples": [{"name": "od-1534", "request": TEXT_REQUEST}]}))
     vfs_put(IMAGE_SOURCE, json.dumps(IMAGE_REQUEST))
     state["proc_before_launch"] = sorted(
         name for name in vfs_dirs.get("/proc", set()) if name.isdigit())
@@ -312,6 +358,7 @@ def install_guard(state: dict) -> None:
         if kind == "launch_service":
             label = argv[2]
             state["label"] = label
+            state["launch_env"] = (kw.get("env") or {}).get("CLEF_LAUNCH_CONFIG")
             spawn_tree()
             base = f"{SERVICE_LOG_ROOT}/{label}"
             vfs_dir(base, ["api.pid"])
@@ -326,12 +373,7 @@ def install_guard(state: dict) -> None:
                 return types.SimpleNamespace(returncode=0, stdout=f"{CHILD_PID} {CHILD_PID}\n", stderr="")
             return types.SimpleNamespace(returncode=0, stdout="", stderr="")
         if kind == "workers":
-            rows = ["+---+--------+----------------+",
-                    f"| 0 | {ROOT_PID} | python |"]
-            workers = state["npu_workers"]
-            for index, pid in enumerate(workers):
-                rows.append(f"| {index} | {pid} | VLLMWorker_TP |")
-            return types.SimpleNamespace(returncode=0, stdout="\n".join(rows), stderr="")
+            return types.SimpleNamespace(returncode=0, stdout=npu_smi_text(state), stderr="")
         if kind == "health":
             body = '{"status":"ready"}' if state["scenario"] != "verify_failure" else '{"status":"loading"}'
             return types.SimpleNamespace(returncode=0, stdout=body, stderr="")
@@ -489,15 +531,13 @@ def expected_source_hashes(repo: Path, commit: str) -> tuple[dict, list]:
     return expected, failures
 
 
-def module_identity(mod_dir: Path, expected: dict) -> tuple[dict, list]:
+def module_identity(mod_dir: Path, expected: dict, loaded: list) -> tuple[dict, list]:
     identity, failures = {}, []
     for name in MODULES:
-        try:
-            mod = importlib.import_module(name)
-        except Exception as exc:
-            identity[name] = {"import_error": f"{type(exc).__name__}: {exc}"}
-            failures.append(f"{name} import failed")
+        if name not in loaded:
+            identity[name] = {"loaded": False, "expected_sha256": expected.get(name)}
             continue
+        mod = sys.modules[name]
         file = Path(getattr(mod, "__file__", "")).resolve()
         spec = getattr(mod, "__spec__", None)
         origin = str(getattr(spec, "origin", ""))
@@ -511,8 +551,8 @@ def module_identity(mod_dir: Path, expected: dict) -> tuple[dict, list]:
             fn = getattr(mod, fn_name, None)
             if fn is not None and hasattr(fn, "__code__"):
                 functions[fn_name] = fn.__code__.co_filename
-        identity[name] = {"file": str(file), "origin": origin, "sha256": sha,
-                          "functions": functions}
+        identity[name] = {"loaded": True, "file": str(file), "origin": origin,
+                          "sha256": sha, "functions": functions}
         if sha != expected.get(name):
             failures.append(f"{name} source SHA mismatch")
         if file != (mod_dir / f"{name}.py").resolve():
@@ -549,14 +589,36 @@ def run_single(args) -> int:
             "scenario": scenario, "argv": [], "kills": [], "kill_simulated": [],
             "net": [], "unexpected": [], "arrived": {}, "vfs_miss": [],
             "workspace_writes": [], "label": None, "spawned": False,
-            "tree_killed": False, "child_rc": 7 if scenario == "child_nonzero" else 0,
-            "npu_workers": [WORKERS[0]] if scenario == "verify_failure" else list(WORKERS),
+            "tree_killed": False,
+            "child_rc": 7 if scenario in ("child_nonzero", "child7_restore_exception") else 0,
+            "workers": list(WORKERS), "root_pid": ROOT_PID,
+            "npu_mode": ("one" if scenario == "verify_failure" else
+                         "unrelated" if scenario == "workers_unrelated" else
+                         "duplicate" if scenario == "workers_duplicate" else "normal"),
             "verify_bad": scenario == "verify_failure",
+            "missing_text": scenario in RESTORE_EXCEPTION,
+            "launch_env": None,
             "vfs_files": {}, "vfs_dirs": {}, "expected": {},
         }
         state_ref.clear()
         state_ref.update(state)
         state["expected"] = expected_commands(out_dir, mod_dir)
+        npu_path = repo / NPU_SMI_SOURCE_REL
+        npu_json = repo / NPU_SMI_JSON_REL
+        npu_info = {"path": str(npu_path), "expected_sha256": NPU_SMI_SOURCE_SHA,
+                    "started_at_utc": NPU_SMI_STARTED, "sha256": None,
+                    "header_matches": False}
+        if npu_path.is_file():
+            npu_text = npu_path.read_text()
+            npu_info["sha256"] = sha256_bytes(npu_text.encode())
+            npu_info["header_matches"] = npu_text.splitlines()[:len(NPU_SMI_HEADER)] == NPU_SMI_HEADER
+        if npu_json.is_file():
+            try:
+                npu_info.update({k: json.loads(npu_json.read_text()).get(k) for k in
+                                 ("started_at_utc", "returncode")})
+            except Exception:
+                pass
+        out["npu_smi_source"] = npu_info
         expected_sources, source_failures = expected_source_hashes(repo, args.commit)
         out["expected_source_sha256"] = expected_sources
         out["source_hash_failures"] = source_failures
@@ -602,7 +664,9 @@ def run_single(args) -> int:
                          "proc_before_launch": state["proc_before_launch"]}
         out["artifacts"] = collect_artifacts(out_dir)
         out["out_files"] = sorted(out["artifacts"])
-        identity, id_failures = module_identity(mod_dir, expected_sources)
+        loaded = [name for name in MODULES if name in sys.modules]
+        out["modules_loaded"] = loaded
+        identity, id_failures = module_identity(mod_dir, expected_sources, loaded)
         id_failures = source_failures + id_failures
         out["module_identity"] = identity
         out["module_identity_failures"] = id_failures
@@ -655,6 +719,10 @@ def evaluate_case(out: dict, state: dict, args, mod_dir: Path) -> None:
     out["verify_blocked"] = restore.get("verify_blocked")
     out["main_int"] = isinstance(main_return, int) and not isinstance(main_return, bool)
     out["production_gap"] = None
+    if out["main_int"] and out["wrapper_rc"] != main_return:
+        out["production_gap"] = {"scenario": scenario, "issue": "raw_rc_wrapper_mismatch",
+                                 "main_return": main_return,
+                                 "raw_rc_wrapper_rc": out["wrapper_rc"]}
 
     add(checks, "main_returned", out.get("main_returned"))
     add(checks, "main_returns_int", out.get("main_int"), f"{out.get('main_return_type')}={main_return!r}")
@@ -664,6 +732,10 @@ def evaluate_case(out: dict, state: dict, args, mod_dir: Path) -> None:
     add(checks, "module_identity", not out.get("module_identity_failures"),
         str(out.get("module_identity_failures")))
     add(checks, "target_commit", out.get("target_commit") == args.commit, out.get("target_commit"))
+    npu_src = out.get("npu_smi_source") or {}
+    add(checks, "npu_smi_source",
+        npu_src.get("sha256") == NPU_SMI_SOURCE_SHA and npu_src.get("header_matches") is True,
+        json.dumps(npu_src))
     add(checks, "wrapper_rc_matches_main",
         out.get("main_int") and out["wrapper_rc"] == main_return,
         f"wrapper={out.get('wrapper_rc')!r} main={main_return!r}")
@@ -686,11 +758,15 @@ def evaluate_case(out: dict, state: dict, args, mod_dir: Path) -> None:
         add(checks, "label_dynamic",
             bool(state["label"] and LABEL_RE.match(state["label"])),
             repr(state["label"]))
+        add(checks, "launch_env_s1", state["launch_env"] == "s1", repr(state["launch_env"]))
     if scenario == HAPPY:
         add(checks, "no_vfs_miss", not state["vfs_miss"], str(state["vfs_miss"]))
     else:
+        allowed_misses = {"/proc/sys/kernel/random/boot_id"}
+        if scenario in RESTORE_EXCEPTION:
+            allowed_misses.add(TEXT_SOURCE)
         add(checks, "no_unexpected_vfs_miss",
-            all(p == "/proc/sys/kernel/random/boot_id" for p in state["vfs_miss"]),
+            all(p in allowed_misses for p in state["vfs_miss"]),
             str(state["vfs_miss"]))
 
     child_pid = ((artifacts.get("root-child.json") or {}).get("json") or {}).get("child_pid")
@@ -785,6 +861,30 @@ def evaluate_case(out: dict, state: dict, args, mod_dir: Path) -> None:
                          if (restore.get(s) or {}).get("ok") is not True]
             add(checks, "verify_failed_branch", out["verify_ok"] is False and bool(stage_bad),
                 f"verify_ok={out['verify_ok']} bad={stage_bad}")
+        if scenario in RESTORE_EXCEPTION:
+            add(checks, "restore_exception_recorded",
+                "restore-failure.json" in artifacts and bool(restore.get("restore_error")),
+                str(sorted(artifacts)))
+            add(checks, "verify_not_entered",
+                not any(k.endswith(".verify") for k in out["arrived"]))
+            if scenario == "child7_restore_exception":
+                add(checks, "child7_preserved",
+                    out["child_raw_rc"] == 7 and out["test_rc"] == 7 and out["wrapper_rc"] == 7,
+                    json.dumps({k: out.get(k) for k in ("child_raw_rc", "test_rc", "wrapper_rc")}))
+            else:
+                add(checks, "zero_codes_preserved",
+                    out["child_raw_rc"] == 0 and out["test_rc"] == 0,
+                    json.dumps({k: out.get(k) for k in ("child_raw_rc", "test_rc")}))
+        if scenario in ("workers_unrelated", "workers_duplicate"):
+            workers = (restore.get("workers") or {})
+            add(checks, "workers_not_inflated",
+                out["verify_ok"] is False and workers.get("ok") is False
+                and workers.get("workers") == 1,
+                json.dumps({k: workers.get(k) for k in ("ok", "workers", "worker_pids")}))
+            for stage in ("health", "text", "image"):
+                add(checks, f"{stage}_still_ok",
+                    (restore.get(stage) or {}).get("ok") is True,
+                    json.dumps(restore.get(stage)))
         if scenario == "parse_failure":
             add(checks, "parse_failure_recorded", "parse-failure.json" in artifacts
                 and raw.get("wrapper_rc") == 5, json.dumps(raw))
