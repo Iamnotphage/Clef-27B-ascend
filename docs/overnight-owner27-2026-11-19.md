@@ -84,6 +84,28 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 
 原件：[ab](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/ab.json)、[配对汇总](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/paired-summary.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/restore.json)，24份raw gzip及stop/launch/wait一并归档。
 
-## 后续执行
+## N1 ARon/cores24：正确性通过，计时未见稳定收益
 
-N1 cores24正确性与条件计时已按20授权、23核定启动；随后串行 A/C/B 三臂诊断。最终 S1/S2/完整质量尚待执行。
+来源 `0e935d06e1368c788e9d41c1e61bb1ed9e217cd0`；payload b782e490…14977、plan8a380481…4a5e3。远端 `/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310/`。先双rank固定门与raw/diag，再同窗口条件计时，全部通过。23独立校验42个bin的大小/SHA/shape，candidate=reference=cores2；计时终态与本窗cell相等。24个有效diag槽覆盖 [0,967)，17段40行、7段41行；FNV、rank、通信字段和余24零槽通过，rstd967行均有限正值。
+
+每rank48calls，first2、warmup6、正式40分列。96条raw经23重算与summary逐项一致。正式20pair：critical wall pooled median 0.567595→0.578880 ms，paired delta +0.012930 ms、速度比0.977116；slow-rank event 0.449630→0.478040 ms，paired delta +0.027530 ms、速度比0.941371。四轮critical中位差 +0.02558/+0.03787/+0.00660/−0.28653 ms，末轮两臂均升高。首call critical baseline10.57658/candidate303.83746 ms独列。该格没有稳定收益证据，保持未采纳，不扩cores48。
+
+外层rc0，window overall0、六step rc0，probe reaped/unknown0/residual0，vendor完整退役，四检恢复通过。label `d0-restore-20261118T191020Z-4516976e`，root1214582、workers1214738/1214739。原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/window.json)、[timing summary](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/probe/timing/summary.json)、[restore](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/restore.json)；大体积bin保留远端并由原始metadata绑定。
+
+## smallQ A/C/B：接入路径净开销
+
+诊断来源 `13fd807a2349aad36f3cf972dc82dbc118c01f17`，profile `06ede1a10230cc3b83d66180e99f51faf3fbb3dd6a0a6544cfa954cf68d4043c`，B四个冻件不变。A为f810原MHA，B为smallQ adapter+Triton，C为相同adapter/guard/projection且进程内显式换SDPA backend。同实例/同真实权重storage、9格四轮三臂各20样本，共2160正式raw，均有限正值。11个gate、原域及两个fallback全部通过，same_weight_storage_verified/frozen_files_unchanged为true。
+
+| 完整head长度 | C−A wall ms | B−C wall ms | B−A wall ms | B−A device ms |
+| --- | ---: | ---: | ---: | ---: |
+| 307 | +0.1538175 | +0.0150325 | +0.1688500 | +0.172285 |
+| 967 | +0.1704150 | +0.0381725 | +0.2004000 | +0.211025 |
+| 1595 | +0.1513450 | +0.0569075 | +0.2082525 | +0.211830 |
+
+表中为四轮中位数差的中位数。C−A/B−A全部4/4变慢，B−C各3/4变慢且范围跨0；六core B−C全部4/4更快。结果支持接入/投影路径净开销这一归因范围，host_submit包含内部同步，当前不能指认纯Python或单条guard。26后续仅提出每调用元数据读取去重的单变量方案；本诊断无服务采用结论，生产保持off。
+
+远端 `/workspace/yangchen/logs/joint-smallq-acb-27-v1-first/`；probe SHA `79d115accb3822425db30c40ccd11775213e45ed5e3ffbecbf5d46c09c203caa`。外层rc0、window overall0、cleanup无unknown/residual，revert f810且移除kernel，四检恢复通过，label `d0-restore-20261118T191302Z-5067eaf0`。23与26均独立重算raw。原件：[probe gzip](../Clef-27B/logs/overnight-20261119-owner27/smallq-acb/probe/head-probe.json.gz)、[配对统计](../Clef-27B/logs/overnight-20261119-owner27/smallq-acb/paired-summary.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/smallq-acb/restore.json)。
+
+## 最终验收准备
+
+28冻结tuple `02546ae2088d76127ac11a0fb6c51a82dbb67c9a` 已部署至同名独立远端work目录，8文件逐SHA一致，manifest `b42cc6f4a456e2ffade5479c392735aa69f7ef6ca33028800deec89c1d70b2b7`、runner `e6ddb887c92c4f34a4d05502b7ff3317b1b10845f20bd7d63e8d95d34b049ff3`。只读 frozen_check 全过；当前服务的 OPP/LD 路径从多轮restore继承累积，service_check按原严格门拒绝。首错保留在远端 `final-acceptance-preflight-27-20261118T192040Z`，由28核干净启动环境；正式最终评测尚未执行。
