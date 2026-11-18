@@ -66,6 +66,24 @@ probe child_rc0、无 timeout、reaped=true、unknown/residual为空；独立 ve
 
 远端 `/workspace/yangchen/logs/n1-v2-aron-c2-owner27-20261119T0245/`；窗口 overall_rc0，probe child_rc0、reaped、无未知/残留。vendor退役16文件逐SHA匹配。02:49:50 CST 恢复四检闭合：label `d0-restore-20261118T184817Z-ea064140`，root1200025，worker1200187/1200188。原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/window.json)、[probe](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/probe/head-probe.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c2/restore.json)。23已独立闭合数值、diag、vendor与恢复证据。
 
+## head 服务 A/B 四轮完成：长文本内部增量，整体待定
+
+最终 runner commit `c0a176d14d66836226202fbb2602b510776d103a`，runner SHA `127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648`。远端 `/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first/`，外层 SSH rc0，ab overall_rc0、四轮八臂全部完成，八次臂 stop 成功。固定请求 body SHA 不变，24份原始 JSONL 共192条（120正式、72预热），全部 HTTP200/valid/finite；三条固定输入在八臂间的答案与概率精确相等。
+
+每臂每轮5个正式样本，逐轮中位数做 ON−OFF 配对，再取四轮中位数：
+
+| 输入 | 配对中位 Δ ms | 配对中位 Δ % | 更快轮数 |
+| --- | ---: | ---: | ---: |
+| od-0105 / 307 token | +0.067995 | +0.065613 | 2/4 |
+| od-1534 / 967 token | -1.039965 | -0.668169 | 4/4 |
+| erqa-0000 | -0.820335 | -0.750630 | 3/4 |
+
+ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postimage 上 flag0/1 的内部增量；aa3e OFF 已共享 routing KV，生产 f810 总收益和完整质量仍待单独对照。当前证据不足以升级为全域稳定收益或采用结论。
+
+03:07:03 CST 恢复四检闭合：label `d0-restore-20261118T190530Z-150b9178`，root1212699，双 worker1212859/1212860；source f810、guard76595657。ab SHA `c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003`，restore SHA `fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f`。23已独立重算全部raw并确认恢复。
+
+原件：[ab](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/ab.json)、[配对汇总](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/paired-summary.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/head-ab-c0a/restore.json)，24份raw gzip及stop/launch/wait一并归档。
+
 ## 后续执行
 
-等待最终 head A/B 包 `c0a176d14d66836226202fbb2602b510776d103a` 的有限核验后重跑新空窗口。后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
+N1 cores24正确性与条件计时已按20授权、23核定启动；随后串行 A/C/B 三臂诊断。最终 S1/S2/完整质量尚待执行。
