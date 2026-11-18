@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Two-rank correctness for the E first version (MatMul+AR+AddRMS, ND weights)."""
 from __future__ import annotations
-import argparse, json, os
+import argparse
+import hashlib, json, os
 from pathlib import Path
 import torch, torch.distributed as dist, torch_npu
 from safetensors import safe_open
@@ -259,6 +260,57 @@ def main() -> int:
         ratio = torch.where(mask, dp / lsb, torch.zeros_like(dp))
         bad = ((ratio - ratio.round()).abs() > 1e-3) & mask
         rmax = ratio[mask]
+        # Real bytes for the CPU fp64 diagnostic: the A arm's own failures.
+        tol_p = 1e-5 + 0.016 * ref_p.float().abs()
+        badp = (dp > tol_p).flatten()
+        a_bidx = [int(i) for i in badp.nonzero().flatten().cpu().tolist()]
+        # Fixed source: the ORIGINAL full-chain union export, never this arm's
+        # own failure set (no silent fallback).
+        union_path = a.output.parent / f"e-full-rt-rank{rank}-union76.json"
+        if not union_path.is_file():
+            raise SystemExit(f"missing original union export: {union_path}")
+        u = json.loads(union_path.read_text())
+        union_sha = hashlib.sha256(union_path.read_bytes()).hexdigest()
+        bidx = sorted({int(p_["idx"]) for p_ in u.get("points", [])})
+        if len(bidx) != 76:
+            raise SystemExit(f"union count {len(bidx)} != 76")
+        # fixed control points (indices known not to fail in the full chain)
+        controls = [0, n, 2 * n + 1, 500 * n + 7]
+        sample = sorted(set(bidx) | set(controls))
+        bytes_export = None
+        if bidx:
+            xh = x.view(torch.uint16).cpu()
+            wh = w.view(torch.uint16).cpu()
+            pc = res_out.float().flatten().cpu()
+            pr = ref_p.float().flatten().cpu()
+            rows = sorted({i // n for i in sample}); cols = sorted({i % n for i in sample})
+            bytes_export = {
+                "arm": "probe_partial r=0 use_hccl=2 (AR off, both sides)",
+                "hashes": {
+                    "x_sha256": hashlib.sha256(x.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                    "w_sha256": hashlib.sha256(w.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                    "gamma_sha256": hashlib.sha256(gamma.view(torch.uint16).cpu().numpy().tobytes()).hexdigest(),
+                    "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                    "dtype": "bfloat16", "byte_order": "little",
+                    "layout": "x/w/gamma logical ND (w row-major [K,N])"},
+                "shapes": {"x": list(x.shape), "w": list(w.shape), "n": n},
+                "union76_idx": bidx, "union_source": str(union_path),
+                "union_source_sha256": union_sha, "a_arm_fail_idx": a_bidx,
+                "a_arm_fail_count": len(a_bidx), "controls": controls, "sample_idx": sample,
+                "x_rows": {int(r_): [format(int(v), "04x") for v in xh[r_].tolist()] for r_ in rows},
+                "w_cols": {int(c_): [format(int(v), "04x") for v in wh[:, c_].tolist()] for c_ in cols},
+                "points": [{"idx": i, "row": i // n, "col": i % n,
+                            "cand": float(pc[i]), "native": float(pr[i]),
+                            "tol": float(tol_p.flatten()[i].cpu()),
+                            "ratio": float(dp.flatten()[i].cpu() / tol_p.flatten()[i].cpu())}
+                           for i in sample]}
+            missing = [i for i in sample if (i // n) not in rows or (i % n) not in cols]
+            assert not missing, f"bytes missing for {missing[:5]}"
+            bytes_export["assert_all_points_covered"] = True
+            a.output.with_name(a.output.stem + f"-rank{rank}-bytes.json").write_text(
+                json.dumps(bytes_export, ensure_ascii=False) + "\n")
+            print(json.dumps({"rank": rank, "union76": len(bidx), "a_fail": len(a_bidx),
+                              "rows": len(rows), "cols": len(cols)}, ensure_ascii=False), flush=True)
         summary_p = {"rank": rank, "probe": "partial",
                      "criterion1": {"mismatch_count": int(mask.sum().cpu()),
                                     "ratio_max": float(rmax.max().cpu()) if rmax.numel() else 0.0,

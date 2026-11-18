@@ -408,3 +408,29 @@
 | C 控制点 | 4 个未失败 idx，字段同 A+B | 未采集 |
 
 - 位模式（`"3f80"` 形式）而非十进制，避免参考自身引入截断误差；只针对现有失败坐标与去重行，不导出整模型、不扩形状矩阵。
+
+## 18. 受控 A 臂（AR off、r=0）与字节导出（2026-11-18 21:21 CST）
+
+### 18.1 运行身份（实际值，日志头为静态旧值，以本节为准）
+
+| 项 | 值 |
+| --- | --- |
+| 包 | `pkgs/clef_matmul_ar_add_rms_norm_ndrt_2ee1c9cec900c160.run`，sha256 `2ee1c9ce…` |
+| 脚本（运行时真实） | `5269aa0db4d2bb6f05870b4aa2df3f53c144a86fcf5efa92e2888ae5963c8c8e`（**日志 header 静态写 `def11e5f`，以本行为准**） |
+| 实参 | `mm_enable=1, mm_dim=1, use_hccl=2, probe_partial(r=0), seed=20261118`，双方 AR off |
+| 启动 | UTC `13:21:22`，`RAW_RC=0`；运行前已清空旧 8 个 PID，端口以 `/proc/net/tcp{,6}` 的 `:40BA` 计数确认 |
+| 来源缺口 | **运行中的完整 PID 树快照未落盘**，不能靠 `exclusive_run` 之类声明补证 |
+
+### 18.2 结果
+
+- 覆盖：**原完整链 union76 + 4 控制点 = 80 点 / 73 行 / 79 列**；两 rank 每点行列均存在，每行/列 8704 个 4 位 uint16 hex；`assert_all_points_covered=true`。
+- **A 臂自身失败数 = 0**（`fail_idx` 空），即 rank-local GEMM 在固定 BF16 门下**通过**。
+- dump：`e-A-bytes-rank{0,1}-bytes.json`（各约 10.6 MB），本体 SHA256 rank0 `3629c841…`、rank1 `725e55b5…`；
+  `x` 完整 hash 两 rank 同为 `220586f0…`，`W` 分别 `1fd0e09d…` / `12539641…`。
+
+### 18.3 归因边界
+
+- **GEMM 已排除**（同输入、双方 AR off、零失败）。
+- 完整链 68 点失败只能来自 **AR** 或 **`partial + residual` 的 BF16 舍入**。
+- 旧完整链 run **未保存输入 hash**，因此不能声称与本 A 臂同输入；下一 B 臂/完整链必须在本轮输入 hash 上重新建立关联。
+
