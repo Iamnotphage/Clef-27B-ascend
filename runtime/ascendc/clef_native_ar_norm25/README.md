@@ -5,7 +5,8 @@ v1 对应源码提交 `eb2e33f`，v2 位于独立分支 `ao/ascend-fusion/native
 
 2026-11-19，worker25。独立 op `ClefNativeArNorm25`，vendor
 `clef_native_ar_norm25`，Torch namespace `clef_n1_25`。设备执行、隔离安装、
-加载与服务恢复由 worker21 负责。E、D0 b719 与生产文件均保持原身份。
+加载与服务恢复在02:27交接至 worker27，须20激活后执行；此前worker21的
+命令与证据按历史记录保留。E、D0 b719 与生产文件均保持原身份。
 
 ## 已完成与待验
 
@@ -268,4 +269,34 @@ ARon `window_payload.json` SHA
   --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
   --run-dir /workspace/yangchen/logs/n1-v2-aron-c1-20261119T0230 \
   --execute
+```
+
+## owner27 接手入口（仅owner与来源增量）
+
+执行归属从21交接至27。新bundle独立保留于
+`/workspace/yangchen/work/clef-n1-25-window-v2-aron-c1-owner27`；旧21 bundle与manifest
+均保持原件。基于`425b5e1abaeedd642a8e7fbe0e94f37b254129e8`，manifest仅入口SHA改变：
+
+- entry：`7e98aba9e854e4e41645216d68dfb3b0642c6a5335b437cec572b8716a50a9cb`
+- payload：`f548b3689b91cfa2e81f5ba5282ef022aa050cc8cc58542b214c0d5b32eb409e`
+- plan：`59da5843df72fdd1b668302d5bd1d0c711768360beb14b7488e5802910f0f8a6`
+
+入口只接受owner27；plan的owner为27，`runner_owner_compat_tag`明确记为21，
+`activation_required_from`为20。固定runner e035及其`--owner21`兼容校验和meta字段
+保留原字节；实际执行身份通过新入口、plan和仅probe child的
+`CLEF_N1_EXECUTION_OWNER=clef-27b-ascend-27`记录。该区分不改变runner的任何执行逻辑。
+其余probe、core、包、adapter、输入生成、门、PGID链均保持上一格SHA，cores1/ARon/240s。
+CPU只读入口生成成功，旧owner21在parser以rc2拒绝。23已有限核最小diff及全部字节。
+
+交接期只读单命令如下；20激活且现场恢复闭合后，由27给此入口加`--execute`串行运行：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v2-aron-c1-owner27/supervised_window.py \
+  --owner clef-27b-ascend-27 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha f548b3689b91cfa2e81f5ba5282ef022aa050cc8cc58542b214c0d5b32eb409e \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v2-aron-c1-owner27-20261119T0230
 ```

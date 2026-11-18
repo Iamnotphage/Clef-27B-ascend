@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Print the exact N1 supervision plan; --execute is reserved for worker21.
+"""Print the exact N1 supervision plan; execution owner is worker27.
 
 No candidate environment is exported in this process. The existing worker24
 wrapper owns stop, installation, timeout, cleanup, finally and four real checks.
+Execution requires worker20 activation. The frozen runner retains its legacy
+owner=21 compatibility tag; this entry and the plan identify the actual owner.
 """
 import argparse
 import json
@@ -57,7 +59,8 @@ def plan(a):
            "--probe-sha", manifest["files"]["window_probe.py"], "--probe-schema", "n1-probe/1",
            "--env-flag=", "--client-rel=", "--candidate-opp-prepend", str(vendor),
            "--candidate-lib-prepend", str(vendor / "op_api/lib"),
-           "--child-env", "ASCEND_RT_VISIBLE_DEVICES=0,1"]
+           "--child-env", "ASCEND_RT_VISIBLE_DEVICES=0,1",
+           "--child-env", "CLEF_N1_EXECUTION_OWNER=" + a.owner]
     for name in PAYLOAD:
         if name in ("window_vendor.py", "window_probe.py"):
             continue
@@ -66,6 +69,8 @@ def plan(a):
                                     (adapter, "n1_adapter.so", identity["adapter_sha256"])):
         cmd.extend(["--payload", f"{source}:{rel + name}:{expected}"])
     return {"schema": "n1-window-plan/1", "owner": a.owner, "argv": cmd,
+            "runner_owner_compat_tag": "clef-27b-ascend-21",
+            "activation_required_from": "clef-27b-ascend-20",
             "shell": shlex.join(cmd), "payload_sha256": a.expect_payload_sha,
             "wrapper_sha256": a.wrapper_sha, "identity_sha256": IDENTITY_SHA,
             "env_scope": "OPP/opapi/devices on probe child; PYTHONPATH on torchrun child only",
@@ -75,7 +80,7 @@ def plan(a):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--owner", required=True, choices=["clef-27b-ascend-21"])
+    p.add_argument("--owner", required=True, choices=["clef-27b-ascend-27"])
     p.add_argument("--wrapper", type=Path, required=True)
     p.add_argument("--wrapper-sha", required=True)
     p.add_argument("--expect-payload-sha", required=True)
