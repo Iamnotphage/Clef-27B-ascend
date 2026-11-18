@@ -109,12 +109,12 @@ AB runner 8/8。adapter 源码 diff 即上述两个常量与 `allowed_postimage`
   - 每次 mutation 写 owned `source-<tag>-<source>.json` manifest，并核实际 target SHA。
 - 启动后同 PID/start/boot/PGID + final vllm argv、source SHA、root env 硬断言；A 无 allow env，
   B allow 精确 aa3e。
-- finally 回 f810、revert service-check adapter、恢复原 guard `765956…` 与唯一 label 四检；
+- finally 前 fresh `port==closed` 硬门：open/unknown 记录 blocked 且禁止 final source/restore；回 f810、revert service-check adapter、恢复原 guard `765956…` 与唯一 label 四检；
   任一源/身份/guard 不清则阻断 restore。
 - 失败臂保留完整 arm_row（含两类 error）并即时 flush。
 
-CPU：`runtime/test_joint_fused_source_control.py` 10/10（ABBA、A/B env 隔离、no-op/apply/revert
-切源、unknown source/端口 open 拒绝、main 旧目录与非 f810 初始源拒绝）。23 核后由 27 执行：
+CPU：`runtime/test_joint_fused_source_control.py` 12/12（ABBA、A/B env 隔离、no-op/apply/revert
+切源、unknown source/端口 open 拒绝、main 旧目录与非 f810 初始源拒绝、真实 main 在 f810+open/unknown 端口下禁止 restore launch）。23 核后由 27 执行：
 
 ```bash
 PY=/workspace/yangchen/venvs/clef-py312/bin/python
@@ -124,3 +124,11 @@ $PY $REPO/runtime/joint_fused_source_control.py --run-dir "$RUN" --repo "$REPO" 
   --tree /workspace/yangchen/work/src/vllm --python "$PY" \
   --stop-script /tmp/d0cc/d0_stop.py --rounds 4 --reps 5 --warmup 3
 ```
+
+
+## clean parent 最终恢复（待23/28核，未并入）
+
+当前 `restore_prod` 继承生产 `prod_env`，可能保留 OPP/LD 重复链；28 已证明 clean parent
+`PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin`
++ `CLEF_LAUNCH_CONFIG=s1` 直接原 launcher 一次（不预 source）可对齐历史 OPP9/LD12。
+拟仅覆盖 source-control 最终 restore，arm env 不变；在 23/28 确认前不并入、不执行 source-control。

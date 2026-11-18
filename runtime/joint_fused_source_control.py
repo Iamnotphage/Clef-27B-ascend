@@ -305,8 +305,15 @@ def main(argv=None) -> int:
             ab.arm_identity = None
         if ab.attribution_unknown or ab.cleanup_unconfirmed:
             stopped = False
+        port_state = ab.win.port_open(args.port)
+        ab.state["steps"]["port_gate"] = {"ok": port_state == "closed",
+                                          "port": port_state}
+        if port_state != "closed":
+            stopped = False
+            ab.state["service_state"] = {"stopped": False, "port": port_state,
+                                         "action": "blocked"}
         source_ok = True
-        if stopped and ab.win.port_open(args.port) == "closed":
+        if stopped:
             try:
                 ab.switch_source("f810", "final")
                 ab.state["steps"]["final_source"] = {"ok": True}
@@ -315,6 +322,10 @@ def main(argv=None) -> int:
                 ab.state["steps"]["final_source"] = {
                     "ok": False, "error": f"{type(exc).__name__}: {exc}"}
                 stopped = False
+        else:
+            ab.state["steps"]["final_source"] = {
+                "ok": False, "action": "blocked_service_or_port_not_clean",
+                "port": port_state}
         service_check_ok = True
         if getattr(ab, "service_check_applied", False):
             try:
@@ -328,6 +339,11 @@ def main(argv=None) -> int:
             service_target = Path(base.SERVICE_ROOT) / "runtime" / "apply_joint_single_field_patch.py"
             service_check_ok = (service_target.is_file()
                                 and ab.win.sha256(service_target) == base.SERVICE_CHECK_PREIMAGE_SHA)
+        port_state = ab.win.port_open(args.port)
+        ab.state["steps"]["restore_port_gate"] = {"ok": port_state == "closed",
+                                                  "port": port_state}
+        if port_state != "closed":
+            stopped = False
         target_sha = ab.win.sha256(target) if target.is_file() else None
         if target_sha != F810 or not source_ok or not service_check_ok:
             ab.state["steps"]["restore"] = {

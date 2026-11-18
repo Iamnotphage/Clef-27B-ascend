@@ -136,6 +136,74 @@ def main() -> int:
               rc == 1 and "requires f810" in state.get("error", "")
               and "restore" not in state.get("steps", {}))
 
+    # Real main: target f810 + non-closed port must block before restore.
+    def run_main_port(port_state):
+        with tempfile.TemporaryDirectory(prefix="source-port-") as tmp:
+            tmp = Path(tmp)
+            tree = tmp / "tree"
+            target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+            target.parent.mkdir(parents=True)
+            target.write_text("f810")
+            service_root = tmp / "service"
+            guard = service_root / "runtime" / "apply_joint_single_field_patch.py"
+            guard.parent.mkdir(parents=True)
+            guard.write_text("guard")
+            class FakeWin:
+                def sha256(self, path):
+                    name = Path(path).name
+                    return {target.name: mod.F810, guard.name: mod.base.SERVICE_CHECK_PREIMAGE_SHA,
+                            "d0_stop.py": mod.base.STOP_SHA,
+                            "activate_env.sh": mod.base.ACTIVATE_SHA,
+                            "launch.sh": mod.base.LAUNCH_SHA,
+                            "wait.sh": mod.base.WAIT_SHA}.get(name, "0" * 64)
+                def port_open(self, port):
+                    return port_state
+            original_load = mod.base.load_window
+            original_root = mod.base.SERVICE_ROOT
+            original = {}
+            patches = {
+                "stage_d0": lambda self: None,
+                "stage_candidate": lambda self: None,
+                "current_service": lambda self: ({"root": {"pid": 1}, "descendants": []}, {}),
+                "stop_tree": lambda self, identity, label: {"stopped": True},
+                "apply_service_check": lambda self: setattr(self, "service_check_applied", True),
+                "switch_source": lambda self, source, tag: {"target": source},
+                "input_bodies": lambda self: {},
+                "run_arm": lambda self, flag, label: {
+                    "label": label, "provenance": {}, "samples": {}, "error": None,
+                    "stop": {}, "stop_error": None},
+                "revert_service_check": lambda self: setattr(self, "service_check_applied", False),
+                "restore_prod": lambda self: (_ for _ in ()).throw(
+                    AssertionError("restore must not launch")),
+            }
+            for name, value in patches.items():
+                original[name] = getattr(mod.SourceControl, name)
+                setattr(mod.SourceControl, name, value)
+            mod.base.load_window = lambda: FakeWin()
+            mod.base.SERVICE_ROOT = str(service_root)
+            try:
+                run = tmp / "run"
+                with redirect_stdout(io.StringIO()):
+                    rc = mod.main(["--run-dir", str(run), "--repo", str(HERE.parent),
+                                   "--tree", str(tree)])
+                state = json.loads((run / "ab.json").read_text())
+                return rc, state
+            finally:
+                for name, value in original.items():
+                    setattr(mod.SourceControl, name, value)
+                mod.base.load_window = original_load
+                mod.base.SERVICE_ROOT = original_root
+
+    for port_state in ("open", "unknown"):
+        rc, state = run_main_port(port_state)
+        check(f"main blocks restore on {port_state} port",
+              rc == 1
+              and state["steps"]["port_gate"]["port"] == port_state
+              and state["steps"]["port_gate"]["ok"] is False
+              and state["steps"]["final_source"]["ok"] is False
+              and state["steps"]["restore"]["action"] == "blocked_service_not_proven_stopped"
+              and state["steps"].get("restore_port_gate", {}).get("ok") is False)
+
     failed = [name for name, ok in checks if not ok]
     print(json.dumps({"checks": len(checks), "failed": failed, "ok": not failed}))
     return 0 if not failed else 1
