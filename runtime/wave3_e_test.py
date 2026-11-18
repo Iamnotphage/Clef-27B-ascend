@@ -104,6 +104,8 @@ def main() -> int:
                      "y_gt_0.01": int((dy > 0.01).sum().cpu()),
                      "res_gt_0.01": int((dres > 0.01).sum().cpu()),
                      "elements": int(dy.numel()),
+                     "y_max_rel": float(((dy) / ry.float().abs().clamp(min=1e-5)).max().cpu()),
+                     "y_min_abs_ref": float(ry.float().abs().min().cpu()),
                      "max_abs_partial": float(partial.float().abs().max().cpu()),
                      "max_abs_gamma": float(gamma.float().abs().max().cpu()),
                      "diag": [float(v) for v in diag.cpu()]}
@@ -123,10 +125,11 @@ def main() -> int:
     # Reference A (fp32 reduce, as before) and Reference B (bf16 reduce, the
     # same rounding path as the op: bf16 partial, bf16 all-reduce).
     partial = torch.matmul(x, w).float()
-    dist.all_reduce(partial, op=dist.ReduceOp.SUM)
-    ref_y, ref_rstd, ref_res = torch_npu.npu_add_rms_norm(partial.to(torch.bfloat16), r, gamma, a.eps)
     partial_bf = torch.matmul(x, w)
-    dist.all_reduce(partial_bf, op=dist.ReduceOp.SUM)
+    if a.use_hccl == 1:
+        dist.all_reduce(partial, op=dist.ReduceOp.SUM)
+        dist.all_reduce(partial_bf, op=dist.ReduceOp.SUM)
+    ref_y, ref_rstd, ref_res = torch_npu.npu_add_rms_norm(partial.to(torch.bfloat16), r, gamma, a.eps)
     refb_y, refb_rstd, refb_res = torch_npu.npu_add_rms_norm(partial_bf, r, gamma, a.eps)
     torch.npu.synchronize()
     dy = (out.float() - ref_y.float()).abs()
@@ -142,9 +145,20 @@ def main() -> int:
         bad = d > tol
         n_bad = int(bad.sum().cpu())
         ratio = (d / tol)
+        nz_mask = ref.float().abs() < 1e-5
         out = {"fail_count": n_bad, "max_abs": float(d.max().cpu()),
-               "max_ratio": float(ratio.max().cpu()), "finite": bool(torch.isfinite(cand.float()).all().cpu())}
+               "max_ratio": float(ratio.max().cpu()),
+               "cand_finite": bool(torch.isfinite(cand.float()).all().cpu()),
+               "ref_finite": bool(torch.isfinite(ref.float()).all().cpu()),
+               "shape_ok": tuple(cand.shape) == tuple(ref.shape),
+               "dtype_ok": cand.dtype == ref.dtype,
+               "near_zero_count": int(nz_mask.sum().cpu()),
+               "near_zero_max_abs": float(d[nz_mask].max().cpu()) if bool(nz_mask.any()) else 0.0,
+               "near_zero_fail_count": int((bad & nz_mask).sum().cpu())}
         if n_bad:
+            bad_idx = bad.flatten().nonzero().flatten()
+            out["fail_total"] = int(bad_idx.numel())
+            out["fail_idx"] = [int(i) for i in bad_idx.cpu().tolist()]
             flat = ratio.flatten()
             top = torch.topk(flat, min(3, flat.numel()))
             out["worst"] = [{"idx": int(i), "abs": float(d.flatten()[i].cpu()),
@@ -159,10 +173,20 @@ def main() -> int:
         rel = torch.where(mask, d / denom, torch.zeros_like(d))
         return float(rel.max().cpu())
 
-    gate = {"residual_sum": bf16_gate(res_out, ref_res),
-            "y": bf16_gate(out, ref_y),
-            "rstd": bf16_gate(rstd, ref_rstd.reshape(-1)),
-            "y_max_rel": y_max_rel(out, ref_y),
+    y_abs = (out.float() - refb_y.float()).abs()
+    y_den = refb_y.float().abs().clamp(min=1e-5)
+    y_mask = refb_y.float().abs() >= 1e-5
+    y_rel = torch.where(y_mask, y_abs / y_den, torch.zeros_like(y_abs))
+    y_strict = {"max_abs": float(y_abs.max().cpu()),
+                "max_rel": float(y_rel.max().cpu()),
+                "pass": bool(float(y_abs.max().cpu()) <= 0.02 and float(y_rel.max().cpu()) <= 0.01),
+                "near_zero_count": int((~y_mask).sum().cpu())}
+    gate = {"y_strict": y_strict,
+            "reference": "bf16 matmul + bf16 SUM (refb_*), AR follows use_hccl",
+            "residual_sum": bf16_gate(res_out, refb_res),
+            "y": bf16_gate(out, refb_y),
+            "rstd": bf16_gate(rstd, refb_rstd.reshape(-1)),
+            "y_max_rel": y_max_rel(out, refb_y),
             "criterion": "|c-r| <= 1e-5 + 0.016*|r| (torch.bfloat16 defaults), every element",
             "seed": a.seed}
     summary = {"rank": rank, "group": group, "m": m, "k": k, "n": n, "gate": gate,
