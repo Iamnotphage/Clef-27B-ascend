@@ -33,6 +33,7 @@ struct ClefMatmulArAddRmsNormTilingData {
     uint32_t mmMode;
     uint32_t normLate;
     uint32_t mmBTrans;
+    uint32_t mmStep;
     float eps;
     float invN;
 };

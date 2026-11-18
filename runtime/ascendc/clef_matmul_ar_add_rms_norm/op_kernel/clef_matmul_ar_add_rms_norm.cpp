@@ -127,17 +127,23 @@ public:
             aG.SetGlobalBuffer((__gm__ bfloat16_t*)xGm_, static_cast<uint64_t>(m_) * k_);
             bG.SetGlobalBuffer((__gm__ bfloat16_t*)wGm_, static_cast<uint64_t>(k_) * n_);
             cG.SetGlobalBuffer((__gm__ bfloat16_t*)partialGm_, static_cast<uint64_t>(m_) * n_);
+            // mm_step gates the cube calls one at a time so a fault can be
+            // attributed to a single call:
+            //   1 = Init only          2 = + SetOrgShape
+            //   3 = + SetTensorA       4 = + SetTensorB
+            //   5 = + IterateAll (full)
+            // mm_step=0 falls back to the older mm_mode: 1 => 4, 2 => 5.
+            uint32_t step = tiling_->mmStep;
+            if (step == 0u) step = (tiling_->mmMode >= 2u) ? 5u : 4u;
             mm_.Init(&tiling_->cubeTiling, &pipe_);
-            mm_.SetOrgShape(m_, n_, k_);
-            mm_.SetTensorA(aG, false);
-            // mm_btrans=1 tells the cube B is stored column-major (the
-            // classic ND-layout mismatch); host tiling and kernel must agree.
-            mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
-            // mm_mode=1 stops before IterateAll: one run separates a
-            // tiling/init fault from an iterate (L1/L0C streaming) fault.
-            if (tiling_->mmMode >= 2u) {
-                mm_.IterateAll(cG);
+            if (step >= 2u) { mm_.SetOrgShape(m_, n_, k_); }
+            if (step >= 3u) { mm_.SetTensorA(aG, false); }
+            if (step >= 4u) {
+                // mm_btrans=1 tells the cube B is stored column-major; host
+                // tiling and kernel are driven by the same attribute.
+                mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
             }
+            if (step >= 5u) { mm_.IterateAll(cG); }
             mmRc = 0;
         }
         AscendC::SyncAll();

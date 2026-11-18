@@ -78,6 +78,7 @@ bash build.sh
 | `mm_bufspace` | `0` = 用 tiling 自带的缓冲模型；`1` = 把 L1/L0C 约束到平台真实尺寸；`2` = 再为归一化段预留 128 KB UB |
 | `norm_ub_late` | `1`（默认）= 归一化段约 120 KB 的 UB **推迟到 cube 阶段之后**才分配；`0` = 恢复在 `Init()` 里先分配 |
 | `mm_btrans` | `1` = B 物理上是列主序（`isTransposeB`）；**host tiling 的 `SetBType(isTrans)` 与 kernel 的 `SetTensorB(isTrans)` 由同一个 attr 驱动**，不会打架 |
+| `mm_step` | 逐调用门控 cube 段：`1`=只 `Init`；`2`=+`SetOrgShape`；`3`=+`SetTensorA`；`4`=+`SetTensorB`；`5`=+`IterateAll`。`0` = 沿用 `mm_mode` 语义（`1`→4、`2`→5），不影响既有脚本 |
 
 ### 已由设备侧定性的两条（21 实测）
 
