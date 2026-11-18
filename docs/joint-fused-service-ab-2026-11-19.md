@@ -113,7 +113,7 @@ AB runner 8/8。adapter 源码 diff 即上述两个常量与 `allowed_postimage`
   任一源/身份/guard 不清则阻断 restore。
 - 失败臂保留完整 arm_row（含两类 error）并即时 flush。
 
-CPU：`runtime/test_joint_fused_source_control.py` 16/16（ABBA、A/B env 隔离、no-op/apply/revert
+CPU：`runtime/test_joint_fused_source_control.py` 17/17（含真实 restore_prod 执行 d0 import/verify/env compare）（ABBA、A/B env 隔离、no-op/apply/revert
 切源、unknown source/端口 open 拒绝、main 旧目录与非 f810 初始源拒绝、真实 main 在 f810+open/unknown 端口下禁止 restore launch）。23 核后由 27 执行：
 
 ```bash

@@ -7,6 +7,7 @@ import importlib.util
 import io
 import json
 import os
+import sys
 import tempfile
 import types
 from contextlib import redirect_stdout
@@ -133,6 +134,62 @@ def main() -> int:
         check("restored OPP/LD mismatch blocks", env_blocked
               and runner_env.state["steps"]["restore_env"]["ok"] is False)
         mod.CLEAN_ENV_EXPECT_SHA = original_expected_sha
+
+    # real restore_prod path: launch/wait, sys.path d0 imports, OPP/LD compare
+    with tempfile.TemporaryDirectory(prefix="restore-full-") as tmp:
+        tmp = Path(tmp)
+        logs = tmp / "logs"
+        proc = tmp / "proc"
+        (proc / "4242").mkdir(parents=True)
+        opp = "a:b:c:d:e:f:g:h:i"
+        ld = "1:2:3:4:5:6:7:8:9:10:11:12"
+        (proc / "4242/environ").write_bytes(
+            f"ASCEND_CUSTOM_OPP_PATH={opp}\0LD_LIBRARY_PATH={ld}\0".encode())
+        expected = tmp / "expected.json"
+        expected.write_text(json.dumps({"service_environment": {
+            "ASCEND_CUSTOM_OPP_PATH": opp, "LD_LIBRARY_PATH": ld}}))
+        original_expected_sha = mod.CLEAN_ENV_EXPECT_SHA
+        mod.CLEAN_ENV_EXPECT_SHA = hashlib.sha256(expected.read_bytes()).hexdigest()
+        run = tmp / "run"
+        (run / "stage/d0").mkdir(parents=True)
+        (run / "stage/d0/d0_restore.py").write_text(
+            "def discover_service_pids(label, before):\n"
+            "    return {'pids': [4242], 'error': None}\n"
+            "def build_commands(render):\n"
+            "    return {'cmd': 'x'}\n"
+            "def verify(cmds, log, service_pids=None):\n"
+            "    return True\n")
+        (run / "stage/d0/d0_run.py").write_text(
+            "def render_request():\n    return None\n")
+        runner_full = object.__new__(mod.SourceControl)
+        runner_full.args = types.SimpleNamespace(
+            launch="/launch.sh", wait="/wait.sh", wait_timeout=1,
+            clean_env_expect=str(expected), service_log_root=str(logs))
+        runner_full.run_dir = run
+        runner_full.state = {"steps": {}}
+        runner_full.prod_env = {"PATH": "/polluted"}
+        runner_full.win = types.SimpleNamespace(
+            PROC_ROOT=proc,
+            sha256=lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest())
+        original_run = mod.subprocess.run
+        def fake_launch(cmd, **kw):
+            if cmd[0] == "/bin/bash" and cmd[1] == "/launch.sh":
+                label = cmd[2]
+                (logs / label).mkdir(parents=True, exist_ok=True)
+                (logs / label / "api.pid").write_text("4242\n")
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+        mod.subprocess.run = fake_launch
+        try:
+            restored = runner_full.restore_prod()
+        finally:
+            mod.subprocess.run = original_run
+            mod.CLEAN_ENV_EXPECT_SHA = original_expected_sha
+        check("real restore executes d0 import and env compare",
+              restored.get("verify_ok") is True
+              and restored.get("restore_env", {}).get("match") is True
+              and (run / "restore.json").is_file()
+              and (run / "restore-env-compare.json").is_file()
+              and runner_full.prod_env == {"PATH": "/polluted"})
 
     with tempfile.TemporaryDirectory(prefix="source-control-") as tmp:
         tmp = Path(tmp)
