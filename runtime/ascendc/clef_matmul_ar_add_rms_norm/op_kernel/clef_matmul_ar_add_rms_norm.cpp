@@ -87,7 +87,13 @@ public:
         int32_t rankDim = -1;
 
         // ---- 1) MatMul X[M,K] x W[K,N] -> partial[M,N] (workspace region 0) --
-        {
+        // mm_enable=0 skips the whole cube stage: that is the bisect arm which
+        // tells whether the scalar-access fault lives in the matmul at all.
+        // Only blocks below the tiling's usedCoreNum may enter the matmul, so
+        // SetDim and SetBlockDim can be decoupled without indexing cores that
+        // the cube tiling never allocated internal buffers for.
+        if (tiling_->mmEnable != 0 &&
+            GetBlockIdx() < static_cast<uint32_t>(tiling_->cubeTiling.usedCoreNum)) {
             GlobalTensor<bfloat16_t> aG, bG, cG;
             aG.SetGlobalBuffer((__gm__ bfloat16_t*)xGm_, static_cast<uint64_t>(m_) * k_);
             bG.SetGlobalBuffer((__gm__ bfloat16_t*)wGm_, static_cast<uint64_t>(k_) * n_);
@@ -156,6 +162,9 @@ public:
             d.SetValue(2, static_cast<float>(arRc));
             d.SetValue(3, hcclMode_ == 1u ? 1.0f : (hcclMode_ >= 1u ? 2.0f : 0.0f));
             d.SetValue(4, static_cast<float>(mmRc));
+            // 5 = the cube tiling's usedCoreNum, which is what the matmul
+            // actually splits over; compare it against GetBlockNum().
+            d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
             PipeBarrier<PIPE_ALL>();
             DataCopy(diag_[0], d, 8);
             PipeBarrier<PIPE_ALL>();

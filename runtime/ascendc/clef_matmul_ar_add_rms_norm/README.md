@@ -71,21 +71,39 @@ bash build.sh
 | `repeat` | AllReduce 的 repeat（1..255） |
 | `group` | 真实 HCCL comm 名（opdef 已 `MC2().HcclGroup("group")`） |
 | `use_hccl` | **三态**：`0` = 整体跳过 HCCL 段；`1` = 全跑（生命周期 + AllReduce/Wait）；`2` = **只跑生命周期**（InitV2 / SetCcTilingV2 / Finalize，不发布 collective） |
-| `block_dim` | matmul 切分与核数：`0` = 自动取 AIV 数；`-1` = 取 AIC 数；`>0` = 显式值。**kernel 的 block 数与 `MultiCoreMatmulTiling::SetDim` 用同一个值** |
+| `block_dim` | 核数：`0` = 自动取 AIV 数；`-1` = 取 AIC 数；`>0` = 显式。**只影响 `SetBlockDim`** |
+| `mm_enable` | `1` = 跑 MatMul；`0` = **整段跳过 cube**。这是把故障定位到 matmul 的决定性开关 |
+| `mm_dim` | 只驱动 `MultiCoreMatmulTiling::SetDim`（即 `TCubeTiling.usedCoreNum`），`0` = 跟随 `block_dim`，`-1` = AIC 数，`>0` = 显式 |
 
-`diag[0..4]` = rankId / rankDim / arRc / hcclMode / mmRc。
+kernel 用 `usedCoreNum` 做门控（只有 `GetBlockIdx() < usedCoreNum` 的核进 matmul），所以
+`mm_dim` 与 `block_dim` 解耦是安全的，不会让未分配 cube 内部缓冲的核进入 matmul。
+
+`diag[0..5]` = rankId / rankDim / arRc / hcclMode / mmRc / **cubeTiling.usedCoreNum**
+（最后一槽用来核对 tiling 是否真的按 `mm_dim` 设了 `usedCoreNum`）。
 
 ## 上板首轮结果与当前诊断状态
 
 `E v1 (ND, b61e2836)` 上板：两 rank 在 synchronization 崩溃，device 报
 `fftsplus aivector error, core id 26`，extend info 为
 **"The address for the scalar to access the internal buffer of AICore is out of bounds"**
-（errcode 0x200000000000000, subErrType:4）。**不是 KFC 参数错误**，是 kernel 内标量访问
-AICore 内部缓冲越界，指向 matmul 的 block dim / SetDim / sub-block 语义
-（Cube:Vector = 1:2）。该次用的是 ND 权重，与 NZ 无关。
+（errcode 0x200000000000000, subErrType:4）。**不是 KFC 参数错误**。
 
-因此当前这版是**诊断构建**：B 回到 ND、`block_dim` 可扫。建议顺序：先 `block_dim=1`
-跑到通并确认 matmul 数值，再逐步加（2/4/…/-1/0）记录崩溃阈值。
+`block_dim=-1`（AIC 数）复测：**同一故障**，`core id 34/26`、`blk=22`、`subErrType:4`，
+与 `block_dim=0` 时相同。因此 **"AIV/AIC 核数错配"这一假设已被否证**，
+故障在 kernel 内部标量寻址，与 block 数取值无关。
+
+### 二分矩阵（每次只动一个变量）
+
+| # | `mm_enable` | `use_hccl` | 覆盖的路径 | 判读 |
+| ---: | ---: | ---: | --- | --- |
+| 1 | 0 | 0 | 仅向量 AddRMS（无 cube、无 HCCL） | 若仍崩 → 故障在我的向量/标量代码；若不崩 → 指向 matmul |
+| 2 | 1 | 0 | MatMul + AddRMS | 若 1 通过而 2 崩 → matmul 段确认 |
+| 3 | 1 | 2 | MatMul + 仅 HCCL 生命周期 | 判 KFC 生命周期配对假设 |
+| 4 | 1 (`mm_dim=1`) | 0 | matmul 只切 1 核 | 判是否与多核切分有关 |
+
+单看第 1 行就能定性：它完全没有 cube 侧代码。`diag[5]` 与 `GetBlockNum()` 的对比
+用来确认 tiling 是否按 `mm_dim` 生效。
+
 
 ## W 布局：最终契约是 FRACTAL_NZ（本诊断版暂为 ND）
 

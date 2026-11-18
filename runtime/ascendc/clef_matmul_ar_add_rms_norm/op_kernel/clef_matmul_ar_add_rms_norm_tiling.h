@@ -28,6 +28,8 @@ struct ClefMatmulArAddRmsNormTilingData {
     uint32_t ccTilingRc;
     uint32_t mmTilingRc;
     uint32_t useHccl;
+    uint32_t mmEnable;
+    uint32_t mmDim;
     float eps;
     float invN;
 };

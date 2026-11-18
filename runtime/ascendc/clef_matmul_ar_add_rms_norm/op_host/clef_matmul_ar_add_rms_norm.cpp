@@ -85,12 +85,21 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
         t->ccTilingRc = 0;
     }
 
+    // mm_enable=0 skips the whole cube stage (bisect arm: does the
+    // scalar-access fault live in the matmul at all?).  mm_dim only drives
+    // MultiCoreMatmulTiling::SetDim and therefore TCubeTiling.usedCoreNum; the
+    // kernel guards the matmul by usedCoreNum, so it can differ from block_dim.
+    const auto* mmEnableAttr = context->GetAttrs()->GetAttrPointer<int64_t>(5);
+    t->mmEnable = ((mmEnableAttr == nullptr) || (*mmEnableAttr != 0)) ? 1u : 0u;
+    const auto* mmDimAttr = context->GetAttrs()->GetAttrPointer<int64_t>(6);
+    const int64_t mmDimReq = (mmDimAttr == nullptr) ? 0 : *mmDimAttr;
+
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
     // "scalar access to the internal buffer of AICore is out of bounds"),
-    // -1 = AIC count, >0 = explicit.  The kernel's block count and the matmul
-    // split must be the same number; sweeping this isolates the
-    // Cube:Vector = 1:2 sub-block question.
+    // -1 = AIC count, >0 = explicit.  Both 0 and -1 were observed to crash
+    // with the same fault and the same blk value, so this is now only a
+    // secondary knob.
     const auto* blockDimAttr = context->GetAttrs()->GetAttrPointer<int64_t>(4);
     const int64_t blockDimReq = (blockDimAttr == nullptr) ? 0 : *blockDimAttr;
     uint32_t cores = 0;
@@ -105,11 +114,20 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     }
     if (cores == 0) cores = 1;
 
+    uint32_t mmDim = cores;
+    if (mmDimReq == -1) {
+        mmDim = platform.GetCoreNumAic();
+    } else if (mmDimReq > 0) {
+        mmDim = static_cast<uint32_t>(mmDimReq);
+    }
+    if (mmDim == 0) mmDim = 1;
+    t->mmDim = mmDim;
+
     // Cube tiling for X[M,K] x W[K,N] -> partial[M,N].  Cube/Vector are 1:2 on
     // this SoC, so the same block count drives both the matmul split and the
     // row split of the normalisation pass.
     matmul_tiling::MultiCoreMatmulTiling mmTiling(platform);
-    mmTiling.SetDim(static_cast<int32_t>(cores));
+    mmTiling.SetDim(static_cast<int32_t>(mmDim));
     mmTiling.SetAType(matmul_tiling::TPosition::GM, matmul_tiling::CubeFormat::ND,
                       matmul_tiling::DataType::DT_BFLOAT16, false);
     // B is ND in this diagnostic build: the block-dim sweep must isolate a
@@ -177,6 +195,8 @@ public:
         this->Attr("group").String();
         this->Attr("use_hccl").Int(1);
         this->Attr("block_dim").Int(0);
+        this->Attr("mm_enable").Int(1);
+        this->Attr("mm_dim").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");
