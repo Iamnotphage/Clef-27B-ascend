@@ -1,0 +1,38 @@
+{
+ "run_id": "d0-20261119T005921-out",
+ "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-lccxkv0l/out",
+ "cell": {
+  "mm_dim": 1,
+  "use_hccl": 2,
+  "rows": 967,
+  "seed": 20261118
+ },
+ "trace": {
+  "slots": 72,
+  "fields": 8,
+  "bytes": 2304,
+  "container_dtype": "int32",
+  "acl_view": "ACL_UINT32",
+  "normalisation": "readback & 0xFFFFFFFF",
+  "format": "ND",
+  "allocations": 1
+ },
+ "launch": {
+  "tool": "torch.distributed.run",
+  "standalone": true,
+  "nproc_per_node": 2,
+  "world_size": 2,
+  "ranks": [
+   0,
+   1
+  ]
+ },
+ "sequence": [
+  "clear trace on stream",
+  "launch",
+  "synchronize stream",
+  "read trace back"
+ ],
+ "timeout_s": 180,
+ "scope": "capacity-internal observations only; absent slot is not a missing participant; launch set, SDK receipt, partial writes and consumer visibility are outside this trace"
+}

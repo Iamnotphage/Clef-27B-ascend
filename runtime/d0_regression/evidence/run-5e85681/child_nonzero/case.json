@@ -1,0 +1,692 @@
+{
+ "schema": "d0-regression-case/1",
+ "scenario": "child_nonzero",
+ "target_commit": "5e85681ec09b37ec9ba951bde4ca4a38615ab34e",
+ "at": "2026-11-18T16:59:22Z",
+ "checks": [
+  {
+   "check": "main_returned",
+   "ok": true,
+   "detail": "",
+   "category": "common"
+  },
+  {
+   "check": "main_returns_int",
+   "ok": true,
+   "detail": "int=7",
+   "category": "common"
+  },
+  {
+   "check": "no_network",
+   "ok": true,
+   "detail": "[]",
+   "category": "common"
+  },
+  {
+   "check": "no_unexpected_argv",
+   "ok": true,
+   "detail": "[]",
+   "category": "common"
+  },
+  {
+   "check": "no_workspace_write",
+   "ok": true,
+   "detail": "[]",
+   "category": "common"
+  },
+  {
+   "check": "module_identity",
+   "ok": true,
+   "detail": "[]",
+   "category": "common"
+  },
+  {
+   "check": "target_commit",
+   "ok": true,
+   "detail": "5e85681ec09b37ec9ba951bde4ca4a38615ab34e",
+   "category": "common"
+  },
+  {
+   "check": "wrapper_rc_matches_main",
+   "ok": true,
+   "detail": "wrapper=7 main=7",
+   "category": "common"
+  },
+  {
+   "check": "restore_test_rc_recorded",
+   "ok": true,
+   "detail": "7",
+   "category": "common"
+  },
+  {
+   "check": "run_child_reached",
+   "ok": true,
+   "detail": "",
+   "category": "common"
+  },
+  {
+   "check": "restore_reached",
+   "ok": true,
+   "detail": "blocked_before_launch=False",
+   "category": "common"
+  },
+  {
+   "check": "query_reached",
+   "ok": true,
+   "detail": "",
+   "category": "common"
+  },
+  {
+   "check": "root_child_by_run_child",
+   "ok": true,
+   "detail": "['plan.json', 'process-tree.json', 'raw-rc.json', 'restore.json', 'root-child.json', 'stderr.log', 'stdout.log', 'tree-after.json']",
+   "category": "common"
+  },
+  {
+   "check": "label_dynamic",
+   "ok": true,
+   "detail": "'d0-restore-20261118T165922Z-4aa3f4f2'",
+   "category": "common"
+  },
+  {
+   "check": "no_unexpected_vfs_miss",
+   "ok": true,
+   "detail": "[]",
+   "category": "common"
+  },
+  {
+   "check": "root_child_pid_separate",
+   "ok": true,
+   "detail": "child=424200 service=424242 harness=52347",
+   "category": "common"
+  },
+  {
+   "check": "proc_before_empty",
+   "ok": true,
+   "detail": "['52347']",
+   "category": "common"
+  },
+  {
+   "check": "dut_nonzero",
+   "ok": true,
+   "detail": "main=7 expected=7",
+   "category": "common"
+  },
+  {
+   "check": "restore_recorded",
+   "ok": true,
+   "detail": "",
+   "category": "common"
+  },
+  {
+   "check": "rc_separated",
+   "ok": true,
+   "detail": "{\"test_rc\": 7, \"wrapper_rc\": 7, \"restore_ok\": true, \"verify_ok\": true}",
+   "category": "common"
+  },
+  {
+   "check": "child_rc_recorded",
+   "ok": true,
+   "detail": "{\"wrapper_rc\": 7, \"child_raw_rc\": 7, \"timed_out\": false, \"pgid\": 424200}",
+   "category": "common"
+  }
+ ],
+ "not_reached": [],
+ "production_gap": null,
+ "git_archive_rc": 0,
+ "files": [
+  "d0_executor.py",
+  "d0_gate.py",
+  "d0_launch.py",
+  "d0_restore.py",
+  "d0_run.py",
+  "d0_trace_parse.py",
+  "test_d0_gate_restore.py",
+  "test_d0_identity_guard.py",
+  "test_d0_process_tree.py",
+  "test_d0_runner_cpu.py",
+  "test_d0_trace_parse.py"
+ ],
+ "expected_source_sha256": {
+  "d0_run": "b1566245d646cda0978c3df81e6df279dd5286c63361ffa9b2a2d0d95d030fa6",
+  "d0_restore": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
+  "d0_launch": "779542c625e20b789ee74eaf04f58be6f0b24c5e5e558012737ba79e2ca07fc0",
+  "d0_gate": "5dae02c2fa3e32e2a6500b831ad7029f368d9405bd2ea3df0ca4100d92ab1543",
+  "d0_executor": "1c91e0c4e35defcd315fc633e30432188336fa402bdf531208ebaa40008ff8f4",
+  "d0_trace_parse": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f"
+ },
+ "source_hash_failures": [],
+ "entry": "d0_run",
+ "import_ok": true,
+ "main_returned": true,
+ "main_return": 7,
+ "main_return_type": "int",
+ "main_exception": null,
+ "arrived": [
+  "d0_restore.<module>",
+  "d0_restore._identity",
+  "d0_restore._now",
+  "d0_restore._parse_answer",
+  "d0_restore._parse_health",
+  "d0_restore._worker_pids",
+  "d0_restore.build_commands",
+  "d0_restore.discover_service_pids",
+  "d0_restore.new_service_label",
+  "d0_restore.restore",
+  "d0_restore.verify",
+  "d0_run._live_pids",
+  "d0_run._read_stat",
+  "d0_run.launch_cmd",
+  "d0_run.main",
+  "d0_run.query_group",
+  "d0_run.refuse_existing",
+  "d0_run.render_request",
+  "d0_run.run_child",
+  "d0_run.snapshot_tree",
+  "d0_trace_parse.<module>"
+ ],
+ "record": {
+  "argv": [
+   {
+    "kind": "child",
+    "argv": [
+     "/opt/homebrew/opt/python@3.12/bin/python3.12",
+     "-m",
+     "torch.distributed.run",
+     "--standalone",
+     "--nproc-per-node=2",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_launch.py",
+     "--out-dir",
+     "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/out",
+     "--rows",
+     "967",
+     "--seed",
+     "20261118",
+     "--mm-dim",
+     "1",
+     "--use-hccl",
+     "2",
+     "--adapter",
+     "None",
+     "--adapter-sha",
+     "None"
+    ]
+   },
+   {
+    "kind": "ps",
+    "argv": [
+     "ps",
+     "-eo",
+     "pid=,pgid="
+    ]
+   },
+   {
+    "kind": "ps",
+    "argv": [
+     "ps",
+     "-eo",
+     "pid=,pgid="
+    ]
+   },
+   {
+    "kind": "launch_service",
+    "argv": [
+     "bash",
+     "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+     "d0-restore-20261118T165922Z-4aa3f4f2"
+    ]
+   },
+   {
+    "kind": "wait",
+    "argv": [
+     "bash",
+     "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh"
+    ]
+   },
+   {
+    "kind": "health",
+    "argv": [
+     "curl",
+     "-s",
+     "-m",
+     "5",
+     "http://127.0.0.1:18143/health"
+    ]
+   },
+   {
+    "kind": "workers",
+    "argv": [
+     "npu-smi",
+     "info"
+    ]
+   },
+   {
+    "kind": "text",
+    "argv": [
+     "curl",
+     "-s",
+     "-m",
+     "120",
+     "-X",
+     "POST",
+     "http://127.0.0.1:18143/v1/systemone",
+     "-H",
+     "Content-Type: application/json",
+     "-d",
+     "{\"prompt\": \"x\", \"candidates\": [\"a\", \"b\"]}"
+    ]
+   },
+   {
+    "kind": "image",
+    "argv": [
+     "curl",
+     "-s",
+     "-m",
+     "120",
+     "-X",
+     "POST",
+     "http://127.0.0.1:18143/v1/decide",
+     "-H",
+     "Content-Type: application/json",
+     "-d",
+     "{\"request\": {\"prompt\": \"x\", \"images\": [\"i0\"], \"candidates\": [\"a\", \"b\"]}}"
+    ]
+   }
+  ],
+  "kills": [],
+  "kill_simulated": [],
+  "net": [],
+  "unexpected": [],
+  "label": "d0-restore-20261118T165922Z-4aa3f4f2",
+  "vfs_miss": [],
+  "workspace_writes": [],
+  "proc_before_launch": [
+   "52347"
+  ]
+ },
+ "artifacts": {
+  "plan.json": {
+   "sha256": "5d09b55e402b5a54af4b3575b21e90078c042adc23416948a2ed4ae5036a901f",
+   "size": 850,
+   "json": {
+    "run_id": "d0-20261119T005922-out",
+    "out_dir": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/out",
+    "cell": {
+     "mm_dim": 1,
+     "use_hccl": 2,
+     "rows": 967,
+     "seed": 20261118
+    },
+    "trace": {
+     "slots": 72,
+     "fields": 8,
+     "bytes": 2304,
+     "container_dtype": "int32",
+     "acl_view": "ACL_UINT32",
+     "normalisation": "readback & 0xFFFFFFFF",
+     "format": "ND",
+     "allocations": 1
+    },
+    "launch": {
+     "tool": "torch.distributed.run",
+     "standalone": true,
+     "nproc_per_node": 2,
+     "world_size": 2,
+     "ranks": [
+      0,
+      1
+     ]
+    },
+    "sequence": [
+     "clear trace on stream",
+     "launch",
+     "synchronize stream",
+     "read trace back"
+    ],
+    "timeout_s": 180,
+    "scope": "capacity-internal observations only; absent slot is not a missing participant; launch set, SDK receipt, partial writes and consumer visibility are outside this trace"
+   }
+  },
+  "process-tree.json": {
+   "sha256": "8f0d7f0607d60b3781510a0bbece5dbc6073c0ba7c6d8e7024f0081d309e094b",
+   "size": 286,
+   "json": {
+    "root_pid": 52347,
+    "root": {
+     "comm": "python3",
+     "state": "0",
+     "ppid": 1,
+     "pgrp": 0,
+     "session": 0,
+     "cmdline": ""
+    },
+    "captured_at": "2026-11-19T00:59:22+0800",
+    "processes": {
+     "52347": {
+      "comm": "python3",
+      "state": "0",
+      "ppid": 1,
+      "pgrp": 0,
+      "session": 0,
+      "cmdline": ""
+     }
+    },
+    "descendants": []
+   }
+  },
+  "raw-rc.json": {
+   "sha256": "6d15188576c788bbda7f960e5ceac0a9278a8c0b07210896c431206708c5e23c",
+   "size": 73,
+   "json": {
+    "wrapper_rc": 7,
+    "child_raw_rc": 7,
+    "timed_out": false,
+    "pgid": 424200
+   }
+  },
+  "restore.json": {
+   "sha256": "b3953877abe42ecd383d33a1ff296aaab0310808ac5341d89ed5fc4c67fa4a31",
+   "size": 2394,
+   "json": {
+    "test_rc": 7,
+    "test_exception": null,
+    "run_id": "d0-20261119T005922-out",
+    "service_label": "d0-restore-20261118T165922Z-4aa3f4f2",
+    "service_config": "s1",
+    "prelaunch_group": {
+     "survivor_check": "ok",
+     "members": [],
+     "query_returncode": 0
+    },
+    "restore_blocked": null,
+    "restore": {
+     "launch_started": "2026-11-19T00:59:22+08:00",
+     "launch_finished": "2026-11-19T00:59:22+08:00",
+     "launch_rc": 0,
+     "stdout": "",
+     "stderr": "",
+     "wait_started": "2026-11-19T00:59:22+08:00",
+     "wait_finished": "2026-11-19T00:59:22+08:00",
+     "wait_rc": 0,
+     "wait_stdout": "",
+     "wait_stderr": ""
+    },
+    "service_discovery": {
+     "pid_file": "/workspace/yangchen/logs/perf-wave2-20261118/d0-restore-20261118T165922Z-4aa3f4f2/api.pid",
+     "exists": true,
+     "api_pid": 424242,
+     "api_identity": {
+      "pid": 424242,
+      "starttime": "1000",
+      "boot_id": "BOOT-TEST-0001"
+     },
+     "root_identity_stable": true,
+     "pids": [
+      424242,
+      424301,
+      424302
+     ],
+     "descendant_count": 2,
+     "tree": [
+      {
+       "pid": 424242,
+       "starttime": "1000",
+       "boot_id": "BOOT-TEST-0001",
+       "ppid": 1
+      },
+      {
+       "pid": 424301,
+       "starttime": "1100",
+       "boot_id": "BOOT-TEST-0001",
+       "ppid": 424242
+      },
+      {
+       "pid": 424302,
+       "starttime": "1200",
+       "boot_id": "BOOT-TEST-0001",
+       "ppid": 424242
+      }
+     ]
+    },
+    "service_pids": [
+     424242,
+     424301,
+     424302
+    ],
+    "health": {
+     "started": "2026-11-19T00:59:22+08:00",
+     "finished": "2026-11-19T00:59:22+08:00",
+     "rc": 0,
+     "stdout": "{\"status\":\"ready\"}",
+     "stderr": "",
+     "ok": true
+    },
+    "workers": {
+     "started": "2026-11-19T00:59:22+08:00",
+     "finished": "2026-11-19T00:59:22+08:00",
+     "rc": 0,
+     "stdout": "+---+--------+----------------+\n| 0 | 424242 | python |\n| 0 | 424301 | VLLMWorker_TP |\n| 1 | 424302 | VLLMWorker_TP |",
+     "stderr": "",
+     "workers": 2,
+     "worker_pids": [
+      424301,
+      424302
+     ],
+     "service_pids": [
+      424242,
+      424301,
+      424302
+     ],
+     "ok": true
+    },
+    "text": {
+     "started": "2026-11-19T00:59:22+08:00",
+     "finished": "2026-11-19T00:59:22+08:00",
+     "rc": 0,
+     "stdout": "{\"answers\": {\"answer\": {\"type\": \"score\"}}}",
+     "stderr": "",
+     "ok": true
+    },
+    "image": {
+     "started": "2026-11-19T00:59:22+08:00",
+     "finished": "2026-11-19T00:59:22+08:00",
+     "rc": 0,
+     "stdout": "{\"answers\": {\"answer\": {\"type\": \"choice\"}}}",
+     "stderr": "",
+     "ok": true
+    },
+    "verify_ok": true,
+    "restore_ok": true
+   }
+  },
+  "root-child.json": {
+   "sha256": "b8c53291e7ad72a17fb7e8acd1973e64514516c971b123c79e26762af4072665",
+   "size": 684,
+   "json": {
+    "child_pid": 424200,
+    "pgid": 424200,
+    "starttime": "950",
+    "boot_id": "BOOT-TEST-0001",
+    "launch_source": "/opt/homebrew/opt/python@3.12/bin/python3.12 -m torch.distributed.run",
+    "tree_at_start": {
+     "root_pid": 52347,
+     "root": {
+      "comm": "python3",
+      "state": "0",
+      "ppid": 1,
+      "pgrp": 0,
+      "session": 0,
+      "cmdline": ""
+     },
+     "captured_at": "2026-11-19T00:59:22+0800",
+     "processes": {
+      "424200": {
+       "comm": "python3",
+       "state": "0",
+       "ppid": 52347,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      },
+      "52347": {
+       "comm": "python3",
+       "state": "0",
+       "ppid": 1,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      }
+     },
+     "descendants": [
+      {
+       "pid": 424200,
+       "comm": "python3",
+       "state": "0",
+       "ppid": 52347,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      }
+     ]
+    }
+   }
+  },
+  "stderr.log": {
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "size": 0,
+   "text": ""
+  },
+  "stdout.log": {
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "size": 0,
+   "text": ""
+  },
+  "tree-after.json": {
+   "sha256": "d4fed3b526718bcf85071bd072a7823fefcff75c948165b76b02a846b77be458",
+   "size": 577,
+   "json": {
+    "tree": {
+     "root_pid": 52347,
+     "root": {
+      "comm": "python3",
+      "state": "0",
+      "ppid": 1,
+      "pgrp": 0,
+      "session": 0,
+      "cmdline": ""
+     },
+     "captured_at": "2026-11-19T00:59:22+0800",
+     "processes": {
+      "424200": {
+       "comm": "python3",
+       "state": "0",
+       "ppid": 52347,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      },
+      "52347": {
+       "comm": "python3",
+       "state": "0",
+       "ppid": 1,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      }
+     },
+     "descendants": [
+      {
+       "pid": 424200,
+       "comm": "python3",
+       "state": "0",
+       "ppid": 52347,
+       "pgrp": 0,
+       "session": 0,
+       "cmdline": ""
+      }
+     ]
+    },
+    "pgid": 424200,
+    "survivor_check": "ok",
+    "members": [],
+    "query_returncode": 0
+   }
+  }
+ },
+ "out_files": [
+  "plan.json",
+  "process-tree.json",
+  "raw-rc.json",
+  "restore.json",
+  "root-child.json",
+  "stderr.log",
+  "stdout.log",
+  "tree-after.json"
+ ],
+ "module_identity": {
+  "d0_run": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_run.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_run.py",
+   "sha256": "b1566245d646cda0978c3df81e6df279dd5286c63361ffa9b2a2d0d95d030fa6",
+   "functions": {
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_run.py",
+    "run_child": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_run.py",
+    "query_group": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_run.py"
+   }
+  },
+  "d0_restore": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+   "origin": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+   "sha256": "4c4afeae9b8511c6a1c85a01a2a4d3be2c9eaf0a379ca44f5120dfa361474c84",
+   "functions": {
+    "main": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+    "restore": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+    "verify": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+    "discover_service_pids": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py",
+    "build_commands": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_restore.py"
+   }
+  },
+  "d0_launch": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_launch.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_launch.py",
+   "sha256": "779542c625e20b789ee74eaf04f58be6f0b24c5e5e558012737ba79e2ca07fc0",
+   "functions": {
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_launch.py"
+   }
+  },
+  "d0_gate": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_gate.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_gate.py",
+   "sha256": "5dae02c2fa3e32e2a6500b831ad7029f368d9405bd2ea3df0ca4100d92ab1543",
+   "functions": {
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_gate.py"
+   }
+  },
+  "d0_executor": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_executor.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_executor.py",
+   "sha256": "1c91e0c4e35defcd315fc633e30432188336fa402bdf531208ebaa40008ff8f4",
+   "functions": {}
+  },
+  "d0_trace_parse": {
+   "file": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_trace_parse.py",
+   "origin": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_trace_parse.py",
+   "sha256": "13413bf0ee1eff07a6bdd4be584f7dda74f981a6b48bbc099e5b6fc532c0fb5f",
+   "functions": {
+    "main": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_trace_parse.py",
+    "decode": "/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/d0reg-0lq_2ppr/src/runtime/d0/d0_trace_parse.py"
+   }
+  }
+ },
+ "module_identity_failures": [],
+ "test_rc": 7,
+ "child_raw_rc": 7,
+ "wrapper_rc": 7,
+ "restore_ok": true,
+ "verify_ok": true,
+ "restore_blocked": null,
+ "verify_blocked": null,
+ "main_int": true,
+ "failed": [],
+ "case_ok": true
+}

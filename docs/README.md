@@ -41,6 +41,7 @@
 | [conv+QKV 融合算子](gdn-conv-qkv-2026-11-17.md) | conv 与 QKV norm 合一、packed QKVZ 免拷贝、逐位探针与服务级对照 |
 | [Wave 2 攻关](perf-wave2-20261118.md) | 默认栈重新 profile、S2 预算复测、GDN chunk 扩展扫描、joint head 分解与最终三轮验证 |
 | [Wave 2 调研](perf-wave2-research.md) | 只读调研：T1 allreduce+RMSNorm 融合、T2 K 维流水、T4 ATB cache、T5 分桶 graph；T3 已实测关闭 |
+| [D0 CPU 回归闭合](d0-regression-2026-11-19.md) | 独立 CPU harness：10 case 前后矩阵、模块身份/精确 argv/VFS 边界、生产 5642732→5e85681 的 wrapper_rc 修复证据 |
 | [交接文档 11-17](handoff-11-17.md) | 当前状态、baseline 对比、已采用优化、负结果、profile、复现与开放问题 |
 | [输入长度与特征分布](input-distribution-2026-11-16.md) | OD/ERQA 的 token 桶、延迟/时间占比、字段/候选/图片结构 |
 | [B10/B12 合批扫描](batching-b10-b12-2026-11-16.md) | B8/B10/B12/B16 吞吐、p95 与质量，S2 工作点结论 |
