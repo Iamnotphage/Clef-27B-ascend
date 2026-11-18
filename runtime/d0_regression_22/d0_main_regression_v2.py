@@ -69,6 +69,14 @@ def guard() -> None:
         REC["argv"].append(argv)
         if not allowed(argv):
             raise AssertionError(f"unexpected external command: {argv}")
+        joined = " ".join(argv)
+        if "curl" in joined:
+            if "/health" in joined:
+                return types.SimpleNamespace(returncode=0, stdout='{"status":"ready"}', stderr="")
+            if "systemone" in joined or "decide" in joined:
+                return types.SimpleNamespace(
+                    returncode=0,
+                    stdout='{"answers":{"answer":{"type":"score"}}}', stderr="")
         return types.SimpleNamespace(returncode=0, stdout="", stderr="")
 
     class FakePopen:
@@ -202,6 +210,8 @@ def main() -> int:
     ap.add_argument("--json-out", required=True)
     ap.add_argument("--scenario", default="happy",
                     choices=("happy", "root_changed", "boot_missing"))
+    ap.add_argument("--service-label", default=None,
+                    help="pass --service-label to the operator so fixtures can place api.pid")
     a = ap.parse_args()
     repo = Path(a.repo).resolve()
     out = {"target_commit": a.commit, "checks": [], "not_reached": []}
@@ -235,6 +245,8 @@ def main() -> int:
 
     odir = tmp / "out"
     sys.argv = ["d0_run.py", "--out-dir", str(odir)]
+    if a.service_label:
+        sys.argv += ["--service-label", a.service_label]
     sys.setprofile(profile_hook)
     returned, exc_name = False, None
     try:
