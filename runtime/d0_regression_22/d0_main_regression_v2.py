@@ -75,6 +75,7 @@ def guard() -> None:
         if len(argv) >= 3 and argv[0] == "bash" and argv[1].endswith("launch.sh"):
             label = argv[2]
             REC["label"] = label
+            REC["_spawn_tree"]()
             put, mkdir = REC["_vfs_put"], REC["_vfs_dir"]
             base = f"/workspace/yangchen/logs/perf-wave2-20261118/{label}"
             mkdir(base, ["api.pid"])
@@ -142,8 +143,8 @@ def guard() -> None:
                 base.mkdir(parents=True, exist_ok=True)
                 for rank in (0, 1):
                     (base / f"result-rank{rank}.json").write_text(json.dumps({
-                        "rank": rank, "rc": 0, "trace_ok": True,
-                        "trace": {"slots": 72, "fields": 8, "flat_u32_len": 72 * 8},
+                        "rank": rank, "rc": 0,
+                        "flat_u32": [0] * (72 * 8),
                     }))
             except Exception:
                 pass
@@ -268,13 +269,24 @@ def guard() -> None:
     # /proc: the root plus two VLLMWorker_TP descendants
     ROOT_PID = 424242
     WORKERS = [424301, 424302]
-    vfs_dir("/proc", [str(ROOT_PID)] + [str(w) for w in WORKERS])
-    for pid, start in [(ROOT_PID, "1000"), (WORKERS[0], "1100"), (WORKERS[1], "1200")]:
-        fields = ["0"] * 20
-        fields[19] = start
-        vfs_put(f"/proc/{pid}/stat", f"{pid} (python3) " + " ".join(fields) + "\n")
+    vfs_dir("/proc", [])   # service tree must NOT exist before the launch
+    def spawn_service_tree():
+        """Called from the launch fixture: the tree appears only then."""
+        vfs_dir("/proc", [str(ROOT_PID)] + [str(w) for w in WORKERS])
+        for pid, start, ppid in [(ROOT_PID, "1000", 1),
+                                 (WORKERS[0], "1100", ROOT_PID),
+                                 (WORKERS[1], "1200", ROOT_PID)]:
+            fields = ["0"] * 20
+            fields[1] = str(ppid)
+            fields[19] = start
+            vfs_put(f"/proc/{pid}/stat", f"{pid} (python3) " + " ".join(fields) + "\n")
+    REC["_spawn_tree"] = spawn_service_tree
     vfs_put("/proc/sys/kernel/random/boot_id", "BOOT-TEST-0001\n")
     REC["root_pid"] = ROOT_PID
+    # discovery reads SERVICE_LABEL (a module constant), not the dynamic label
+    const_base = "/workspace/yangchen/logs/perf-wave2-20261118/final-default-s1"
+    vfs_dir(const_base, ["api.pid"])
+    vfs_put(f"{const_base}/api.pid", f"{ROOT_PID}\n")
     REC["workers"] = WORKERS
     REC["sources"]["fs"] = "Path.read_text for /proc/*/stat, boot_id, api.pid"
 
@@ -373,11 +385,12 @@ def main() -> int:
     chk("no_network", len(REC["net"]) == 0, f"net={REC['net']}")
     chk("no_unexpected_argv", all(allowed(x) for x in REC["argv"]), f"argv={REC['argv']}")
 
-    if a.scenario != "happy":
+    if True:
         res_mod = sys.modules.get("d0_restore")
         info = res_mod.discover_service_pids(res_mod.SERVICE_LABEL, before=None) if res_mod else {}
         out["discovery"] = {k: (sorted(v) if isinstance(v, set) else v) for k, v in info.items()}
-        chk("discovery_reports_error", bool(info.get("error")), f"error={info.get('error')!r}")
+        if a.scenario != "happy":
+            chk("discovery_reports_error", bool(info.get("error")), f"error={info.get('error')!r}")
         if a.scenario == "root_changed":
             chk("error_with_nonempty_pids", bool(info.get("error")) and bool(info.get("pids")),
                 f"pids={out['discovery'].get('pids')}")
@@ -396,7 +409,22 @@ def main() -> int:
     Path(a.json_out).write_text(json.dumps(out, indent=1))
     print(json.dumps({k: out[k] for k in ("target_commit", "main_returned", "main_return_type",
                                          "main_exception", "out_dir", "not_reached", "failed")}, indent=1))
-    shutil.rmtree(tmp, ignore_errors=True)
+    # preserve the evidence that would otherwise be deleted with the temp dir
+    keep = {}
+    for name in ("restore.json", "restore-failure.json", "parse-failure.json",
+                 "root-child.json", "raw-rc.json", "tree-after.json",
+                 "result-rank0.json"):
+        f = odir / name
+        if f.is_file():
+            try:
+                keep[name] = json.loads(f.read_text())
+            except Exception:
+                keep[name] = f.read_text()[:2000]
+    out["artifacts"] = keep
+    Path(a.json_out).write_text(json.dumps(out, indent=1))
+    REC["_keepdir"] = str(tmp)
+    if os.environ.get("D0REG_KEEP") != "1":
+        shutil.rmtree(tmp, ignore_errors=True)
     return 0 if not out["failed"] else 1
 
 
