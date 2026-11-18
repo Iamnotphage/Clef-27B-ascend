@@ -57,7 +57,6 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t cores = platform.GetCoreNumAiv();
     if (cores == 0) cores = 8;
-    if (t->useHccl != 0) cores = 1;
     context->SetBlockDim(cores);
     // Out-of-place reduction destination (in-place was observed to leave the
     // source unchanged even though Wait returned success).

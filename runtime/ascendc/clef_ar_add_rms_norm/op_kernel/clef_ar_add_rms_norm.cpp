@@ -23,6 +23,10 @@ public:
         useHccl_ = t->useHccl != 0;
         xGm_ = x;
         wsGm_ = workspace;
+        if (workspace != nullptr) {
+            flagGm_ = (__gm__ float*)((__gm__ uint8_t*)workspace + (uint64_t)t->m * t->n * 2);
+            flagG_.SetGlobalBuffer(flagGm_, 8);
+        }
         diag_.SetGlobalBuffer((__gm__ float*)diag, 8);
         repeat_ = static_cast<uint8_t>(t->repeat);
         mPad_ = t->mPad;
@@ -51,22 +55,39 @@ public:
         int32_t rankId = -1;
         int32_t rankDim = -1;
         if (useHccl_) {
-            Hccl hccl;
-            hccl.InitV2(AscendC::GetHcclContext<HCCL_GROUP_ID_0>(), &tiling_->mc2InitTiling);
-            const int32_t setRc = hccl.SetCcTilingV2(offsetof(ClefArAddRmsNormTilingData, mc2CcTiling));
-            rankId = static_cast<int32_t>(hccl.GetRankId());
-            rankDim = static_cast<int32_t>(hccl.GetRankDim());
-            HcclHandle h = hccl.AllReduce<true>(xGm_, wsGm_, static_cast<uint64_t>(m_) * n_,
-                                                HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM, repeat_);
-            PipeBarrier<PIPE_ALL>();
-            arRc = hccl.Wait(h) * 100 + setRc;
-            hccl.Finalize();
+            // Only core 0 may write hcclMsgArea, so it owns the collective and
+            // publishes a GM completion flag; the other cores poll the flag and
+            // then join the normalisation pass.
+            __gm__ float* flagPtr = nullptr;
+            if (wsGm_ != nullptr && flagGm_ != nullptr) flagPtr = flagGm_;
+            if (GetBlockIdx() == 0) {
+                Hccl hccl;
+                hccl.InitV2(AscendC::GetHcclContext<HCCL_GROUP_ID_0>(), &tiling_->mc2InitTiling);
+                const int32_t setRc = hccl.SetCcTilingV2(offsetof(ClefArAddRmsNormTilingData, mc2CcTiling));
+                rankId = static_cast<int32_t>(hccl.GetRankId());
+                rankDim = static_cast<int32_t>(hccl.GetRankDim());
+                HcclHandle h = hccl.AllReduce<true>(xGm_, wsGm_, static_cast<uint64_t>(m_) * n_,
+                                                    HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM, repeat_);
+                PipeBarrier<PIPE_ALL>();
+                arRc = hccl.Wait(h) * 100 + setRc;
+                hccl.Finalize();
+                if (flagPtr != nullptr) {
+                    LocalTensor<float> f = diagT_.Get<float>();
+                    f.SetValue(0, 1.0f);
+                    PipeBarrier<PIPE_ALL>();
+                    DataCopy(flagG_, f, 8);
+                    PipeBarrier<PIPE_ALL>();
+                }
+            } else if (flagPtr != nullptr) {
+                for (uint64_t spin = 0; spin < 200000000ull; ++spin) {
+                    if (flagG_.GetValue(0) > 0.5f) break;
+                    DataCacheCleanAndInvalid<float, CacheLine::SINGLE_CACHE_LINE,
+                                             DcciDst::CACHELINE_OUT>(flagG_);
+                }
+            }
             if (wsGm_ != nullptr) {
-                // The reduction lands in the workspace, not in the local input.
                 x_.SetGlobalBuffer((__gm__ bfloat16_t*)wsGm_, static_cast<uint64_t>(m_) * n_);
             }
-            // The AICPU server wrote through GM; drop stale data cache lines so
-            // the vector cores read the reduced values.
             PipeBarrier<PIPE_ALL>();
             DataCacheCleanAndInvalid<bfloat16_t, CacheLine::ENTIRE_DATA_CACHE,
                                      DcciDst::CACHELINE_OUT>(x_);
@@ -190,6 +211,8 @@ private:
     bool useHccl_{false};
     GM_ADDR xGm_{nullptr};
     GM_ADDR wsGm_{nullptr};
+    __gm__ float* flagGm_{nullptr};
+    GlobalTensor<float> flagG_;
     uint8_t repeat_{1};
 };
 

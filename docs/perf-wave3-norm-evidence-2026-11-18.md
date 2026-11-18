@@ -140,3 +140,22 @@
 - 下一步：block0 发起 AR，其余核以 GM flag 同步后并行执行 norm（多核原型），再以同一方法复测；之后补
   NZ GEMM N=5120/2560/1280 与完整 MatMul 覆盖，最后才做服务级 A/B 与 OD/ERQA ≤2 pp。
 - 本形状单例计时**不能外推**到 S1 p95。
+
+## 7. 多核原型（block0 AR + GM flag 同步，2026-11-18 13:19 CST）
+
+- 改动：block0 独占 `AllReduce/Wait/Finalize` 并在 workspace 尾部写完成标志；其余核轮询该标志（每条读前 DCCI），
+  随后所有核按连续行区间并行执行 norm。tiling 恢复使用全部 AIV 核。
+- 正确性：两 rank 仍全部通过（`Y 0.0078125`、`residual 0`、`rstd 2.38e-7`、`finite`、`diag rankId=0/1 & rankDim=2`）。
+- 计时（中位，ms；括号为 device event 中位；warmup 5 / 20 次）：
+
+| 臂 | rank0 墙钟 | rank1 墙钟 |
+| --- | ---: | ---: |
+| copy-only | 0.142（0.037） | 0.169（0.030） |
+| baseline：copy + `dist.all_reduce` + `npu_add_rms_norm` | 0.465（0.352） | 0.461（0.352） |
+| **candidate（多核）** | **0.457（0.356）** | **0.460（0.353）** |
+
+- 结论：多核原型把候选从 2.66 ms 降到 **0.457–0.460 ms**，与基线持平（差异在噪声内）。
+  由于基线还额外包含一次约 0.14–0.17 ms 的输入恢复拷贝，候选在**同口径下约省掉这次拷贝**，但净收益在
+  AR+Add+RMSNorm 子链上仍接近于零 —— 真正的收益必须来自把 MatMul 一起融合（去掉中间写回/读回并让 AR 与
+  GEMM 重叠），即 A–E 的 E 组。
+- 仍未做服务级或质量结论；单形状数据不外推 S1 P95。
