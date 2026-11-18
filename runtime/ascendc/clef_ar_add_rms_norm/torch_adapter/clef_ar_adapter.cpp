@@ -56,10 +56,19 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> ar_add_rms_norm(
     TORCH_CHECK(st == 0 && executor != nullptr,
                 "GetWorkspaceSize failed status=", static_cast<int>(st),
                 " msg=", aclGetRecentErrMsg());
+    // Reuse one workspace per size so the comparison is not dominated by
+    // per-call allocation; the pointer is device-side and shape-stable.
+    static void* cached_ws = nullptr;
+    static uint64_t cached_size = 0;
     void* ws = nullptr;
     if (workspace > 0) {
-        TORCH_CHECK(aclrtMalloc(&ws, workspace, ACL_MEM_MALLOC_HUGE_FIRST) == ACL_SUCCESS,
-                    "workspace alloc failed");
+        if (cached_ws == nullptr || cached_size < workspace) {
+            if (cached_ws != nullptr) aclrtFree(cached_ws);
+            TORCH_CHECK(aclrtMalloc(&cached_ws, workspace, ACL_MEM_MALLOC_HUGE_FIRST) == ACL_SUCCESS,
+                        "workspace alloc failed");
+            cached_size = workspace;
+        }
+        ws = cached_ws;
     }
     aclrtStream stream = c10_npu::getCurrentNPUStream().stream();
     // Run through OpCommand so the Nnopbase launch path applies the MC2

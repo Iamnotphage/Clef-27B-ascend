@@ -117,3 +117,26 @@
 2. 若需要窗口，调整 tiling/kernel 让 AR 目标落在窗口内后重跑同一两 rank 测试（判据：`residual_sum` 与
    `dist.all_reduce` 参考一致）；
 3. 通过后再做同条件完整链计时与 A–E；服务在阶段结束时已恢复（health/文本/图文均通过）。
+
+## 6. AR 融合链同条件计时（2026-11-18 13:05 CST）
+
+- 构建：package `499e5302…` / kernel `.o` `ac5e96ba…`（与 §5.4 通过的构建一致），adapter 增加按尺寸复用的 workspace 缓存。
+- 方法：同一进程、同一输入/布局/预热（5）/迭代（20）、无 profiler；三臂顺序执行并各自记录逐次墙钟与 device event；
+  两 rank 各写 `rank{0,1}.json`。
+- 正确性（rank 各异有限输入：rank0 偏移 0、rank1 偏移 +0.1）：两 rank 均通过 —— `Y max_abs 0.0078125`、
+  `residual_sum 0`、`rstd 2.38e-7`、`finite`、`diag rankId=0/1 & rankDim=2 & rc=0`。
+- 计时（中位，ms；括号为 device event 中位）：
+
+| 臂 | rank0 墙钟 | rank1 墙钟 |
+| --- | ---: | ---: |
+| copy-only（基线需要的输入恢复拷贝） | 0.200（0.040） | 0.275（0.034） |
+| baseline：copy + `dist.all_reduce` + `npu_add_rms_norm` | 0.656（0.520） | 0.685（0.405） |
+| candidate：融合 AR+Add+RMSNorm（**单 block 原型**） | **2.660（2.502）** | **2.656（2.451）** |
+
+- 结论：**该单 block 原型实测慢**（约 4×），主因是 norm 阶段只使用 1 个 AIV 核（AR 阶段按契约也只有 core 0 可发起）。
+  这是原型实现的限制，**不据此关闭 T1**。
+- 成本对称性说明：baseline 含一次 `[967,5120]` BF16 拷贝（约 9.9 MB，copy-only 臂量化约 0.2–0.28 ms 墙钟）；
+  candidate 不含该拷贝，但内部有 workspace 与 aclnn/OpCommand 调度开销。两者都包含同一次 2-rank AllReduce。
+- 下一步：block0 发起 AR，其余核以 GM flag 同步后并行执行 norm（多核原型），再以同一方法复测；之后补
+  NZ GEMM N=5120/2560/1280 与完整 MatMul 覆盖，最后才做服务级 A/B 与 OD/ERQA ≤2 pp。
+- 本形状单例计时**不能外推**到 S1 p95。
