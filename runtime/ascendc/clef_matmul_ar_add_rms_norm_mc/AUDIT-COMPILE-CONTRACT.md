@@ -26,10 +26,21 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
   --tiling-lib=.../op_host/libcust_opmaster_rt2.0.so --enable-binary="True" ...
 ```
 
-**关键限制（缺口，非遗漏）**：`opc` 在该驱动内**进程内**调用，构建系统**不落盘 pass 级
-`ccec` 命令行**，因此**无法**用真实 flags 复放 `-E -dM` 得到逐 pass 宏表；
-按任务口径**不另造简化 TU 冒充目标**。故 §3 的宏分支结论来自**源内条件 + 构建元数据交叉**，
-不是伪造的预处理输出。
+**关于 pass 级命令的可捕获性（2026-11-18 收窄）**：
+- 我只证明了一件事：**本次普通 build 的日志里没有保存 pass 级 argv**；
+  **不能**由此推出"工具不支持捕获"。此前"`opc` 进程内调用 ⇒ 无可复放命令"的说法**撤回**。
+- 驱动脚本确实**生成并消费**这些文件：
+  `compiler/tikcpp/ascendc_kernel_cmake/fwk_modules/util/ascendc_compile_kernel.py`
+  `:130-146` 生成 `bin-param *.json` 与同名 `*.sh`（`self.compile_sh`），`:175` 起循环执行；
+  `:96-98` 的 `clean()` 只有在 `dump_cce` **不在** `op_debug_config` 时才删除 `working_dir`。
+- **本次取证用的是 `--debug-config=""`**，因此生成的 `*.sh`/`bin-param`/工作目录已被清理，
+  **本次没有取得**这些文件，也就**没有取得**真实 pass argv 与逐 pass 预处理。
+- **明确记缺项**：AIC/AIV 的宏表与预处理输出**本次未取得**。
+  §3 的宏结论因此只是**源内条件 × 构建元数据**的交叉，**不能**替代逐 pass 预处理证据；
+  也**不把** `taskRation=1:2` 当作宏证据（两者来源不同）。
+- 若将来需要，最小目标是**同一 TU**、`--debug-config` 含 `dump_cce` 的**一次**定向重建，
+  保留生成的 `*.sh` / `bin-param *.json` / `opc` 配置 / 完整 argv 及工作目录产物；
+  这不属于本次交付，也**不**另开无目标重建。
 
 ## 2. 生成 JSON 里的真实字段（构建期实证）
 
