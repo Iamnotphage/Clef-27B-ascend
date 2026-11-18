@@ -1629,6 +1629,93 @@
         "all_valid": true,
         "verification": "28 read-only recount; 23 independent bodySHA, finite and 8-arm answer/probability equality checks documented in source_document"
       }
+    },
+    "production_source_control_plan": {
+      "status": "reviewed_plan_not_executed",
+      "reviewer": 23,
+      "execution_owner": 27,
+      "scope": "Independent real production f810 flag0 versus aa3e flag1; separate from aa3e internal flag A/B results",
+      "commit": "ebca7694ac8e956ec4781e2112c27aa9910ef6be",
+      "staging": "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769",
+      "schema": "joint-fused-source-control/1",
+      "files": {
+        "runtime/joint_fused_source_control.py": {
+          "bytes": 25111,
+          "sha256": "a1c502a3a709b836d31dc994a156f702d6a826ce5f2854beeec9ac50701f7299"
+        },
+        "runtime/test_joint_fused_source_control.py": {
+          "bytes": 16425,
+          "sha256": "bd1a50343b4e6851d25d0ab74161ead640d323c423527abe6a3166e7857b16b5"
+        },
+        "runtime/joint_fused_service_ab.py": {
+          "bytes": 38423,
+          "sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648"
+        },
+        "runtime/joint_fused_attention_window.py": {
+          "bytes": 46759,
+          "sha256": "700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473"
+        },
+        "runtime/apply_joint_fused_attention.py": {
+          "bytes": 5128,
+          "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
+        }
+      },
+      "arms": {
+        "A": {
+          "head_sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+          "CLEF_JOINT_FUSED_ATTN": "0",
+          "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": null
+        },
+        "B": {
+          "head_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+          "CLEF_JOINT_FUSED_ATTN": "1",
+          "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+        }
+      },
+      "rounds": 4,
+      "reps_per_arm_per_input": 5,
+      "warmup_per_arm_per_input": 3,
+      "clean_final_restore": {
+        "seed": {
+          "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+          "CLEF_LAUNCH_CONFIG": "s1"
+        },
+        "expected_file": {
+          "path": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+          "bytes": 12933,
+          "sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"
+        },
+        "expected_values": {
+          "ASCEND_CUSTOM_OPP_PATH": {
+            "entries": 9,
+            "value_sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1"
+          },
+          "LD_LIBRARY_PATH": {
+            "entries": 12,
+            "value_sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c"
+          }
+        },
+        "owner_preexecution_gate": "Before any service mutation, copy the complete expected file into the fresh owner run and verify file SHA/bytes plus both value SHA; pass that copy with --clean-env-expect. Keep experiment-arm environments unchanged.",
+        "runtime_check": "After original health/workers/text/image checks, read fresh restored root /proc environ and compare OPP/LD raw bytes; mismatch blocks without fallback.",
+        "outputs": [
+          "restore-env-expected.json",
+          "restore-env-actual.json",
+          "restore-env-compare.json",
+          "restore.json"
+        ]
+      },
+      "superseded_nonexecutable_commits": [
+        "9fb630f",
+        "148ba8c",
+        "683f3a4"
+      ],
+      "verification": {
+        "cpu_tests_reported_by_24": 17,
+        "cpu_tests_reviewed_by_23": true,
+        "local_git_blob_sha_verified_by_28": true,
+        "remote_sha_verified_utc_raw": "2026-11-18T19:38:24Z",
+        "remote_sha_verified_cst": "2026-11-19T03:38:24+08:00"
+      }
     }
   },
   "clean_launch_environment": {

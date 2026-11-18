@@ -98,22 +98,22 @@ timeout 120 /workspace/yangchen/venvs/clef-py312/bin/python \
 
 stop SHA：`d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`。非零或残留阻断；0=open、111=closed，其它port结果为unknown并阻断。禁用旧宽pgrep与旧`final-default-s1`label。
 
-已核启动入口 `/workspace/yangchen/logs/perf-wave2-20261118/launch.sh` SHA `a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321`，内部source `/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh` SHA `3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a`。唯一label由27生成并先断言其目录不存在；下面三条是分别选择的配置，逐阶段运行：
+已核启动入口 `/workspace/yangchen/logs/perf-wave2-20261118/launch.sh` SHA `a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321`，内部source `/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh` SHA `3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a`。唯一label由27生成并先断言其目录不存在；下面四条使用第8节已核clean seed，分别选择配置，逐阶段运行；父环境不预source：
 
 ```bash
 # S1与最后恢复：选定源码/原guard先由27恢复到已验身份。
-env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL"
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 /bin/bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL"
 # S2 B8，仍使用s1优化栈。
-env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 8 --max-num-batched-tokens 8192
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 /bin/bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 8 --max-num-batched-tokens 8192
 # S2 B16。
-env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 16 --max-num-batched-tokens 16384
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 /bin/bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 16 --max-num-batched-tokens 16384
 # ERQA。
-env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-model-len 16384 --max-num-batched-tokens 16384 --limit-mm-per-prompt '{"image":16,"video":0}' --mm-processor-kwargs '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}'
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 /bin/bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-model-len 16384 --max-num-batched-tokens 16384 --limit-mm-per-prompt '{"image":16,"video":0}' --mm-processor-kwargs '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}'
 # 每次launch后：
 timeout 600 bash /workspace/yangchen/logs/perf-wave2-20261118/wait.sh
 ```
 
-wait SHA `e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0`。上面启动模板依赖27已清理profiling/候选环境并选定审定源码；清单中的运行时env断言会拒绝泄漏。源恢复必须使用27已审D0恢复流程，原guard恢复顺序保持其现有约定。
+wait SHA `e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0`。上面启动模板使用完整两键父环境，并由27先选定审定源码；清单中的运行时env断言继续逐字节检查。源恢复必须使用27已审D0恢复流程，原guard恢复顺序保持其现有约定。
 
 恢复原件入口：`/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py` SHA `9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`；六D0模块哈希由它钉住。该wrapper入口还承担候选AB，本文不猜测新的restore-only参数。27直接复用已成功恢复操作及`restore.json`的health/workers/text/image真实RC/ok、进程树与同卡检查。历史可核身份：`/workspace/yangchen/logs/handoff27-restore-20261118T183212Z-dc78478b/service-identities.json`；该PID只作历史证据，执行前取fresh。
 
@@ -203,3 +203,18 @@ B8/B16/ERQA在此命令末尾使用第5节原覆盖参数。27监督器中等价
 历史请求总wall约24.9分钟；上表总执行/恢复预算70分钟。每阶段将启动、客户端、清理分别限制在本阶段剩余预算内，下一阶段只在`clients_exited=true`、严格身份和资源门通过后进入。单次HTTP 300/600秒与wait脚本上限继续按原协议记录，外层绝对截止可以提前终止本阶段；到期原件保留并记不完整，成功覆盖与质量门仍按完整分母判断。未完成项据实上报，恢复窗口保留。
 
 具体原件：Wave2 `s1-final/r1..r5/s1.json`、`s2-b8/s2-b8c16.json`、`s2-b16/s2-b16c64.json`、`erqa/summary.json`；早期B8 C8 `/workspace/yangchen/logs/gdn-data-path-20261115/seqs8-test/c8.json` SHA `2f4ab895363213abbae9514ab6989d45f65353fe07b36d06d7cb9befd67286bd`；B16 C32 `.../seqs16-test/c32.json` SHA `2ff82db4074c9dc39f47bf4fbe649a4f9302ce86cb598a5ed1dbc63055991825`。最近恢复为第7节 `150b9178` 历史原件；本计划没有把历史耗时记为最终测量。
+
+## 10. 独立f810 source-control入口（已审计划，待27执行）
+
+23有限核通过24提交 `ebca7694ac8e956ec4781e2112c27aa9910ef6be`，stage为 `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`；runner SHA `a1c502a3a709b836d31dc994a156f702d6a826ce5f2854beeec9ac50701f7299`，test SHA `bd1a50343b4e6851d25d0ab74161ead640d323c423527abe6a3166e7857b16b5`。24报告17/17 CPU通过，23实读真实restore成功路径与端口门；28核对git blob及远端字节一致。9fb/148/683已被此版本替代，不作为执行入口。
+
+该独立模式固定A=f810/flag0/无allow，B=aa3e/flag1/exact allow，四轮ABBA、每输入5次正式+3次预热。已有第7节结果仍限定aa3e内部增量。两实验臂env、输入、评分保持原协议；最终restore采用第8节完整clean seed，由原launcher一次activate。当前最终验收清单仍固定f810，winner仍pending。
+
+27执行前须在外层fresh目录保存expected完整副本并核对，再以真实 `--clean-env-expect` 参数传入。原件 `/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json`：12933 bytes，SHA `fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230`。两项均读取 `service_environment` 中的原字符串，其value SHA按UTF-8字节、不加换行：
+
+| 键 | 项数 | value SHA-256 |
+| --- | ---: | --- |
+| ASCEND_CUSTOM_OPP_PATH | 9 | `7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1` |
+| LD_LIBRARY_PATH | 12 | `ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c` |
+
+该外层前置检查补足runner在最终restore时才读取expected的时序。restore四检后，runner从fresh root `/proc/PID/environ`逐字节比较，保存expected/actual/compare三份JSON，失败阻断且不fallback。生产源、guard、最终三轮门和四phase执行参数均未因本次候选元数据更新而改变。
