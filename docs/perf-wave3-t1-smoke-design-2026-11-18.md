@@ -167,7 +167,10 @@
 - TP2 下各 rank 拿到全部 N，统计归并**不需要再加一个跨 rank AR**；分核时仍需本卡依赖与可见性保证。
 - 顺序：GEMM/Fixpipe 写回可见 → 对应 tile 发布/collective → Wait 并确保对消费核可见 → Add + partial sumsq → 该行四块 `q` 均 ready → 本卡跨 tile 统计归并/rstd → 最终输出。
 - 前段 Add/q 可叠在后续 GEMM/AR 上；**rstd 与完整输出有尾部屏障**；slot 复用必须等 AR 及向量消费完成；`Z` 要留到最终乘 gamma（UB 容纳方案或 GM 落盘/重读成本需计入）。
-- **待核对**：真实服务是否还要求 `residual_sum` 输出。
+- **已核对（只读）**：真实服务**需要 `residual_sum`**。`vllm_ascend/ops/layernorm.py:92-95`（bias 路径）与 `:112-114`（Gemma 路径）均为
+  `x, _, residual = npu_add_rms_norm(...); return x, residual`，第三个输出被作为下一层的残差流继续传递；
+  `vllm/model_executor/layers/layernorm.py:125-133` 的融合 add 路径同样保留残差。
+  因此 T1 融合核必须同时产出 `normed` 与 `residual_sum`，不能只返回归一化结果。
 
 ### 9.3 收益比较与探针边界
 
