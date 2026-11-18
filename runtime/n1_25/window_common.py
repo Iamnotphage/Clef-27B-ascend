@@ -15,7 +15,7 @@ RUNNER_SHAS = {
     "contract.py": "8d1b39df08970829a502389112d4673ad920e68a620e2191173346b3de0b8f64",
     "fixed_gate.py": "041a66aa81c52d2a53bd825cf406323d7185759242669dff64b3551f86eba849",
 }
-CELL = {"rows": 967, "seed": 20261118, "cores": 2, "use_hccl": 1}
+CELL = {"rows": 967, "seed": 20261118, "cores": 24, "use_hccl": 1}
 
 
 def digest(path):

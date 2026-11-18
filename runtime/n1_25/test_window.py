@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import struct
 from unittest.mock import patch
 
 import window_common as common
 import window_probe as probe
 import window_vendor as vendor
+from contract import MAGIC, checksum, intervals
 
 
 class WindowContractTests(unittest.TestCase):
@@ -36,10 +38,18 @@ class WindowContractTests(unittest.TestCase):
                     "eps": 1e-6, "pass": True, "files": {n: item for n in names},
                     "inputs": {n: copy.deepcopy(item) for n in ("partial", "x", "w", "r", "gamma")}}
             result = {"pass": True, "fixed_gate": {"pass": True}, "reduced_bit_equal": True, "diag": {"pass": True}}
+            diag = [[0] * 32 for _ in range(48)]
+            for core, (start, end) in enumerate(intervals(common.CELL["rows"], common.CELL["cores"])):
+                diag[core][:13] = [MAGIC, 1, core, common.CELL["cores"], start, end, 1,
+                                  rank if core == 0 else 0xFFFFFFFF, 2 if core == 0 else 0xFFFFFFFF,
+                                  0, 0, 967, 5120]
+                diag[core][31] = checksum(diag[core][:31])
+            diag_raw = struct.pack("<1536I", *(v for row in diag for v in row))
+            meta["files"]["diag"] = {"bytes": len(diag_raw), "sha256": hashlib.sha256(diag_raw).hexdigest()}
             (root / "meta.json").write_text(json.dumps(meta))
             (root / "result.json").write_text(json.dumps(result))
             for name in names:
-                (root / (name + ".bin")).write_bytes(raw)
+                (root / (name + ".bin")).write_bytes(diag_raw if name == "diag" else raw)
         return cell
 
     def change(self, path, fn):
@@ -96,8 +106,37 @@ class WindowContractTests(unittest.TestCase):
         self.assertIn("--run-path", cmd)
         self.assertIn("--start-method=spawn", cmd)
         self.assertIn("--max-restarts=0", cmd)
-        self.assertEqual(cmd[cmd.index("--cores") + 1], "2")
+        self.assertEqual(cmd[cmd.index("--cores") + 1], "24")
         self.assertEqual(cmd[cmd.index("--use-hccl") + 1], "1")
+
+    def test_requested_partition_and_observed_fixture_are_separate(self):
+        parts = intervals(967, 24)
+        self.assertEqual(parts[0][0], 0)
+        self.assertEqual(parts[-1][1], 967)
+        self.assertTrue(all(parts[i][1] == parts[i + 1][0] for i in range(23)))
+        self.assertEqual(sorted(end - start for start, end in parts), [40] * 17 + [41] * 7)
+        observed = probe.observed_diag(self.reports())
+        self.assertTrue(all(r["observed_nonzero_slot_count"] == 24 for r in observed))
+        self.assertEqual([(s["row_start"], s["row_end"]) for s in observed[0]["observed_nonzero_slots"]], parts)
+
+    def test_wrong_core_gate_never_starts_timing_child(self):
+        target = self.root / "probe"
+        target.mkdir()
+        self.reports().rename(target / "cell")
+        self.change(target / "cell/rank0/meta.json", lambda m: m.update(cores=2))
+        env = {"ASCEND_RT_VISIBLE_DEVICES": "0,1",
+               "ASCEND_CUSTOM_OPP_PATH": str(self.root / "isolated-opp/vendors" / common.VENDOR),
+               "LD_LIBRARY_PATH": str(self.root / "isolated-opp/vendors" / common.VENDOR / "op_api/lib")}
+        with patch.object(probe, "staged_paths", return_value=(self.stage, self.root)), \
+             patch.object(probe, "check_head"), patch.object(probe, "frozen", return_value=self.identity), \
+             patch("contract.verify_identity"), patch.dict("os.environ", env), \
+             patch("sys.argv", ["probe", "--tree", str(self.root), "--device", "0", "--output", str(target / "head-probe.json")]), \
+             patch.object(probe.subprocess, "call", return_value=0) as child:
+            self.assertEqual(probe.main(), 1)
+        self.assertEqual(child.call_count, 1)
+        result = json.loads((target / "head-probe.json").read_text())
+        self.assertFalse(result["gate_passed"])
+        self.assertNotIn("timing_argv", result)
 
     def lifecycle(self, action):
         with patch.object(vendor, "check_head"), patch.object(vendor, "frozen", return_value={}), \

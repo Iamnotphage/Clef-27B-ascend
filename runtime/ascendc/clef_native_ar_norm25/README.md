@@ -346,3 +346,66 @@ plan SHA `da35e14f150c84c799ebfa3373abb22a76366ff52d9d54f2e8e289e9b3428609`。
   --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
   --run-dir /workspace/yangchen/logs/n1-v2-aron-c2-owner27-20261119T0245
 ```
+
+## cores2 实际闭合与 cores24 条件计时交付
+
+cores2 run：`/workspace/yangchen/logs/n1-v2-aron-c2-owner27-20261119T0245`。
+window SHA `32019923fd4f5400da18fcd87389dfb7674a933ccfe80f1e26e8a9da0fad102c`，
+overall0/六步骤RC0；restore SHA
+`f736bb3e8b4053595e4e7ca402b64915bedef90c5d1a1ee18a77a97db208a9c3`，
+label `d0-restore-20261118T184817Z-ea064140`，root1200025/worker1200187、1200188，
+四检通过，active vendor消失，retired16文件全SHA匹配。
+
+两rank各12原bin大小/SHA通过，五输入元数据和所有输出与cores1相同，原固定门误差全0。
+实际diag slot0[0,483)、slot1[483,967)，两个槽全31字段FNV过、后46槽全0。
+rstd row482/483实际字节分别`edf5153f`/`5cb8183f`，值为0.5857837796/0.5965631008；
+row480..485及两段完整输出均与本格参考和cores1相等。
+边界报告`/tmp/n1-aron-c2-boundary-analysis.json` SHA
+`48ebc3a524fb4486a37c578f6a1ea2989a6b4c54c0a1e960c3d5495ac737d3d6`；
+字节审计`/tmp/n1-v2-aron-c2-owner27-20261119T0245-byte-audit.json` SHA
+`e28ada7f4bafad47f8e8238edeead687ffd8e7e17bd61928b30248ca968a32fa`。
+本格正确性及生命周期闭合，尚无性能结论或普遍同步证明。
+
+20授权下一独立cores24格及其门后计时。原v2包、ABI、adapter、run_cell、输入、
+HCCL类型/算法和固定门保持原SHA。CPU分区模型为17段40行、7段41行，互斥覆盖[0,967)；
+这是请求参数模型。实际diag非零槽集合和每槽区间由6144B raw解析，单列observed与requested。
+
+同一个240秒监督probe按顺序执行：
+
+1. 原run_cell执行cores24/ARon正确性格；两rank固定门、explicit reduced、diag、
+   完整raw SHA全部通过后才允许下一步。
+2. 同PGID、`--run-path --start-method=spawn`的新torchrun运行`bench_ready.py`。
+   导入设备后端前再次要求**本窗口**cores24结果及全部原bytes；cores1/2均被拒绝。
+3. 以相同partial/r/gamma测native all_reduce+AddRMSNorm和N1；每调用先恢复输入、
+   barrier/sync及创建事件，均放计时外。N1计时包括adapter分配、diag与实际算子调用。
+4. 1对首次调用、3对warmup独列；正式4轮AB/BA/BA/AB，每轮5对。每rank共48条调用记录，
+   正式40条；保存每次device event、wall、perf_counter_ns起止。固定AOT包未在窗口内编译，
+   runtime编译耗时标为未单独观测，首次调用包含可能的惰性初始化；加载/输入上传setup另列。
+5. 每轮结束复核固定门、diag、reduced及本窗口native source参考；最后一轮保存9份原bin。
+   任一轮或计时子进程失败，整个probe判失败并沿原finally恢复。
+6. 聚合只接受两rank完整同序列、同host/boot及monotonic实现；每调用保留两rank原始样本，
+   分列max(rank event)、max(rank wall)、max(end)-min(start)整体wall关键路径。
+   median/p95及配对速度比仅取正式轮次，p95线性插值，零分母比值显式null。
+
+CPU验证14项接线/分区＋10项统计协议通过；涵盖拒绝cores2前置启动计时、缺样本/重排、
+非finite时长、错wall、跨host/boot/clock等。CPU synthetic数据只验证协议，无设备计时含义。
+计时范围是input-ready AR+AddRMSNorm，GEMM及输入恢复在外；设备原件到齐前不报收益。
+
+bundle：`/workspace/yangchen/work/clef-n1-25-window-v2-aron-c24-timing-owner27`。
+payload SHA `b782e49087e0bd0c7ccc48790540a3af8804bd19aee690c73372cc3da8614977`；
+plan SHA `8a380481cae6d1b105f4a7a2ed39d46010aa5ea91bd1e1a27b83830d11c4a5e3`；
+entry SHA `5753d8e43096a876666c1340d5574f5cf97ef7fc6809574a090429198ad5aae8`；
+bench SHA `1fd5dcefc43f1b91535c334c077013dd6deca5016abde4077faeea9aeb7ac05e`。
+完整payload含新timing模块，原1/2核bundle保持冻结。下面只读命令已由25执行生成plan，
+最终增量核准且前置窗口恢复闭合后，由27按20授权加`--execute`。cores48不排。
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v2-aron-c24-timing-owner27/supervised_window.py \
+  --owner clef-27b-ascend-27 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha b782e49087e0bd0c7ccc48790540a3af8804bd19aee690c73372cc3da8614977 \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310
+```

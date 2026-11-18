@@ -17,7 +17,7 @@ from window_common import IDENTITY_SHA, PREIMAGE_SHA, STOP_SHA, VENDOR, require_
 
 PYTHON = "/workspace/yangchen/venvs/clef-py312/bin/python"
 PAYLOAD = ("window_common.py", "window_vendor.py", "window_probe.py", "run_cell.py",
-           "contract.py", "fixed_gate.py", "build_identity.json")
+           "contract.py", "fixed_gate.py", "build_identity.json", "bench_ready.py", "timing_contract.py")
 
 
 def plan(a):
@@ -75,7 +75,13 @@ def plan(a):
             "wrapper_sha256": a.wrapper_sha, "identity_sha256": IDENTITY_SHA,
             "env_scope": "OPP/opapi/devices on probe child; PYTHONPATH on torchrun child only",
             "revert": "rename isolated-opp to isolated-opp.retired; preserve all bytes",
-            "cell": {"rows": 967, "seed": 20261118, "cores": 2, "use_hccl": 1}}
+            "cell": {"rows": 967, "seed": 20261118, "cores": 24, "use_hccl": 1},
+            "partition_model": {"scope": "CPU expectation; actual slot set is read from raw diag",
+                                "ranges": [[967 * i // 24, 967 * (i + 1) // 24] for i in range(24)]},
+            "timing": {"requires_this_cell_gate": True, "round_orders": ["AB", "BA", "BA", "AB"],
+                       "reps_per_round": 5, "warmup_pairs": 3, "first_call_pairs": 1,
+                       "rank_scope": "slow-rank device/wall and whole-call monotonic critical path",
+                       "same_probe_process_group": True}}
 
 
 def main():
