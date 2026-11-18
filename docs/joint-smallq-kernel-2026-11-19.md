@@ -112,7 +112,7 @@ S1/S2 与全量 OD/ERQA 尚未运行，当前整头负收益不进入服务 AB/�
 
 ### 与 24 预筛的对照范围
 
-26 使用真实 joint_head.safetensors；24 probe 使用 normal(0,0.02) 随机 head 参数。26 OFF 保持 f810 的 routing 两次 memory LayerNorm、不同 K/V 对象及 unpacked projection；24 aa3e postimage 的 OFF 路径先共享一次 memory norm 的 kv_in，MHA 会选择 packed KV。两套 OFF 的工作量与权重范围不同，绝对 head 耗时和百分比不能跨窗口直接归并。两套方法均需各自同窗口 A/B，服务级对照统一回 f810 后再评估。
+26 使用真实 joint_head.safetensors；24 probe 使用 normal(0,0.02) 随机 head 参数。26 OFF 保持 f810 的 routing 两次 memory LayerNorm、不同 K/V 对象及 unpacked projection；24 aa3e postimage 的 OFF 路径先共享一次 memory norm 的 kv_in，MHA 会选择 packed KV。两套 OFF 的工作量与权重范围不同，绝对 head 耗时和百分比不能跨窗口直接归并。24 当前服务 AB 两臂同为 aa3e，仅切换 flag，仍可判断该源码内的 flag 增量，按原计划继续。最终相对生产 f810 的总收益与质量保留独立来源对照，由 20 排程后续最小验证；本结论范围说明保持当前服务 AB 流程。
 
 ### 生命周期闭合
 
