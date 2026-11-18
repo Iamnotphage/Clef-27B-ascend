@@ -245,3 +245,28 @@ $PY runtime/joint_fused_attention_window.py --run-dir "$RUN" --repo "$REPO" \
 `steps.restore.action = blocked_vendor_revert_failed`，保留 `vendor_applied=true` 和原始 RC/stdout/stderr，
 **不启动恢复**（避免在 vendor ownership 未知时覆盖现场），整体非 0。只有 revert 成功后 `vendor_applied`
 才清零并继续 target preimage 检查/恢复。CPU 新增成功与失败两条 finally 回归；head 21 例不变，合计 23/23。
+
+## 15. head 真实窗口结果（2026-11-18 18:05Z，23 合核）
+
+证据目录：`/workspace/yangchen/logs/head89-20261118T180555Z/`。
+window `65dcced4…cc5ee`，probe `f5bd3d70…f1676b`，restore `0c9cc408…43d3f`。
+
+- window overall RC **0**：preflight/stop/apply/probe/revert/restore 全部 rc0；probe cleanup `reaped=true`、
+  `unknown/residual` 空；revert 后 source `f8101b98`。
+- restore：唯一 label `d0-restore-20261118T180615Z-b1b3354b`，root `1186263` 身份前后稳定，
+  workers `1186403/1186404` 属其树，物理卡 7 chip0/1；health/text(score)/image(choice) 全过。
+- probe：AB/BA/BA/AB 四轮、每臂每轮 30 次，共 120/臂；device 中位 **4.707900 → 4.278670 ms**，
+  pooled delta **−0.429230 ms**；逐轮 paired device delta
+  `[-0.701820, -0.417740, -0.438980, -0.426990]`，四轮同向。wall 中位 4.828365 → 4.392170 ms。
+- 本格输出 `bit_equal=true`、finite、`max_abs=0`。`torch_npu_git_version=3363ea59…`；
+  sdpa flags flash/math/mem-efficient 均 true；COMPATIBLE_IMPL/NPU_COMPATIBLE_IMPL 未设置。
+- **范围限制**：合成输入、随机 head 权重、L967/O4；不含真实服务 S1/S2/质量，不能作为采用结论。
+- 预筛预算（≥0.3 ms 同向）已达到，可进入真实服务 A/B 与完整 OD/ERQA；由 20 统一排期。
+
+### 15.1 下一步服务 A/B（21 执行）
+
+1. 用 `/tmp/head_89eb/runtime/apply_joint_fused_attention.py` 安装 `aa3e1758`（两臂同一 postimage）。
+2. A 臂以 `CLEF_JOINT_FUSED_ATTN=0` 启动 s1，B 臂 `=1`；同输入 `od-1534`（body SHA
+   `568ea158…b76bf`），`joint_fused_attention_client.py` 每臂 3 warmup + 20 次，ABBA ≥3 轮。
+3. 服务级稳定后再跑同窗口 S1 ≥3 轮、S2、完整 OpenDecisions + ERQA；质量仍按 ≤2 pp。
+4. 未过则关闭候选并 revert `f8101b98`；26/25 候选不得与本 postimage 混装。
