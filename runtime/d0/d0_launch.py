@@ -2,8 +2,21 @@
 """Child process body for one D0 cell. Only d0_run.py starts this."""
 import argparse
 import json
+import os
 import sys
+import traceback
 from pathlib import Path
+
+def _rank() -> int:
+    return int(os.environ.get("RANK", "0"))
+
+
+def write_failure(out_dir: Path, kind: str, exc: BaseException) -> None:
+    """Rank-scoped so two ranks never overwrite each other's failure."""
+    rank = _rank()
+    (out_dir / f"{kind}-rank{rank}.json").write_text(json.dumps(
+        {"rank": rank, "failure": type(exc).__name__, "message": str(exc)[:4000],
+         "traceback": traceback.format_exc()}, ensure_ascii=False) + "\n")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -24,14 +37,12 @@ def main() -> int:
         import torch.distributed as dist
         from d0_executor import run, summarize_failure
     except Exception as exc:                                  # noqa: BLE001
-        (a.out_dir / "import-failure.json").write_text(
-            json.dumps({"failure": type(exc).__name__, "message": str(exc)}, ensure_ascii=False) + "\n")
+        write_failure(a.out_dir, "import-failure", exc)
         return 3
     try:
         run(torch, torch_npu, a, a.out_dir, dist)
     except Exception as exc:                                  # noqa: BLE001
-        (a.out_dir / "trace-unavailable.json").write_text(
-            json.dumps(summarize_failure(exc), ensure_ascii=False) + "\n")
+        write_failure(a.out_dir, "trace-unavailable", exc)
         return 4
     return 0
 

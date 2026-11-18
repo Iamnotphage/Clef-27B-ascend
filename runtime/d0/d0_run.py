@@ -100,7 +100,11 @@ def main() -> int:
     plan = {
         "cell": {"mm_dim": a.mm_dim, "use_hccl": a.use_hccl, "rows": a.rows, "seed": a.seed},
         "trace": {"slots": TRACE_SLOTS, "fields": TRACE_FIELDS, "bytes": TRACE_BYTES,
-                  "dtype": "uint32", "format": "ND", "allocations": 1},
+                  "container_dtype": "int32", "acl_view": "ACL_UINT32",
+                  "normalisation": "readback & 0xFFFFFFFF",
+                  "format": "ND", "allocations": 1},
+        "launch": {"tool": "torch.distributed.run", "standalone": True,
+                   "nproc_per_node": 2, "world_size": 2, "ranks": [0, 1]},
         "sequence": ["clear trace on stream", "launch", "synchronize stream", "read trace back"],
         "timeout_s": a.timeout,
         "scope": ("capacity-internal observations only; absent slot is not a missing "
@@ -118,13 +122,18 @@ def main() -> int:
     # Real execution path. Kept explicit so the failure modes are visible:
     # a timeout kills the child and still writes a trace-unavailable record.
     # Real executor lives in its own module; this process only supervises it.
+    # Two ranks under torchrun: env:// in the executor needs RANK, WORLD_SIZE
+    # and MASTER_ADDR, and the cell is defined for exactly two ranks on one card.
+    env = dict(os.environ)
+    env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
     child = subprocess.Popen(
-        [sys.executable, str(Path(__file__).with_name("d0_launch.py")),
+        [sys.executable, "-m", "torch.distributed.run", "--standalone",
+         "--nproc-per-node=2", str(Path(__file__).with_name("d0_launch.py")),
          "--out-dir", str(a.out_dir), "--rows", str(a.rows), "--seed", str(a.seed),
          "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl),
          "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)],
         start_new_session=True,                       # child.pid is the pgid leader
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     (a.out_dir / "process-tree.json").write_text(
         json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
     pgid = child.pid                                   # leader of its own session
@@ -172,10 +181,12 @@ def main() -> int:
                             magic=0xD0D0C0DE)
             res.with_name(res.stem + "-parsed.json").write_text(
                 json.dumps(parsed, ensure_ascii=False, indent=1) + "\n")
-    except Exception as exc:                                  # noqa: BLE001
-        (a.out_dir / "parse-failure.json").write_text(
-            json.dumps({"failure": type(exc).__name__, "message": str(exc)},
-                       ensure_ascii=False) + "\n")
+    except (Exception, SystemExit) as exc:                    # noqa: BLE001
+        # A parser refusal is a wrapper failure, not a silent pass.
+        (a.out_dir / "parse-failure.json").write_text(json.dumps(
+            {"failure": type(exc).__name__, "message": str(exc)},
+            ensure_ascii=False) + "\n")
+        rc = rc if rc else 5
     return rc
 
 
