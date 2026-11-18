@@ -107,24 +107,15 @@ public:
     __aicore__ inline void WriteTilingDiag() {
         if (GetBlockIdx() != 0) return;
         LocalTensor<float> d = diagT_.Get<float>();
-        // Output ABI is unchanged: diag stays 8 floats.
-        // Default (mc_diag = 0): 5 = usedCoreNum, 6 = baseM, 7 = depthA1.
-        // With mc_diag = 1 the three slots are repurposed for the multi-core
-        // contract, because the caller's 8-float buffer has no spare slot:
-        //   5 = workers (tiling's usedCoreNum, the worker count)
-        //   6 = singleCoreM (per-worker M extent used for the slice)
-        //   7 = GetBlockNum() (actual launch blocks)
-        // The requested budget is not in diag; it stays a host-side record
-        // (tiling mmDim), so budget / tiling-answer / launch are never conflated.
-        if (tiling_->mcDiag != 0u) {
-            d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
-            d.SetValue(6, static_cast<float>(tiling_->cubeTiling.singleCoreM));
-            d.SetValue(7, static_cast<float>(GetBlockNum()));
-        } else {
-            d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
-            d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
-            d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
-        }
+        // Output ABI is unchanged: diag stays 8 floats and there is no extra
+        // attribute.  5 = usedCoreNum, 6 = baseM, 7 = depthA1, written before
+        // the cube stage so a fault inside the matmul still leaves the tiling
+        // visible.  The requested budget is a host-side record (tiling mmDim)
+        // and the actual launch is GetBlockNum(); the three are never conflated
+        // and none of them is exposed as a new diag slot.
+        d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
+        d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
+        d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
         PipeBarrier<PIPE_ALL>();
         DataCopy(diag_[0], d, 8);
         PipeBarrier<PIPE_ALL>();
@@ -202,9 +193,13 @@ public:
             // (vllm-ascend gmm grouped_matmul_swiglu_quant.h:222-231; its
             // caller offsets only A and C for an M split at :169-172 and adds
             // GetWOffset(tailN, k) only for an N split at :174).
-            // We deliberately do NOT rely on any AIV->AIC index mapping: each
-            // participating block owns a distinct M range, so the result is
-            // correct whichever server consumes the message.
+            // The slice ranges are *designed* to be independent of any AIV->AIC
+            // index mapping: each participating block owns a distinct M range.
+            // That is an assumption, not a verified fact.  Still open on 2201:
+            // whether every participating block's message is consumed by a
+            // server that executes exactly its range, whether the client/server
+            // pairing holds for the whole set, and whether the KFC quit set
+            // matches the launch set.  A CPU sweep cannot answer any of these.
             const uint32_t workers = (tiling_->cubeTiling.usedCoreNum == 0u)
                                          ? 1u
                                          : static_cast<uint32_t>(tiling_->cubeTiling.usedCoreNum);

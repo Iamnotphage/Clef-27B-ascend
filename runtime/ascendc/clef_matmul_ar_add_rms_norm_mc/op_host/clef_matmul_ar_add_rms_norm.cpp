@@ -140,14 +140,6 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const int64_t normXReq = (normXAttr == nullptr) ? 0 : *normXAttr;
     if (normXReq < 0 || normXReq > 1) { return ge::GRAPH_FAILED; }
     t->normFromX = static_cast<uint32_t>(normXReq);
-    // mc_diag=1 repurposes diag[5..7] for the multi-core contract (workers /
-    // singleCoreM / launch blocks).  The output ABI is unchanged -- diag stays
-    // 8 floats and the caller allocates exactly what it allocates today.
-    const auto* mcDiagAttr = context->GetAttrs()->GetAttrPointer<int64_t>(14);
-    const int64_t mcDiagReq = (mcDiagAttr == nullptr) ? 0 : *mcDiagAttr;
-    if (mcDiagReq < 0 || mcDiagReq > 1) { return ge::GRAPH_FAILED; }
-    t->mcDiag = static_cast<uint32_t>(mcDiagReq);
-
     // Four-way consistency: (a) the storage format the framework reports for
     // the weight descriptor, (b) the format combination selected from the
     // OpDef, (c) host SetBType, (d) the kernel MatmulType.  (b)(c)(d) are fixed

@@ -1,3 +1,9 @@
+> **本文件适用范围（版本限定）**：以下描述针对包 `clef_matmul_ar_add_rms_norm_mc`
+> （vendor `clef_matmul_ar_add_rms_norm_mc`，源提交 `aacf371` 之后）。
+> 其中"ND"、"修复未实施"、"diag 增加槽位"等旧段落属于**归档的 nzguard/ND 包**，
+> **不代表本包**；本包的构建身份、最小差异与未证项以 `MANIFEST.md` 为准。
+> 本包**从未安装、从未上板**。
+
 # E 诊断证据与契约状态（只读核对，非根因结论）
 
 本文件记录 Group E 当前包在 CANN 9.2.1 / ascend910_93 上的**编译级**证据与契约落点。

@@ -1,3 +1,9 @@
+> **本文件适用范围（版本限定）**：以下描述针对包 `clef_matmul_ar_add_rms_norm_mc`
+> （vendor `clef_matmul_ar_add_rms_norm_mc`，源提交 `aacf371` 之后）。
+> 其中"ND"、"修复未实施"、"diag 增加槽位"等旧段落属于**归档的 nzguard/ND 包**，
+> **不代表本包**；本包的构建身份、最小差异与未证项以 `MANIFEST.md` 为准。
+> 本包**从未安装、从未上板**。
+
 # clef_matmul_ar_add_rms_norm（Group E 首版）
 
 单算子包含 **MatMul → TP AllReduce → 全 N Add + RMSNorm**，用于 down_proj + AR + AddRMS 的
