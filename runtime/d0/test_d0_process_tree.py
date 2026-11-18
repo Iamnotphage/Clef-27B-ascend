@@ -53,13 +53,21 @@ def main() -> int:
     # 2 leader exits first while a grandchild keeps the pipe open
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
-        script = "sleep 60 & exit 0"          # child exits, grandchild holds stdout
+        marker = d / "gc.pid"
+        script = f"sleep 60 & echo $! > {marker}; exit 0"
         t0 = time.time()
         rc = run_child(["sh", "-c", script], d, timeout=2)
         dt = time.time() - t0
+        time.sleep(0.5)
+        gpid = int(marker.read_text()) if marker.exists() else 0
         meta = json.loads((d / "raw-rc.json").read_text())
         check("leader-first bounded", dt < 40, f"{dt:.1f}s")
-        check("leader-first recorded", "child_raw_rc" in meta and "pgid" in meta, meta)
+        check("leader-first timed out with wrapper 2",
+              meta["timed_out"] is True and meta["wrapper_rc"] == 2
+              and meta["child_raw_rc"] == 0, meta)
+        check("leader-first grandchild exited", gpid and not alive(gpid), f"pid={gpid}")
+        after = json.loads((d / "tree-after.json").read_text())
+        check("survivors judged by captured pgid", "surviving_members" in after, after.keys())
 
     # 3 nonzero child rc is kept separate from the wrapper rc
     with tempfile.TemporaryDirectory() as td:

@@ -95,6 +95,9 @@ def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -
     child = subprocess.Popen(cmd, start_new_session=True, env=env,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     pgid = child.pid                                   # leader of its own session
+    (out_dir / "root-child.json").write_text(json.dumps(
+        {"child_pid": child.pid, "pgid": pgid,
+         "tree_at_start": snapshot_tree(os.getpid())}, ensure_ascii=False) + "\n")
     timed_out = False
     try:
         out, err = child.communicate(timeout=timeout)
@@ -125,8 +128,19 @@ def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -
         ensure_ascii=False) + "\n")
     (out_dir / "stdout.log").write_text(out or "")
     (out_dir / "stderr.log").write_text(err or "")
-    (out_dir / "tree-after.json").write_text(
-        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
+    # Survivors are judged against the PGID actually created, not a fresh scan.
+    survivors = []
+    try:
+        out_pg = subprocess.run(["ps", "-o", "pid=", "-g", str(pgid)],
+                                capture_output=True, text=True, timeout=10)
+        survivors = [int(x) for x in out_pg.stdout.split() if x.isdigit()]
+    except Exception:                                     # noqa: BLE001
+        survivors = []                                    # recorded as a gap below
+    (out_dir / "tree-after.json").write_text(json.dumps(
+        {"tree": snapshot_tree(os.getpid()), "pgid": pgid,
+         "surviving_members": survivors,
+         "survivor_check": "ps -g" if survivors else "empty"},
+        ensure_ascii=False) + "\n")
     return 2 if timed_out else child_raw_rc
 
 
@@ -174,6 +188,8 @@ def main() -> int:
     # Real execution path. Kept explicit so the failure modes are visible:
     # a timeout kills the child and still writes a trace-unavailable record.
     # Real executor lives in its own module; this process only supervises it.
+    env = dict(os.environ)
+    env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
     rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
@@ -191,7 +207,11 @@ def main() -> int:
         (a.out_dir / "parse-failure.json").write_text(json.dumps(
             {"failure": type(exc).__name__, "message": str(exc)},
             ensure_ascii=False) + "\n")
-        rc = rc if rc else 5
+        prev = json.loads((a.out_dir / "raw-rc.json").read_text())
+        prev["wrapper_rc"] = 5                 # child_raw_rc is left untouched
+        (a.out_dir / "raw-rc.json").write_text(
+            json.dumps(prev, ensure_ascii=False) + "\n")
+        rc = 5
     return rc
 
 

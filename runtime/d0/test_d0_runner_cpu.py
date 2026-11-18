@@ -193,6 +193,42 @@ print(legal, illegal, len(calls))
         check("illegal mapping never reaches loader",
               len(out) >= 2 and out[1] == "REJECTED", p.stdout + p.stderr[-300:])
 
+    # 8 real main(): monkeypatched run_child proves the wiring without torchrun
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td) / "run"
+        code = f"""
+import sys, json
+sys.path.insert(0, {str(HERE)!r})
+from pathlib import Path
+from types import SimpleNamespace
+import d0_run
+
+seen = {{}}
+def fake_run_child(cmd, out_dir, timeout, env=None):
+    seen["cmd"] = list(cmd)
+    seen["env_world"] = (env or {{}}).get("WORLD_SIZE")
+    seen["env_omp"] = (env or {{}}).get("OMP_NUM_THREADS")
+    # write the files main expects to post-process
+    (Path(out_dir) / "raw-rc.json").write_text(json.dumps(
+        {{"wrapper_rc": 0, "child_raw_rc": 0, "timed_out": False, "pgid": 1}}))
+    return 0
+d0_run.run_child = fake_run_child
+argv = ["d0_run.py", "--out-dir", {str(d)!r}, "--adapter", "/tmp/x.so",
+        "--adapter-sha", "0"*64]
+sys.argv = argv
+try:
+    rc = d0_run.main()
+except SystemExit as e:
+    rc = e.code
+ok = (rc == 0 and "torch.distributed.run" in seen.get("cmd", [])
+      and "--nproc-per-node=2" in seen.get("cmd", [])
+      and seen.get("env_world") == "2" and seen.get("env_omp") == "1")
+print("OK" if ok else f"BAD rc={{rc}} seen={{seen}}")
+"""
+        p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        check("main wires env and launch without torchrun",
+              "OK" in p.stdout, p.stdout + p.stderr[-400:])
+
     print("RESULT:", "ALL PASS" if not failures else f"FAILURES: {failures}")
     return 0 if not failures else 1
 
