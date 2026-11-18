@@ -79,6 +79,7 @@ def check_derivation(block: int, sub: int, ratio: int, aiv_blocks: int) -> list:
 # its range counts as a claim. An AIV record without the worker bit keeps its
 # identity and is simply not a claim.
 REQUIRED_AIC = ("K1", "K8_final")
+AIC_ALLOWED = {"K1", "K2", "K8_final"}      # K3/K4 are unreachable on AIC
 REQUIRED_AIV_WORKER = ("K1", "K4", "K8_final")
 STAGE_ORDER = ["K1", "K2", "K3", "K4", "K5_enter", "K5_return",
                "K6_end_before", "K6_end_after", "K7a", "K7b", "K8_final"]
@@ -136,13 +137,28 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
         # contract anomalies: AIC returns inside REGIST, so it can neither be a
         # worker nor carry a claim, and it never reaches the later stages.
         anomaly = []
+        # Bits outside the declared map never become stage names, so they are
+        # counted from the raw words instead of from the decoded list.
+        mask1 = 0
+        for i in STAGE1:
+            mask1 |= 1 << i
+        mask2 = 0
+        for i in STAGE2:
+            mask2 |= 1 << i
+        unknown = [f"bits:{bin(bits & ~mask1).count('1')}",
+                   f"bits2:{bin(bits2 & ~mask2).count('1')}"]
+        unknown = [u for u in unknown if not u.endswith(":0")]
+        if unknown:
+            # stage bits outside the declared map: listed, never used as a claim
+            anomaly.append(f"unknown_stage_bits:{len(unknown)}")
         if rec["domain"] == "aic":
             if rec["is_worker"]:
                 anomaly.append("aic_worker_bit")
             if rec["claim_m"]:
                 anomaly.append("aic_claim")
-            if any(x in stages for x in STAGE_ORDER[3:]):
-                anomaly.append("aic_beyond_k3")
+            extra = [x for x in stages if x not in AIC_ALLOWED]
+            if extra:
+                anomaly.append("aic_unreachable_stage")
         if anomaly:
             rec["contract_anomaly"] = anomaly
 
@@ -167,9 +183,16 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
                 observations.append(rec)
             continue
 
-        # enter must precede its return when both are present
-        if all(x in stages for x in ENTER_RETURN) and stages.index("K5_enter") > stages.index("K5_return"):
-            rec["incomplete"] = ["k5_order"]
+        # Bitmaps carry no order, so only dependency violations are checked:
+        # a later marker present without its prerequisite.
+        have = set(stages)
+        dep = [("K3", "K2"), ("K3", "K1"), ("K4", "K3"),
+               ("K5_return", "K5_enter"),
+               ("K6_end_after", "K6_end_before"),
+               ("K7b", "K7a")]
+        violated = [f"{a}->{b}" for a, b in dep if a in have and b not in have]
+        if violated:
+            rec["incomplete"] = [f"order:{','.join(violated)}"]
             incomplete.append(rec)
             continue
         observations.append(rec)
