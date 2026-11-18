@@ -18,7 +18,7 @@ def command(stage, run, python):
             "--identity", str(stage / "build_identity.json"),
             "--vendor-root", str(run / "isolated-opp/vendors" / VENDOR),
             "--adapter", str(stage / "n1_adapter.so"), "--output", str(run / "probe/cell"),
-            "--rows", "967", "--seed", "20261118", "--cores", "1", "--use-hccl", "0"]
+            "--rows", "967", "--seed", "20261118", "--cores", "1", "--use-hccl", "1"]
 
 
 def aggregate(cell, identity):
@@ -67,7 +67,7 @@ def main():
     try:
         stage, run = staged_paths(__file__, a.output.resolve().parent.parent)
         if a.device != 0 or a.output.resolve().parent != run / "probe":
-            raise ValueError("N1 first cell requires device=0 and supervised probe output")
+            raise ValueError("N1 cell requires device=0 and supervised probe output")
         check_head(a.tree)
         identity = frozen(stage)
         from contract import verify_identity

@@ -91,13 +91,13 @@ class WindowContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             common.staged_paths(self.root / "window_probe.py", self.root)
 
-    def test_command_pins_run_path_and_first_cell(self):
+    def test_command_pins_run_path_and_aron_cell(self):
         cmd = probe.command(self.stage, self.root, "/fixed/python")
         self.assertIn("--run-path", cmd)
         self.assertIn("--start-method=spawn", cmd)
         self.assertIn("--max-restarts=0", cmd)
         self.assertEqual(cmd[cmd.index("--cores") + 1], "1")
-        self.assertEqual(cmd[cmd.index("--use-hccl") + 1], "0")
+        self.assertEqual(cmd[cmd.index("--use-hccl") + 1], "1")
 
     def lifecycle(self, action):
         with patch.object(vendor, "check_head"), patch.object(vendor, "frozen", return_value={}), \

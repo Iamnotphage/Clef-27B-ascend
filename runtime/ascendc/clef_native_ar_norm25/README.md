@@ -157,7 +157,7 @@ v1 清单保留在 `eb2e33f` 与远端 v1/identity.json。
 原runner、v2 parser、identity、adapter到窗口stage，使用该冻结副本。
 
 v1/v2 各自独立冻结，使用相同 N1 op 名，按互斥安装/进程隔离测试。
-v2 尚未安装/加载/执行；23 核新增链及身份后，由21安排 head 后首格。
+v2 的首格设备结果和后续最小格见文末；本节记录独立编译交付身份。
 
 ## v2 完整监督接线（2026-11-19 02:15 CST）
 
@@ -211,3 +211,61 @@ probe1187580、torchrun1187581、rank1187586/1187587均PGID/SID1187580；
 12秒timeout格各子进程均PGID1187599，真实killpg后rc-9、reaped=true、
 unknown/residual空、四PID postcleanup均null。记录包含完整CPU命令与每层argv。
 此验证范围为CPU probe子链；preflight/stop/finish、设备加载/退出和数值结果仍待21首格。
+
+## v2 首格实际原件与 ARon/cores1 后续格
+
+21首格目录：`/workspace/yangchen/logs/n1-v2-cell1-20261119T0215`。
+ARoff接线源码冻结于`a289a6ba757eaeedf20d39544fe97c550e829243`，原bundle保持不变。
+实际torch2.10.0+cpu/torch_npu2.10.0.post7，rows967/seed20261118/cores1/eps1e-6。
+
+25只读CPU复算两rank各4,951,040个BF16 residual/Y、967个FP32 rstd：
+shape/dtype/双方finite通过，residual fail_count=0/max_abs=0，Y max_abs/max_rel=0，
+rstd max_abs=0；Y近零域分别4,604/4,606个元素，近零max_abs=0。
+每rank12份原始文件SHA/长度/声明shape/dtype全匹配。
+Y/residual/rstd/reduced候选与参考原字节分别相等，partial与reduced原字节相等。
+用记录的reduced+r重建BF16 residual、用记录的rstd和gamma重建Y亦完全相等。
+diag slot0覆盖[0,967)，rank0/1、ranks2、status0，前31字段checksum通过，余47槽全0。
+
+| 输入 | rank | SHA256 |
+| --- | --- | --- |
+| x | 0/1 | `220586f0b0d5edab9e8f2e5cfe6da8a81bf444ecc90f0b5c0ddc8206566d4b35` |
+| w | 0 | `1fd0e09d01aa862184076b0313a3566c697d644610e62dae902e09a4e8e6e72b` |
+| w | 1 | `12539641fe24794c9e17cac3c83c0147705ff04f8afe93fd58ef1405d0926785` |
+| r | 0/1 | `62a80d252e84ffcf82c8ca613e0158dc0bf6b90ca06d55802c61b73c8ebb955f` |
+| gamma | 0/1 | `5cadbc9f2438a7db5712c8cc7d3ac9ecfd3b68c90b5d1dac35401d3bbaecddfb` |
+| partial | 0 | `86cfcdfa184479daa95287b92a568856acc18175306efa4d63d56cceebff540d` |
+| partial | 1 | `f0ace3fd51f869e9c7998a2223c6d4d77775dd319d20ffbee2a844518da80201` |
+
+缺项：x/w有hash/shape/dtype/bytes元数据，缺少x.bin/w.bin；r/gamma/partial及全部输出
+均有真实bytes。当前只证此输入链的cores1/ARoff生命周期与数值，ARon、多核、计时、
+完整质量与服务收益均待各自验证；旧E的Matmul根因仍缺真实workspace partial证据。
+23另已闭合六步骤RC0、vendor16文件退役、active目录消失、head f810和真实恢复四检。
+
+CPU数值原件：`/tmp/n1-cell1-cpu-analysis-rank0.json`
+（`c2cbcebfc45047491f995f92a6e229132dc2f0412238c1435ed0e099e188983d`）、
+`/tmp/n1-cell1-cpu-analysis-rank1.json`
+（`8fae07ca45f87d06f40f1f94730a5d6817e08da5d7df33bdeef006a0acaaf6ba`）。
+逐项字节/identity报告：`/tmp/n1-v2-cell1-20261119T0215-byte-identity-audit.json`
+（`1cdaca982af8f5af8ba70e483ae80dca125541eb01aeb1b903f623554f9bae2f`）。
+
+下一独立bundle：`/workspace/yangchen/work/clef-n1-25-window-v2-aron-c1`。
+仅改变common.CELL、probe argv与plan的use_hccl为1及对应CPU断言（12/12通过）；
+runner、输入生成、固定门、v2算子源码/包/adapter/vendor安装器/监督wrapper均保持相同SHA。
+本仓最新payload用于ARon；ARoff payload在a289a6b和原bundle保留。
+ARon `window_payload.json` SHA
+`b2130071e100b5467a0265617c85387e85a6617ca3cb98deb255cf3aa90ec7a0`，
+`plan.json` SHA `6ac8fffad6dcaf25bc8d81e1554b8bb803491ee8f4dbecbf80af554b675c39dd`。
+运行后须逐项核x/w/r/gamma/partial与上表同输入，继续要求explicit reduced逐位等于native AR参考。
+21唯一执行，排程由20统一；通过后再提出单变量cores扩展与计时。
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/clef-n1-25-window-v2-aron-c1/supervised_window.py \
+  --owner clef-27b-ascend-21 \
+  --wrapper /workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py \
+  --wrapper-sha 9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5 \
+  --expect-payload-sha b2130071e100b5467a0265617c85387e85a6617ca3cb98deb255cf3aa90ec7a0 \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --run-dir /workspace/yangchen/logs/n1-v2-aron-c1-20261119T0230 \
+  --execute
+```
