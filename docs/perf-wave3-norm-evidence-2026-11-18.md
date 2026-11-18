@@ -676,16 +676,17 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 | 7 | server 退出 `quitSize < MIX_NUM` | — | `kernel_kfc.h:60-63`、`:123-128`、`:199-218` |
 | 8 | `End()` 仅 `isSyncGetC` 时投 `MMFUN_END` | `op_kernel:229` 附近 | `matmul_client.h:695-701` |
 | 9 | `WaitIterateAll()` 断言 `!isSyncGetC` | `IterateAll(...,true)` | `matmul_client.h:772-773` |
-| 10 | **`SyncAll<true>` 是 AIC 直接返回的 AIV-only 屏障** | `op_kernel:246` | `dav_c220/kernel_operator_sync_impl.h:63-83` |
+| 10 | **无参 `SyncAll<true>()` 走硬件 FFTS 屏障**（`ffts_cross_core_sync` + `wait_flag_dev`，不用 GM 槽）；`SoftSyncAllImpl` 仅对应带 gm/ub/usedCores 的重载 | `op_kernel:246` | `kernel_operator_block_sync_intf_impl.h:236-240` → `dav_c220/kernel_operator_sync_impl.h:363-403`（**早前引 `:63-83` 已作废**） |
 | 11 | GM 生产→消费的**内存序** | `op_kernel:246-265` | **SDK 未给契约** |
 
 ### 27.2 问题 ①：worker 用 AIV 下标 ⇒ 24 worker 只落 12 个 cube
 
 - `GetBlockIdx()` 在 AIV 为 `aicIdx*2+subBlockId`；`usedCoreNum=24` 时参与的是 AIV 0..23 ⇒ **aicIdx 0..11**，每 AIC 两个 client 各认领不同 M 段。
 - **不漏行、不重复写**（M 段互斥且覆盖全区间；CPU 140 例只证这一点），但**不是 24 路 cube 并行**，只是 12 个 cube 各做两段。
-- 若要 `usedCoreNum` 路 cube，worker 判据应改为 `subBlockId==0 && aicIdx<usedCoreNum`（`aicIdx = GetBlockIdx()/MIX_NUM`）——**需改代码，本轮未做**。
+- **前提条件**：以上成立需 ratio=2 **且** 实际 launch 集合完整；**实际 launch 集合尚未记录**，故 24→12 是**在该条件下的推论**，不是已测事实。
+- 若要 `usedCoreNum` 路 cube，worker 判据应改为 `subBlockId==0 && aicIdx<usedCoreNum`，其中 **`aicIdx = get_block_idx() / GetTaskRationImpl()`**（SDK 实际式为 `get_block_idx()*GetTaskRationImpl()+subid`），且 `MIX_NUM` 存在**宏覆盖**（`__MIX_CORE_AIC_RATION__`）——**需改代码，本轮未做**。
 
-### 27.3 问题 ②（**2026-11-18 22:38 CST 更正，24/23 SDK 实读**）：该挂死推断引用了错误的函数
+### 27.3 问题 ②（来源更正：**23 实读**；事件时间 `2026-11-18T14:35:51Z`，本地 transcript；远端时钟另记）：该挂死推断引用了错误的函数
 
 **更正**：22 的"GM 槽共享 → 挂死"引用的是**带 gm/ub 参数的 `SoftSyncAllImpl`**。本包调用的是**无参 `SyncAll<true>()`**，经
 `kernel_operator_block_sync_intf_impl.h:236-240` → `dav_c220/kernel_operator_sync_impl.h:363-403`，
@@ -705,10 +706,12 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 
 ### 27.4 拟议的最小可证伪诊断（只准备，未执行，待 20 决定）
 
-| 格 | 配置 | 通过判据 | 停止条件 |
+**D1/D2 仅是无授权的诊断设计，不构成通过门**；固定门仍是 mixed 容差 `1e-5 + 0.016·|ref|`（全元素）。
+
+| 格 | 配置 | 观察项（**非通过判据**） | 说明 |
 | --- | --- | --- | --- |
-| **D1**（判 ②，风险最高，先跑） | `usedCoreNum=1`，保留新增 `SyncAll<true>` | `RAW_RC=0` 且三输出与归档单核对照差 0 | 出现 `507014 / 0x25` 或超时 ⇒ **判定 `SyncAll<true>` 在本包范式下不可用**，立即停，回到 GM flag 手工屏障方案 |
-| **D2**（判 ①） | `mm_dim=2`（最小偶数 worker） | `RAW_RC=0`；`partial` 与单核对照全元素差 0；diag[5] 报 `usedCoreNum` | `partial` 未写行 ⇒ 漏行；两段相同 ⇒ 重复写；超时 ⇒ 集合问题 |
+| **D1**（判 ②，风险最高） | `usedCoreNum=1`，保留新增 `SyncAll<true>` | `RAW_RC`、`diag`、是否产出 `partial`、与归档单核对照的**数值差（单列诊断列）** | **超时不能单独归因屏障**；需与其他证据合并判读 |
+| **D2**（判 ①） | `mm_dim=2`（最小偶数 worker） | `RAW_RC`、`diag[5]`、`partial` 是否完整、与单核对照的**数值差（单列）** | **输出相同不足以单独判"重复写"**；未写行、相同输出、超时都需合并证据 |
 
 - **不做**：baseK/shape 扫描，不一次跑多个 `usedCoreNum`。
 - 本包**未安装、未上板**；①的改法属代码改动，需另行授权。
