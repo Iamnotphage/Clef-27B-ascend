@@ -102,7 +102,11 @@ public:
             mm_.SetOrgShape(m_, n_, k_);
             mm_.SetTensorA(aG, false);
             mm_.SetTensorB(bG, false);
-            mm_.IterateAll(cG);
+            // mm_mode=1 stops before IterateAll, so one run separates a
+            // tiling/init fault from an iterate (L1/L0C streaming) fault.
+            if (tiling_->mmMode >= 2u) {
+                mm_.IterateAll(cG);
+            }
             mmRc = 0;
         }
         AscendC::SyncAll();
@@ -165,6 +169,10 @@ public:
             // 5 = the cube tiling's usedCoreNum, which is what the matmul
             // actually splits over; compare it against GetBlockNum().
             d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
+            // 6/7 = baseM / depthA1: the cube tiling's tile and L1 depth, which
+            // is where an over-allocated internal buffer would show up.
+            d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
+            d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
             PipeBarrier<PIPE_ALL>();
             DataCopy(diag_[0], d, 8);
             PipeBarrier<PIPE_ALL>();

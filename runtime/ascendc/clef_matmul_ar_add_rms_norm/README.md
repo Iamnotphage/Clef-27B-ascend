@@ -74,6 +74,34 @@ bash build.sh
 | `block_dim` | 核数：`0` = 自动取 AIV 数；`-1` = 取 AIC 数；`>0` = 显式。**只影响 `SetBlockDim`** |
 | `mm_enable` | `1` = 跑 MatMul；`0` = **整段跳过 cube**。这是把故障定位到 matmul 的决定性开关 |
 | `mm_dim` | 只驱动 `MultiCoreMatmulTiling::SetDim`（即 `TCubeTiling.usedCoreNum`），`0` = 跟随 `block_dim`，`-1` = AIC 数，`>0` = 显式 |
+| `mm_mode` | `2` = 完整（默认）；`1` = **停在 Init/SetOrgShape/SetTensorA/B 之后，不调 `IterateAll`** |
+| `mm_bufspace` | `0` = 用 tiling 自带的缓冲模型；`1` = 把 L1/L0C 约束到平台真实尺寸；`2` = 再为归一化段预留 128 KB UB |
+
+### 已由设备侧定性的两条（21 实测）
+
+1. **KFC 生命周期假设成立**：`mm_enable=0 + use_hccl=2 + block_dim=-1` 两 rank 正常完成
+   （RAW_RC=0，diag = [0/1, 2, 0, 2, 0, usedCoreNum 24]）。保留
+   `InitV2/SetCcTilingV2/Finalize`、不发布 collective 可以正常结束；此前 `use_hccl=0`
+   的挂起是**整段跳过生命周期**造成的，无效 tiling 的 `param invalid` 是另一回事。
+   **后续矩阵一律用 `use_hccl=2` 作"无 AR"对照臂，不要用 0。**
+2. **越界故障在 matmul 路径内**，不在向量/AddRMS/标量代码。
+
+### matmul 内部二分（下一步）
+
+| # | `mm_mode` | `mm_bufspace` | `mm_dim` | 覆盖 | 判读 |
+| ---: | ---: | ---: | ---: | --- | --- |
+| 1 | 1 | 0 | 0 | 仅 Init + 绑张量，不 Iterate | 干净 → tiling/init 无问题，故障在 `IterateAll` |
+| 2 | 2 | 1 | 0 | 完整 + L1/L0C 约束到真实值 | 干净 → tiling 高估了内部缓冲 |
+| 3 | 2 | 2 | 0 | 完整 + 为归一化预留 128 KB UB | 干净 → UB 预算冲突 |
+| 4 | 2 | 0 | 1 | 单核 cube | 干净 → 与多核切分有关 |
+
+`diag[6] = baseM`、`diag[7] = depthA1`，用来判断 tiling 给出的 tile 与 L1 深度是否离谱。
+
+（历史记录：`E v1 (ND, b61e2836)` 与 `block_dim=-1` 复测都是同一故障
+`fftsplus aivector error`、`blk=22`、`subErrType:4`、
+"The address for the scalar to access the internal buffer of AICore is out of bounds"，
+与 block 数无关，故 `block_dim` 扫描已放弃。）
+
 
 kernel 用 `usedCoreNum` 做门控（只有 `GetBlockIdx() < usedCoreNum` 的核进 matmul），所以
 `mm_dim` 与 `block_dim` 解耦是安全的，不会让未分配 cube 内部缓冲的核进入 matmul。

@@ -93,6 +93,20 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     t->mmEnable = ((mmEnableAttr == nullptr) || (*mmEnableAttr != 0)) ? 1u : 0u;
     const auto* mmDimAttr = context->GetAttrs()->GetAttrPointer<int64_t>(6);
     const int64_t mmDimReq = (mmDimAttr == nullptr) ? 0 : *mmDimAttr;
+    // mm_mode: 2 = full (default), 1 = stop after Init/SetOrgShape/SetTensorA/B
+    // and never call IterateAll.  That splits a tiling/init fault from an
+    // iterate (L1/L0C streaming) fault.
+    const auto* mmModeAttr = context->GetAttrs()->GetAttrPointer<int64_t>(7);
+    const int64_t mmModeReq = (mmModeAttr == nullptr) ? 2 : *mmModeAttr;
+    if (mmModeReq < 1 || mmModeReq > 2) { return ge::GRAPH_FAILED; }
+    t->mmMode = static_cast<uint32_t>(mmModeReq);
+    // mm_bufspace: 0 = leave the tiling's own buffer model (default),
+    // 1 = constrain L1/L0C to the platform's real sizes, 2 = also reserve the
+    // normalisation pass's UB footprint.  The fault is a scalar access past an
+    // AICore internal buffer, so an over-allocated tiling is the prime suspect.
+    const auto* bufSpaceAttr = context->GetAttrs()->GetAttrPointer<int64_t>(8);
+    const int64_t bufSpaceReq = (bufSpaceAttr == nullptr) ? 0 : *bufSpaceAttr;
+    if (bufSpaceReq < 0 || bufSpaceReq > 2) { return ge::GRAPH_FAILED; }
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
@@ -140,6 +154,22 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     mmTiling.SetBias(false);
     mmTiling.SetShape(static_cast<int32_t>(m), static_cast<int32_t>(n), static_cast<int32_t>(k));
     mmTiling.SetOrgShape(static_cast<int32_t>(m), static_cast<int32_t>(n), static_cast<int32_t>(k));
+    if (bufSpaceReq >= 1) {
+        uint64_t l1 = 0, l0c = 0, ub = 0;
+        platform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1);
+        platform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, l0c);
+        platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ub);
+        int32_t ubForMm = -1;
+        if (bufSpaceReq >= 2) {
+            // Reserve the normalisation pass's UB footprint so the cube stage
+            // cannot plan into buffers the vector stage already owns.
+            const int32_t reserved = 128 * 1024;
+            ubForMm = (static_cast<int32_t>(ub) > reserved)
+                          ? static_cast<int32_t>(ub) - reserved : 0;
+        }
+        mmTiling.SetBufferSpace(static_cast<int32_t>(l1), static_cast<int32_t>(l0c),
+                                ubForMm, -1);
+    }
     t->mmTilingRc = static_cast<uint32_t>(mmTiling.GetTiling(t->cubeTiling));
     if (t->mmTilingRc != 0) { return ge::GRAPH_FAILED; }
 
@@ -197,6 +227,8 @@ public:
         this->Attr("block_dim").Int(0);
         this->Attr("mm_enable").Int(1);
         this->Attr("mm_dim").Int(0);
+        this->Attr("mm_mode").Int(2);
+        this->Attr("mm_bufspace").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");
