@@ -1026,3 +1026,45 @@ g++ -shared -o d0_final.so d0_adapter.o \
 2. **固定 mixed 数值门** —— 待 20 决定；claims 覆盖不代替数值门；
 3. **完整 `-z defs` 依赖链接** —— 未做；
 4. 真实 op 调用路径（`torch.ops.clef_d0.d0_trace`、group 名、`diag` 实值）**从未执行**。
+
+## 36. D0 adapter 链接闭合（22，commit `8708145`，`LINK-AUDIT-22.md`）
+
+**未装载、未执行、未碰设备。** 冻结副本：`/workspace/yangchen/logs/perf-wave3-20261118/d0-link-audit-22/`（原件未动），SHA 复核一致：对象 `8edf909b…978d`、源 `cb816029…2454`、头 `146daf7f…a395`、opapi `33149226…48ec`。
+
+### 36.1 完整未解析集合（非抽样）
+
+`nm -u d0_adapter.o`：**286 强 + 1 弱**。
+强：`Py*` 95、`_Py*` 7、`at::_ops` 2、`c10::` 19、`acl*` 8、其余 `_Z*` 142；弱：`__cxa_pure_virtual`。
+
+### 36.2 逐类提供者与严格链接结果
+
+| 类 | 提供者 | 严格链接 |
+| --- | --- | --- |
+| `Py*`/`_Py*`（**102**） | **宿主解释器**（`libpython3.12.so.1.0`） | **未解析（仅宿主可提供）** |
+| `at::_ops`/`c10::`/其余 `_Z*`（163） | `torch/lib`、`torch_npu/lib` | 已解析 |
+| `acl*`（8） | `cann-9.2.1/aarch64-linux/lib64/libascendcl.so` | 已解析 |
+| **`Nnopbase*`（opapi 的 32 个）** | 同目录 `libnnopbase.so` | **整体解析通过** |
+
+### 36.3 一次严格链接（逐字记录于 `strict_link_cmd.txt` / `strict_link_rc.txt` / `strict_link.log`）
+
+```
+g++ -shared -z defs -o d0_strict.so d0_adapter.o \
+  -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
+  -L<包内 op_api/lib> -lcust_opapi \
+  -L/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64 -lnnopbase -lascendcl
+```
+
+**RC=1**；268 条未解析引用、去重 105 个名字，其中 **102 个是 `Py*`/`_Py*`**，其余 **3 条是正则误截片段，不是真实符号**。
+首错逐字：`in function 'Py_SIZE': d0_adapter.cpp:(.text+0x2c): undefined reference to 'PyLong_Type'`。
+
+**结论**：非 Python 类全部解析；`-z defs` 失败**只因 Python C-API 只能由宿主提供**（按设计未链 libpython）。这是**分类事实，不是接线缺陷**，故未做修正。
+
+### 36.4 路径与仍未闭合
+
+- `libnnopbase.so`：本次显式选 **lib64** `72cd43b4…477c`；devlib 版 `ea82573d…8013` 未选，分列保留。
+- `sysconfig`（未导入 torch_npu）：`LIBDIR=/install/lib`、`LDLIBRARY=libpython3.12.so`、`INSTSONAME=libpython3.12.so.1.0` —— **构建期值，未证等于运行期实际路径**。
+- **仍未闭合**：102 个 Python C-API 的宿主实际提供者（须运行期解析）、`/install/lib` 与运行期路径一致性、运行装载与设备 binary。本结论**只证明链接期解析**。
+
+### 36.5 与我方第 35 节记录的关系
+
+§35.2 中"完整 `-z defs` 依赖解析未做"一条，现由本节闭合为**已做并分类**；§35.2 的"仅完成共享库生成 + 依赖声明"保留为**当时状态**。
