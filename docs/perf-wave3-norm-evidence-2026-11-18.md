@@ -198,3 +198,17 @@
 - 代价：四块切分使 GEMM 自身变慢 9–18%（gate/up +0.028 ms、down +0.052 ms/层）。E 的净收益必须用
   「同口径完整链」实测覆盖这笔代价后才可判定；本表只提供分块成本，不是收益结论。
 - 局限：单层（layer 0）、单 rank、单形状；未含 pack 热路径与写回布局开销；跨层差异未测。
+
+## 10. 排队候选：GDN 输出 Norm 的 BLOCK_M 单变量探针（22 号方案，未执行）
+
+- 范围：只改 `vllm_ascend/ops/triton/layernorm_gated.py` 的 `BLOCK_M`；接口、rstd 保存、out 分配、grid 推导、
+  `num_warps` 全部保持不变。不做 rstd 删除、缓冲复用或联合扫描。
+- 契约（现行唯一口径）：`x/z` BF16 `[23208,128]`、`weight[128]`、`group_size=None → 128`、`ngroups=1`、M=23208、N=128；
+  四臂 BM16/32/64/128 的 grid 分别为 1451/726/363/182，padding 8/24/24/88 行。**不使用** 967 行、groups24 或旧 padding 论据。
+- 探针：取真实调用点的一份 x/z/weight（四臂共用）；按真实每请求模式以 **48 次连续调用**为一组；四臂 **交错 ≥3 轮**；
+  每轮记录 48 次总 device 时间、单次均值/最大值、相对 BM64 的逐元素比较（逐位一致是目标而非保证）。
+- 判据：仅当某臂在 ≥3 轮交错中稳定优于 BM64，且全量 S1 p95 不回归、OD/ERQA ≤2 pp，才进入下一步；四臂噪声内则关闭该方向。
+- 版本与 patch 身份：固定 vLLM-Ascend `89eb8a5e`；改动前后文件 SHA-256、一行 diff 原文；Triton Ascend 3.6.0.post2 /
+  CANN 9.2.1 / torch_npu 2.10.0.post7；**每臂实际解析到的 num_warps/num_stages** 必须从编译产物读出；eps 取模型实际值；
+  实施时按仓库惯例做成带 `--check` 的 `runtime/apply_*.py` 安装器。
+- 状态：**排队，待 E 组阶段完成后由 20/22 择时执行**；不占当前 NPU 窗口。
