@@ -42,6 +42,26 @@ kernel `.o` 的文件名 hash `b87a0f8f…` 与 nzguard 包相同（名字由 op
 
 ## 两条口径限定（2026-11-18 23 复核后收口）
 
+**⓪ 撤回一条错误分析（2026-11-18 23 复核）**：本包调用的是**无参** `SyncAll<true>()`，
+经 `impl/basic_api/kernel_operator_block_sync_intf_impl.h:236-240` 转发到
+`SyncAllImpl<isAIVOnly>()`，其 c220 实现在
+`impl/basic_api/dav_c220/kernel_operator_sync_impl.h:363-403`：
+`:384 PipeBarrier<PIPE_ALL>`，`isAIVOnly` 分支为
+`ffts_cross_core_sync(PIPE_MTE3, GetffstMsg(0x0, SYNC_AIV_ONLY_ALL))` + `wait_flag_dev(...)` 后返回
+——**硬件 FFTS 屏障，不用 GM、没有按 block 的槽位**。
+我先前引用的 `:63-83` 是 `SoftSyncAllImpl`，只对应**带 gm/ub/usedCores 参数**的重载（`:217-226`），
+**"两个 AIV 子块共用同一 GM 槽 ⇒ 挂死" 的判断作废**，我不判定本包屏障可用或不可用。
+
+该实现的两个事实与两个未证：
+- `isAIVOnly` 分支**没有** `ASCEND_IS_AIC` 提前返回，因此依赖 cube pass 不走到该行；
+  本包中 AIC 在 `REGIST_MATMUL_OBJ` 内从 `Process()` 返回，这是它成立的前提。
+- `GetBlockIdx()` 在 AIV = `get_block_idx() * GetTaskRationImpl() + get_subblockid()`
+  （`dav_c220/kernel_operator_sys_var_impl.h:67-68`），ratio 来自 `get_subblockdim()`（`:43-54`）；
+  `MIX_NUM` 在 `dav_c220/kfc/kfc_comm.h:93-97`：**有 `__MIX_CORE_AIC_RATION__` 宏则取该宏，否则 2**
+  ——**构建宏取值未落盘，属缺口**。
+- **未证**：`SYNC_AIV_ONLY_ALL` 是否把各 worker 的 fixpipe/GM 数据写序化到其他 AIV 的 GM 读之前；
+  屏障参与者集合是否等于实际发起 matmul 的集合。
+
 **① "切片区间独立于 AIV→AIC 映射" 是一个设计假设，不是已证事实。**
 每个参与 block 只认领一段独立 M，这是**按不依赖映射**来设计的。但 2201 上下列三点
 **都还没有证据**，CPU 140 例也覆盖不到：
@@ -74,6 +94,14 @@ kernel `.o` 的文件名 hash `b87a0f8f…` 与 nzguard 包相同（名字由 op
 **属性个数与归档包一致，没有第 15 个属性**，adapter 调用**无需改动**。
 （`libcust_opapi.so` 与 nzguard 包逐字节相同，但这只说明**文件同字节**，
 不代表符号解析选中了哪一份；两包 vendor 不同，不可同时安装。）
+
+## 诊断设计的判据修正
+
+- **D1/D2 目前只是设计，无设备授权。**
+- **超时不能单独判定 `SyncAll` 因果**：一次 timeout 可能来自屏障、也可能来自
+  server/quit 集合或 AR 段；必须与其他信号（`diag`、是否产出 `partial`、RAW_RC）合并判读。
+- **固定门仍是 mixed 容差**（`1e-5 + 0.016|ref|` 全元素），不因本次讨论改变。
+- "与归档单核数值差 0" 只能作为**独立诊断列**，不作为通过判据。
 
 ## 未证 / 需设备验证
 

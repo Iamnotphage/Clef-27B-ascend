@@ -263,35 +263,48 @@ public:
         }
         // ---- cross-worker visibility for the AR / Norm consumers --------------
         // Each worker wrote only its own M rows of `partial`; the AR publisher
-        // (block 0) must not read before every worker's rows are there.  What
-        // the barrier is allowed to rest on, with line numbers:
+        // (block 0) must not read before every worker's rows are there.
         //
-        // 1. Every AIV block reaches this line.  The worker guard above only
-        //    skips the matmul calls, so the barrier set is the full AIV set --
-        //    the same set on entry and exit.
-        // 2. Client-side completion is explicit: IterateAll is called with
-        //    waitIterateAll=true, whose wait entry is matmul_client.h:772
-        //    (WaitIterateAll), and End() posts MMFUN_END (matmul_client.h:695-701)
-        //    to retire the cube task before this point.
-        // 3. The server side only leaves its loop after collecting MIX_NUM
-        //    quits (kernel_kfc.h:60-63, `isRun() { return quitSize < MIX_NUM; }`,
-        //    with the quit counting at :123-128 and :199-218), so the wiring
-        //    scope above keeps the pair complete.
+        // What this call actually resolves to (same-machine, c220 tree):
+        //   the no-argument SyncAll<isAIVOnly>() forwards to SyncAllImpl<isAIVOnly>()
+        //   (impl/basic_api/kernel_operator_block_sync_intf_impl.h:236-240), whose
+        //   c220 body is impl/basic_api/dav_c220/kernel_operator_sync_impl.h:363-403:
+        //   :384 PipeBarrier<PIPE_ALL>, then for isAIVOnly
+        //   ffts_cross_core_sync(PIPE_MTE3, GetffstMsg(0x0, SYNC_AIV_ONLY_ALL))
+        //   followed by wait_flag_dev(SYNC_AIV_ONLY_ALL), then return.
+        //   That is a hardware FFTS barrier: no GM workspace, no per-block slots.
+        //   (SoftSyncAllImpl at :63-83 is the overload that takes gm/ub/usedCores
+        //   and is NOT what this call reaches.)
         //
-        // SyncAll<true> is the isAIVOnly form; the template parameter is declared
-        // at basic_api/kernel_operator_block_sync_intf.h:77-87 (`template <bool
-        // isAIVOnly = true>`).  The default value alone is NOT a usability proof,
-        // so what remains unproven and must be checked on device:
-        //   (a) that this AIV-only barrier orders the fixpipe/GM writes of a
-        //       worker's cube stage against another AIV block's GM reads -- the
-        //       primitives' memory-ordering contract is not stated in the header;
-        //   (b) that the barrier's participating set equals the set of blocks
-        //       that actually issued matmul work when usedCoreNum exceeds the
-        //       number of AIC cores;
-        //   (c) that no AIC block is still required to participate at this point
-        //       (the earlier "AIC already exited, so a barrier times out" comment
-        //       was based on a hypothesis that was later retracted, so it is no
-        //       longer offered as a reason either way).
+        // Three things this does and does not establish:
+        //   - the AIV-only branch has no ASCEND_IS_AIC guard, so it relies on the
+        //     cube pass never reaching this line; in this kernel the AIC pass
+        //     returns from Process() inside REGIST_MATMUL_OBJ, which is what keeps
+        //     that true;
+        //   - client-side completion, traced through the non-USE_SSBUF GM
+        //     overload (matmul_client.h:931-977).  This kernel calls
+        //     IterateAll(gm, 0, false, true) with no explicit template argument,
+        //     so sync keeps its default `true`:
+        //       :963 kfcMsg_.body.sync = sync;  :966 PostMessage<..., sync>();
+        //       :968-975 the `if constexpr (sync)` branch runs WaitEvent(intraId);
+        //       :977 isSyncGetC = sync;
+        //     So the client-side wait here is WaitEvent, NOT WaitIterateAll() --
+        //     that entry asserts !isSyncGetC (matmul_client.h:772-773) and is not
+        //     on this path.  The waitIterateAll argument only travels in the
+        //     message.  Because isSyncGetC ends up true, End() does post
+        //     MMFUN_END (matmul_client.h:695-701); that is a consequence of the
+        //     default template argument, not of the 4th call argument.
+        //     The client's SERVICE_QUIT is separate again: it is emitted by the
+        //     KfcCommClient destructor (dav_c220/kfc/kfc_comm_client.h:100-118,
+        //     which has enableHardWare and MIX_NUM==1/subblock skips), not by End().
+        //   - the server leaves its loop only after MIX_NUM quits
+        //     (kernel_kfc.h:60-63, :123-128, :199-218).
+        //
+        // NOT established, and not claimed either way: whether SYNC_AIV_ONLY_ALL
+        // orders each worker's fixpipe/GM data writes so another AIV block's GM
+        // reads observe them, and whether the barrier's participant set equals the
+        // set that actually issued matmul work.  The template default is not a
+        // usability proof, and a CPU range sweep says nothing about this.
         SyncAll<true>();
         PipeBarrier<PIPE_ALL>();
 
