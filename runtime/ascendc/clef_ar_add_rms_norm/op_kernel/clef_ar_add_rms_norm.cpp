@@ -1,4 +1,5 @@
 #include "kernel_operator.h"
+#include "adv_api/hccl/hccl.h"
 #include "clef_ar_add_rms_norm_tiling.h"
 
 using namespace AscendC;
@@ -9,6 +10,8 @@ using namespace AscendC;
 // out = z*rstd*gamma; residual_out = z (the stream the service carries).
 class ClefArAddRmsNormKernel {
 public:
+    __aicore__ inline void SetTiling(const ClefArAddRmsNormTilingData* t) { tiling_ = t; }
+
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR residual, GM_ADDR gamma,
                                 GM_ADDR out, GM_ADDR residualOut, GM_ADDR rstd,
                                 const ClefArAddRmsNormTilingData* t) {
@@ -16,6 +19,9 @@ public:
         n_ = t->n;
         eps_ = t->eps;
         invN_ = t->invN;
+        useHccl_ = t->useHccl != 0;
+        xGm_ = x;
+        repeat_ = static_cast<uint8_t>(t->repeat);
         mPad_ = t->mPad;
         x_.SetGlobalBuffer((__gm__ bfloat16_t*)x, static_cast<uint64_t>(m_) * n_);
         r_.SetGlobalBuffer((__gm__ bfloat16_t*)residual, static_cast<uint64_t>(m_) * n_);
@@ -36,6 +42,22 @@ public:
     }
 
     __aicore__ inline void Process() {
+        int32_t arRc = 0;
+        int32_t rankId = -1;
+        int32_t rankDim = -1;
+        if (useHccl_) {
+            Hccl hccl;
+            hccl.InitV2(AscendC::GetHcclContext<HCCL_GROUP_ID_0>(), &tiling_->mc2InitTiling);
+            const int32_t setRc = hccl.SetCcTilingV2(offsetof(ClefArAddRmsNormTilingData, mc2CcTiling));
+            rankId = static_cast<int32_t>(hccl.GetRankId());
+            rankDim = static_cast<int32_t>(hccl.GetRankDim());
+            HcclHandle h = hccl.AllReduce<true>(xGm_, xGm_, static_cast<uint64_t>(m_) * n_,
+                                                HCCL_DATA_TYPE_BFP16, HCCL_REDUCE_SUM, repeat_);
+            PipeBarrier<PIPE_ALL>();
+            arRc = hccl.Wait(h) * 100 + setRc;
+            hccl.Finalize();
+        }
+        tilingDiag(arRc, rankId, rankDim);
         LocalTensor<bfloat16_t> gl = bg_.Get<bfloat16_t>();
         LocalTensor<float> gf = bt_.Get<float>();
         DataCopy(gl, g_[0], n_);
@@ -107,6 +129,17 @@ public:
     }
 
 private:
+    __aicore__ inline void tilingDiag(int32_t rc, int32_t rankId, int32_t rankDim) {
+        if (GetBlockIdx() != 0 || mPad_ <= m_) return;
+        // Spare slot when mPad > m: encode rank, dim and an rc marker.
+        const float v = static_cast<float>(rankId + 10 * rankDim + 1000 * (rc == 0 ? 1 : 0));
+        LocalTensor<float> one = bgst_.Get<float>();
+        one.SetValue(0, v);
+        PipeBarrier<PIPE_ALL>();
+        DataCopy(rs_[mPad_ - 1], one, 8);
+        PipeBarrier<PIPE_ALL>();
+    }
+
     TPipe pipe_;
     TBuf<TPosition::VECCALC> bx_, br_, bg_, bo_, bz_, bt_, bw_, bs_, bwr_, bgst_;
     GlobalTensor<bfloat16_t> x_, r_, g_, o_, ro_;
@@ -115,6 +148,10 @@ private:
     float eps_{1e-6f};
     float invN_{0.0f};
     uint32_t mPad_{0};
+    const ClefArAddRmsNormTilingData* tiling_{nullptr};
+    bool useHccl_{false};
+    GM_ADDR xGm_{nullptr};
+    uint8_t repeat_{1};
 };
 
 extern "C" __global__ __aicore__ void clef_ar_add_rms_norm(
@@ -125,6 +162,7 @@ extern "C" __global__ __aicore__ void clef_ar_add_rms_norm(
     REGISTER_TILING_DEFAULT(ClefArAddRmsNormTilingData);
     GET_TILING_DATA(tilingData, tilingGm);
     ClefArAddRmsNormKernel kernel;
+    kernel.SetTiling(&tilingData);
     kernel.Init(x, residual, gamma, out, residualOut, rstd, &tilingData);
     kernel.Process();
 }
