@@ -361,10 +361,12 @@ def main() -> int:
         log["restore_ok"] = log["verify_ok"] = False
         a.out.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
         return 1
-    restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, log)
+    label = new_service_label()          # same rule as the production runner
+    log["service_label"] = label
+    restored = restore(["bash", SERVICE_LAUNCH[1], label], SERVICE_WAIT, log)
     verified = False
     if restored:
-        disc = discover_service_pids(SERVICE_LABEL)
+        disc = discover_service_pids(label)
         log["service_discovery"] = disc
         if not disc.get("error") and disc.get("pids"):
             verified = verify(build_commands(lambda k: Path(
