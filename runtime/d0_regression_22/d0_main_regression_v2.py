@@ -284,9 +284,6 @@ def guard() -> None:
     vfs_put("/proc/sys/kernel/random/boot_id", "BOOT-TEST-0001\n")
     REC["root_pid"] = ROOT_PID
     # discovery reads SERVICE_LABEL (a module constant), not the dynamic label
-    const_base = "/workspace/yangchen/logs/perf-wave2-20261118/final-default-s1"
-    vfs_dir(const_base, ["api.pid"])
-    vfs_put(f"{const_base}/api.pid", f"{ROOT_PID}\n")
     REC["workers"] = WORKERS
     REC["sources"]["fs"] = "Path.read_text for /proc/*/stat, boot_id, api.pid"
 
@@ -367,6 +364,19 @@ def main() -> int:
     out["arrived"] = sorted(REC["arrived"])
     out["out_dir"] = sorted(p.name for p in odir.glob("*")) if odir.exists() else []
     out["record"] = {k: REC[k] for k in ("argv", "popens", "kills", "net")}
+    mods_seen = {}
+    for m in ("d0_run", "d0_restore"):
+        mod = sys.modules.get(m)
+        if mod is not None:
+            f = getattr(mod, "__file__", None)
+            spec = getattr(mod, "__spec__", None)
+            import hashlib
+            try:
+                sha = hashlib.sha256(open(f, "rb").read()).hexdigest() if f else None
+            except Exception:
+                sha = None
+            mods_seen[m] = {"__file__": f, "origin": getattr(spec, "origin", None), "sha256": sha}
+    out["module_identity"] = mods_seen
     out["fixtures"] = {k: REC.get(k) for k in ("label", "root_pid", "api_pid_written", "api_pid_error")}
 
     def chk(name, ok, detail=""):
@@ -381,13 +391,18 @@ def main() -> int:
     chk("root_child_written", "root-child.json" in out["out_dir"], f"out={out['out_dir']}")
     chk("query_group_reached", any("query_group" in k for k in REC["arrived"]), "")
     chk("restore_reached", any(k.endswith(".restore") for k in REC["arrived"]), "")
-    chk("verify_reached", any(k.endswith(".verify") for k in REC["arrived"]), "")
+    # a false verify_ok does NOT prove verify ran: main may set verified=False
+    # directly when discovery reported an error.
+    verify_arrived = any(k.endswith(".verify") for k in REC["arrived"])
+    chk("verify_reached", verify_arrived,
+        f"arrived={verify_arrived}; verify_ok={out.get('verify_ok')!r}; "
+        f"verify_blocked={out.get('verify_blocked')!r}")
     chk("no_network", len(REC["net"]) == 0, f"net={REC['net']}")
     chk("no_unexpected_argv", all(allowed(x) for x in REC["argv"]), f"argv={REC['argv']}")
 
     if True:
         res_mod = sys.modules.get("d0_restore")
-        info = res_mod.discover_service_pids(res_mod.SERVICE_LABEL, before=None) if res_mod else {}
+        info = res_mod.discover_service_pids(REC.get("label"), before=None) if (res_mod and REC.get("label")) else {}
         out["discovery"] = {k: (sorted(v) if isinstance(v, set) else v) for k, v in info.items()}
         if a.scenario != "happy":
             chk("discovery_reports_error", bool(info.get("error")), f"error={info.get('error')!r}")
@@ -421,6 +436,10 @@ def main() -> int:
             except Exception:
                 keep[name] = f.read_text()[:2000]
     out["artifacts"] = keep
+    _r = keep.get("restore.json") or {}
+    out["verify_ok"] = _r.get("verify_ok")
+    out["verify_blocked"] = _r.get("verify_blocked")
+    out["restore_ok"] = _r.get("restore_ok")
     Path(a.json_out).write_text(json.dumps(out, indent=1))
     REC["_keepdir"] = str(tmp)
     if os.environ.get("D0REG_KEEP") != "1":
