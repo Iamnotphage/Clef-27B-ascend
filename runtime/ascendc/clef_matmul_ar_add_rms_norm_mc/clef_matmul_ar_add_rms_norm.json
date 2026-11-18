@@ -1,0 +1,179 @@
+[
+  {
+    "op": "ClefMatmulArAddRmsNormMc",
+    "input_desc": [
+      {
+        "name": "x",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "bf16"
+        ]
+      },
+      {
+        "name": "w",
+        "param_type": "required",
+        "format": [
+          "FRACTAL_NZ"
+        ],
+        "type": [
+          "bf16"
+        ]
+      },
+      {
+        "name": "residual",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "bf16"
+        ]
+      },
+      {
+        "name": "gamma",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "bf16"
+        ]
+      }
+    ],
+    "output_desc": [
+      {
+        "name": "out",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "bf16"
+        ]
+      },
+      {
+        "name": "residual_out",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "bf16"
+        ]
+      },
+      {
+        "name": "rstd",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "float"
+        ]
+      },
+      {
+        "name": "diag",
+        "param_type": "required",
+        "format": [
+          "ND"
+        ],
+        "type": [
+          "float"
+        ]
+      }
+    ],
+    "attr": [
+      {
+        "name": "eps",
+        "param_type": "required",
+        "type": "float"
+      },
+      {
+        "name": "repeat",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 1
+      },
+      {
+        "name": "group",
+        "param_type": "required",
+        "type": "string"
+      },
+      {
+        "name": "use_hccl",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 1
+      },
+      {
+        "name": "block_dim",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "mm_enable",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 1
+      },
+      {
+        "name": "mm_dim",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "mm_mode",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 2
+      },
+      {
+        "name": "mm_bufspace",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "norm_ub_late",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 1
+      },
+      {
+        "name": "mm_btrans",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "mm_stage",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "norm_from_residual",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "norm_from_x",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      },
+      {
+        "name": "mc_diag",
+        "param_type": "optional",
+        "type": "int",
+        "default_value": 0
+      }
+    ]
+  }
+]
