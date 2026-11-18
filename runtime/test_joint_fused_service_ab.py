@@ -101,6 +101,37 @@ def main() -> int:
             hash_blocked = False
         check("input hash mismatch blocked", hash_blocked)
 
+        # real run_inputs: warmup/sample split, raw JSONL and full response
+        class FakeResponse:
+            status = 200
+            def __init__(self, payload):
+                self.payload = payload
+            def read(self):
+                return json.dumps(self.payload).encode()
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                return False
+        runner = object.__new__(mod.ServiceAB)
+        runner.args = types.SimpleNamespace(warmup=1, reps=2, http_timeout=5)
+        runner.run_dir = tmp / "rawrun"
+        runner.run_dir.mkdir()
+        runner.inputs = {"x": {"body": b"{}", "sha256": "abc", "url": "http://x",
+                               "expect": "score", "kind": "text"}}
+        original_url = mod.urllib.request.urlopen
+        mod.urllib.request.urlopen = lambda request, timeout: FakeResponse(
+            {"answers": {"answer": {"type": "score", "probabilities": {"a": 0.5}}}})
+        try:
+            result = runner.run_inputs("L")
+        finally:
+            mod.urllib.request.urlopen = original_url
+        raw = Path(result["x"]["raw"])
+        lines = [json.loads(line) for line in raw.read_text().splitlines()]
+        check("raw JSONL warmup/sample split", len(lines) == 3
+              and sum(row["warmup"] for row in lines) == 1
+              and len(result["x"]["samples"]) == 2
+              and result["x"]["samples"][0]["response"]["answers"]["answer"]["probabilities"]["a"] == 0.5)
+
     failed = [name for name, ok in checks if not ok]
     print(json.dumps({"checks": len(checks), "failed": failed, "ok": not failed}))
     return 0 if not failed else 1

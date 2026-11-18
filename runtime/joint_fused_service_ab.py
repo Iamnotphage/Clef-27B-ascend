@@ -31,6 +31,8 @@ WIN_PATH = HERE / "joint_fused_attention_window.py"
 PREIMAGE_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
 POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 STOP_SHA = "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
+INSTALLER_SHA = "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
+WINDOW_SHA = "700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473"
 ACTIVATE_SHA = "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
 LAUNCH_SHA = "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321"
 WAIT_SHA = "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0"
@@ -97,6 +99,23 @@ class ServiceAB:
             shutil.copy2(source, target / name)
         return target
 
+    def stage_candidate(self):
+        root = self.run_dir / "stage" / "runtime"
+        root.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(self.args.repo) / "runtime" / "apply_joint_fused_attention.py",
+                     root / "apply_joint_fused_attention.py")
+        (root / "joint_fused_attention").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(Path(self.args.repo) / "runtime" / "joint_fused_attention" /
+                     "clef_joint_schema.py", root / "joint_fused_attention" /
+                     "clef_joint_schema.py")
+        if self.win.sha256(root / "apply_joint_fused_attention.py") != INSTALLER_SHA:
+            raise AbError("staged installer SHA mismatch")
+        if self.win.sha256(root / "joint_fused_attention" / "clef_joint_schema.py") != POSTIMAGE_SHA:
+            raise AbError("staged postimage SHA mismatch")
+        if self.win.sha256(self.win.WIN_PATH) != WINDOW_SHA:
+            raise AbError("helper window SHA mismatch")
+        return root
+
     def current_service(self):
         if self.win.port_open(self.args.port) != "open":
             raise AbError("service port is not open at preflight")
@@ -114,6 +133,11 @@ class ServiceAB:
             env.pop(key, None)
         return root, env
 
+    def stopped_verified(self, identity):
+        window = object.__new__(self.win.Window)
+        window.identity = identity
+        return window.service_stopped_verified()
+
     def stop_tree(self, identity, label):
         out = self.run_dir / f"stop-{label}.json"
         identity_path = self.run_dir / f"identity-{label}.json"
@@ -126,12 +150,15 @@ class ServiceAB:
         (self.run_dir / f"stop-{label}.log").write_text(result.stdout + result.stderr)
         if result.returncode != 0:
             raise AbError(f"stop failed for {label}: {result.returncode}")
+        verified, detail = self.stopped_verified(identity)
+        if not verified:
+            raise AbError(f"saved service not proven stopped {label}: {detail}")
         if self.win.port_open(self.args.port) != "closed":
             raise AbError(f"port still open after stop {label}")
-        return {"stop_json": str(out)}
+        return {"stop_json": str(out), "stopped": detail}
 
     def apply_postimage(self):
-        installer = Path(self.args.repo) / "runtime" / "apply_joint_fused_attention.py"
+        installer = self.run_dir / "stage" / "runtime" / "apply_joint_fused_attention.py"
         check = self.call([self.args.python, str(installer), "--tree", self.args.tree,
                            "--check"])
         report = json.loads(check.stdout)
@@ -148,7 +175,7 @@ class ServiceAB:
         return {"state": "postimage", "applied": True}
 
     def revert_postimage(self):
-        installer = Path(self.args.repo) / "runtime" / "apply_joint_fused_attention.py"
+        installer = self.run_dir / "stage" / "runtime" / "apply_joint_fused_attention.py"
         self.call([self.args.python, str(installer), "--tree", self.args.tree,
                    "--revert", "--manifest", str(self.run_dir / "revert.json")])
         target = Path(self.args.tree) / "vllm/model_executor/models/clef_joint_schema.py"
@@ -181,43 +208,62 @@ class ServiceAB:
         return bodies
 
     def run_inputs(self, label):
+        raw_dir = self.run_dir / "raw"
+        raw_dir.mkdir(exist_ok=True)
         rows = {}
         for name, item in self.inputs.items():
-            samples = []
-            for _ in range(self.args.reps):
-                request = urllib.request.Request(
-                    item["url"], data=item["body"],
-                    headers={"Content-Type": "application/json"})
-                begin = time.perf_counter()
-                with urllib.request.urlopen(request, timeout=self.args.http_timeout) as response:
-                    payload = json.loads(response.read())
-                    status = response.status
-                elapsed = (time.perf_counter() - begin) * 1000.0
-                answer = ((payload.get("answers") or {}).get("answer") or {})
-                valid = status == 200 and answer.get("type") == item["expect"]
-                samples.append({"ms": elapsed, "status": status,
-                                "answer_type": answer.get("type"), "valid": valid})
+            raw_path = raw_dir / f"{label}-{name}.jsonl"
+            warmup_rows, samples = [], []
+            with raw_path.open("w") as stream:
+                for index in range(self.args.warmup + self.args.reps):
+                    started = now()
+                    begin = time.perf_counter()
+                    status, payload, error = None, None, None
+                    try:
+                        request = urllib.request.Request(
+                            item["url"], data=item["body"],
+                            headers={"Content-Type": "application/json"})
+                        with urllib.request.urlopen(
+                                request, timeout=self.args.http_timeout) as response:
+                            status = response.status
+                            payload = json.loads(response.read())
+                    except Exception as exc:
+                        error = f"{type(exc).__name__}: {exc}"
+                    elapsed = (time.perf_counter() - begin) * 1000.0
+                    answer = ((payload or {}).get("answers") or {}).get("answer") or {}
+                    valid = (status == 200 and error is None
+                             and answer.get("type") == item["expect"])
+                    row = {"index": index, "warmup": index < self.args.warmup,
+                           "body_sha256": item["sha256"], "kind": item["kind"],
+                           "started_at": started, "finished_at": now(),
+                           "ms": elapsed, "status": status,
+                           "answer_type": answer.get("type"), "valid": valid,
+                           "response": payload, "error": error}
+                    stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    stream.flush()
+                    (warmup_rows if row["warmup"] else samples).append(row)
             if not samples or not all(row["valid"] for row in samples):
-                raise AbError(f"invalid response for {name} in {label}")
-            rows[name] = samples
+                raise AbError(f"invalid response for {name} in {label}; raw={raw_path}")
+            rows[name] = {"samples": samples, "warmup": warmup_rows,
+                          "raw": str(raw_path)}
         return rows
 
     def start_arm(self, flag, label):
         try:
             return self._start_arm(flag, label)
-        except Exception:
-            # A launch may have created a service before api.pid/identity was
-            # readable.  Stop exactly that listener before propagating.
+        except Exception as exc:
+            # Only a root whose identity came from this label's api.pid may be
+            # signalled.  A bare listener of unknown provenance is never killed.
+            identity = getattr(self, "arm_identity", None)
+            if identity is None:
+                self.state["start_cleanup_error"] = (
+                    f"{type(exc).__name__}: no label-bound identity; no signal sent")
+                raise
             try:
-                pids = self.win.find_api_pid(self.args.port)
-                if len(pids) == 1:
-                    identity = self.win.proc_identity(pids[0])
-                    if identity is not None:
-                        self.stop_tree({"root": identity,
-                                        "descendants": self.win.descendants(identity["pid"])},
-                                       f"failed-{label}")
-            except Exception as exc:
-                self.state["start_cleanup_error"] = f"{type(exc).__name__}: {exc}"
+                self.stop_tree(identity, f"failed-{label}")
+            except Exception as stop_exc:
+                self.state["start_cleanup_error"] = (
+                    f"{type(stop_exc).__name__}: {stop_exc}")
             raise
 
     def _start_arm(self, flag, label):
@@ -226,6 +272,8 @@ class ServiceAB:
             env.pop(key, None)
         if flag is not None:
             env["CLEF_JOINT_FUSED_ATTN"] = str(flag)
+        env["CLEF_LAUNCH_CONFIG"] = "s1"
+        before = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
         launch = subprocess.run(["bash", self.args.launch, label], env=env,
                                 capture_output=True, text=True, timeout=60)
         (self.run_dir / f"launch-{label}.log").write_text(launch.stdout + launch.stderr)
@@ -243,7 +291,24 @@ class ServiceAB:
         identity = self.win.proc_identity(root_pid)
         if identity is None:
             raise AbError(f"root identity missing: {root_pid}")
-        return {"root": identity, "descendants": self.win.descendants(root_pid)}
+        self.arm_identity = {"root": identity,
+                             "descendants": self.win.descendants(root_pid)}
+        after = {int(p.name) for p in self.win.PROC_ROOT.iterdir() if p.name.isdigit()}
+        if root_pid not in (after - before):
+            raise AbError(f"root {root_pid} predates this launch")
+        root_env = self.win.parse_environ(
+            (self.win.PROC_ROOT / f"{root_pid}/environ").read_bytes())
+        source_sha = self.win.sha256(Path(self.args.tree) /
+                                     "vllm/model_executor/models/clef_joint_schema.py")
+        npu = subprocess.run(["npu-smi", "info"], capture_output=True, text=True,
+                             timeout=30)
+        (self.run_dir / f"npu-{label}.txt").write_text(npu.stdout + npu.stderr)
+        return {"root": identity, "descendants": self.arm_identity["descendants"],
+                "label": label, "before_count": len(before),
+                "after_new": sorted(after - before),
+                "env_flag": root_env.get("CLEF_JOINT_FUSED_ATTN"),
+                "launch_config": root_env.get("CLEF_LAUNCH_CONFIG"),
+                "source_sha256": source_sha, "npu_file": str(self.run_dir / f"npu-{label}.txt")}
 
     def restore_prod(self):
         label = f"d0-restore-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{uuid.uuid4().hex[:8]}"
@@ -295,6 +360,7 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=18143)
     ap.add_argument("--rounds", type=int, default=4)
     ap.add_argument("--reps", type=int, default=5)
+    ap.add_argument("--warmup", type=int, default=3)
     ap.add_argument("--short", default="od-0105")
     ap.add_argument("--long", default="od-1534")
     ap.add_argument("--data", default="/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json")
@@ -320,6 +386,11 @@ def main() -> int:
     try:
         ab.run_dir.mkdir(parents=True, exist_ok=False)
         ab.stage_d0()
+        ab.stage_candidate()
+        target = Path(args.tree) / "vllm/model_executor/models/clef_joint_schema.py"
+        target_sha = ab.win.sha256(target) if target.is_file() else None
+        if target_sha != PREIMAGE_SHA:
+            raise AbError(f"head target is not preimage at preflight: {target_sha}")
         if ab.win.sha256(Path(args.stop_script)) != STOP_SHA:
             raise AbError("stop script SHA mismatch")
         for path, expected, name in ((args.activate, ACTIVATE_SHA, "activate"),
@@ -328,6 +399,7 @@ def main() -> int:
             if ab.win.sha256(Path(path)) != expected:
                 raise AbError(f"{name} SHA mismatch")
         current, ab.prod_env = ab.current_service()
+        initial_identity = current
         ab.state["current_root"] = current["root"]["pid"]
         ab.state["prod_env_keys"] = sorted(ab.win.selected_env(ab.prod_env))
         ab.inputs = ab.input_bodies()
@@ -343,49 +415,71 @@ def main() -> int:
         for index in range(args.rounds):
             order = ORDERS[index % len(ORDERS)]
             row = {"round": index, "order": order, "arms": {}}
+            ab.state["rounds"].append(row)
+            ab.flush(f"round-{index}-start")
             for flag in order:
                 label = f"d0-ab-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{index}-{flag}-{uuid.uuid4().hex[:6]}"
                 arm = ab.start_arm(flag, label)
+                provenance = arm
                 samples = ab.run_inputs(label)
-                ab.stop_tree(arm, label)
+                stop_info = ab.stop_tree(arm, label)
                 arm = None
-                row["arms"][str(flag)] = {"label": label, "samples": samples}
+                ab.arm_identity = None
+                row["arms"][str(flag)] = {"label": label, "provenance": provenance,
+                                          "samples": samples, "stop": stop_info}
                 ab.flush(f"round-{index}-flag-{flag}")
-            ab.state["rounds"].append(row)
-            ab.flush(f"round-{index}")
     except Exception as exc:
         ab.state["error"] = f"{type(exc).__name__}: {exc}"
     finally:
+        target = Path(args.tree) / "vllm/model_executor/models/clef_joint_schema.py"
+        target_sha = ab.win.sha256(target) if target.is_file() else None
+        revert_ok = True
         stopped = initial_stopped
-        if arm is not None:
+        if not stopped:
             try:
-                ab.stop_tree(arm, "cleanup-arm")
+                ab.stop_tree(initial_identity, "cleanup-initial")
                 stopped = True
             except Exception as exc:
                 ab.state["cleanup_stop_error"] = f"{type(exc).__name__}: {exc}"
                 stopped = False
-        port_state = ab.win.port_open(args.port)
-        if stopped and port_state != "closed":
-            stopped = False
-            ab.state["service_state"] = {"stopped": False, "port": port_state}
-        try:
-            if applied:
+        cleanup_identity = arm or getattr(ab, "arm_identity", None)
+        if cleanup_identity is not None:
+            try:
+                ab.stop_tree(cleanup_identity, "cleanup-arm")
+                stopped = True
+            except Exception as exc:
+                ab.state["cleanup_stop_error"] = f"{type(exc).__name__}: {exc}"
+                stopped = False
+            arm = None
+            ab.arm_identity = None
+        if applied:
+            try:
                 ab.revert_postimage()
+                revert_ok = True
                 ab.state["steps"]["revert"] = {"ok": True}
-        except Exception as exc:
-            ab.state["steps"]["revert"] = {"ok": False,
-                                           "error": f"{type(exc).__name__}: {exc}"}
-        if stopped:
+            except Exception as exc:
+                revert_ok = False
+                ab.state["steps"]["revert"] = {"ok": False,
+                                               "error": f"{type(exc).__name__}: {exc}"}
+            target_sha = ab.win.sha256(target) if target.is_file() else None
+        ab.state["target_sha256"] = target_sha
+        if stopped and ab.win.port_open(args.port) != "closed":
+            stopped = False
+        if target_sha != PREIMAGE_SHA or not revert_ok:
+            ab.state["steps"]["restore"] = {
+                "ok": False, "action": "blocked_source_or_revert_not_clean",
+                "target_sha256": target_sha, "revert_ok": revert_ok}
+        elif not stopped:
+            ab.state["steps"]["restore"] = {
+                "ok": False, "action": "blocked_service_not_proven_stopped",
+                "port": ab.win.port_open(args.port)}
+        else:
             try:
                 restored = ab.restore_prod()
                 ab.state["steps"]["restore"] = {"ok": True, **restored}
             except Exception as exc:
                 ab.state["steps"]["restore"] = {"ok": False,
                                                 "error": f"{type(exc).__name__}: {exc}"}
-        else:
-            ab.state["steps"]["restore"] = {
-                "ok": False, "action": "blocked_service_not_proven_stopped",
-                "port": port_state}
         ab.state["finished_at"] = now()
         ab.state["overall_rc"] = 0 if (
             not ab.state.get("error")

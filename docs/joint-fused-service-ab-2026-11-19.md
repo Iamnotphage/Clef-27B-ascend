@@ -6,8 +6,8 @@
 ## 身份
 
 - 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）
-- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `cc02071bbe12d8e250cea9a48152b7f3e853ee04ac84d2910157cbbbb33feddf`
-- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `438009a6…6a50d4`，6/6
+- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `b35cc923867427e9dd32d3143a745843993cb7798cabc403a2b9e5678cb83681`
+- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `2bb812a545d380bb37b68cb54cafcf0d28f2e80dca55ebcf84ef971732260b0f`，7/7
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 
 ## 命令（新不存在 run-dir）
@@ -37,13 +37,15 @@ runner 读取后重新计算 SHA，任一不符即中止；每请求记录 statu
   `f8101b98`，再安装 `aa3e1758`；两臂同 postimage。
 - 4 轮 ABBA：`[0,1],[1,0],[1,0],[0,1]`；每臂唯一 `d0-ab-…` label，run 固定输入 `--reps` 次，
   再精确 stop；每轮/每臂写 `ab.json` 与 raw 日志。
-- 启动后半途失败：按端口唯一 listener 取身份并精确 stop，再抛错。
-- finally：停服未确认则不启动恢复；已 apply 必 revert `f8101b98`；恢复唯一 `d0-restore-…` label、
+- 启动后半途失败：只有本 label `api.pid` 绑定且 start/boot 身份匹配的 root 才可 exact stop；来源未知 listener 不发信号，记录后阻断恢复。
+- finally：以实际 target SHA + revert 成功 + 保存 root/后代/PGID 全退出守卫；任一不成立不启动恢复；恢复唯一 `d0-restore-…` label、
   `CLEF_LAUNCH_CONFIG=s1`，`d0_restore.discover/verify` 四检（health/2 worker/text/image）。
+- 每请求即时写 raw JSONL（bodySHA/start/end/response/error），warmup 与正式样本分列；每臂完成即 append/flush `ab.json`。
+- 每臂固定 `CLEF_LAUNCH_CONFIG=s1`，记录实际 root env flag/source SHA/npu-smi 设备原件。
 - 候选 env 仅在两臂启动/probe child；生产恢复不继承候选键。
 - 任一必要步骤失败整体非 0；`ab.json` 分列 rounds/steps/error。
 
 ## CPU 测试范围
 
-6/6：ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
+7/7：ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
 真实服务启动/性能/质量由 21 现场执行、20 判定；本文件不报告服务收益。
