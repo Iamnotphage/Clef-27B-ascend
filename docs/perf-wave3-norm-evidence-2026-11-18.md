@@ -962,3 +962,61 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 ### 34.3 `uint32` 承载的口径
 
 `uint32` 分配在当前栈未获支持证据，故文档记为**本实现选择**：容器 `int32`、`aclTensor` 视图 `ACL_UINT32`、读回按 `& 0xFFFFFFFF` 无损规范化（`0xD0D0C0DE` / `0xC0FFEE00` / `0` / `0xFFFFFFFF` 往返已核）。
+
+## 35. D0 CPU 交付最终记录（2026-11-18 收口，commit `557176d` 之后）
+
+### 35.1 编译与链接身份（远端实读）
+
+| 项 | 值 |
+| --- | --- |
+| 编译源（远端 `/tmp/d0cc/d0_adapter.cpp`） | SHA `cb816029d83f88d3…` |
+| 对象 `d0_adapter.o` | SHA `8edf909bf8f8475c…` |
+| 共享库 `d0_final.so` | SHA `e3a29db20ab8ea7f…` |
+| 生成头 `aclnn_clef_d0_trace.h`（autogen） | SHA `146daf7f29a7a835…`（与包内 header **完全相同**） |
+| 链接所用 `libcust_opapi.so`（**包内** `op_api/lib/`） | SHA `3314922677b7b781…`（与交付包 `b7190e96` 对应） |
+| `build_out/op_host/libcust_opapi.so` | SHA `3c1728432a76a1a1…` —— **不同身份，仅列来源，不作最终依赖** |
+
+**编译命令**（原始，未经 head 截断）：
+
+```
+g++ -std=c++17 -c -O0 -fPIC -I<autogen> -I<python-inc> \
+    -I<torch>/include -I<torch>/include/torch/csrc/api/include \
+    -I<torch_npu>/include -I<cann>/include -I<cann>/aarch64-linux/include \
+    d0_adapter.cpp -o d0_adapter.o
+```
+
+**链接命令**：
+
+```
+g++ -shared -o d0_final.so d0_adapter.o \
+    -L<torch_npu>/lib -L<torch>/lib -ltorch_npu -ltorch -lc10 \
+    -L<包内 op_api/lib> -lcust_opapi
+```
+
+- 对象编译 `RC=0`、0 error；共享库生成 `RC=0`。
+- **源码快照差异**：远端编译源与当前仓库仅差注释措辞（§34 的 guard 说明与前置检查位置），**无代码差异**；本轮未重编，如需以最新注释重编须另跑一次。
+- **不得追认**：以上仅证明可编译、可生成共享库并声明依赖，**不构成加载证据**（未 dlopen、未执行）。
+
+### 35.2 依赖解析状态（未闭合，如实记录）
+
+- `-z defs` 完整依赖解析**未做**（未按首错补 `libtorch_cpu`/`libtorch_python`/`libpython`/`ascendcl` 后重跑）；
+- `nm -D --undefined-only` 仍含 2 个 `aclnnClefD0*` 动态引用；包内 opapi **导出 2 项**且 `DT_NEEDED` 含 `-lcust_opapi`，二者相容；
+- **不以 U 计数 0 判成功，也不以 acln U=2 判失败**；仅完成「共享库生成 + 依赖声明」。
+
+### 35.3 幸存者查询语义（`557176d` 修正）
+
+| 情形 | `survivor_check` | `members` |
+| --- | --- | --- |
+| 查询异常 | `unavailable` + `query_exception` | **null** |
+| `ps` 非 0 | `unavailable` + `query_returncode`/`query_stderr` | **null** |
+| 成功且无成员 | `ok` | `[]` |
+| 成功有成员 | `ok` | PID 列表 |
+
+实现：`ps -eo pid=,pgid=` 全量列举后**按已捕获 PGID 相等过滤**，不用 `ps -g`（跨平台语义不一）。三项 mock 用例（异常/非 0/成功空）均已通过。
+
+### 35.4 仍单独未完成
+
+1. **恢复三检 wrapper** —— 未实现；
+2. **固定 mixed 数值门** —— 待 20 决定；claims 覆盖不代替数值门；
+3. **完整 `-z defs` 依赖链接** —— 未做；
+4. 真实 op 调用路径（`torch.ops.clef_d0.d0_trace`、group 名、`diag` 实值）**从未执行**。
