@@ -160,14 +160,26 @@ bool ok = (ratio > 0) && (sub >= 0) && (sub < ratio) &&
           (linear >= sub) && (((linear - sub) % ratio) == 0);
 int64_t block = ok ? ((linear - sub) / ratio) : -1;      // 由公开值反推
 
-// 域/边界/AIC sub0
+// 域/边界 + 分域 sub 守卫（**AIC 与 AIV 分开判**）
 ok = ok && (block >= 0) && (block < 24);
-if (ASCEND_IS_AIC) ok = ok && (sub == 0);
-const int64_t slot = ok ? ((ASCEND_IS_AIC ? 0 : 24) + block * 2 + sub) : -1;
+if (ASCEND_IS_AIC) {
+    ok = ok && (sub == 0);                       // AIC 只允许 sub 0
+} else {
+    ok = ok && (sub >= 0) && (sub < SUB_CAP);    // **AIV 显式 sub < 2，不用 sub<ratio 代替**
+}
+// 槽：**分支写，不做 (isAIC?0:24)+block*2+sub**（后者会让 AIC block12 写到 24，与 AIV block0 冲突）
+int64_t slot = -1;
+if (ok) {
+    slot = ASCEND_IS_AIC ? block : (24 + block * 2 + sub);
+}
 if (!ok || slot < 0 || slot >= 72) { /* 仅禁用 trace 写；主路径继续 */ }
 ```
 
 - **失败只禁 trace 写**：`REGIST_MATMUL_OBJ` / `IterateAll` / `End` / 屏障**原控制流不动**。
+- **两处笔误已修（2026-11-18，23 核出）**：① 槽号必须**分支写** `isAIC ? block : (24+block*2+sub)`，
+  写成 `(isAIC?0:24)+block*2+sub` 会让 **AIC block12 = 24** 与 **AIV block0 = 24** 冲突；
+  ② **`sub < ratio` ≠ `sub < SUB_CAP`**：ratio=3、sub=2 时 `sub<ratio` 成立但**会越到相邻 block 的槽**，
+  故 AIV 必须**显式 `sub < 2`**。AIC `sub==0` 与 AIV `sub∈{0,1}` **分别守卫**。
 - **`block` 必须标为"由公开值反推"**，**不是** raw 读取；文档与字段语义均按此表述。
 - **源内代数链（沿用已读证据，不重启搜索）**：
   `impl/basic_api/kernel_operator_sys_var_intf_impl.h:66` `GetTaskRatio() { return GetTaskRationImpl(); }`；
