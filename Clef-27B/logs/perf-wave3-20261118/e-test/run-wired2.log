@@ -1,0 +1,136 @@
+date=2026-11-18T07:50:24+00:00
+cell f078715 default use_hccl=2
+[rank0]:[W1118 07:50:46.335379860 NPUCachingAllocator.cpp:204] Warning: The current CANN and HDK(driver) versions require processing for 32 padding size, with memory allocation. (function operator())
+[e-adapter] after GetWorkspaceSize ws=36581504
+[e-adapter] after GetWorkspaceSize ws=36581504
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 94, in <module>
+[rank1]:     raise SystemExit(main())
+[rank1]:                      ^^^^^^
+[rank1]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 72, in main
+[rank1]:     torch.npu.synchronize()
+[rank1]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/npu/utils.py", line 75, in synchronize
+[rank1]:     return torch_npu._C._npu_synchronize()
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: RuntimeError: npuSynchronizeDevice:../torch_npu/csrc/core/npu/NPUStream.cpp:714 NPU function error: AclrtSynchronizeDeviceWithTimeout, error code is 507014
+[rank1]: [ERROR] 2026-11-18-08:00:04 (PID:1069919, Device:1, RankID:1) ERR00100 PTA call acl api failed
+[rank1]: [Error]: The aicore execution times out. 
+[rank1]:         Rectify the fault based on the error information in the ascend log.
+[rank1]: EZ9999: Internal error!
+[rank1]: EZ9999[PID: 1069919] 2026-11-18-08:00:04.768.933 (EZ9999):  An error occurred in the kernel task, retCode=0x25, [aicore timeout].[FUNC:PreCheckTaskErr][FILE:davinci_kernel_task.cc][LINE:1030]
+[rank1]: TraceBack (most recent call last):
+[rank1]:        rtDeviceSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:13: FutureWarning: triton.language.extra.cann.extension.atan2 is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.atan2 instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.atan2")
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:35: FutureWarning: triton.language.extra.cann.extension.isfinited is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.isfinited instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.isfinited")
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:49: FutureWarning: triton.language.extra.cann.extension.finitef is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.finitef instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.finitef")
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] Failed to shutdown process group during NPU exit.
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] Traceback (most recent call last):
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582]   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/distributed/distributed_c10d.py", line 580, in _destructor_process_group
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582]     pg_to_shutdown.shutdown()
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] RuntimeError: synchronize:../torch_npu/csrc/core/npu/NPUStream.cpp:414 NPU function error: c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream()), error code is 507014
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] [ERROR] 2026-11-18-08:00:04 (PID:1069919, Device:1, RankID:1) ERR00100 PTA call acl api failed
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] [Error]: The aicore execution times out. 
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582]         Rectify the fault based on the error information in the ascend log.
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] EE9999: Internal error!
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] EE9999[PID: 1069919] 2026-11-18-08:00:04.885.564 (EE9999):  rtStreamSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] TraceBack (most recent call last):
+[rank1]:W1118 08:00:04.886000 1069919 torch_npu/distributed/distributed_c10d.py:582] 
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 94, in <module>
+[rank0]:     raise SystemExit(main())
+[rank0]:                      ^^^^^^
+[rank0]:   File "/workspace/yangchen/Clef-27B-ascend/runtime/wave3_e_test.py", line 72, in main
+[rank0]:     torch.npu.synchronize()
+[rank0]:   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/npu/utils.py", line 75, in synchronize
+[rank0]:     return torch_npu._C._npu_synchronize()
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: RuntimeError: npuSynchronizeDevice:../torch_npu/csrc/core/npu/NPUStream.cpp:714 NPU function error: AclrtSynchronizeDeviceWithTimeout, error code is 507014
+[rank0]: [ERROR] 2026-11-18-08:00:05 (PID:1069918, Device:0, RankID:0) ERR00100 PTA call acl api failed
+[rank0]: [Error]: The aicore execution times out. 
+[rank0]:         Rectify the fault based on the error information in the ascend log.
+[rank0]: EZ9999: Internal error!
+[rank0]: EZ9999[PID: 1069918] 2026-11-18-08:00:05.244.879 (EZ9999):  An error occurs on the device(chipId:7, dieId:0), the serial number is 112, the error is fftsplus aicore error, core id is 0, error code = 0, dump info: pc start: 0x12c0a6e00000, current: 0x12c0a6e01b74, vec error info: 0, mte error info: 0x4203000099, ifu error info: 0x6b3295a400100, ccu error info: 0x601c0f092a004299, cube error info: 0, biu error info: 0, aic error mask: 0x6500020bd00028c, para base: 0x12c100002080, aic cond: 0.
+[rank0]: The extend info: errcode:(0, 0, 0) errorStr: timeout or trap error. fixp_error0 info: 0x3000099, fixp_error1 info: 0x42, fsmId:0, tslot:0, thread:0, ctxid:0, blk:13, sublk:0, subErrType:4.
+[rank0]: For details, see the troubleshooting document on the Ascend official website. Search for the keyword "AI Core Error".[FUNC:PrintCoreInfo][FILE:device_error_core_proc.cc][LINE:1227]
+[rank0]: TraceBack (most recent call last):
+[rank0]:        An error occurred in the kernel task, retCode=0x25, [aicore timeout].[FUNC:PreCheckTaskErr][FILE:davinci_kernel_task.cc][LINE:1030]
+[rank0]:        rtDeviceSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+
+[rank0]:[W1118 08:00:05.347836100 NPUStream.cpp:734] Warning: NPU warning, error code is 507014[Error]: 
+[Error]: The aicore execution times out. 
+        Rectify the fault based on the error information in the ascend log.
+EE9999: Internal error!
+EE9999[PID: 1069918] 2026-11-18-08:00:05.360.868 (EE9999):  rtDeviceSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+TraceBack (most recent call last):
+ (function npuSynchronizeUsedDevices)
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:13: FutureWarning: triton.language.extra.cann.extension.atan2 is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.atan2 instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.atan2")
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:35: FutureWarning: triton.language.extra.cann.extension.isfinited is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.isfinited instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.isfinited")
+/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:49: FutureWarning: triton.language.extra.cann.extension.finitef is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.finitef instead.
+  @_deprecated(replacement="triton.language.extra.cann.libdevice.finitef")
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] Failed to shutdown process group during NPU exit.
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] Traceback (most recent call last):
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582]   File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/distributed/distributed_c10d.py", line 580, in _destructor_process_group
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582]     pg_to_shutdown.shutdown()
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] RuntimeError: synchronize:../torch_npu/csrc/core/npu/NPUStream.cpp:414 NPU function error: c10_npu::acl::AclrtSynchronizeStreamWithTimeout(stream()), error code is 507014
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] [ERROR] 2026-11-18-08:00:05 (PID:1069918, Device:0, RankID:0) ERR00100 PTA call acl api failed
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] [Error]: The aicore execution times out. 
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582]         Rectify the fault based on the error information in the ascend log.
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] EE9999: Internal error!
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] EE9999[PID: 1069918] 2026-11-18-08:00:05.361.302 (EE9999):  rtStreamSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] TraceBack (most recent call last):
+[rank0]:W1118 08:00:05.361000 1069918 torch_npu/distributed/distributed_c10d.py:582] 
+[W1118 08:00:05.964876710 NPUStream.cpp:716] Warning: NPU warning, error code is 507014[Error]: 
+[Error]: The aicore execution times out. 
+        Rectify the fault based on the error information in the ascend log.
+EE9999: Internal error!
+EE9999[PID: 1069918] 2026-11-18-08:00:05.977.906 (EE9999):  rtDeviceSynchronizeWithTimeout execution failed, reason=aicore timeout[FUNC:FuncErrorReason][FILE:error_message_manage.cc][LINE:76]
+TraceBack (most recent call last):
+ (function npuSynchronizeDevice)
+W1118 08:00:07.611000 1069909 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1069918 closing signal SIGTERM
+E1118 08:00:07.975000 1069909 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 1 (pid: 1069919) of binary: /workspace/yangchen/venvs/clef-py312/bin/python
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+runtime/wave3_e_test.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-11-18_08:00:07
+  host      : 25e6d0590726
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 1069918)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1069918
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-11-18_08:00:07
+  host      : 25e6d0590726
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 1069919)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+[ERROR] 2026-11-18-08:00:07 (PID:1069909, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception
+RAW_RC=1

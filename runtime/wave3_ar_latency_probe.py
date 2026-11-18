@@ -83,6 +83,22 @@ def main() -> int:
         for _, fn in arms:
             for _ in range(args.warmup):
                 fn()
+        # correctness of the measured mode against the same-process reference
+        if args.mode == "off":
+            exp_in = x
+        else:
+            exp_in = x.float().clone()
+            dist.all_reduce(exp_in, op=dist.ReduceOp.SUM)
+            exp_in = exp_in.to(torch.bfloat16)
+        ref_y, ref_rstd, ref_res = torch_npu.npu_add_rms_norm(exp_in, r, g, args.eps)
+        got_y, got_res, got_rstd, got_diag = torch.ops.clef_ar.ar_add_rms_norm(
+            x, r, g, args.eps, 1, group_name, 1 if args.mode == "on" else 0)
+        torch.npu.synchronize()
+        check = {"max_abs_y": float((got_y.float() - ref_y.float()).abs().max().cpu()),
+                 "max_abs_residual_sum": float((got_res.float() - ref_res.float()).abs().max().cpu()),
+                 "max_abs_rstd": float((got_rstd.float() - ref_rstd.float().reshape(-1)).abs().max().cpu()),
+                 "diag": [float(v) for v in got_diag.cpu()]}
+        print(json.dumps({"rank": rank, "n": n, "mode": args.mode, "check": check}), flush=True)
         torch.npu.synchronize()
 
         rows = []

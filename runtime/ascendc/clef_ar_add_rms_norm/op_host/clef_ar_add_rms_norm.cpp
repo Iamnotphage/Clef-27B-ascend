@@ -38,8 +38,7 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const auto* useHccl = context->GetAttrs()->GetAttrPointer<int64_t>(3);
     const bool wantHccl = (useHccl == nullptr) || (*useHccl != 0);
     const char* group = context->GetAttrs()->GetAttrPointer<char>(2);
-    if (wantHccl && (group == nullptr || group[0] == '\0')) { return ge::GRAPH_FAILED; }
-    if (group == nullptr) group = "";
+    if (group == nullptr || group[0] == '\0') { return ge::GRAPH_FAILED; }
     t->commEngine = kEngineAicpu;
     t->opType = kOpTypeAllReduce;
     t->useHccl = wantHccl ? 1u : 0u;
@@ -50,15 +49,14 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     static_assert(sizeof(::Mc2CcTiling) == kMc2CcBytes, "cc tiling size");
     std::memset(t->mc2InitTiling, 0, kMc2InitBytes);
     std::memset(t->mc2CcTiling, 0, kMc2CcBytes);
-    if (wantHccl) {
-        AscendC::Mc2CcTilingConfig cfg(group, kOpTypeAllReduce, kAlg, kReduceSum,
-                                       kBf16, kBf16, kEngineAicpu);
-        t->initTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2InitTiling*>(t->mc2InitTiling));
-        t->ccTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2CcTiling*>(t->mc2CcTiling));
-    } else {
-        t->initTilingRc = 0;
-        t->ccTilingRc = 0;
-    }
+    // Keep the MC2 tiling valid for BOTH arms: the official runtime still
+    // injects the KFC launch from the opdef declaration, so an empty tiling
+    // would only replace one invalid config with another. useHccl only gates
+    // the device-side AllReduce.
+    AscendC::Mc2CcTilingConfig cfg(group, kOpTypeAllReduce, kAlg, kReduceSum,
+                                   kBf16, kBf16, kEngineAicpu);
+    t->initTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2InitTiling*>(t->mc2InitTiling));
+    t->ccTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2CcTiling*>(t->mc2CcTiling));
 
     // The AR smoke runs the collective from a single block: only core 0 may
     // write hcclMsgArea, and cross-block handle sharing is still unverified.
