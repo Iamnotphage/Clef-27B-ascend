@@ -35,6 +35,7 @@ HEALTH_URL = "http://127.0.0.1:18143/health"
 TEXT_SOURCE = ("/workspace/yangchen/logs/tuning/20261114-013000-fix4/"
                "opendecisions/all2352.json")
 TEXT_SAMPLE = "od-1534"
+API_BASE = "http://127.0.0.1:18143"
 IMAGE_SOURCE = ("/workspace/yangchen/logs/perf-wave2-20261118/erqa/samples/"
                 "erqa-0000/request.json")
 
@@ -111,10 +112,18 @@ def cleanup(targets: list[dict], log: dict, killer=None) -> dict:
 
 def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subprocess.run,
             timeout: int = 300) -> bool:
-    started = runner(launch_cmd, capture_output=True, text=True, timeout=timeout,
-                     env={**os.environ, "CLEF_LAUNCH_CONFIG": SERVICE_CONFIG})
-    log["restore"] = {"at": _now(), "launch_rc": started.returncode,
-                      "stdout": started.stdout[-2000:], "stderr": started.stderr[-2000:]}
+    l_started = _now()
+    try:
+        started = runner(launch_cmd, capture_output=True, text=True, timeout=timeout,
+                         env={**os.environ, "CLEF_LAUNCH_CONFIG": SERVICE_CONFIG})
+        log["restore"] = {"launch_started": l_started, "launch_finished": _now(),
+                          "launch_rc": started.returncode,
+                          "stdout": started.stdout, "stderr": started.stderr}
+        launch_ok = started.returncode == 0
+    except Exception as exc:                                 # noqa: BLE001
+        log["restore"] = {"launch_started": l_started, "launch_finished": _now(),
+                          "launch_exception": f"{type(exc).__name__}: {exc}"}
+        launch_ok = False
     if wait_cmd:
         w_started = _now()
         try:
@@ -129,7 +138,7 @@ def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subproces
             wait_ok = False
     else:
         wait_ok = True
-    return started.returncode == 0 and wait_ok
+    return launch_ok and wait_ok
 
 
 def _parse_health(text: str) -> bool:
@@ -140,6 +149,29 @@ def _parse_health(text: str) -> bool:
 
 
 def _count_workers(text: str, service_pids: set[int] | None = None) -> int:
+    """Count worker rows whose PID cell is exactly one of the service pids."""
+    return len(_worker_pids(text, service_pids))
+
+
+def _worker_pids(text: str, service_pids: set[int] | None = None) -> set[int]:
+    """Distinct PIDs from the PID column of worker rows, filtered to the tree."""
+    want = service_pids or set()
+    found: set[int] = set()
+    for line in text.splitlines():
+        if "VLLMWorker_TP" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        # npu-smi rows read | chip | pid | name | hbm | pid |, so the PID is the
+        # second cell; memory figures must never be read as PIDs.
+        if len(cells) < 2:
+            continue
+        cell = cells[1]
+        if cell.isdigit() and int(cell) in want:
+            found.add(int(cell))
+    return found
+
+
+def _unused_count_workers(text: str, service_pids: set[int] | None = None) -> int:
     """Count worker rows whose PID field is exactly one of the service pids.
 
     Substring matching would confuse 111 with 1111, and an empty service set
@@ -166,6 +198,23 @@ def _parse_answer(text: str, expect: str) -> bool:
         return False
 
 
+def build_commands(render) -> dict:
+    """Real verification commands: health URL, npu-smi table, and the two POSTs
+    with the recorded request bodies. `render` posts JSON and returns a string."""
+    text_body = render("text")
+    image_body = render("image")
+    return {
+        "health": ["curl", "-s", "-m", "5", f"{API_BASE}/health"],
+        "workers": ["npu-smi", "info"],
+        "text": ["curl", "-s", "-m", "120", "-X", "POST",
+                 f"{API_BASE}/v1/systemone", "-H", "Content-Type: application/json",
+                 "-d", text_body],
+        "image": ["curl", "-s", "-m", "120", "-X", "POST",
+                  f"{API_BASE}/v1/decide", "-H", "Content-Type: application/json",
+                  "-d", image_body],
+    }
+
+
 def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120,
            service_pids: set[int] | None = None) -> bool:
     """Each stage keeps its own rc, payload and timing; non-empty is not enough."""
@@ -180,7 +229,9 @@ def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120,
             if stage == "health":
                 entry["ok"] = r.returncode == 0 and _parse_health(r.stdout)
             elif stage == "workers":
-                entry["workers"] = _count_workers(r.stdout, service_pids)
+                pids = _worker_pids(r.stdout, service_pids)
+                entry["workers"] = len(pids)
+                entry["worker_pids"] = sorted(pids)
                 entry["service_pids"] = sorted(service_pids or [])
                 entry["ok"] = (r.returncode == 0 and bool(service_pids)
                                and entry["workers"] == 2)

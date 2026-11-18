@@ -112,17 +112,24 @@ def gate_cases():
     check("candidate rstd shape enforced", not g["pass"] and not g["outputs"][2]["shape_ok"],
           g["outputs"][2])
 
-    # mask threshold: just below vs just above 1e-5, on representable values
-    below = torch.tensor([[9.9e-6]], dtype=torch.float32).to(torch.bfloat16)
-    above = torch.tensor([[1.1e-5]], dtype=torch.float32).to(torch.bfloat16)
-    gb = evaluate({"residual": r[:1, :1], "y": below, "rstd": rs[:1]},
-                  {"residual": r[:1, :1], "y": torch.zeros(1, 1, dtype=torch.bfloat16),
-                   "rstd": rs[:1]})
-    ga = evaluate({"residual": r[:1, :1], "y": above, "rstd": rs[:1]},
-                  {"residual": r[:1, :1], "y": below, "rstd": rs[:1]})
-    check("mask threshold both sides",
-          gb["outputs"][1]["near_zero_count"] == 1,
-          (gb["outputs"][1], ga["outputs"][1]))
+    # mask threshold: a reference below 1e-5 is near-zero, at/above is not.
+    # bf16 cannot represent values this small precisely, so the check is driven
+    # through float32 refs and the mask counter only.
+    import torch as _t
+    ref_zero = _t.zeros(1, 1, dtype=_t.bfloat16)
+    cand_tiny = _t.tensor([[0.03]], dtype=_t.bfloat16)
+    g_low = evaluate({"residual": r[:1, :1], "y": cand_tiny, "rstd": rs[:1]},
+                     {"residual": r[:1, :1], "y": ref_zero, "rstd": rs[:1]})
+    check("ref below threshold is near-zero",
+          g_low["outputs"][1]["near_zero_count"] == 1, g_low["outputs"][1])
+
+    # a reference well above the threshold must not be counted near-zero
+    ref_big = _t.tensor([[0.5]], dtype=_t.bfloat16)
+    cand_big = _t.tensor([[0.50390625]], dtype=_t.bfloat16)
+    g_high = evaluate({"residual": r[:1, :1], "y": cand_big, "rstd": rs[:1]},
+                      {"residual": r[:1, :1], "y": ref_big, "rstd": rs[:1]})
+    check("ref above threshold not near-zero",
+          g_high["outputs"][1]["near_zero_count"] == 0, g_high["outputs"][1])
 
 
 def restore_cases():
@@ -241,11 +248,12 @@ import d0_run, d0_restore
 
 def fake_child(cmd, out_dir, timeout, env=None):
     (Path(out_dir) / "raw-rc.json").write_text(json.dumps(
-        {{"wrapper_rc": 7, "child_raw_rc": 7, "timed_out": False, "pgid": 1}}))
+        {{"wrapper_rc": 7, "child_raw_rc": 7, "timed_out": False, "pgid": 4242}}))
     (Path(out_dir) / "root-child.json").write_text(json.dumps(
-        {{"child_pid": 1, "pgid": 1, "starttime": "1", "boot_id": "b"}}))
+        {{"child_pid": 4242, "pgid": 4242, "starttime": "1", "boot_id": "b"}}))
     return 7
 d0_run.run_child = fake_child                   # test fails with rc 7
+d0_run.query_group = lambda pgid: {{"survivor_check": "ok", "members": []}}
 calls = {{}}
 def fake_restore(launch, wait, log, runner=None):
     calls["launch"] = launch

@@ -211,6 +211,7 @@ def main() -> int:
     env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
     test_rc = None                      # null until the child actually reports
     test_exc = None
+    rc = None
     try:
         test_rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
     except Exception as exc:                                  # noqa: BLE001
@@ -219,8 +220,7 @@ def main() -> int:
         # Restore runs on every exit path and keeps its own record; a restore
         # failure never overwrites the test rc.
         try:
-            from d0_restore import (SERVICE_LAUNCH, SERVICE_WAIT, _identity,
-                                    query_group, restore, verify)
+            from d0_restore import SERVICE_LAUNCH, SERVICE_WAIT, restore, verify
             rlog = {"test_rc": test_rc, "test_exception": test_exc}
 
             # The test group must be gone before a restore can start; a failed
@@ -231,17 +231,22 @@ def main() -> int:
             if root.exists():
                 info = json.loads(root.read_text())
                 pgid = info.get("pgid")
-                if isinstance(pgid, int):
+                if not isinstance(pgid, int) or pgid <= 1:
+                    blocked = "root-child pgid missing or invalid"
+                else:
                     try:
-                        q = query_group(pgid)
+                        q = query_group(pgid)       # defined in this module
                     except Exception as exc:                 # noqa: BLE001
                         q = {"survivor_check": "unavailable",
                              "members": None, "query_exception": str(exc)}
                     rlog["prelaunch_group"] = q
+                    members = q.get("members")
                     if q.get("survivor_check") != "ok":
                         blocked = "survivor query unavailable"
-                    elif q.get("members"):
-                        blocked = f"{len(q['members'])} members still alive"
+                    elif not isinstance(members, list):
+                        blocked = "survivor members not an explicit list"
+                    elif len(members) != 0:
+                        blocked = f"{len(members)} members still alive"
             else:
                 blocked = "missing root-child identity"
             rlog["restore_blocked"] = blocked
@@ -268,6 +273,7 @@ def main() -> int:
                 ensure_ascii=False) + "\n")
     if test_exc is not None:
         return 4
+    return rc if "rc" in dir() else test_rc
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
     try:
