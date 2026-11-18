@@ -289,3 +289,39 @@
 仍执行 `InitV2` + `SetCcTilingV2` + `Finalize`（不调用 `AllReduce`/`Wait`），观察是否能正常结束。
 
 **服务**：测试进程已按超时清理；默认服务已恢复，`/health` ready，文本 od-1534 → score、图文 erqa-0000 → choice 均通过。
+
+## 14. E 组端到端与 Norm 归因（2026-11-18 20:22 CST）
+
+### 14.1 链路打通
+
+`bb300298`（End + waitIterateAll + 接线去 `usedCoreNum` 门控）首次让 MatMul+AR+AddRMS 在设备上完整执行：
+两 rank `RAW_RC=0`，diag `mmRc=0`、`usedCoreNum=1`、`baseM=128`、`depthA1=16`。
+
+### 14.2 原始测量（只记录，不作验收）
+
+| 臂 | 配置 | 实测 |
+| --- | --- | --- |
+| A（rank-local GEMM） | `use_hccl=2`、residual=0、rank-local 参考 | max_abs **0.015625**，>0.1 计 0 |
+| B（AR 后） | `use_hccl=1`、residual=0 | max_abs **0.03125**，>0.1 计 0 |
+| 完整链 | `use_hccl=1`、真实 r/γ | residual_sum 0.03125、rstd 6.14e-6、Y 0.0625、Y>0.02 计 116 |
+| 同 partial Norm（normx） | `norm_from_x=1`、`mm_enable=0`、`use_hccl=2`，x=`[967,5120]`、dummy w `[5120,5120]` | residual_out **0.0**、rstd 1.19e-7/1.79e-7、Y 0.0625、>0.02 计 98/75 |
+| 同 partial Norm（normsp） | 同上，方差改整行单次 ReduceSum | residual_out **0.0**、rstd 1.79e-7/2.38e-7、Y 0.0625、>0.02 计 98/75 |
+
+### 14.3 已排除与未排除
+
+- 已排除（对 Y 尾部）：GEMM、AllReduce、方差求和树、线性通路 z 的 BF16 化（`residual_out` 精确为 0）。
+- **未**唯一锁定"最后那次乘法"：`rstd` 的绝对差（1e-7 级）在 BF16 边界上同样可能翻转，不能把 `|δY|/(rstd·γ)` 之类反推当证明。
+- 完整链 `residual_sum 0.03125`（>0.01）**仍然存在**；norm-only 臂的 `res=0` 不可外推为整个 E 数值门闭合。
+
+### 14.4 参考语义（SDK 直接证据，只读）
+
+`opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/add_rms_norm/add_rms_norm.h:201-244` 的 BF16 Compute：
+`Muls(x_fp32, rstd)` → `Cast_RINT` 到 BF16 → `Cast_NONE` 回 FP32 → gamma 转 FP32 → `Mul` → `CAST_RINT` 到 BF16。
+即**归一化后、乘 gamma 前有一次 BF16 round-trip**；"全程 FP32 最后只舍入一次"不是该分支语义。
+边界：入口 `add_rms_norm.cpp:39-41/63-65/69-70` 存在 key 30/33/34 等多分支，实际运行分支尚未闭合，
+因此这只是**有据的最小改动方向**，不是已证实根因。
+
+### 14.5 口径
+
+- 未宣布任何数值门、质量或收益结论；A/B 臂与 Norm 臂数字一律标 descriptive。
+- 修复后须同时复核同 partial Norm 格与**完整链三输出**，两者都过才谈数值门；之后才切 NZ 与同条件 ABBA 计时。
