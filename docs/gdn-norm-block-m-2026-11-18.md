@@ -1,7 +1,10 @@
 # GDN 输出 Norm 的 BLOCK_M 单变量准备（2026-11-18）
 
-状态：**CPU 准备完成，未执行任何设备或服务测试**。四格由 21 在受限 E 采集之后串行排队；本文不报告任何
-未实测收益，也不把 48 调用微基准批次写成每请求 48 层链。
+状态：CPU 准备完成。设备侧已有两轮启动尝试，均在第一个 kernel 之前失败：run1 是 runner 未加载
+`activate_env.sh`（`libhccl.so` 缺失），run2 是 probe 对 Triton decorator 的解包入口（`Heuristics` 无
+`device_caches`）。两格已归档，**不构成四 BM 的数值或性能证据**。修复后的 probe、runner 模板与 CPU loader
+预检已通过静态与远端 loader 检查，等待 21 在 E 采集和三检之后用新空目录单次重试。本文不报告任何未实测收益，
+也不把 48 调用微基准批次写成每请求 48 层链。
 
 ## 1. 范围与冻结契约
 
@@ -66,8 +69,11 @@
 | --- | --- |
 | `runtime/apply_gdn_norm_block_m.py` | 哈希门控安装器：`--check/--apply/--revert/--print-diff/--manifest`，preimage/postimage SHA 校验，原子写与 preimage 备份 |
 | `runtime/gdn_norm_block_m/layernorm_gated_preimage.py` | 上游文件逐字节副本（SHA-256 `68f61d7f…a774`），供离线测试与审阅 |
-| `runtime/wave3_gdn_norm_block_m_probe.py` | 四臂探针：共用输入、48 调用微基准批次、≥3 轮预定交错、BM64 配对差、编译 metadata 与 specialization 校验、逐元素/finite/rstd 比较 |
+| `runtime/wave3_gdn_norm_block_m_probe.py` | 四臂探针：共用输入、48 调用微基准批次、≥3 轮预定交错、BM64 配对差、编译 metadata 与 specialization 校验、逐元素/finite/rstd 比较；启动时先解包 Triton decorator 再读取 metadata |
+| `runtime/gdn_norm_block_m_env_check.sh` | CPU-only loader 预检：source `activate_env.sh` 后检查 `libhccl.so`、torch lib 与 `torch_npu` 扩展的依赖解析，不 import torch/torch_npu |
+| `runtime/run_gdn_norm_block_m.sh` | 正式 runner 模板：在启动任何 Python 之前 source 环境，拒绝已存在输出目录，依次 check/apply/probe/revert |
 | `runtime/test_gdn_norm_block_m_patch.py` | 纯 CPU 离线测试：哈希、patch/unpatch、后镜像语法、CLI 状态机、未知内容拒绝 |
+| `runtime/test_gdn_norm_block_m_probe.py` | 纯 CPU 探针 helper 测试：decorator 解包、循环保护、四臂 grid/padding，且 import 不加载 torch |
 
 精确 patch（唯一行为改动，默认值不变）：
 
@@ -89,31 +95,32 @@
 
 ## 4. 21 的执行清单（四格）
 
-前置：在 21 自己的受限窗口内执行，服务停止，单逻辑 NPU；先完成 E 采集排队。以下命令中的 `REPO` 指向
-`perf/wave3-gdn-block-m-prep` 的检出目录，`TREE` 为固定 vLLM-Ascend 树。
+前置：在 21 的受限窗口内、服务停止、单逻辑 NPU、E 采集与三检完成之后执行。**shell 必须先 source
+`activate_env.sh`，再启动 Python**；不要用 Python 启动后修改 `LD_LIBRARY_PATH` 来掩盖 loader 问题。推荐直接用
+runner（它已包含该 source、CPU 预检、单次新目录防护与无条件回退）：
 
 ```bash
-PY=/workspace/yangchen/venvs/clef-py312/bin/python
+REPO=<本分支检出目录>
+OUT=/workspace/yangchen/logs/gdn-norm-block-m-20261118-run3   # 必须尚不存在
+bash "$REPO/runtime/run_gdn_norm_block_m.sh" "$OUT"
+```
+
+等价的直接命令（供审阅）：
+
+```bash
+source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh
+PY="${PYTHON_BIN:?}"
 TREE=/workspace/yangchen/work/src/vllm-ascend
-REPO=<perf/wave3-gdn-block-m-prep 检出目录>
-OUT=/workspace/yangchen/logs/gdn-norm-block-m-20261118
+REPO=<本分支检出目录>
+OUT=/workspace/yangchen/logs/gdn-norm-block-m-20261118-run3
 
-# 1) 只读核对：应为 preimage，ready=true，knob_present=false
+bash "$REPO/runtime/gdn_norm_block_m_env_check.sh"          # CPU loader 预检
 $PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --check
-
-# 2) 安装旋钮：写备份并校验后镜像 SHA
-$PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --apply \
-  --manifest "$OUT/apply.json"
-
-# 3) 四格探针：默认 BM16/32/64/128，参考臂 BM64，3 轮交错
+$PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --apply --manifest "$OUT/apply.json"
 $PY "$REPO/runtime/wave3_gdn_norm_block_m_probe.py" --tree "$TREE" \
   --expect-source-sha a1093e1290afd48b546830a9ae0639f945910f44f9e22f12111b67aa72f8fe6c \
   --output "$OUT/probe.json"
-
-# 4) 回退：恢复 preimage 并校验 SHA
-$PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --revert \
-  --manifest "$OUT/revert.json"
-$PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --check
+$PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --revert --manifest "$OUT/revert.json"
 ```
 
 可选 `--per-call`：额外跑一批逐调用事件采样，只用于报告单次最大值；该批次含事件开销，**不参与四臂比较**。
@@ -178,11 +185,60 @@ $PY "$REPO/runtime/apply_gdn_norm_block_m.py" --tree "$TREE" --check
   revert 优先用该备份，缺失时按精确逆变换恢复并校验 preimage SHA。
 - 探针 JSON 记录 source path/SHA、输入 SHA、协议、四臂 specialization、correctness、逐轮 timing 与 summary；
   每个阶段落盘，异常时保留已完成部分。
-- 离线验证：`python3 -I runtime/test_gdn_norm_block_m_patch.py`（20 项检查，含 patch/unpatch、CLI 状态机、
-  后镜像语法与未知内容拒绝），以及三个脚本的 `py_compile`。本准备未导入 torch/torch_npu/vllm_ascend。
+- 离线验证：patch 测试 20 项、probe helper 测试 11 项、三个 Python 脚本 `py_compile`、两个 shell 脚本
+  `bash -n`，全部通过。远端 CPU loader 预检在真实环境通过（`hccl_dir=/usr/local/Ascend/cann-9.2.1/lib64`）；
+  不含 `libhccl.so` 的 stub 环境按预期失败。本准备未导入 torch/torch_npu/vllm_ascend。
 
 ## 9. 交给 21 的回报清单
 
 请回传：`probe.json`、四个 `specialization_ok`、`num_warps/num_stages` 实测值、每臂 `out/rstd` 的
 `bit_equal/finite/max_abs`、三轮 `paired_device_delta_ms` 与 `batch_device_ms/batch_wall_ms`，
 以及运行时的 source SHA 与 `CLEF_GDN_NORM_BLOCK_M` 值。收到这些数据后再决定是否进入服务 A/B。
+
+## 10. 首轮执行记录与启动修复（归档）
+
+两轮都失败在第一个 kernel 之前，**没有四 BM 的数值或性能数据**；失败格保留，不作为证据。
+
+| 轮次 | 日志 | 时间（UTC） | 结果 | 首错 |
+| --- | --- | --- | --- | --- |
+| run1 | `/workspace/yangchen/logs/perf-wave3-20261118/e-test/run-gdn.log` | 14:07:27 起 | APPLY 0 / PROBE 1 / REVERT 0 | `torch_npu/_C` → `ImportError: libhccl.so: cannot open shared object file` |
+| run2 | `/workspace/yangchen/logs/perf-wave3-20261118/e-test/run-gdn2.log`（SHA-256 `c0b0e544…3e21d14`） | 14:09:53 起 | APPLY 0 / PROBE 1 / REVERT 0 | `probe:340` `AttributeError: 'Heuristics' object has no attribute 'device_caches'` |
+
+run1 根因与修复：
+
+- `e_run_gdn.sh` 没有 source `activate_env.sh`，进程继承不到 CANN 的 `LD_LIBRARY_PATH`；torch 自动加载
+  `torch_npu` 扩展时在 `torch_npu/npu/utils.py:8 import torch_npu._C` 处失败，随后
+  `RuntimeError: Failed to load the backend extension: torch_npu`。
+- 修复放在 **Python 启动前的 shell**：runner 先 source
+  `/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh`，由它依次 source CANN `set_env.sh`、
+  ATB `set_env.sh` 与 venv。`nohup`/`timeout`/Python 子进程自然继承；不在 Python 内改 `LD_LIBRARY_PATH`。
+- CPU 预检脚本 `runtime/gdn_norm_block_m_env_check.sh` 只做 source + `ldd` 解析 + `sys` 版本检查，不 import
+  torch/torch_npu；真实环境通过，缺 `libhccl.so` 的 stub 按预期失败。
+
+run2 根因与修复：
+
+- 模块属性 `_layer_norm_fwd_1pass_kernel_npu` 是两层 `@triton.heuristics` 包住的 `Heuristics` 对象。
+  固定 Triton Ascend `3.6.0.post2` 源码：`triton/runtime/autotuner.py:449-459` 的 `Heuristics.__init__`
+  保存 `.fn`，`run` 委托给 `.fn.run`；`triton/runtime/jit.py:787` 的 `JITFunction.device_caches` 与
+  `:797` 的 `arg_names` 只在最内层 JITFunction 上。run2 把外层 `Heuristics` 当 JITFunction 用，因此在
+  warmup 之前的 cache 读取处失败（run2 的旧 probe `dae7cd74…` 第 340 行；其 warmup 在第 349 行之后）。
+- 修复只在 **metadata 入口**：`unwrap_jit_function()` 沿 `.fn` 逐层解包到有 `device_caches` 的对象，并记录
+  `unwrap_chain`；找不到就带 `kernel_object` 信息早退。
+- 计算调用继续走原来的 `layer_norm_fwd_npu` → 原装饰器 → `Heuristics.run`，heuristics 语义不变；探针没有
+  绕过 wrapper，也没有把期望配置当成观测值。
+- 编译后的 `num_warps/num_stages/coalesce_*` 与 `BLOCK_M` constexpr 仍从实际 `CompiledKernel` 读取；
+  缺字段记 `null`，`specialization_ok` 仍断言实际编译的 `BLOCK_M` 与请求臂一致，未删除该校验。
+
+本次修复后的身份：
+
+| 文件 | SHA-256 |
+| --- | --- |
+| `runtime/wave3_gdn_norm_block_m_probe.py` | `b1cad7585600b7c51f52afa2aa640f0b581cb6641cb010347edfa2bfa1ec2b8b` |
+| `runtime/apply_gdn_norm_block_m.py` | `140766f26914a26d13c0b25b7082fcb5e5fbdac4c4b1438888a926244ba02bc1`（未变） |
+| `runtime/gdn_norm_block_m_env_check.sh` | `805d60b2213f2fe856b5cf777e7ce28b4d015a6cb7c83631a748c60a495daf58` |
+| `runtime/run_gdn_norm_block_m.sh` | `716c82154a82c8ce8d03b318d52cf885f586e09503a25674b874e18a0438057a` |
+| `runtime/test_gdn_norm_block_m_probe.py` | `58fb77ed795572cd4e0286a69991eb863ad224b31c4eea2e9bf306ad642a4f18` |
+
+重试策略：旧两格归档；21 完成三检后使用**尚不存在的**新目录
+`/workspace/yangchen/logs/gdn-norm-block-m-20261118-run3` 单次重试；runner 会拒绝已存在目录，并在探针
+失败时仍执行 revert。设备、服务与三检仍由 21 负责。

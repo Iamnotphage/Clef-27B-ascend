@@ -75,6 +75,27 @@ def grid_row(arm: int) -> dict:
             "provenance": "ceil(rows/BLOCK_M), ngroups=1 as derived by the wrapper"}
 
 
+def unwrap_jit_function(kernel):
+    """Walk Triton's decorator wrappers down to the JITFunction.
+
+    ``layer_norm_gated.py`` stacks two ``@triton.heuristics`` decorators over
+    ``@triton.jit``.  ``Heuristics`` exposes ``.fn`` but not ``device_caches``;
+    only the innermost JITFunction owns the compiled-kernel cache and
+    ``arg_names``.
+    """
+    chain = []
+    seen = set()
+    current = kernel
+    while not hasattr(current, "device_caches"):
+        chain.append(type(current).__name__)
+        if id(current) in seen or not hasattr(current, "fn"):
+            return None, chain
+        seen.add(id(current))
+        current = current.fn
+    chain.append(type(current).__name__)
+    return current, chain
+
+
 def kernel_info(jit_fn, compiled) -> dict:
     metadata = compiled.metadata
     fields, missing = {}, []
@@ -295,6 +316,16 @@ def main(argv=None) -> int:
         failures.append(f"{ENV_VAR} is absent; run the installer first")
     if args.expect_source_sha is not None and source_sha != args.expect_source_sha:
         failures.append("source SHA-256 does not match --expect-source-sha")
+    jit_fn, unwrap_chain = unwrap_jit_function(_layer_norm_fwd_1pass_kernel_npu)
+    report["kernel_object"] = {
+        "module_attribute": type(_layer_norm_fwd_1pass_kernel_npu).__name__,
+        "unwrap_chain": unwrap_chain,
+        "unwrapped": type(jit_fn).__name__ if jit_fn is not None else None,
+        "has_device_caches": jit_fn is not None,
+        "has_arg_names": bool(jit_fn is not None and hasattr(jit_fn, "arg_names")),
+    }
+    if jit_fn is None or not hasattr(jit_fn, "arg_names"):
+        failures.append("could not unwrap the Triton decorators to a JITFunction")
     if failures:
         report["failures"] = failures
         report["ready"] = False
@@ -337,7 +368,7 @@ def main(argv=None) -> int:
     from triton.runtime import driver as triton_driver
     cache_device = triton_driver.active.get_current_device()
     report["device"]["triton_cache_device"] = cache_device
-    cache = _layer_norm_fwd_1pass_kernel_npu.device_caches[cache_device][0]
+    cache = jit_fn.device_caches[cache_device][0]
 
     def flush(phase: str) -> None:
         report["phase"] = phase
@@ -353,7 +384,7 @@ def main(argv=None) -> int:
             call()
         torch.npu.synchronize()
         new_keys = [key for key in cache.keys() if key not in before_keys]
-        entries = [kernel_info(_layer_norm_fwd_1pass_kernel_npu, cache[key]) for key in new_keys]
+        entries = [kernel_info(jit_fn, cache[key]) for key in new_keys]
         block_m_values = [entry["constants"].get("BLOCK_M") for entry in entries
                           if isinstance(entry.get("constants"), dict)]
         specialization_ok = arm in block_m_values
