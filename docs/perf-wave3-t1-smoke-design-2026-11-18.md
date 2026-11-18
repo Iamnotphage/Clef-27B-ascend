@@ -38,6 +38,33 @@
 - 对齐随引擎而变：`aicpu_kfc_def.h:23` 的 `HCCL_MIN_SLICE_ALIGN=128`（KFC 路径）；`alg_template_base.h:32` 的 16384（alg-template/superkernel）。967×5120 只满足前者。
 - 910_93 的 OPP kernel 目录无 hccl/mc2/rms 算子，不存在可直接调用的 `aclnnAllReduceAddRmsNorm`，必须自研。
 
+## 3.1 编译期门（2026-11-18，已执行，零 NPU）
+
+### 门 A：HCCL MC2 host args API —— **通过**
+
+`/usr/local/Ascend/cann-9.2.1/include/hccl/hccl_mc2.h`（声明 `Hccl*` 前缀），实现由 `libhccl.so` 导出
+（`libmc2_client.so` 导出的是旧命名 `Mc2*`，两者并存）。最小程序 `gate2`：
+
+| 调用 | 返回 |
+| --- | --- |
+| `HcclKfcAllocOpArgs(&args)` | 0，指针有效 |
+| `SetCount(4951040)` / `SetReduceType(0)` / `SetSrcDataType(11)` / `SetDstDataType(11)` / `SetAlgConfig("NHR")` | 均 0 |
+| `HcclKfcFreeOpArgs` | 0 |
+
+**引擎枚举更正**：`SetCommEngine` 只接受 **2（`COMM_ENGINE_AICPU`）与 4（`COMM_ENGINE_AIV`）**；
+0（CPU）、1（CPU_TS）、3（AICPU_TS）全部返回 rc=5。22 方案里的「1 = AICPU」有误，AICPU 是 **2**。
+（枚举见 `/usr/local/Ascend/cann-9.2.1/include/hcomm/hcomm_res_defs.h:108-112`。）
+
+链接集合：`-L$H/lib64 -L$H/aarch64-linux/lib64 -lhccl -lhcomm -lascendcl -Wl,--allow-shlib-undefined`；
+缺 `hcomm/ascendcl` 会出现 `aclrt*`/`Hcomm*` 未定义。
+
+### 门 B：MC2 tiling API —— **未证实（需走官方 op 构建）**
+
+- 头文件在 `asc/include/adv_api/hccl/hccl_tiling.h`（`AscendC::Mc2CcTilingConfig`，含 `GetTiling(Mc2InitTiling&)` / `GetTiling(Mc2CcTiling&)` 与 `SetCommEngine/SetAlgConfig/SetStepSize`）。
+- 实现位于 `aarch64-linux/lib64/libtiling_api.a`；`optiling::TilingDef` 的依赖在 `aarch64-linux/lib64/device/lib64/libtilingdata_base.a`。
+- 但用独立 `g++` 手动链接会失败：`Mc2CcTilingConfig` 构造函数未解析 + `TilingDefImpl::InitData` 为 hidden symbol 与 DSO 冲突。
+- **判定：该接口只能通过官方 `npu_op_package` CMake 流程（op_host）验证**，不能用独立小程序替代。smoke 的构建必须走 `runtime/ascendc/clef_ar_add_rms_norm/build.sh`，并把 tiling 头包含进 op_host。
+
 ## 4. 构建与安装
 
 - 复用 `runtime/ascendc/clef_gdn_conv_qkv/` 的 `build.sh` + `CMakeLists.txt` + `op_host`/`op_kernel` 布局，新建 `runtime/ascendc/clef_ar_rms_smoke/`，**不覆盖**已验收的 `Clef-27B/src/ascendc/vendors/{clef_conv_qkv,customize}`。
@@ -76,4 +103,5 @@
 ## 8. 待办
 
 1. 等用户对「是否投入 0.5–1 天做 smoke」给出明确授权；
-2. 等 22 号的「调用链 + 伪代码 + 编译产物清单」2/2 方案，与本文对齐后开工。
+2. ~~等 22 号的实现方案~~：2a/2 + 2b/2 已收到，本文已按它更新，并修正了 `SetCommEngine` 的取值（AICPU=2，不是 1）；
+3. 授权后第一步是搭 `runtime/ascendc/clef_ar_add_rms_norm/` 的 op_host + op_kernel 骨架，用官方 `npu_op_package` 构建验证门 B（tiling），再做 2-rank comm（自建 `HcclCommInitRootInfo`，不依赖 torch.distributed）与 kernel 门 A/B。
