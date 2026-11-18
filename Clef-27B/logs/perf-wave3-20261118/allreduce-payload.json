@@ -1,0 +1,126 @@
+{
+ "rows": [
+  {
+   "kind": "sweep",
+   "rank": 0,
+   "tokens": 967,
+   "hidden": 5120,
+   "payload_mb": 9.443359375,
+   "one": {
+    "ms": 0.40698982775211334,
+    "device_ms": 0.3048499971628189,
+    "min_ms": 0.360140111297369,
+    "samples": 30
+   },
+   "chain": {
+    "ms_per_call": 0.12485311890486628,
+    "calls": 32,
+    "repeats": 5
+   },
+   "gb_per_s": 73.8630377882294
+  },
+  {
+   "kind": "sweep",
+   "rank": 0,
+   "tokens": 1595,
+   "hidden": 5120,
+   "payload_mb": 15.576171875,
+   "one": {
+    "ms": 0.45728497207164764,
+    "device_ms": 0.3561500012874603,
+    "min_ms": 0.41499966755509377,
+    "samples": 30
+   },
+   "chain": {
+    "ms_per_call": 0.1642712450120598,
+    "calls": 32,
+    "repeats": 5
+   },
+   "gb_per_s": 92.59749230952124
+  },
+  {
+   "kind": "sweep",
+   "rank": 0,
+   "tokens": 4800,
+   "hidden": 5120,
+   "payload_mb": 46.875,
+   "one": {
+    "ms": 0.7379199378192425,
+    "device_ms": 0.6351100206375122,
+    "min_ms": 0.693929847329855,
+    "samples": 30
+   },
+   "chain": {
+    "ms_per_call": 0.453099055448547,
+    "calls": 32,
+    "repeats": 5
+   },
+   "gb_per_s": 101.02949153620177
+  },
+  {
+   "kind": "sweep",
+   "rank": 0,
+   "tokens": 9600,
+   "hidden": 5120,
+   "payload_mb": 93.75,
+   "one": {
+    "ms": 1.1871748138219118,
+    "device_ms": 1.0448399782180786,
+    "min_ms": 1.1160997673869133,
+    "samples": 30
+   },
+   "chain": {
+    "ms_per_call": 0.8837265631882474,
+    "calls": 32,
+    "repeats": 5
+   },
+   "gb_per_s": 103.59848644212119
+  },
+  {
+   "kind": "payload_split",
+   "dimension": "allreduce_payload_eq_next_matmul_k",
+   "rank": 0,
+   "tokens": 967,
+   "hidden": 5120,
+   "whole_one_ms": 0.3963899798691273,
+   "half_pair_ms": 0.39062020368874073,
+   "ratio_half_over_whole": 0.985444192655194,
+   "payload_mb": 9.443359375
+  },
+  {
+   "kind": "payload_split",
+   "dimension": "allreduce_payload_eq_next_matmul_k",
+   "rank": 0,
+   "tokens": 1595,
+   "hidden": 5120,
+   "whole_one_ms": 0.43434021063148975,
+   "half_pair_ms": 0.39783515967428684,
+   "ratio_half_over_whole": 0.9159528635303464,
+   "payload_mb": 15.576171875
+  }
+ ],
+ "analysis": {
+  "fit": {
+   "fixed_ms": 0.03038465275045854,
+   "slope_ms_per_mb": 0.009082167459433625,
+   "implied_bw_gbs": 0.10752526909043578,
+   "points": 4,
+   "implied_bw_gbs_recomputed": 110.10587554860624,
+   "implied_bw_note": "slope is ms/MB; 1 MB/ms == 1 GB/s, so implied_bw = 1/slope. The implied_bw_gbs field above was written by the pre-fix formula and is off by 1024; use this field."
+  },
+  "ratio_at": {
+   "967": 0.985444192655194,
+   "1595": 0.9159528635303464
+  },
+  "dimension_note": "ratio is the allreduce-payload split (next matmul K); a down_proj K-reduction split keeps full [M,5120] partials and doubles the full-payload allreduce count, so it needs its own cost model and is not implied by this ratio",
+  "t2_gate": "ratio_half_over_whole < 0.90 -> payload split returns earlier; still only necessary, not sufficient (needs the overlap bound)"
+ },
+ "world_size": 2,
+ "hidden": 5120,
+ "host_load": [
+  22.060546875,
+  20.2890625,
+  19.24365234375
+ ],
+ "created_at": "2026-11-18T01:55:31+0000"
+}
