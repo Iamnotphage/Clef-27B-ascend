@@ -685,7 +685,19 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 - **不漏行、不重复写**（M 段互斥且覆盖全区间；CPU 140 例只证这一点），但**不是 24 路 cube 并行**，只是 12 个 cube 各做两段。
 - 若要 `usedCoreNum` 路 cube，worker 判据应改为 `subBlockId==0 && aicIdx<usedCoreNum`（`aicIdx = GetBlockIdx()/MIX_NUM`）——**需改代码，本轮未做**。
 
-### 27.3 问题 ②：`SyncAll<true>` 两 AIV 子块共用同一 GM 槽 ⇒ 可能永久等待
+### 27.3 问题 ②（**2026-11-18 22:38 CST 更正，24/23 SDK 实读**）：该挂死推断引用了错误的函数
+
+**更正**：22 的"GM 槽共享 → 挂死"引用的是**带 gm/ub 参数的 `SoftSyncAllImpl`**。本包调用的是**无参 `SyncAll<true>()`**，经
+`kernel_operator_block_sync_intf_impl.h:236-240` → `dav_c220/kernel_operator_sync_impl.h:363-403`，
+其 `true` 分支使用**硬件 `ffts_cross_core_sync` + `wait_flag_dev`**，**不使用该 GM 槽**。
+
+因此：
+- 「两 AIV 子块共用同一 GM 槽 ⇒ 永久等待」**不成立**（错引函数）；
+- **参与者集合与 GM 可见性仍未定**（这两点本身仍开放）；
+- **timeout 不能单独归因于屏障**。
+
+以下原文保留为已作废的推断记录：
+
 
 - `:77` 在 `isAIVOnly` 时用 `get_block_idx()`（AIC 下标 0..23）算槽位，`:72` 总块数用 `GetBlockNum()`。
 - 若 `GetBlockNum()` 在 AIV 返回 **AIV 数（48）**，则 48 个到达者只写 24 个槽 ⇒ **屏障永不满足 → 挂死**。
