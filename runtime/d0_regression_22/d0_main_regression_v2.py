@@ -128,6 +128,45 @@ def guard() -> None:
     socket.create_connection = no_net
     REC["sources"]["guards"] = "subprocess.run/Popen, os.kill/killpg, socket"
 
+    # ---- filesystem boundary for the read-only identity sources --------------
+    # /proc/<pid>/stat and the boot id are the only inputs _identity uses; the
+    # api.pid file is what discover_service_pids reads. All three are external
+    # read-only sources, so they may be supplied here without touching any
+    # production function.
+    import pathlib
+    real_read_text = pathlib.Path.read_text
+    state = {"stat_reads": 0, "boot_reads": 0}
+    SC = REC.setdefault("scenario", "happy")
+
+    def fake_read_text(self, *a, **kw):
+        p = str(self)
+        if p.startswith("/proc/") and p.endswith("/stat"):
+            state["stat_reads"] += 1
+            # root_changed: a different starttime on the second read
+            start = "1000" if (SC != "root_changed" or state["stat_reads"] == 1) else "2000"
+            fields = ["0"] * 20
+            fields[19] = start
+            return "1 (comm) " + " ".join(fields) + "\n"
+        if p.endswith("/boot_id"):
+            state["boot_reads"] += 1
+            if SC == "boot_missing":
+                raise FileNotFoundError(p)
+            return "BOOT-TEST-0001\n"
+        if p.endswith("/api.pid"):
+            return "424242\n"
+        return real_read_text(self, *a, **kw)
+
+    real_is_file = pathlib.Path.is_file
+
+    def fake_is_file(self):
+        if str(self).endswith("/api.pid"):
+            return True
+        return real_is_file(self)
+
+    pathlib.Path.read_text = fake_read_text
+    pathlib.Path.is_file = fake_is_file
+    REC["sources"]["fs"] = "Path.read_text for /proc/*/stat, boot_id, api.pid"
+
 
 def profile_hook(frame, event, arg):
     """Record which production functions are entered, without patching them."""
@@ -145,6 +184,8 @@ def main() -> int:
     ap.add_argument("--repo", required=True)
     ap.add_argument("--commit", required=True)
     ap.add_argument("--json-out", required=True)
+    ap.add_argument("--scenario", default="happy",
+                    choices=("happy", "root_changed", "boot_missing"))
     a = ap.parse_args()
     repo = Path(a.repo).resolve()
     out = {"target_commit": a.commit, "checks": [], "not_reached": []}
@@ -165,6 +206,7 @@ def main() -> int:
 
     guard()                      # BEFORE importing the production modules
     sys.path.insert(0, str(mod_dir))
+    REC["scenario"] = a.scenario
     try:
         run_mod = importlib.import_module("d0_run")
         out["import_ok"] = True
@@ -214,6 +256,21 @@ def main() -> int:
     chk("verify_reached", any(k.endswith(".verify") for k in REC["arrived"]), "")
     chk("no_network", len(REC["net"]) == 0, f"net={REC['net']}")
     chk("no_unexpected_argv", all(allowed(x) for x in REC["argv"]), f"argv={REC['argv']}")
+
+    if a.scenario != "happy":
+        res_mod = sys.modules.get("d0_restore")
+        info = res_mod.discover_service_pids(res_mod.SERVICE_LABEL, before=None) if res_mod else {}
+        out["discovery"] = {k: (sorted(v) if isinstance(v, set) else v) for k, v in info.items()}
+        chk("discovery_reports_error", bool(info.get("error")), f"error={info.get('error')!r}")
+        if a.scenario == "root_changed":
+            chk("error_with_nonempty_pids", bool(info.get("error")) and bool(info.get("pids")),
+                f"pids={out['discovery'].get('pids')}")
+        if a.scenario == "boot_missing":
+            chk("boot_missing_not_stable", info.get("identity_stable") is not True,
+                f"identity_stable={info.get('identity_stable')!r}")
+        chk("verify_not_passed_on_bad_identity",
+            (not any(k.endswith(".verify") for k in REC["arrived"])) or (not out.get("verify_pids_ok", False)),
+            f"verify_arrived={any(k.endswith('.verify') for k in REC['arrived'])}")
 
     for name in ("run_child", "query_group", "restore", "verify", "parse"):
         if not any(name in k for k in REC["arrived"]):
