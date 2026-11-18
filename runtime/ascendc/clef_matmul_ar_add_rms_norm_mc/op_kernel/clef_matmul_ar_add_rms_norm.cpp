@@ -1,7 +1,7 @@
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 #include "adv_api/hccl/hccl.h"
-#include "../clef_matmul_ar_add_rms_norm_tiling.h"
+#include "clef_matmul_ar_add_rms_norm_tiling.h"
 
 using namespace AscendC;
 
@@ -499,7 +499,7 @@ private:
     uint8_t repeat_{1};
 };
 
-extern "C" __global__ __aicore__ void clef_matmul_ar_add_rms_norm_mc(
+extern "C" __global__ __aicore__ void clef_matmul_ar_add_rms_norm(
     GM_ADDR x, GM_ADDR w, GM_ADDR residual, GM_ADDR gamma,
     GM_ADDR out, GM_ADDR residualOut, GM_ADDR rstd, GM_ADDR diag,
     GM_ADDR workspace, GM_ADDR tilingGm) {

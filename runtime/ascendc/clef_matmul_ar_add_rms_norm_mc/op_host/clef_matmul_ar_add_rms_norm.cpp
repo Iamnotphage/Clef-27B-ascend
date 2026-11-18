@@ -274,9 +274,9 @@ static graphStatus InferDataType(gert::InferDataTypeContext* context) {
 }  // namespace ge
 
 namespace ops {
-class ClefMatmulArAddRmsNormMc : public OpDef {
+class ClefMatmulArAddRmsNorm : public OpDef {
 public:
-    explicit ClefMatmulArAddRmsNormMc(const char* name) : OpDef(name) {
+    explicit ClefMatmulArAddRmsNorm(const char* name) : OpDef(name) {
         // This package's device side is compiled for an NZ weight (kernel
         // MatmulType and host SetBType are fixed at CubeFormat::NZ), so the
         // operator must declare exactly that and nothing else.  Declaring an
@@ -332,5 +332,5 @@ public:
         this->MC2().HcclGroup("group");
     }
 };
-OP_ADD(ClefMatmulArAddRmsNormMc);
+OP_ADD(ClefMatmulArAddRmsNorm);
 }  // namespace ops
