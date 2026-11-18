@@ -7,6 +7,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+# CPU-only: never let torch try to load a device backend here.
+os.environ.setdefault("TORCH_DEVICE_BACKEND_AUTOLOAD", "0")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import d0_restore  # noqa: E402
 
