@@ -392,9 +392,7 @@ public:
         // set that actually issued matmul work.  The template default is not a
         // usability proof, and a CPU range sweep says nothing about this.
         TraceBit(1u, 0u);              // K7a before barrier
-        TraceBit(1u, 0u);                  // K7a before barrier
         SyncAll<true>();
-        TraceBit(1u, 1u);                  // K7b after barrier
         TraceBit(1u, 1u);              // K7b after barrier
         PipeBarrier<PIPE_ALL>();
 
