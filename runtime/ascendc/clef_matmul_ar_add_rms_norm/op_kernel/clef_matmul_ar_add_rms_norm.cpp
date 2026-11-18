@@ -57,10 +57,15 @@ public:
         wGm_ = w;
 
         const uint64_t mnBytes = static_cast<uint64_t>(m_) * n_ * 2;
-        partialGm_ = workspace;
-        arGm_ = (workspace != nullptr) ? (GM_ADDR)((__gm__ uint8_t*)workspace + mnBytes) : nullptr;
-        if (workspace != nullptr) {
-            flagGm_ = (__gm__ float*)((__gm__ uint8_t*)workspace + 2 * mnBytes);
+        // The KFC system region lives in front of the user region; only the
+        // user part may be used for the matmul output, the reduce output and
+        // the completion flag.
+        GM_ADDR userWs = AscendC::GetUserWorkspace(workspace);
+        wsGm_ = userWs;
+        partialGm_ = userWs;
+        arGm_ = (userWs != nullptr) ? (GM_ADDR)((__gm__ uint8_t*)userWs + mnBytes) : nullptr;
+        if (userWs != nullptr) {
+            flagGm_ = (__gm__ float*)((__gm__ uint8_t*)userWs + 2 * mnBytes);
             flagG_.SetGlobalBuffer(flagGm_, 8);
         }
         diag_.SetGlobalBuffer((__gm__ float*)diag, 8);

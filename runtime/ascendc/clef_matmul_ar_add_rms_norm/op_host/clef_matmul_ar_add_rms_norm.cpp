@@ -192,8 +192,12 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     if (t->mmTilingRc != 0) { return ge::GRAPH_FAILED; }
 
     context->SetBlockDim(cores);
-    // workspace: partial[M,N] (matmul out) | reduced[M,N] (AllReduce out) | flag
-    context->GetWorkspaceSizes(1)[0] = static_cast<size_t>(m) * n * 2 * 2 + 128;
+    // The KFC matmul owns a system workspace region that the framework places
+    // in front of the user region; the kernel reaches its own buffers through
+    // GetUserWorkspace().  Size = system region + partial | reduced | flag.
+    const size_t sysWs = platform.GetLibApiWorkSpaceSize();
+    const size_t userWs = static_cast<size_t>(m) * n * 2 * 2 + 128;
+    context->GetWorkspaceSizes(1)[0] = sysWs + userWs;
     return ge::GRAPH_SUCCESS;
 }
 }  // namespace optiling
