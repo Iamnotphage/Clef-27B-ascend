@@ -16,6 +16,8 @@ routing 原实现两次 memory LayerNorm 产生不同 K/V 对象，走独立 K/V
 
 `runtime/joint_smallq/clef_smallq_kernel.py` 中 `clef_smallq_online` 为实际自定义 Triton kernel：每个 `(head, query)` 一个 program，64 token 分块，FP32 QK 点积、在线 max/exp/sum、FP32 PV 累加，最终写 BF16 BSH。每处 attention core 一次 launch，无全局 score/probability 中间张量。使用当前输入即时计算，未缓存答案、权重或激活。
 
+首阶段后的服务化修正将 L 改成运行时 i32，并设 `do_not_specialize=["L"]`，全部支持长度共用一个 binary，避免 OD 大量长度逐个 JIT。Q 数目只改变 launch grid。该版本离线编译 2.591547 秒成功，kernel SHA `08ad88f6cebfb148aff8d973097d5bcf234e25d144a824385b18b8b078e82dff`，binary SHA `4fbed082933ae2fcb597ad758384fb707f5ce5ff66bd3546a13a4676c682ef44`。下表保留首版 constexpr L 的编译证据；设备首跑统一使用运行时 L 版本。
+
 `CLEF_JOINT_SMALLQ=1` 才启用。域为单字段推理、eval、梯度关闭、B1、BF16、width1024/head16、Q1–8、L1–2048、最后一维连续、同设备、无 bias_k/v/add_zero_attn。其它情况返回原 MHA；默认关闭路径不导入 Triton/新 kernel。多字段原 decoder 路径保持完整。长 ERQA 回退原路径。
 
 收益预算：相对独立 QK/softmax/PV，core 可由至少 3 launches 降为 1，免写读 score/probability；O4、6 层、L967 时，两个中间量共 `192×967` 元素，各一次写读约 1.49 MB（BF16）或 2.97 MB（FP32）。原 SDPA 常用分支已有融合，上述预算仅适用于 math 分支；本窗口主要验证小 Q 的 vector tiling、直接 BSH 写回与通用 attention 调度成本。Q1 仅 16 个 program，QO 重读 K/V，均可能抵消收益。真实 head 约 5 ms，最终采用需稳定同窗口 S1/S2 收益及完整质量通过。

@@ -16,7 +16,6 @@ import time
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--lengths", default="307,967,2048")
     ap.add_argument("--kernel", type=Path,
                     default=Path(__file__).parent / "joint_smallq/clef_smallq_kernel.py")
     args = ap.parse_args()
@@ -38,17 +37,17 @@ def main():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     target = GPUTarget("npu", "Ascend910_9382", 0)
-    for length in map(int, args.lengths.split(",")):
-        start = time.perf_counter()
-        source = ASTSource(module.clef_smallq_online,
-                           {key: "*bf16" for key in ("Q", "K", "V", "Out")},
-                           {"L": length, "QS": 1024, "KS": 1024, "VS": 1024,
-                            "WIDTH": 1024, "D": 64, "BLOCK": 64})
-        compiled = triton.compile(source, target=target)
-        print(json.dumps({"length": length, "seconds": time.perf_counter() - start,
-                          "binary_sha256": hashlib.sha256(compiled.asm["npubin"]).hexdigest(),
-                          "kernel_sha256": hashlib.sha256(args.kernel.read_bytes()).hexdigest(),
-                          "mode": "offline_compile_only_no_device"}), flush=True)
+    start = time.perf_counter()
+    signature = {key: "*bf16" for key in ("Q", "K", "V", "Out")} | {"L": "i32"}
+    source = ASTSource(module.clef_smallq_online, signature,
+                       {"QS": 1024, "KS": 1024, "VS": 1024,
+                        "WIDTH": 1024, "D": 64, "BLOCK": 64})
+    compiled = triton.compile(source, target=target)
+    print(json.dumps({"length": "runtime i32, no per-length specialization",
+                      "seconds": time.perf_counter() - start,
+                      "binary_sha256": hashlib.sha256(compiled.asm["npubin"]).hexdigest(),
+                      "kernel_sha256": hashlib.sha256(args.kernel.read_bytes()).hexdigest(),
+                      "mode": "offline_compile_only_no_device"}), flush=True)
 
 
 if __name__ == "__main__":

@@ -10,10 +10,10 @@ import triton
 import triton.language as tl
 
 
-@triton.jit
+@triton.jit(do_not_specialize=["L"])
 def clef_smallq_online(
     Q, K, V, Out,
-    L: tl.constexpr, QS: tl.constexpr, KS: tl.constexpr, VS: tl.constexpr,
+    L, QS: tl.constexpr, KS: tl.constexpr, VS: tl.constexpr,
     WIDTH: tl.constexpr = 1024, D: tl.constexpr = 64,
     BLOCK: tl.constexpr = 64,
 ):
