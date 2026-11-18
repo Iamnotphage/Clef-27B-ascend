@@ -88,6 +88,17 @@ def launch_cmd(a) -> list:
             "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)]
 
 
+def _live_pids() -> set:
+    """Pids alive before the restore, so new descendants can be attributed."""
+    out = set()
+    if not Path("/proc").is_dir():
+        return out
+    for d in Path("/proc").iterdir():
+        if d.name.isdigit():
+            out.add(int(d.name))
+    return out
+
+
 def render_request(kind: str) -> str:
     """Serialise the recorded request body for the text or image probe.
 
@@ -238,7 +249,8 @@ def main() -> int:
         # failure never overwrites the test rc.
         wrapper_rc = test_rc if isinstance(test_rc, int) else 4
         try:
-            from d0_restore import (SERVICE_LAUNCH, SERVICE_WAIT, build_commands,
+            from d0_restore import (SERVICE_LABEL, SERVICE_LAUNCH, SERVICE_WAIT,
+                                    build_commands, discover_service_pids,
                                     restore, verify)
             rlog = {"test_rc": test_rc, "test_exception": test_exc}
 
@@ -272,8 +284,12 @@ def main() -> int:
             if blocked:
                 restored = verified = False
             else:
+                before = _live_pids()
                 restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
-                service_pids = rlog.get("service_pids") or set()
+                disc = discover_service_pids(SERVICE_LABEL, before)
+                rlog["service_discovery"] = disc
+                service_pids = disc.get("pids") or set()
+                rlog["service_pids"] = sorted(service_pids)
                 verified = verify(build_commands(render_request), rlog,
                                   service_pids=service_pids) if restored else False
             rlog["restore_ok"], rlog["verify_ok"] = restored, verified

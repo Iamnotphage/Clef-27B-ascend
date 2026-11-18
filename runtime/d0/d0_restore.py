@@ -27,6 +27,7 @@ STAGES = ("cleanup", "restore", "health", "workers", "text", "image")
 # The config is pinned rather than inherited: an inherited CLEF_LAUNCH_CONFIG
 # is not a verified default.
 SERVICE_LABEL = "final-default-s1"
+SERVICE_LOG_ROOT = "/workspace/yangchen/logs/perf-wave2-20261118"
 SERVICE_CONFIG = "s1"
 SERVICE_LAUNCH = ["bash", "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
                   SERVICE_LABEL]
@@ -196,6 +197,57 @@ def _parse_answer(text: str, expect: str) -> bool:
         return json.loads(text)["answers"]["answer"].get("type") == expect
     except Exception:                                        # noqa: BLE001
         return False
+
+
+def discover_service_pids(label: str, before: set[int] | None = None) -> dict:
+    """Read the api pid the launcher wrote and collect its live descendants.
+
+    The launcher records `api.pid` inside its label directory; workers are
+    children of that process. Pids already present before the restore are
+    excluded so an unrelated tree cannot be attributed to the new service.
+    """
+    pid_file = Path(SERVICE_LOG_ROOT) / label / "api.pid"
+    info = {"pid_file": str(pid_file), "exists": pid_file.is_file()}
+    if not info["exists"]:
+        info["error"] = "api.pid missing"
+        return info
+    try:
+        root = int(pid_file.read_text().strip())
+    except (OSError, ValueError) as exc:
+        info["error"] = f"api.pid unreadable: {exc}"
+        return info
+    info["api_pid"] = root
+    ident = _identity(root)
+    info["api_identity"] = ident
+    if ident is None:
+        info["error"] = "api pid not alive"
+        return info
+    descendants: set[int] = set()
+    if Path("/proc").is_dir():
+        children: dict[int, list[int]] = {}
+        for d in Path("/proc").iterdir():
+            if not d.name.isdigit():
+                continue
+            st = _identity(int(d.name))
+            if st is None:
+                continue
+            try:
+                ppid = int((d / "stat").read_text().split(") ", 1)[1].split()[1])
+            except (OSError, IndexError):
+                continue
+            children.setdefault(ppid, []).append(int(d.name))
+        stack = [root]
+        while stack:
+            cur = stack.pop()
+            for c in children.get(cur, []):
+                if c not in descendants:
+                    descendants.add(c)
+                    stack.append(c)
+    if before:
+        descendants -= set(before)
+    info["pids"] = {root} | descendants
+    info["descendant_count"] = len(descendants)
+    return info
 
 
 def build_commands(render) -> dict:
