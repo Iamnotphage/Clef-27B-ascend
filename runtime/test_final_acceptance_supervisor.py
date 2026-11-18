@@ -9,8 +9,41 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+import contextlib
+import io
+import json
+from datetime import datetime, timezone, timedelta
 
 import final_acceptance_supervisor as subject
+
+
+class SingleRoundCliTest(unittest.TestCase):
+    def plan(self, extra):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp)
+            argv = ['supervisor', '--code', str(p / 'code'), '--manifest', str(p / 'manifest.json'),
+                '--manifest-sha', 'manifest-sha', '--phase', 's1', '--output-dir', str(p / 'out'),
+                '--records-dir', str(p / 'records'), '--identities', str(p / 'ids'),
+                '--launch-manifest', str(p / 'launch'), '--owner-evidence', str(p / 'owner'),
+                '--deadline-utc', (datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat(), *extra]
+            def fake_sha(path):
+                if Path(path).name == 'final_acceptance.py':return subject.RUNNER_SHA
+                if Path(path).name == 'manifest.json':return 'manifest-sha'
+                return subject.HELPER_SHA
+            out = io.StringIO()
+            with patch.object(sys, 'argv', argv), patch.object(subject, 'sha', side_effect=fake_sha), contextlib.redirect_stdout(out):
+                self.assertEqual(subject.main(), 0)
+            return json.loads(out.getvalue())['argv']
+
+    def test_default_full_phase_unchanged(self):
+        self.assertNotIn('--single-baseline-round', self.plan([]))
+
+    def test_single_s1_explicit_forward(self):
+        self.assertEqual(self.plan(['--single-baseline-round']).count('--single-baseline-round'), 1)
+
+    def test_single_other_phase_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'requires s1'):
+            self.plan(['--phase', 'erqa', '--single-baseline-round'])
 
 
 @unittest.skipUnless(Path('/proc/self/stat').exists(), 'Linux /proc required')

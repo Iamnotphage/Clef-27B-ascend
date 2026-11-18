@@ -114,3 +114,6 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 最终客户端监督器 [final_acceptance_supervisor.py](../runtime/final_acceptance_supervisor.py) v4 已经23有限核通过，SHA `03409c78b0e1d39f44299785247586a545c171a020ed78d886c441559c59db41`。默认plan-only，固定28 runner与5c helper文件SHA；隔离加载5c清理函数，并明确使用严格/proc查询适配器，清理前核整组完整cmdline、逐信号核PID/start/boot/PGID。服务PID保护、未知/查询失败阻断、最终clients_exited确认后才能切服务。此脚本仅监管评测客户端，不操作服务。
 
 绝对monotonic截止锚点在main准备前固定，准备、Popen及循环共享；到期拒绝启动、慢启动计入预算。真实Linux CPU 11项测试通过：正常/非0退出、超时双进程、已观测孤儿清理、查询失败、身份变化、保护服务、清理查询失败、PGID/cmdline前置门、准备过期、慢启动。v2在组KILL后的cmdline清空瞬态误记unknown，首错原件保留；v3将完整cmdline门置于清理前，v4收紧绝对deadline。测试仅创建自身CPU短进程，未导入NPU模块。证据 [CPU日志](../Clef-27B/logs/overnight-20261119-owner27/final-supervisor-cpu/final-supervisor-cpu-v4.log)，原failed日志与超时5次复核另列。正式评测尚未执行。
+
+
+单轮基线转发 v5 经23有限核通过：supervisor SHA `172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876`、test `044a4ef7033a8a2d7929aa3ea3413a0b1f0b1883274a18ba3cd70fada82e3ff0`。本体只更新28单轮runner pin为 `7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab` 并显式转发仅s1的 `--single-baseline-round`；所有监督/清理函数AST保持v4。新增3项CLI CPU测试通过。默认完整phase与最终S1≥3轮门保持，单轮输出单独标记 baseline_single_round/final_s1_complete=false。旧v4独立stage与commit保留。单轮仍待合法clean恢复和严格env检查通过后执行。

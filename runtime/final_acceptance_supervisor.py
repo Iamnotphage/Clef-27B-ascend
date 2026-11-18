@@ -19,7 +19,7 @@ import time
 import traceback
 
 HELPER_SHA = '9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5'
-RUNNER_SHA = 'e6ddb887c92c4f34a4d05502b7ff3317b1b10845f20bd7d63e8d95d34b049ff3'
+RUNNER_SHA = '7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab'
 PYTHON = '/workspace/yangchen/venvs/clef-py312/bin/python'
 
 
@@ -192,6 +192,7 @@ def main():
     p.add_argument('--manifest', type=Path, required=True)
     p.add_argument('--manifest-sha', required=True)
     p.add_argument('--phase', choices=('s1', 's2_b8', 's2_b16', 'erqa'), required=True)
+    p.add_argument('--single-baseline-round', action='store_true')
     p.add_argument('--output-dir', type=Path, required=True)
     p.add_argument('--records-dir', type=Path, required=True)
     p.add_argument('--identities', type=Path, required=True)
@@ -215,6 +216,9 @@ def main():
     argv = [PYTHON, str(runner), '--manifest', str(a.manifest.resolve()), '--phase', a.phase,
             '--output-dir', str(a.output_dir.resolve()), '--identities', str(a.identities.resolve()),
             '--launch-manifest', str(a.launch_manifest.resolve()), '--owner-evidence', str(a.owner_evidence.resolve()), '--execute']
+    if a.single_baseline_round:
+        require(a.phase == 's1', 'single baseline round requires s1')
+        argv.append('--single-baseline-round')
     if not a.execute:
         print(json.dumps(dict(status='plan_not_executed', argv=argv, deadline_utc=deadline.isoformat(), timeout_seconds=seconds), indent=2))
         return 0
