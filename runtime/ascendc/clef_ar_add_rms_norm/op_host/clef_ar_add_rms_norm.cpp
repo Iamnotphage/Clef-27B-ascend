@@ -35,11 +35,14 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     if (t->repeat == 0 || t->repeat > 255) { return ge::GRAPH_FAILED; }
     // The group must be the real HCCL comm name (from the actual PG), never a
     // hardcoded string; the op def marks it REQUIRED and binds it to MC2.
+    const auto* useHccl = context->GetAttrs()->GetAttrPointer<int64_t>(3);
+    const bool wantHccl = (useHccl == nullptr) || (*useHccl != 0);
     const char* group = context->GetAttrs()->GetAttrPointer<char>(2);
-    if (group == nullptr || group[0] == '\0') { return ge::GRAPH_FAILED; }
+    if (wantHccl && (group == nullptr || group[0] == '\0')) { return ge::GRAPH_FAILED; }
+    if (group == nullptr) group = "";
     t->commEngine = kEngineAicpu;
     t->opType = kOpTypeAllReduce;
-    t->useHccl = 1;
+    t->useHccl = wantHccl ? 1u : 0u;
 
     // mc2InitTiling is the first member and mc2CcTiling follows it, so the
     // kernel can use offsetof() as the SetCcTilingV2 offset.
@@ -47,10 +50,15 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     static_assert(sizeof(::Mc2CcTiling) == kMc2CcBytes, "cc tiling size");
     std::memset(t->mc2InitTiling, 0, kMc2InitBytes);
     std::memset(t->mc2CcTiling, 0, kMc2CcBytes);
-    AscendC::Mc2CcTilingConfig cfg(group, kOpTypeAllReduce, kAlg, kReduceSum,
-                                   kBf16, kBf16, kEngineAicpu);
-    t->initTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2InitTiling*>(t->mc2InitTiling));
-    t->ccTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2CcTiling*>(t->mc2CcTiling));
+    if (wantHccl) {
+        AscendC::Mc2CcTilingConfig cfg(group, kOpTypeAllReduce, kAlg, kReduceSum,
+                                       kBf16, kBf16, kEngineAicpu);
+        t->initTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2InitTiling*>(t->mc2InitTiling));
+        t->ccTilingRc = cfg.GetTiling(*reinterpret_cast<::Mc2CcTiling*>(t->mc2CcTiling));
+    } else {
+        t->initTilingRc = 0;
+        t->ccTilingRc = 0;
+    }
 
     // The AR smoke runs the collective from a single block: only core 0 may
     // write hcclMsgArea, and cross-block handle sharing is still unverified.
@@ -107,6 +115,7 @@ public:
         this->Attr("eps").Float();
         this->Attr("repeat").Int(1);
         this->Attr("group").String();
+        this->Attr("use_hccl").Int(1);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");
