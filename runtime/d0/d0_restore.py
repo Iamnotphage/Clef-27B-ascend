@@ -17,7 +17,7 @@ import os
 import signal
 import subprocess
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 STAGES = ("cleanup", "restore", "health", "workers", "text", "image")
@@ -26,7 +26,20 @@ STAGES = ("cleanup", "restore", "health", "workers", "text", "image")
 # They are the actual paths used then; this module never runs them here.
 # The config is pinned rather than inherited: an inherited CLEF_LAUNCH_CONFIG
 # is not a verified default.
-SERVICE_LABEL = "final-default-s1"
+# launch.sh takes the first argument purely as a log directory name and reads
+# the model config from CLEF_LAUNCH_CONFIG, so label and config are separate.
+# A historical label would overwrite an existing api.pid, so one is generated
+# per restore instead.
+
+
+def new_service_label() -> str:
+    """A fresh log label: d0-restore-<UTC yyyymmddThhmmssZ>-<uuid8>."""
+    import uuid
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"d0-restore-{stamp}-{uuid.uuid4().hex[:8]}"
+
+
+SERVICE_LABEL = "final-default-s1"      # historical default, not used for restores
 SERVICE_LOG_ROOT = "/workspace/yangchen/logs/perf-wave2-20261118"
 SERVICE_CONFIG = "s1"
 SERVICE_LAUNCH = ["bash", "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",

@@ -210,7 +210,9 @@ def main() -> int:
     refuse_existing(a.out_dir)
     a.out_dir.mkdir(parents=True)
 
-    plan = {
+    run_id = f"d0-{datetime.now().strftime('%Y%m%dT%H%M%S')}-{a.out_dir.name}"
+    plan = {"run_id": run_id,
+            "out_dir": str(a.out_dir),
         "cell": {"mm_dim": a.mm_dim, "use_hccl": a.use_hccl, "rows": a.rows, "seed": a.seed},
         "trace": {"slots": TRACE_SLOTS, "fields": TRACE_FIELDS, "bytes": TRACE_BYTES,
                   "container_dtype": "int32", "acl_view": "ACL_UINT32",
@@ -249,10 +251,14 @@ def main() -> int:
         # failure never overwrites the test rc.
         wrapper_rc = test_rc if isinstance(test_rc, int) else 4
         try:
-            from d0_restore import (SERVICE_LABEL, SERVICE_LAUNCH, SERVICE_WAIT,
+            from d0_restore import (SERVICE_CONFIG, SERVICE_LAUNCH, SERVICE_WAIT,
                                     build_commands, discover_service_pids,
-                                    restore, verify)
-            rlog = {"test_rc": test_rc, "test_exception": test_exc}
+                                    new_service_label, restore, verify)
+            label = new_service_label()          # unique per restore
+            launch = ["bash", SERVICE_LAUNCH[1], label]
+            rlog = {"test_rc": test_rc, "test_exception": test_exc,
+                    "run_id": run_id, "service_label": label,
+                    "service_config": SERVICE_CONFIG}
 
             # The test group must be gone before a restore can start; a failed
             # or incomplete query blocks rather than launching over it.
@@ -285,8 +291,8 @@ def main() -> int:
                 restored = verified = False
             else:
                 before = _live_pids()
-                restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
-                disc = discover_service_pids(SERVICE_LABEL, before)
+                restored = restore(launch, SERVICE_WAIT, rlog)
+                disc = discover_service_pids(label, before)
                 rlog["service_discovery"] = disc
                 service_pids = set(disc.get("pids") or [])
                 rlog["service_pids"] = sorted(service_pids)
