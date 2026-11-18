@@ -1,0 +1,3 @@
+all: clef_matmul_ar_add_rms_norm0
+clef_matmul_ar_add_rms_norm0:
+	cd /workspace/yangchen/work/wave3-e-audit-22/runtime/ascendc/clef_matmul_ar_add_rms_norm_mc/build_out/op_kernel/ClefMatmulArAddRmsNorm_ascend910_93/kernel_0 && bash /workspace/yangchen/work/wave3-e-audit-22/runtime/ascendc/clef_matmul_ar_add_rms_norm_mc/build_out/op_kernel/ClefMatmulArAddRmsNorm_ascend910_93/bin_param/ClefMatmulArAddRmsNorm-clef_matmul_ar_add_rms_norm-0.sh --kernel-src=$(CPP) $(PY) $(OUT) $(MAKE)

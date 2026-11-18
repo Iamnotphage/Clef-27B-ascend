@@ -55,19 +55,19 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 | `magic` | `RT_DEV_BINARY_MAGIC_ELF` | 产物为 ELF |
 | `staticKey` / `sha256` | 见 JSON | 二进制/静态 key |
 
-**`taskRation = 1:2` 直接支撑**：`get_subblockdim()` 在 AIV 侧应为 **2**，
-即 `GetBlockIdx() = get_block_idx()*2 + get_subblockid()` 的 ratio 为 2。
-（这与 `dav_c220/kfc/kfc_comm.h:93-97` 的 `MIX_NUM` 默认 2 一致，但**两者是不同来源**：
- `taskRation` 来自本包产物，`MIX_NUM` 来自源内宏。）
+**效力边界**：`taskRation = 1:2` 仅作为**本次生成元数据**。
+它与 `get_subblockdim()` 的**运行返回值之间没有本次取得的直接契约**，也没有设备实读，
+因此**不能**写成"ratio 运行值已证明"。`GetBlockIdx()` 的公式
+`get_block_idx()*GetTaskRationImpl() + get_subblockid()`（源码事实）中的 ratio 仍是**动态 builtin**。
 
 ## 3. 宏与分支：可证到什么程度
 
 | 宏/分支 | 结论 | 依据 |
 | --- | --- | --- |
 | `__NPU_ARCH__` | 非 3510（c220 树 / `ascend910_93`） | 编译单元 + `dav_c220` 实现树 |
-| `USE_SSBUF` | **未定义**（源内条件） | `matmul_utils.h:26-38`：仅 `__NPU_ARCH__==3510` 定义 |
-| `USE_WORKSPACE` | **定义**（源内 `:36-38` 无条件分支） | 同上 |
-| 选中的 `IterateAll` 重载 | **`matmul_client.h:931-977`**（非 SSBUF 的 GM 重载） | 由上两行推出；`--compile-options=""` 无外部 `-D` |
+| `USE_SSBUF` | **源内条件推导**：非 3510 不定义 | `matmul_utils.h:26-38`；**未取得逐 pass 宏表** |
+| `USE_WORKSPACE` | **源内条件推导**：`:36-38` 无条件分支 | 同上 |
+| 选中的 `IterateAll` 重载 | **源内条件推导**为 `matmul_client.h:931-977` | 由上述两行推出；**外层 `--compile-options` 为空不等于下游无 `-D`**（见 §6.2） |
 | `__MIX_CORE_AIC_RATION__` | **无法从产物确定** | 源内 `#ifdef`，产物只给 `taskRation=1:2` |
 | `ASCEND_IS_AIV` / `ASCEND_IS_AIC` | 由双 pass 决定，`coreType=MIX` 印证 | `coreType` 实读 |
 | 选中的 `SyncAll` | `SyncAllImpl<true>` → FFTS `SYNC_AIV_ONLY_ALL` | `kernel_operator_sync_impl.h:363-403`（同机 SHA 见 §4） |
@@ -92,8 +92,8 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 
 | 项 | 内容 |
 | --- | --- |
-| 采集字段 | 每 block：`GetBlockIdx()`、`GetSubBlockIdx()`、`get_block_idx()`（如可读）、`GetBlockNum()`、`GetTaskRationImpl()`；`diag[5..7]`（`usedCoreNum/baseM/depthA1`）；kernel 是否产出 `partial`（首/末行非空校验和） |
-| 规模 | 单次 `usedCoreNum=1` 与单次 `usedCoreNum=2`，各一次窗口 |
+| 采集字段 | 每 block：`GetBlockIdx()`、`GetSubBlockIdx()`、`GetBlockNum()`、`GetTaskRationImpl()`；`diag[5..7]`；`partial` 首/末行**仅作采样位置校验**（**不**证明全张量无漏写或覆盖正确；覆盖问题另需每参与者身份+区间记录+全范围检查）；client 发 `End`/quit 与 server 收到**分别记观测可达性**，未采到一侧不可推定 |
+| 规模 | 单次**请求的 `mm_dim` 预算 = 1** 与 **= 2**，各一次窗口；`usedCoreNum` 与实际 launch **只记实测**，不预定为 1/2 |
 | 超时 | **单次有界 180 s**，超时即杀进程并记录 |
 | 停止条件 | 出现 `507014/0x25`、超时、或 `partial` 出现未写行 ⇒ 立即停，不继续下一格 |
 | 判读 | 只回答"集合/比值/是否漏行"，**不判数值因果**；固定门仍为 mixed 容差 |
@@ -118,7 +118,9 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 `/tmp/dumpcce.log` `eddb484566ad5a43cdf023ff8cf746b0d17dd1bbe64634842e50724220bc5232`。
 清单**不含自身**。
 
-### 6.1 真实 pass 调用（`.sh` 原文，按值记录）
+### 6.1 生成 `asc_opc` 驱动调用（`.sh` 原文，按值记录）
+
+> 这是**生成脚本里的 `asc_opc` 驱动命令**；**尚未取得** AIC/AIV **pass 级 `ccec` argv**。
 
 ```
 asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
@@ -159,3 +161,24 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 2. `__MIX_CORE_AIC_RATION__` 是否定义：未知；
 3. `get_block_idx()`/`get_subblockid()`/`GetBlockNum()` 运行值：未取得；
 4. 本次重建**只证明本次构建**，不追证旧 E 装载。
+
+## 8. 历史撤回集中留存
+
+| 日期 | 我曾写的 | 现状 |
+| --- | --- | --- |
+| 11-18 | "`IterateAll` 自动按 `GetBlockIdx` 跨核分片" | **撤回**（matmul 头无 `GetBlockIdx`） |
+| 11-18 | "`SetTail` 只属 Iterate/UB 变体" | **否证**（`enableSetTail` 默认 true；`SetSingleShape`→`SetTail`） |
+| 11-18 | "两个 AIV 子块共用同一 GM 槽 ⇒ 挂死" | **撤回**（无参 `SyncAll` 走 FFTS，`SoftSyncAllImpl` 是另一重载） |
+| 11-18 | "`opc` 进程内 ⇒ 无 pass 命令 / 不落盘" | **撤回**（只证普通日志未存；`dump_cce` 可保留） |
+| 11-18 | "外层 `--compile-options=""` ⇒ 无外部 `-D`" | **撤回**（`dynamic/<Op>.py` 显式注入 `-D`） |
+| 11-18 | "`taskRation=1:2` 证明 ratio" | **收窄**为本次生成元数据 |
+| 11-18 | "24 worker 落在 12 cube" | **降为条件推导**（需 ratio=2 且 launch 集合完整） |
+| 11-18 | "数值必不变 / 没变就排除多核" | **撤回**（`GetTiling` 预编译，可能改 `baseK`/顺序） |
+| 11-18 | "让候选逐位匹配原生不可达" | **撤回**（门是 mixed 容差，非逐位） |
+
+## 9. 冻结副本
+
+实际冻结副本在本包 `audit-frozen/`，含 6 个生成件、2 份日志、`liboptiling.so` 的
+**链接原值/realpath/目标 SHA** 记录及**目标副本**；
+清单 `audit-frozen/MANIFEST.sha256`（**不含自身**，SHA `1e1891449cef9b0e0f4b0ada8a219f08ffc49cd250b825a6b4e1ae9b63a12ddb`）。
+两份日志的 `--src-file` 均指向完整 audit TU（源 SHA `08c412aa…2fb1e1` = `85b3028` blob）。
