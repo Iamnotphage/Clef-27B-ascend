@@ -883,3 +883,48 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 ### 32.4 AUDIT 残留修复
 
 `:36` 改为「阶段 A 清理 / **阶段 B 已冻结**」；原"未来 dump_cce"改为**已完成**、仍缺的是**逐 pass argv/宏表**；`pyc` 行改为**未纳入**并指向 `EXCLUSIONS.txt`。
+
+## 33. D0 诊断包补实现与新身份（22，2026-11-18 23:15 CST，commit `91e005c`）
+
+三处漏实现已修并**重新纯编译通过**（`BUILD_EXIT=0`）。**旧包 SHA 仅归档、已标"勿用于对接"**。
+
+### 33.1 host InferShape / InferDataType
+
+- `out` 由"复制 `x`（[M,K]）"改为**显式 `[M,N]`**（M = `x->GetDim(0)`、N = `w->GetDim(1)`）；
+- 新增 `trace` 输出 shape **`[72,8]`**（输出索引 4），`InferDataType` 补 `SetOutputDataType(4, ge::DT_UINT32)`；
+- 生成头实核：**4 输入 + 5 输出 = 9 个 `const aclTensor*`**；**14 属性 + 2 句柄 = 16 个标量形参**。
+
+### 33.2 kernel 逐点真插桩（每处 1 次，grep 计数核过）
+
+| 点 | 位置 |
+| --- | --- |
+| K1 | `TraceInit` 写完 magic/id/domain 后 |
+| K2 | `REGIST_MATMUL_OBJ` **之前** |
+| K3 | `REGIST_MATMUL_OBJ` **之后**，**仅 AIV**（AIC 在宏内 `return`，该点天然只 AIV 可达） |
+| K4 | 每个**到达 worker 判定点**的 AIV（`is_worker` 位**另置**，二者分开） |
+| K5 | `IterateAll` 进入 / 返回 |
+| K6 | `End()` 前 / 后 |
+| K7 | 屏障前 / 后 |
+| K8' | 接线作用域关闭后，且**仅当 `tiling_->mmEnable != 0`** |
+| K8 + `seal` | 全局入口 `kernel.Process()` 返回后（两域可达） |
+
+**K3 仅 AIV 可达与解析器的域相关前置一致**（AIC 只要求 K1/K8）。
+
+### 33.3 当前版产物 SHA
+
+| 产物 | SHA-256 |
+| --- | --- |
+| `.run` | `b7190e96c6997b460245becc8e4d34fc5d0c33919914762b65223f94ff7fe62c` |
+| kernel `.o` | `5cb2242c94ddcdd819f445f039e000bd30517efa6eb9b4faabd2e2de214ddd20` |
+| `libcust_opmaster_rt2.0.so` | `4f4f9fbf8fd4b44ef846245b7a7b10c8e5550f03ac1972eb3655add7c83b1271` |
+| `libcust_opapi.so` | `3314922677b7b78164628f1bc22c7339ac63d59cf537c261533cbf740ac948ec` |
+
+**归档勿用**：`.run 7cc64277…4c31`、`.o 27030ab4…7926`、`opmaster 505090b1…a249`。
+
+### 33.4 仍未测
+
+双层写回/顺序、`ratio` 运行实值、`partial` 覆盖、GM 可见性**均未验证**；8 字段无独立 ratio 读回。**未安装、未加载、未上板**，设备权限保持关闭。
+
+### 33.5 我方 CPU 侧状态（解析器 `c0b4adb`）
+
+域相关前置与该插桩表一致：AIC 仅需 K1/K8（K4/K7 不可达），AIV worker 需 K1/K4/K8，AIV 非 worker 保留身份不计覆盖；14 项 CPU 反例全通过。
