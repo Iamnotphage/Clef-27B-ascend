@@ -138,6 +138,26 @@ def query_group(pgid: int) -> dict:
     return {"survivor_check": "ok", "members": members, "query_returncode": 0}
 
 
+def child_env(vendor: str | None, base: dict | None = None) -> dict:
+    """Environment for the D0 child only.
+
+    The D0 vendor and its library path are added here and nowhere else, so this
+    process and anything it restores keep the environment they started with.
+    """
+    env = dict(os.environ if base is None else base)
+    env.setdefault("WORLD_SIZE", "2")
+    if vendor:
+        root = Path(vendor)
+        for sub in ("op_api/lib",):
+            lib = root / sub
+            if lib.is_dir():
+                env["LD_LIBRARY_PATH"] = f"{lib}:{env.get('LD_LIBRARY_PATH', '')}"
+        if root.is_dir():
+            env["ASCEND_CUSTOM_OPP_PATH"] = (f"{root}:"
+                                             f"{env.get('ASCEND_CUSTOM_OPP_PATH', '')}")
+    return env
+
+
 def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -> int:
     """Supervise one child tree. Reused by the cpu fixture, so it takes cmd."""
     env = dict(os.environ if env is None else env)
@@ -204,6 +224,7 @@ def main() -> int:
     ap.add_argument("--use-hccl", type=int, default=2, choices=(2,),
                     help="first candidate is fixed at 2 (AR off)")
     ap.add_argument("--adapter", type=Path, help="prebuilt extension to load")
+    ap.add_argument("--d0-vendor", help="isolated vendor dir passed to the child only")
     ap.add_argument("--adapter-sha", help="expected sha256 of that extension")
     ap.add_argument("--dry-run", action="store_true", help="print the plan only; touches no device")
     a = ap.parse_args()
@@ -238,8 +259,9 @@ def main() -> int:
     # Real execution path. Kept explicit so the failure modes are visible:
     # a timeout kills the child and still writes a trace-unavailable record.
     # Real executor lives in its own module; this process only supervises it.
-    env = dict(os.environ)
-    env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
+    # D0 isolation lives in the child environment only; the parent keeps its own.
+    env = child_env(a.d0_vendor)
+    env["OMP_NUM_THREADS"] = "1"
     test_rc = None                      # null until the child actually reports
     test_exc = None
     rc = None
