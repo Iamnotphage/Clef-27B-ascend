@@ -579,13 +579,30 @@
 
 - **本次导出未取得 tiling key**：`tiling_columns: []`；`api_statistic.csv` 的 `MatMulV2_Tiling` 是 **API 名 + 调用耗时**，不是 key。
 - kernel 名后缀（`98514`/`229586`）是名字内嵌标识，**不能当 tiling key**；名中 `FP16` 与实际 `DT_BF16` 字段冲突时**以字段为准**。
-- **设备 kernel 二进制身份未闭合**：本轮 maps 为**主机库**映射（各 136 文件、0 个 deleted），且已发现同机存在**多份** `libcust_opapi.so`/`libcust_opmaster_rt2.0.so`（`batch_invariant`、`fla_npu_transformer`、`libcustom_op_runtime.so`）——安装 identity 与实际加载 identity 必须分开记录。
+- **设备 kernel 二进制身份未闭合**：本轮 maps 为**主机库**映射（各 136 文件、0 个 deleted）；maps 只能证明**这些主机库存在于进程内**（路径 + 落盘 SHA 说明被映射），**单凭同时映射不能判定符号解析选中了哪一份 tiling**，也不能追证旧 E 实际加载，且已发现同机存在**多份** `libcust_opapi.so`/`libcust_opmaster_rt2.0.so`（`batch_invariant`、`fla_npu_transformer`、`libcustom_op_runtime.so`）——安装 identity 与实际加载 identity 必须分开记录。
 - 22 已更正其 `exported_fields.json` 的误报：`core_type`/`op_type`/`block_dim` 实际**存在**（提示词下划线 vs 列名空格），真正缺失的只有 tiling key。
 
 ### 25.4 数值（背景，非 dispatch 证据）
 
-`numeric.json` 两 rank 各 4,951,040 元素、`max_abs_diff = 0`、`nonzero = 0` —— 本窗口本形状下 ND 与 NZ 两条原生路径数值相同；不外推其他形状。
+`numeric.json` 两 rank 各 4,951,040 元素、`max_abs_diff = 0`、`nonzero = 0` —— 表述为**本窗口全元素数值差 0**（该文件只算 float 差与 `nonzero_count`，**未做位模式比较、未独立检查 finite**，故不称"逐位相同"）；不外推其他形状。此前 ND/NZ 两臂 76 点"全等"同样是 JSON 十进制往返后的**数值**相等，一并按此表述。
 
 ### 25.5 与自定义算子的对照（仅记录）
 
-原生 `Block Num = 24`；自定义 E 算子 `diag[5]`（`cubeTiling.usedCoreNum`）在 ND/NZ 两次全量 run 中均为 **1**。多核切分切 M/N 不切 K，**不据此推断数值因果**。
+原生 `Block Num = 24`；自定义 E 算子 `diag[5]`（`cubeTiling.usedCoreNum`）在 ND/NZ 两次全量 run 中均为 **1**。
+
+**来源已查明（22 只读源码 `op_host:180-194`）**：`mm_dim` 属性被 runner 显式传为 **1** → `SetDim(1)` → `GetTiling` 返回 `usedCoreNum=1`。这是**传参结果，不是 tiling 能力不足**。
+
+**三个数字不可等同**：
+
+| 数字 | 来源 | 值 |
+| --- | --- | --- |
+| `mm_dim` 属性（`SetDim` 预算） | runner 传参 | 1 |
+| `TCubeTiling.usedCoreNum` | 我们 kernel 写入 `diag[5]` | 1 |
+| 原生 `Block Num` | profiler `kernel_details.csv` | 24（AIC） |
+| 我们算子实际 launch block 数 | **本轮无证据** | 未知 |
+
+**默认映射问题（源码级，未上板）**：`mm_dim=0` 时走 `cores`，而 `block_dim=0` 时 `cores = GetCoreNumAiv()`（Vector 核数），cube 却只能按 AIC 核数划分（本机 AIC=24）。最小修复是把未指定时的 `mmDim` 默认取 `GetCoreNumAic()`；需改代码与协调包身份，**当前不动**。
+
+**可检验的单变量控制臂（未执行）**：只把 `mm_dim: 1 → -1`（走已有 `mmDimReq==-1 → GetCoreNumAic()` 路径，**无需改代码/重建包**），预期 `usedCoreNum=24`。**预先登记预测**：多核切分切 M/N 不切 K，数值预期不变（全元素数值差 0）——若变则说明"M/N 划分影响累加"模型不成立，属新证据；若不变则多核配置被排除。**该差异不预判为精度根因，仅是把并行划分拉回预期。**
+
+**其他源码判断**：每 block 的 A/B/C 偏移由 `IterateAll` 依 `TCubeTiling` 自行推导，我们未写也不需要写（非缺口）；`SetSingleShape`/`SetTail` 未调用且该路径不需要，但 **tail 行为属未证明**（M=967、baseM=128 确有尾部）；`REGIST_MATMUL_OBJ` 在所有 block 执行，仅计算调用受 `GetBlockIdx() < usedCoreNum` 门控。
