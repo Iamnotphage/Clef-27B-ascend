@@ -522,3 +522,31 @@
 - 该配置分支是**可核实的直接线索**，但尚未由我方独立确认修复路径；
 - 不据 4D 文档示例推断"2D 不支持"，也不以手写 29 伪装 NZ；
 - 冻结目录：`/workspace/yangchen/logs/perf-wave3-20261118/nz-contract-fail-20261118/`（`SHA256SUMS` 校验 2/2 OK）。
+
+## 24. ND 与 NZ 逐点比对（2026-11-18 21:47 CST）
+
+### 24.1 结果（同 seed 20261118、同 x/w/r/gamma）
+
+| 项 | rank0 | rank1 |
+| --- | --- | --- |
+| `residual` fail | ND 68 / NZ 68，交集 **68**，各自独有 **0** | 同 |
+| `Y` fail | ND 68 / NZ 68，交集 **68**，各自独有 **0** | 同 |
+| union 集合 | **76 = 76，完全相同** | 同 |
+| 逐点六字段（residual / y / rstd / gamma / residual_input / partial） | **76/76 相等** | 76/76 相等 |
+| 汇总 | res max_abs 0.03125、Y max_abs 0.015625 / max_rel **1.0**、rstd 6.079673767e-6 | 同 |
+
+### 24.2 能说与不能说
+
+- **能说**：本次同输入的 76 点采样上，NZ 臂与 ND 臂的失败集合与逐点值**完全一致**，即这些失败**不是 NZ 消费路径特有**的。
+- **不能说**：不做"NZ 引起/非 NZ 引起"的排他因果（仅 76 点，非全张量比对）；ND 臂的 68 个失败仍是**开放问题**，此前只到"每 rank ≤1 ulp + 跨 rank 抵消放大"的描述层面。
+
+### 24.3 身份与缺口
+
+| 环节 | 状态 |
+| --- | --- |
+| 安装对应 | **已闭合**：包 `9a1c20cc…`；install18 的 `libcust_opapi.so 9d62051f…`、`libcust_opmaster_rt2.0.so 4111ffc5…`、kernel `.o 68014382…` 三项与包内值逐一一致 |
+| adapter descriptor | `format=29`、`storage=[320,544,16,16]`（= 8704×5120 精确相等） |
+| tiling 闸门 | 非 `FORMAT_FRACTAL_NZ` 即 `GRAPH_FAILED`；本 run `ws=36581504`、`RAW_RC=0` |
+| **运行时加载** | **未证明**：loader / mmap 记录未留存，静态证据不能证明进程实际加载了这三个文件 |
+
+- `diag[7]=16` 已由 22 更正为 **`depthA1`**，不携带格式语义，本 doc 早前相关表述作废。
