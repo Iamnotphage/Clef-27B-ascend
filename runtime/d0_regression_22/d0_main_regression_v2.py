@@ -70,13 +70,37 @@ def guard() -> None:
         if not allowed(argv):
             raise AssertionError(f"unexpected external command: {argv}")
         joined = " ".join(argv)
+        # the launch runs through subprocess.run (restore's default runner),
+        # so the label fixture must be emitted here as well
+        if len(argv) >= 3 and argv[0] == "bash" and argv[1].endswith("launch.sh"):
+            label = argv[2]
+            REC["label"] = label
+            root = 424242
+            REC["root_pid"] = root
+            try:
+                base = Path("/workspace/yangchen/logs/perf-wave2-20261118") / label
+                base.mkdir(parents=True, exist_ok=True)
+                (base / "api.pid").write_text(f"{root}\n")
+                REC["api_pid_written"] = str(base / "api.pid")
+            except Exception as exc:
+                REC["api_pid_error"] = f"{type(exc).__name__}: {exc}"
         if "curl" in joined:
             if "/health" in joined:
                 return types.SimpleNamespace(returncode=0, stdout='{"status":"ready"}', stderr="")
             if "systemone" in joined or "decide" in joined:
+                # text sample -> score, image sample -> choice (both shapes given)
                 return types.SimpleNamespace(
                     returncode=0,
-                    stdout='{"answers":{"answer":{"type":"score"}}}', stderr="")
+                    stdout='{"answers":{"answer":{"type":"score"}},'
+                           '"choices":[{"type":"choice"}]}', stderr="")
+        if joined.startswith("npu-smi"):
+            # header + two worker rows: second column is the pid
+            rows = ["NPU Name Chip Process id Process name",
+                    f"7  0  0  {REC.get('root_pid', 424242)}  python",
+                    f"7  1  0  {REC.get('root_pid', 424242)}  python",
+                    "7  2  0  424244  VLLMWorker_TP0",
+                    "7  3  0  424245  VLLMWorker_TP1"]
+            return types.SimpleNamespace(returncode=0, stdout="\n".join(rows), stderr="")
         return types.SimpleNamespace(returncode=0, stdout="", stderr="")
 
     class FakePopen:
@@ -89,7 +113,23 @@ def guard() -> None:
             self.pid = 424242
             self.returncode = 0
             # supply ONLY what the external child would have produced
+            self._emit_launch_fixture(self.argv)
             self._emit_child_files(self.argv)
+
+        def _emit_launch_fixture(self, argv):
+            """label is the third token of: bash <launch.sh> <label>"""
+            if len(argv) >= 3 and argv[0] == "bash" and argv[1].endswith("launch.sh"):
+                label = argv[2]
+                REC["label"] = label
+                root = 424242
+                REC["root_pid"] = root
+                base = Path("/workspace/yangchen/logs/perf-wave2-20261118") / label
+                try:
+                    base.mkdir(parents=True, exist_ok=True)
+                    (base / "api.pid").write_text(f"{root}\n")
+                    REC["api_pid_written"] = str(base / "api.pid")
+                except Exception as exc:
+                    REC["api_pid_error"] = f"{type(exc).__name__}: {exc}"
 
         def _emit_child_files(self, argv):
             """Write only what the external child would write, into --out-dir."""
@@ -268,6 +308,7 @@ def main() -> int:
     out["arrived"] = sorted(REC["arrived"])
     out["out_dir"] = sorted(p.name for p in odir.glob("*")) if odir.exists() else []
     out["record"] = {k: REC[k] for k in ("argv", "popens", "kills", "net")}
+    out["fixtures"] = {k: REC.get(k) for k in ("label", "root_pid", "api_pid_written", "api_pid_error")}
 
     def chk(name, ok, detail=""):
         out["checks"].append({"check": name, "ok": bool(ok), "detail": detail})
