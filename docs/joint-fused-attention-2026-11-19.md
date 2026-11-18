@@ -270,3 +270,28 @@ window `65dcced4…cc5ee`，probe `f5bd3d70…f1676b`，restore `0c9cc408…43d3
    `568ea158…b76bf`），`joint_fused_attention_client.py` 每臂 3 warmup + 20 次，ABBA ≥3 轮。
 3. 服务级稳定后再跑同窗口 S1 ≥3 轮、S2、完整 OpenDecisions + ERQA；质量仍按 ≤2 pp。
 4. 未过则关闭候选并 revert `f8101b98`；26/25 候选不得与本 postimage 混装。
+
+## 16. 服务 A/B runner（21 执行）
+
+文件：`runtime/joint_fused_service_ab.py`
+SHA-256 `0a1304b6b794f2218183a6d41d203ae94c75e5b4c5703361b00e87e67e3e48e4`；
+测试 `runtime/test_joint_fused_service_ab.py`（SHA `438009a6…6a50d4`），6/6：
+ABBA 顺序、≥4 轮、固定输入 hash、旧目录拒绝、stop 失败、输入 hash 不符拒绝。
+
+```bash
+PY=/workspace/yangchen/venvs/clef-py312/bin/python
+REPO=<本提交检出>
+RUN=/workspace/yangchen/logs/joint-fused-service-ab-$(date -u +%Y%m%dT%H%M%SZ)
+$PY "$REPO/runtime/joint_fused_service_ab.py" --run-dir "$RUN" --repo "$REPO" \
+  --tree /workspace/yangchen/work/src/vllm --python "$PY" \
+  --stop-script /tmp/d0cc/d0_stop.py --rounds 4 --reps 5
+```
+
+- 两臂同一 postimage `aa3e1758`，仅 `CLEF_JOINT_FUSED_ATTN=0/1`；真实权重与真实服务。
+- 固定输入：`od-0105`（800 B，SHA `25b8acaf…72bf0`）、`od-1534`（2,835 B，
+  SHA `568ea158…b76bf`）、`erqa-0000`（22,570 B，SHA `f3229f5c…209aab`）。
+- 每轮 ABBA 顺序 `[0,1],[1,0],[1,0],[0,1]`；每臂独立 `d0-ab-…` label，精确 stop 后再下一臂。
+- `ab.json` 保存每轮每臂每输入的逐请求 ms/status/answer_type/valid；stop/launch/wait 日志分列。
+- finally：停服未确认则不启动恢复；已 apply 必 revert `f8101b98`；恢复用唯一 `d0-restore-…` label、
+  `CLEF_LAUNCH_CONFIG=s1`，`d0_restore.discover/verify` 四检（health/2 worker/text/image）。
+- CPU 仅测入口/失败分支；真实服务操作与收益/质量结论只由 21+20 现场决定。
