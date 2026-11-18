@@ -89,7 +89,29 @@
   或由 tiling 指定的窗口内，而不是任意 workspace；也可能需要额外的窗口注册/可见性步骤。
 - **尚未做性能测量**，也没有任何质量结论；该链当前只到 “AR+Add+RMSNorm，不含 MatMul”。
 
-### 5.4 下一步
+### 5.4 通过（2026-11-18 12:56 CST）
+
+在 AR 之后补两处修复后，**两 rank 全链数值通过**：
+
+- 修复 1：`AllReduce` 改为 out-of-place（workspace 作 recvBuf），并在 `Wait` 后把 norm 的输入重绑到 workspace；
+- 修复 2：AR 后对目标缓冲做 `DataCacheCleanAndInvalid<bfloat16_t, ENTIRE_DATA_CACHE, CACHELINE_OUT>`，
+  解决读侧看到 AR 前旧值（in-place 表现为本地原值、out-of-place 表现为全 0）；
+- 修复 3（Y 专项）：gamma 的 `DataCopy(gl, g_[0], n_)` 与 `Cast(gf, gl, ...)` 之间补 `PipeBarrier<PIPE_ALL>()`，
+  此前 gamma 前若干行被读成未落地的数据，表现为 `out[2k]=0`、`out[2k+1]≈2·ref[k]`。
+
+实测（M=967、N=5120、eps=1e-6、repeat=1、group=`group_name_0`，两 rank）：
+
+| 输出 | max_abs（自研 vs 同进程 `dist.all_reduce`+`npu_add_rms_norm`） |
+| --- | ---: |
+| `residual_sum` | **0** |
+| `rstd` | **2.38e-7** |
+| `Y` | **0.0078125**（`Y>0.01` 元素数 **0**/4,951,040） |
+
+- 身份：package `499e5302…`（255,286 B）、kernel `.o` `ac5e96ba…`；diag 输出显示 `rankId=0, rankDim=2, rc=0, useHccl=1`。
+- 该链当前为 **AR+Add+RMSNorm（不含 MatMul）**；尚未做任何性能测量或质量声明。
+- 服务在测试后已恢复（PID 1019618，health/文本/图文均通过）。
+
+### 5.5 下一步
 
 1. 只读核对 adv_api `Hccl` 对 sendBuf/recvBuf 的窗口要求与 `GetWindowsInAddr/OutAddr` 语义；
 2. 若需要窗口，调整 tiling/kernel 让 AR 目标落在窗口内后重跑同一两 rank 测试（判据：`residual_sum` 与

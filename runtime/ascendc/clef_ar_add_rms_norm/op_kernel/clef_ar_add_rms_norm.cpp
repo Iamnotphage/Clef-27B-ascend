@@ -1,5 +1,6 @@
 #include "kernel_operator.h"
 #include "adv_api/hccl/hccl.h"
+#include "kernel_operator_cache_intf.h"
 #include "clef_ar_add_rms_norm_tiling.h"
 
 using namespace AscendC;
@@ -35,12 +36,13 @@ public:
         pipe_.InitBuffer(br_, n_ * sizeof(bfloat16_t));
         pipe_.InitBuffer(bg_, n_ * sizeof(bfloat16_t));
         pipe_.InitBuffer(bo_, n_ * sizeof(bfloat16_t));
+        pipe_.InitBuffer(bout_, n_ * sizeof(bfloat16_t));
         pipe_.InitBuffer(bz_, n_ * sizeof(float));
         pipe_.InitBuffer(bt_, n_ * sizeof(float));
         pipe_.InitBuffer(bw_, n_ * sizeof(float));
         pipe_.InitBuffer(bs_, 64 * sizeof(float));
-        pipe_.InitBuffer(bwr_, 512 * sizeof(float));
-        pipe_.InitBuffer(bgst_, 32);
+        pipe_.InitBuffer(bwr_, 8 * 1024);
+        pipe_.InitBuffer(bgst_, 2 * 1024);
         pipe_.InitBuffer(diagT_, 32);
     }
 
@@ -59,6 +61,16 @@ public:
             PipeBarrier<PIPE_ALL>();
             arRc = hccl.Wait(h) * 100 + setRc;
             hccl.Finalize();
+            if (wsGm_ != nullptr) {
+                // The reduction lands in the workspace, not in the local input.
+                x_.SetGlobalBuffer((__gm__ bfloat16_t*)wsGm_, static_cast<uint64_t>(m_) * n_);
+            }
+            // The AICPU server wrote through GM; drop stale data cache lines so
+            // the vector cores read the reduced values.
+            PipeBarrier<PIPE_ALL>();
+            DataCacheCleanAndInvalid<bfloat16_t, CacheLine::ENTIRE_DATA_CACHE,
+                                     DcciDst::CACHELINE_OUT>(x_);
+            PipeBarrier<PIPE_ALL>();
         }
         if (GetBlockIdx() == 0) {
             LocalTensor<float> d = diagT_.Get<float>();
@@ -73,7 +85,16 @@ public:
         LocalTensor<bfloat16_t> gl = bg_.Get<bfloat16_t>();
         LocalTensor<float> gf = bt_.Get<float>();
         DataCopy(gl, g_[0], n_);
+        PipeBarrier<PIPE_ALL>();
         Cast(gf, gl, RoundMode::CAST_NONE, n_);
+        PipeBarrier<PIPE_ALL>();
+        if (GetBlockIdx() == 0) {
+            LocalTensor<float> d2 = diagT_.Get<float>();
+            for (int k = 0; k < 4; ++k) d2.SetValue(4 + k, gf.GetValue(k));
+            PipeBarrier<PIPE_ALL>();
+            DataCopy(diag_[0], d2, 8);
+            PipeBarrier<PIPE_ALL>();
+        }
 
         const uint32_t blocks = GetBlockNum();
         const uint32_t perCoreRaw = (m_ + blocks - 1) / blocks;
@@ -119,9 +140,12 @@ public:
             sums.SetValue(buffered, rstd);
             ++buffered;
 
+            PipeBarrier<PIPE_ALL>();
             Muls(z, z, rstd, n_);
+            PipeBarrier<PIPE_ALL>();
             Mul(z, z, gf, n_);
-            LocalTensor<bfloat16_t> ol = bo_.Get<bfloat16_t>();
+            PipeBarrier<PIPE_ALL>();
+            LocalTensor<bfloat16_t> ol = bout_.Get<bfloat16_t>();
             Cast(ol, z, RoundMode::CAST_RINT, n_);
             PipeBarrier<PIPE_ALL>();
             DataCopy(o_[base], ol, n_);
@@ -153,7 +177,7 @@ private:
     }
 
     TPipe pipe_;
-    TBuf<TPosition::VECCALC> bx_, br_, bg_, bo_, bz_, bt_, bw_, bs_, bwr_, bgst_;
+    TBuf<TPosition::VECCALC> bx_, br_, bg_, bo_, bout_, bz_, bt_, bw_, bs_, bwr_, bgst_;
     GlobalTensor<bfloat16_t> x_, r_, g_, o_, ro_;
     GlobalTensor<float> rs_;
     GlobalTensor<float> diag_;

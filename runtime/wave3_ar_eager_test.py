@@ -88,6 +88,13 @@ def main() -> int:
     ref_y, ref_rstd, ref_res = torch_npu.npu_add_rms_norm(total, r, g, args.eps)
     torch.npu.synchronize()
 
+    y_self = (res_out.float() * rstd.reshape(-1, 1).float() * g.float()).to(torch.bfloat16)
+    d_self = (out.float() - y_self.float()).abs()
+    if rank == 0:
+        print("dbg ours_y[0:4]", [float(v) for v in out[0, :4].float().cpu()], flush=True)
+        print("dbg ref_y[0:4]", [float(v) for v in ref_y[0, :4].float().cpu()], flush=True)
+        print("dbg self-consistency max|out - z*rstd*g| =", float(d_self.max().cpu()),
+              "gt0.01 =", int((d_self > 0.01).sum().cpu()), flush=True)
     dy = (out.float() - ref_y.float()).abs()
     dres = (res_out.float() - ref_res.float()).abs()
     drstd = (rstd.float() - ref_rstd.float().reshape(-1)).abs()
