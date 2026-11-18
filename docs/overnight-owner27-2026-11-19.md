@@ -90,7 +90,7 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 
 每rank48calls，first2、warmup6、正式40分列。96条raw经23重算与summary逐项一致。正式20pair：critical wall pooled median 0.567595→0.578880 ms，paired delta +0.012930 ms、速度比0.977116；slow-rank event 0.449630→0.478040 ms，paired delta +0.027530 ms、速度比0.941371。四轮critical中位差 +0.02558/+0.03787/+0.00660/−0.28653 ms，末轮两臂均升高。首call critical baseline10.57658/candidate303.83746 ms独列。该格没有稳定收益证据，保持未采纳，不扩cores48。
 
-外层rc0，window overall0、六step rc0，probe reaped/unknown0/residual0，vendor完整退役，四检恢复通过。label `d0-restore-20261118T191020Z-4516976e`，root1214582、workers1214738/1214739。原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/window.json)、[timing summary](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/probe/timing/summary.json)、[restore](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/restore.json)；大体积bin保留远端并由原始metadata绑定。
+外层rc0，window overall0、六step rc0，probe reaped/unknown0/residual0，vendor完整退役，四检恢复通过。label `d0-restore-20261118T191020Z-4516976e`，root1214582、workers1214738/1214739。原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/window.json)、[timing summary](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/probe/timing/summary.json.gz)、[restore](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c24/restore.json)；大体积bin保留远端并由原始metadata绑定。
 
 ## smallQ A/C/B：接入路径净开销
 
@@ -109,3 +109,8 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 ## 最终验收准备
 
 28冻结tuple `02546ae2088d76127ac11a0fb6c51a82dbb67c9a` 已部署至同名独立远端work目录，8文件逐SHA一致，manifest `b42cc6f4a456e2ffade5479c392735aa69f7ef6ca33028800deec89c1d70b2b7`、runner `e6ddb887c92c4f34a4d05502b7ff3317b1b10845f20bd7d63e8d95d34b049ff3`。只读 frozen_check 全过；当前服务的 OPP/LD 路径从多轮restore继承累积，service_check按原严格门拒绝。首错保留在远端 `final-acceptance-preflight-27-20261118T192040Z`，由28核干净启动环境；正式最终评测尚未执行。
+
+
+最终客户端监督器 [final_acceptance_supervisor.py](../runtime/final_acceptance_supervisor.py) v4 已经23有限核通过，SHA `03409c78b0e1d39f44299785247586a545c171a020ed78d886c441559c59db41`。默认plan-only，固定28 runner与5c helper文件SHA；隔离加载5c清理函数，并明确使用严格/proc查询适配器，清理前核整组完整cmdline、逐信号核PID/start/boot/PGID。服务PID保护、未知/查询失败阻断、最终clients_exited确认后才能切服务。此脚本仅监管评测客户端，不操作服务。
+
+绝对monotonic截止锚点在main准备前固定，准备、Popen及循环共享；到期拒绝启动、慢启动计入预算。真实Linux CPU 11项测试通过：正常/非0退出、超时双进程、已观测孤儿清理、查询失败、身份变化、保护服务、清理查询失败、PGID/cmdline前置门、准备过期、慢启动。v2在组KILL后的cmdline清空瞬态误记unknown，首错原件保留；v3将完整cmdline门置于清理前，v4收紧绝对deadline。测试仅创建自身CPU短进程，未导入NPU模块。证据 [CPU日志](../Clef-27B/logs/overnight-20261119-owner27/final-supervisor-cpu/final-supervisor-cpu-v4.log)，原failed日志与超时5次复核另列。正式评测尚未执行。
