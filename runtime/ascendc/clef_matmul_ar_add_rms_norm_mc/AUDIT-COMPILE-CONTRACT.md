@@ -1,6 +1,6 @@
 # 编译期契约取证（基线：包 `873ef8fb`，源提交 `85b3028`）
 
-**范围**：本次只用**同一源码提交**在独立目录
+**范围（两个阶段）**：阶段 A = 普通构建（`--debug-config=""`）；阶段 B = **已完成的定向 `dump_cce` 捕获**（同 TU、RC=0，生成件已冻结，见 §6/§9）。两阶段都只用**同一源码提交**在独立目录
 `/workspace/yangchen/work/wave3-e-audit-22` 重建一次，取证编译期事实。
 现包 `873ef8fb` 与现构建目录**未被覆盖**。本次重建**只证明本次构建**，
 **不追证**旧 E 实际装载过哪一份二进制。
@@ -71,7 +71,7 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 | `__MIX_CORE_AIC_RATION__` | **无法从产物确定** | 源内 `#ifdef`，产物只给 `taskRation=1:2` |
 | `ASCEND_IS_AIV` / `ASCEND_IS_AIC` | 由双 pass 决定，`coreType=MIX` 印证 | `coreType` 实读 |
 | 选中的 `SyncAll` | `SyncAllImpl<true>` → FFTS `SYNC_AIV_ONLY_ALL` | `kernel_operator_sync_impl.h:363-403`（同机 SHA 见 §4） |
-| `End()` 是否投 `MMFUN_END` | **投**（`isSyncGetC = sync = true`，默认模板实参） | `matmul_client.h:963/966/968-975/977`、`:695-701` |
+| `End()` 是否投 `MMFUN_END` | **条件链**：若选中 `USE_WORKSPACE` 重载（`:931-977`），则 `isSyncGetC = sync = true`（默认模板实参）⇒ `End()` **投** `MMFUN_END`（`:695-701`）；若选中 `USE_SSBUF` 重载则按其分支另行判定，**本次未取宏表** | `matmul_utils.h:26-38` + `matmul_client.h:963/966/968-975/977`、`:695-701` |
 | quit 来源 | `KfcCommClient` 析构，**独立于 `End()`** | `dav_c220/kfc/kfc_comm_client.h:100-118` |
 
 引用头的 SHA-256（同机）：
@@ -93,8 +93,8 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 | 项 | 内容 |
 | --- | --- |
 | 采集字段 | 每 block：`GetBlockIdx()`、`GetSubBlockIdx()`、`GetBlockNum()`、`GetTaskRationImpl()`；`diag[5..7]`；`partial` 首/末行**仅作采样位置校验**（**不**证明全张量无漏写或覆盖正确；覆盖问题另需每参与者身份+区间记录+全范围检查）；client 发 `End`/quit 与 server 收到**分别记观测可达性**，未采到一侧不可推定 |
-| 规模 | 单次**请求的 `mm_dim` 预算 = 1** 与 **= 2**，各一次窗口；`usedCoreNum` 与实际 launch **只记实测**，不预定为 1/2 |
-| 超时 | **单次有界 180 s**，超时即杀进程并记录 |
+| 规模 | **第一候选只有一格**：请求 `mm_dim = 1` + **AR 关闭**（沿用既有 `use_hccl=2` 通路）。`mm_dim = 2` **列为后续条件项**，不是已排定的两格；`usedCoreNum` 与实际 launch **只记实测** |
+| 超时 | **单次有界超时**（建议 180 s）；超时即杀进程并**记录后恢复服务**；**超时不能单独归因 `SyncAll`** |
 | 停止条件 | 出现 `507014/0x25`、超时、或 `partial` 出现未写行 ⇒ 立即停，不继续下一格 |
 | 判读 | 只回答"集合/比值/是否漏行"，**不判数值因果**；固定门仍为 mixed 容差 |
 | 前置 | 需 20 显式授权设备时间；当前 E 设备授权关闭 |
@@ -178,7 +178,16 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 
 ## 9. 冻结副本
 
-实际冻结副本在本包 `audit-frozen/`，含 6 个生成件、2 份日志、`liboptiling.so` 的
-**链接原值/realpath/目标 SHA** 记录及**目标副本**；
-清单 `audit-frozen/MANIFEST.sha256`（**不含自身**，SHA `1e1891449cef9b0e0f4b0ada8a219f08ffc49cd250b825a6b4e1ae9b63a12ddb`）。
+独立冻结目录：`runtime/ascendc/clef_matmul_ar_add_rms_norm_mc/audit-frozen/`。
+
+| 类别 | 内容 |
+| --- | --- |
+| 生成件 | `bin_param/*.sh`、`bin_param/*_param.json`、`*.make`、`customize/.../aic-ascend910_93-ops-info.json`、`dynamic/ClefMatmulArAddRmsNorm.py` |
+| 日志 | `logs/audit_build.log`（阶段 A）、`logs/dumpcce.log`（阶段 B） |
+| 构建阶段 JSON（**分名冻结**） | `kernel-json/kernel-bin-json.normalbuild.json`、`kernel-json/kernel-bin-json.dumpcce.json` |
+| 链接与目标 | `customize/op_impl/ai_core/tbe/op_tiling/liboptiling.so`（相对链接）→ `op_host_libcust_opmaster_rt2.0.so`（419792 B，SHA `de96a08d118254095870b2b69a0c5601a6a8de9f44989f88134793dc0a3a1b79`）；原链接文本为绝对路径 `…/build_out/op_host/libcust_opmaster_rt2.0.so`，realpath 与之一致 |
+| **未纳入（明示）** | `dynamic/__pycache__/ClefMatmulArAddRmsNorm.cpython-310.pyc`（字节码缓存，非记录性产物），见 `EXCLUSIONS.txt` |
+
+清单 `audit-frozen/MANIFEST.sha256`：**非自含**（不含自身，另含 3 行 `#` 链接记录），
+当前 SHA `7e9d30b1ef6acaaeeab39ae24cbca97207da9ca960040c9b9d6a35fb36f3fc67`。
 两份日志的 `--src-file` 均指向完整 audit TU（源 SHA `08c412aa…2fb1e1` = `85b3028` blob）。
