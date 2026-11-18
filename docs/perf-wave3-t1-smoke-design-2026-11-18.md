@@ -107,8 +107,10 @@
 
 | 项 | 审计点 |
 | --- | --- |
-| 对齐 | 每行 5120×2 = 10240 B = 80×128 B，按行切天然 128B 对齐；分核按 `(M+blockNum-1)/blockNum` 上取整并裁尾 |
-| repeat | **（已更正）** `repeat` 是 `uint8_t`（`hccl.h:77-78`），上限 255，`repeat=967` 不可表达。API 只要求每个 task 的**元素 count 均匀**；4,951,040 的 ≤255 约数含 1/2/4/5/8/10/16/20/32/40/64/80/128/160，**repeat=8 合法且无需 padding**（此前 968 建议撤回）。注意「967 质数 ⇒ 只能按整行等分」只在按行切分时成立，按元素均匀切不要求行边界。 |
+| 对齐 | 每行 5120×2 = 10240 B = 80×128 B，按行切天然 128B 对齐；分核按 `(M+blockNum-1)/blockNum` 上取整并裁尾。**128/16384 两个常量的消费端与单位尚未证实**（`aicpu_kfc_def.h:23`、`alg_template_base.h:31-34`）：967 整块按元素或 BF16 字节都整除 128、不整除 16384；1024 两者都整除。须逐 task 检查 count/地址/stride；「仅 967 失败、1024 通过」**不能唯一归因于 16384 路由**。 |
+| repeat | `AllReduce(..., uint64_t count, ..., uint8_t repeat=1)`（`aarch64-linux/asc/include/adv_api/hccl/hccl.h:77-78`）；`task[i]` 起址 = `sendBuf + count·sizeof(dtype)·i`（:67-71），**count 是每 task 元素数、每 task 等量**；repeat 上限 255，967 不可表达。整块 4,951,040 可按 repeat=4（1,237,760）或 repeat=8（618,880）等分，**算术上无须 padding**；运行时范围另验。「967 质数」只限制**等长整行分块**。 |
+| 布局 | row-major `[967,5120]` 的 flat 四分跨行（241.75 行），**不会自动形成 `[967,1280]` 列块**；N-tile 需要 GEMM 直接产出 tile-major 连续缓冲，或显式 pack（pack 成本单列）。整行方案：不等长 242/242/242/241 各一次调用，或 pad 到 968 后 repeat=8×121 行；**pad 是候选布局选择，不是必需**。 |
+| task 固定项 | 30.4 µs 是拟合截距，混有 host/API/task 成本，**不能当作 KFC 每 task 常数**，也不能断言 repeat 可免费摊薄；需在 C 组实测。 |
 | 通信域 | `Mc2CcTilingConfig` 的 group name 与训练/服务一致（TP2 组）；`SetStepSize`/`SetCommEngine` 明确选 AICPU KFC |
 | 算法 | `HcclKfcOpArgsSetAlgConfig` 用 HCCL 词表（小写、level0），先试空/nullptr 自动选择，再试 `AllReduce=level0:ring/doublering/fullmesh`；运行期用 HCCL 日志确认实际算法 |
 | 生命周期 | `InitV2 → Prepare → Commit → Wait → Finalize` 每核每 tile 配对；不得跨迭代复用未 Finalize 的句柄 |
@@ -178,14 +180,18 @@
 - 已测的 host 双流负结果**只覆盖其 torch/HCCL 调用方法**；设备内 producer-ready 的 N-tile 流水**仍未验证**，不能据此判定融合 N-tile 无效。
 - `runtime/wave3_layer_serial_bound_probe.py` 的已知边界：各 rank 用不同随机 `residual[1,5120]`、无显式 NZ、异常时静默回退为分离 Add+Norm，且 JSON 未记录回退臂。**新对照必须**：同 rank 一致 `residual[M,N]`、实际 NZ 布局、显式记录所走算子/是否回退、完整链墙钟 + device timeline、两 rank 关键路径。
 
-## 10. 可执行补测矩阵（下一轮，待 gate8 恢复确认后执行）
+## 10. 可执行补测矩阵（23 号 A–E，待 gate8 恢复确认）
 
-| # | 目标 | 形状/布局 | 方法 | 判定 | 预估 |
-| --- | --- | --- | --- | --- | --- |
-| M1 | 确认 N 切分后 GEMM 的真实代价 | M=967/1595；完整 `[M,8704]×[8704,5120]`、单 N=1280、N=2560、累计 4/2 块；BF16、**服务同款 NZ 权重** | 每项预热 5、计时 20，device event + 墙钟；同一进程内交替顺序 | 与 320.9 µs/层的偏差、每块是否近似线性 | 30 min |
-| M2 | 每-tile AR 真实延迟与 repeat 语义 | `[967,1280]` BF16 = 2.47552 MB；repeat=1 与 repeat=8（4,951,040 整除） | 2-rank 自建 comm，KFC 路径；记录 handleId/rc/耗时 | 实测 vs 51.8 µs 外推；repeat=8 是否等分正确 | 20 min |
-| M3 | 融合候选的同口径完整链 | 单层 `GEMM→AR→Add→RMSNorm`（residual 在 AR 后加一次、FP32 sumsq 全 5120） | A/B/C 同 sync 口径 + device timeline；**两 rank 相同 residual[M,N]**；显式记录算子路径 | 候选完整链 < 串行完整链；给出差额与置信区间 | 40 min |
-| M4 | producer-ready N-tile 流水原型 | 4×`[967,1280]`，GEMM 完成一块即发 AR | 设备内（kernel 侧）或受控 host 原型；记录每块 ready→AR→消费时间 | 前 3 块 AR 是否真的被下一块 GEMM 掩盖 | 1–2 h |
-| M5 | 服务级验收（仅在 M1–M4 有正信号后） | 默认 `--config s1`，同窗口交错 A/B | 全量 S1 + 全量 OD + ERQA；可回退开关 | p95/吞吐改善且质量 ≤2 pp | 1 h |
+**执行依赖**：先解通信资源 ctx 与官方 op_host 构建；通过后用 A/B/C 收集实测并选分块；再做 D/E。只有同环境完整链出现稳定改善，才做服务级交错 A/B（OD/ERQA 绝对变化 ≤2 pp）；3% 仅作研发排序。
 
-**执行前置**：gate8（algConfig 变体）恢复确认；停服前快照 PID/argv/env、确认无他人进程、超时回收本人 rank、结束后恢复默认服务并做 health/文本/图文检查。
+**通用测量规则**：预热 ≥5、稳态 20 次、A/B 交错、保存逐次值；**无 profiler 的完整墙钟用于核算收益，device timeline/profile 只用于解释重叠**；两个 rank 都记录并取关键路径；同一组内冷/热缓存状态一致。单例均值 ×64 或固定 967 样本不能替代全量请求 P95。
+
+| 组 | 内容 | 关键记录 | 判定/用途 |
+| --- | --- | --- | --- |
+| **A 基线** | M=967 / K=8704 / N=5120，**实际服务 BF16 NZ 权重**、两 rank 相同 `residual[M,N]`，完整 `GEMM → AR → Add → RMSNorm` | 真实 kernel 名与布局、各阶段时间、是否发生异常回退（禁止静默 fallback） | 提供**同环境串行链分母**，后续所有候选与它比 |
+| **B 计算** | M=967 / K=8704，N=5120/2560/1280；单块、累计 2/4 块总时与 ready 时间 | baseM/N/K、核数、波次数；权重预 pack 记为一次性；热路径 pack、输出重排、额外 launch 单列 | 确认 N 切分后 GEMM 是否近似线性；与 NZ profile 的 321 µs/层不可直接混比（那是 ND 热缓存口径） |
+| **C 通信** | 独立连续输出 N=5120/2560/1280 各 1 组；相同整块总字节下比较 **4 个独立 call vs 1 个 repeat=4**（必要时 repeat=8） | 单 task 完成点、总时/尾部、两 rank 到达偏斜、实际选中算法；单次 wall 与 32-call 链式分列；M=1024 仅 1 组形状控制 | 判断小 payload 曲线、task 固定项、逐块 ready 能力；不把 30.4 µs 当每 task 常数 |
+| **D 归一化** | 全 N `AddRMS` 参考 vs 4 块 `Add/FP32 sumsq` + 本卡归并 + rstd + 全输出 | partial 阶段与最终尾部分列；Y/rstd 误差分布；**必须核对 `residual_sum`**；覆盖跨 tile 边界、末行、buffer 轮换；两 rank 相同 residual、有限输入 | 证明 RMSNorm 语义与尾部代价；旧的 in-place SUM 链式 probe 会累积放大输入，**不作精度证据** |
+| **E 完整流水** | p=2、p=4 两个候选对照 A | GEMM 写回 → AR 提交/完成 → q → rstd → 最终输出的时间线；扣除分块膨胀、搬运、同步；按两 rank 关键路径比较完整链 | 只有稳定改善才补 M=1595，并进入服务级交错 A/B 与 OD/ERQA ≤2 pp |
+
+**不在本轮执行**：以上全部需要 NPU 与 gate8 恢复确认；当前只做本地文档与证据整理。
