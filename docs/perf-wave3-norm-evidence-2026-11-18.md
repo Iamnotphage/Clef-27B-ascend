@@ -1057,7 +1057,11 @@ g++ -shared -z defs -o d0_strict.so d0_adapter.o \
 **RC=1**；268 条未解析引用、去重 105 个名字，其中 **102 个是 `Py*`/`_Py*`**，其余 **3 条是正则误截片段，不是真实符号**。
 首错逐字：`in function 'Py_SIZE': d0_adapter.cpp:(.text+0x2c): undefined reference to 'PyLong_Type'`。
 
-**结论**：非 Python 类全部解析；`-z defs` 失败**只因 Python C-API 只能由宿主提供**（按设计未链 libpython）。这是**分类事实，不是接线缺陷**，故未做修正。
+**结论（2026-11-19 更正，采信撤回后的结论）**：未解析名字 **115 个 = 102 个 Python C-API + 13 个真实 Torch 符号**。
+- 13 个 Torch 符号由 **`libtorch_cpu`** 提供（13/13 解析）；
+- 102 个 Python C-API 由**实际 `libpython`** 提供（102/102 解析）；
+- 因此**不能**写"非 Py 类已全部闭合"，也**不能**写"仅宿主可提供"——13 个 Torch 符号在我方链接输入中**缺失**（未链 `libtorch_cpu`），这是**可修的接线项**，不是分类事实。
+- 本节此前（`d193cb8`）采信的"其余 3 条为正则误截片段"**亦撤回**：真实数量为 13。
 
 ### 36.4 路径与仍未闭合
 
