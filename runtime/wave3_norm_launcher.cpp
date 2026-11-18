@@ -26,6 +26,14 @@ static uint16_t f2bf(float v) {
     u += 0x7fffu + ((u >> 16) & 1u);  // round to nearest even
     return static_cast<uint16_t>(u >> 16);
 }
+static bool load_file(const char* path, void* dst, size_t bytes) {
+    FILE* f = std::fopen(path, "rb");
+    if (f == nullptr) return false;
+    const size_t got = std::fread(dst, 1, bytes, f);
+    std::fclose(f);
+    return got == bytes;
+}
+
 static float bf2f(uint16_t b) {
     uint32_t u = static_cast<uint32_t>(b) << 16;
     float v;
@@ -36,6 +44,7 @@ static float bf2f(uint16_t b) {
 int main(int argc, char** argv) {
     const int M = argc > 1 ? std::atoi(argv[1]) : 967;
     const int N = argc > 2 ? std::atoi(argv[2]) : 5120;
+    const char* natdir = argc > 3 ? argv[3] : nullptr;
     const float eps = 1e-6f;
     const size_t elems = static_cast<size_t>(M) * N;
     const int mPad = (M + 7) / 8 * 8;
@@ -48,11 +57,36 @@ int main(int argc, char** argv) {
 
     std::vector<uint16_t> hx(elems), hr(elems), hg(N), hout(elems), hro(elems);
     std::vector<float> href(elems), hrst(M), hrst_dev(mPad);
+    std::vector<uint16_t> hy_native(elems), hres_native(elems);
+    std::vector<float> hrstd_native(mPad);
+    bool have_native = false;
+    if (natdir != nullptr) {
+        char path[512];
+        std::snprintf(path, sizeof(path), "%s/x.bin", natdir);
+        const bool ox = load_file(path, hx.data(), bytes);
+        std::snprintf(path, sizeof(path), "%s/r.bin", natdir);
+        const bool orr = load_file(path, hr.data(), bytes);
+        std::snprintf(path, sizeof(path), "%s/g.bin", natdir);
+        const bool og = load_file(path, hg.data(), N * 2);
+        std::snprintf(path, sizeof(path), "%s/y.bin", natdir);
+        const bool oy = load_file(path, hy_native.data(), bytes);
+        std::snprintf(path, sizeof(path), "%s/res.bin", natdir);
+        const bool ores = load_file(path, hres_native.data(), bytes);
+        std::snprintf(path, sizeof(path), "%s/rstd.bin", natdir);
+        const bool ors = load_file(path, hrstd_native.data(), static_cast<size_t>(M) * 4);
+        have_native = ox && orr && og && oy && ores && ors;
+        printf("native inputs loaded=%d (x=%d r=%d g=%d y=%d res=%d rstd=%d)\n",
+               (int)have_native, (int)ox, (int)orr, (int)og, (int)oy, (int)ores, (int)ors);
+        if (!have_native) return 4;
+    }
+    if (!have_native)
     for (size_t i = 0; i < elems; ++i) {
         hx[i] = f2bf(std::sin(static_cast<double>(i) * 1e-3) * 0.75f);
         hr[i] = f2bf(std::cos(static_cast<double>(i) * 7e-4) * 0.5f);
     }
+    if (!have_native)
     for (int i = 0; i < N; ++i) hg[i] = f2bf(0.5f + 0.5f * std::sin(static_cast<double>(i) * 1e-2));
+    if (!have_native)
     for (int row = 0; row < M; ++row) {
         double q = 0.0;
         for (int c = 0; c < N; ++c) {
@@ -137,8 +171,36 @@ int main(int argc, char** argv) {
     printf("raw: out[0..3]=%g,%g,%g,%g rstd[0..3]=%g,%g,%g,%g\n",
            bf2f(hout[0]), bf2f(hout[1]), bf2f(hout[2]), bf2f(hout[3]),
            hrst_dev[0], hrst_dev[1], hrst_dev[2], hrst_dev[3]);
-    printf("M=%d N=%d max_abs_out=%.6g max_abs_residual=%.6g max_abs_rstd=%.6g "
-           "out_gt_0.01=%zu/%zu\n", M, N, max_out, max_res, max_rstd, bad_out, elems);
+    printf("M=%d N=%d ref=%s max_abs_out=%.6g max_abs_residual=%.6g max_abs_rstd=%.6g "
+           "out_gt_0.01=%zu/%zu\n", M, N, have_native ? "native" : "cpu_fp32_on_bf16_inputs",
+           max_out, max_res, max_rstd, bad_out, elems);
+    if (have_native) {
+        double dy = 0.0, dres = 0.0, drs = 0.0;
+        size_t bad = 0;
+        for (size_t i = 0; i < elems; ++i) {
+            const double a = std::fabs(static_cast<double>(bf2f(hout[i])) - bf2f(hy_native[i]));
+            const double b = std::fabs(static_cast<double>(bf2f(hro[i])) - bf2f(hres_native[i]));
+            if (a > dy) dy = a;
+            if (b > dres) dres = b;
+            if (a > 0.01) ++bad;
+        }
+        for (int row = 0; row < M; ++row) {
+            const double d = std::fabs(static_cast<double>(hrst_dev[row]) - hrstd_native[row]);
+            if (d > drs) drs = d;
+        }
+        printf("vs_native: max_abs_Y=%.6g max_abs_residual_sum=%.6g max_abs_rstd=%.6g "
+               "Y_gt_0.01=%zu/%zu\n", dy, dres, drs, bad, elems);
+        printf("Y ours : ");
+        for (int k = 0; k < 8; ++k) printf("%.5g ", bf2f(hout[k]));
+        printf("\nY nativ: ");
+        for (int k = 0; k < 8; ++k) printf("%.5g ", bf2f(hy_native[k]));
+        printf("\nz*rstd*g in: ");
+        for (int k = 0; k < 8; ++k) {
+            const float zz = bf2f(hx[k]) + bf2f(hr[k]);
+            printf("%.5g ", zz * hrst_dev[0] * bf2f(hg[k]));
+        }
+        printf("\n");
+    }
 
     aclDestroyTensor(tx); aclDestroyTensor(tr); aclDestroyTensor(tg);
     aclDestroyTensor(to); aclDestroyTensor(tro); aclDestroyTensor(trs);

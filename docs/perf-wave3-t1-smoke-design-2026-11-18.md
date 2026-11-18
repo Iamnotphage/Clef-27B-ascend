@@ -251,7 +251,16 @@
 - 输入与参数（确定性，无随机种子）：`x[i]=bf16(sin(i*1e-3)*0.75)`、`residual[i]=bf16(cos(i*7e-4)*0.5)`、`gamma[c]=bf16(0.5+0.5*sin(c*1e-2))`、`eps=1e-6`、`repeat=1`、M∈{8,64,967}、N=5120。
 - 判据来源：`>0.01` 元素数与 `max_abs` 是**冒烟级**判据（BF16 ulp 量级），**不能替代 2 pp 全量质量验收**；正式验收仍走全量 OpenDecisions + ERQA。
 - 该结果**只证明 Add+RMSNorm 语义**，不证明 AR 或性能；单独耗时不计入 T1 收益。
-- **下一步（设备窗口）**：用同一份真实 BF16 输入对比原生 `torch_npu.npu_add_rms_norm` 的 `Y / rstd / residual_sum` 三输出，覆盖真实残差形状、末行与 buffer 轮换；FP32 参考仅作补充。
+- **原生对照（已完成，2026-11-18 12:00 CST）**：用 `runtime/wave3_norm_native_dump.py` 生成确定性 BF16 输入并由 `torch_npu.npu_add_rms_norm` 产出三输出，launcher 用**同一份字节**跑自研算子后比对（M=967、N=5120、eps=1e-6）：
+
+| 输出 | max_abs（自研 vs 原生） | 备注 |
+| --- | ---: | --- |
+| `residual_sum` | **0** | 逐位一致 |
+| `rstd` | **4.77e-7** | FP32 量级一致 |
+| `Y` | **0.015625** | 约 2 个 BF16 ulp；403/4,951,040 个元素 >0.01（0.008%） |
+
+- 该对照仍只覆盖一个形状（967×5120）与固定分布；末行/多形状/buffer 轮换由 A/B/C 组补测。
+- **下一步（设备窗口）**：把 KFC `repeat=1` 的 AllReduce 接入同一 kernel（按 §13 的官方链路），先做 AR 数值与可见性验证，再做 A–E 性能；独立 Norm 正确性不计为 T1 收益。
 
 ## 13. KFC 接线（待执行，证据已齐）
 
