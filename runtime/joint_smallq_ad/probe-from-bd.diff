@@ -1,0 +1,74 @@
+diff --git a/runtime/joint_smallq_bd_probe.py b/runtime/joint_smallq_ad_probe.py
+index 94a6b09..c9683e8 100644
+--- a/runtime/joint_smallq_bd_probe.py
++++ b/runtime/joint_smallq_ad_probe.py
+@@ -1,9 +1,9 @@
+ #!/usr/bin/env python3
+-"""Owner 27's B/D metadata-dispatch diagnostic; no service control.
++"""Owner 27's direct f810 A/D diagnostic; no service control.
+ 
+-B and D bind complete methods on one shared head/storage. Their source differs
+-only in the per-call guard prefix; projection and kernel are identical. A uses
+-exact f810 methods for untimed numerical gates. Production files stay intact.
++A and D bind complete methods on one shared head/storage. A uses exact f810
++methods; D is the frozen dispatch candidate. B remains a gate-only reference
++for metadata-only bitwise validation. Production files stay intact.
+ """
+ import argparse
+ import ast
+@@ -25,7 +25,7 @@ POST = "086357bddbe4fbfbda1630e5ac70503c44f06113d582089c5c54669720d3260a"
+ KERNEL = "08ad88f6cebfb148aff8d973097d5bcf234e25d144a824385b18b8b078e82dff"
+ WEIGHTS = "a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953"
+ CORE_ATOL, HEAD_ATOL, PROB_ATOL = 0.0078125, 0.03125, 0.005
+-ORDERS = (("B", "D"), ("D", "B"), ("D", "B"), ("B", "D"))
++ORDERS = (("A", "D"), ("D", "A"), ("D", "A"), ("A", "D"))
+ HERE = Path(__file__).resolve().parent
+ 
+ 
+@@ -101,7 +101,7 @@ class ArmController:
+ 
+ 
+ def load_reference(path, suffix):
+-    name = "vllm.model_executor.models.clef_smallq_bd_" + suffix
++    name = "vllm.model_executor.models.clef_smallq_ad_" + suffix
+     spec = importlib.util.spec_from_file_location(name, path)
+     module = importlib.util.module_from_spec(spec)
+     sys.modules[name] = module
+@@ -349,7 +349,7 @@ def run(args, report):
+                         round_["arms"][arm][metric] = stats([sample[metric] for sample in samples])
+                     flush()
+             row["paired_deltas"] = {}
+-            for left, right in (("B", "D"),):
++            for left, right in (("A", "D"),):
+                 row["paired_deltas"][f"{right}_minus_{left}"] = {
+                     metric: [r["arms"][right][metric]["median"] - r["arms"][left][metric]["median"]
+                              for r in row["rounds"]]
+@@ -366,20 +366,20 @@ def main():
+     ap.add_argument("--tree", type=Path, default=Path("/workspace/yangchen/work/src/vllm"))
+     ap.add_argument("--device", type=int, choices=(0, 1), default=0)
+     ap.add_argument("--weights", type=Path, default=Path("/workspace/yangchen/models/Clef-27B/joint_head.safetensors"))
+-    ap.add_argument("--reference", type=Path, default=HERE / "joint_smallq_bd/f810_reference.py")
+-    ap.add_argument("--frozen-b", type=Path, default=HERE / "joint_smallq_bd/b_reference.py")
+-    ap.add_argument("--input-manifest", type=Path, default=HERE / "joint_smallq_bd/inputs.json")
++    ap.add_argument("--reference", type=Path, default=HERE / "joint_smallq_ad/f810_reference.py")
++    ap.add_argument("--frozen-b", type=Path, default=HERE / "joint_smallq_ad/b_reference.py")
++    ap.add_argument("--input-manifest", type=Path, default=HERE / "joint_smallq_ad/inputs.json")
+     ap.add_argument("--gate-only", action="store_true")
+     ap.add_argument("--output", type=Path, required=True)
+     args = ap.parse_args()
+     args.output.parent.mkdir(parents=True, exist_ok=True)
+-    report = {"schema": "joint-smallq-probe/1", "experiment": "joint-smallq-bd/1", "gate_passed": False,
++    report = {"schema": "joint-smallq-probe/1", "experiment": "joint-smallq-ad/1", "gate_passed": False,
+               "args": {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()},
+-              "arm_paths": {"A": "gate reference only; exact f810 methods; no steady-state timing",
+-                            "B": "same head/storage; frozen 2e8 methods, adapter and Triton backend",
++              "arm_paths": {"A": "same head/storage; exact production f810 methods; original MHA",
++                            "B": "gate-only frozen 2e8 methods; D/B bitwise validation",
+                             "D": "same head/storage; per-call metadata dedup guard; identical projection/kernel"},
+-              "experimental_variable": "guard metadata reads only; no cross-call cache",
+-              "core_control": "both B/D use identical kernel callable; only head guard differs",
++              "experimental_variable": "exact f810 methods versus frozen D methods and smallQ; no candidate changes",
++              "core_control": "A projected SDPA versus D frozen smallQ; report separately from full head",
+               "timing_notes": {"selection": "method/backend/env changes outside measurement; warmup5 per arm block",
+                                "device_ms": "event interval includes stream gaps; not kernel-only time",
+                                "host_submit_ms": "time in Python/framework call; can include internal synchronization",

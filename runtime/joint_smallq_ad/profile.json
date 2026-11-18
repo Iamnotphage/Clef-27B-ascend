@@ -1,0 +1,168 @@
+{
+  "schema": "joint-smallq-ad-profile/1",
+  "experiment": "joint-smallq-ad/1",
+  "execution_owner": "clef-27b-ascend-27",
+  "schedule": "20 schedules after 23 review and 24/rstd window restore closure; only owner 27 executes.",
+  "frozen_B_commit": "2e8af5d59fc88de8922276ed4f55db187b7e2fea",
+  "wrapper_commit": "5c045eb1427e9cb902867bd7147c0d636ce91e1c",
+  "wrapper_sha256": "9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5",
+  "payloads": {
+    "postimage": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_dispatch/clef_joint_schema.py",
+      "repository_file": "runtime/joint_smallq_dispatch/clef_joint_schema.py",
+      "stage_rel": "runtime/joint_smallq_dispatch/clef_joint_schema.py",
+      "sha256": "086357bddbe4fbfbda1630e5ac70503c44f06113d582089c5c54669720d3260a"
+    },
+    "installer": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/apply_joint_smallq_dispatch.py",
+      "repository_file": "runtime/apply_joint_smallq_dispatch.py",
+      "stage_rel": "runtime/apply_joint_smallq_dispatch.py",
+      "sha256": "13dff04404e664b77c61e1eb2dd85df9610224a80fd0899cf3ef0e4d63e084c7"
+    },
+    "probe": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_ad_probe.py",
+      "repository_file": "runtime/joint_smallq_ad_probe.py",
+      "stage_rel": "runtime/joint_smallq_ad_probe.py",
+      "sha256": "265af902ad3fe39ba51796319035c082fd9dd6c133fc142835a6ec9b295dfbcb"
+    },
+    "kernel": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_dispatch/clef_smallq_kernel.py",
+      "repository_file": "runtime/joint_smallq_dispatch/clef_smallq_kernel.py",
+      "stage_rel": "runtime/joint_smallq_dispatch/clef_smallq_kernel.py",
+      "sha256": "08ad88f6cebfb148aff8d973097d5bcf234e25d144a824385b18b8b078e82dff"
+    },
+    "reference": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_single_field/clef_joint_schema.py",
+      "repository_file": "runtime/joint_single_field/clef_joint_schema.py",
+      "stage_rel": "runtime/joint_smallq_ad/f810_reference.py",
+      "sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
+    },
+    "frozen_B": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq/clef_joint_schema.py",
+      "repository_file": "runtime/joint_smallq/clef_joint_schema.py",
+      "stage_rel": "runtime/joint_smallq_ad/b_reference.py",
+      "sha256": "cf02419978ce62f18ca908b8d4c9646531fb00d3b07871b310576f963e5ec612"
+    },
+    "inputs": {
+      "source": "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_acb/inputs.json",
+      "repository_file": "runtime/joint_smallq_acb/inputs.json",
+      "stage_rel": "runtime/joint_smallq_ad/inputs.json",
+      "sha256": "189fd36285b762273c0ef7d1dd99cb2a43a7db50f68b5ff7ab0036b320b20429"
+    }
+  },
+  "argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py",
+    "--run-dir",
+    "/workspace/yangchen/logs/joint-smallq-ad-27-v1-first",
+    "--repo",
+    "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb",
+    "--tree",
+    "/workspace/yangchen/work/src/vllm",
+    "--python",
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "--activate",
+    "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+    "--launch",
+    "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+    "--wait",
+    "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh",
+    "--device",
+    "0",
+    "--port",
+    "18143",
+    "--candidate-kind",
+    "head-postimage",
+    "--stop-script",
+    "/tmp/d0cc/d0_stop.py",
+    "--expect-stop-sha",
+    "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886",
+    "--postimage-rel",
+    "runtime/joint_smallq_dispatch/clef_joint_schema.py",
+    "--postimage-source",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_dispatch/clef_joint_schema.py",
+    "--postimage-sha",
+    "086357bddbe4fbfbda1630e5ac70503c44f06113d582089c5c54669720d3260a",
+    "--installer-rel",
+    "runtime/apply_joint_smallq_dispatch.py",
+    "--installer-source",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/apply_joint_smallq_dispatch.py",
+    "--installer-sha",
+    "13dff04404e664b77c61e1eb2dd85df9610224a80fd0899cf3ef0e4d63e084c7",
+    "--probe-rel",
+    "runtime/joint_smallq_ad_probe.py",
+    "--probe-source",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_ad_probe.py",
+    "--probe-sha",
+    "265af902ad3fe39ba51796319035c082fd9dd6c133fc142835a6ec9b295dfbcb",
+    "--payload",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_dispatch/clef_smallq_kernel.py:runtime/joint_smallq_dispatch/clef_smallq_kernel.py:08ad88f6cebfb148aff8d973097d5bcf234e25d144a824385b18b8b078e82dff",
+    "--payload",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_single_field/clef_joint_schema.py:runtime/joint_smallq_ad/f810_reference.py:f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "--payload",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq/clef_joint_schema.py:runtime/joint_smallq_ad/b_reference.py:cf02419978ce62f18ca908b8d4c9646531fb00d3b07871b310576f963e5ec612",
+    "--payload",
+    "/workspace/yangchen/work/scratch-26/joint-smallq-ad-v1/runtime/joint_smallq_acb/inputs.json:runtime/joint_smallq_ad/inputs.json:189fd36285b762273c0ef7d1dd99cb2a43a7db50f68b5ff7ab0036b320b20429",
+    "--client-rel",
+    "",
+    "--env-flag",
+    "CLEF_JOINT_SMALLQ",
+    "--probe-schema",
+    "joint-smallq-probe/1",
+    "--preimage-sha",
+    "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "--stop-timeout",
+    "120",
+    "--probe-timeout",
+    "900",
+    "--wait-timeout",
+    "900"
+  ],
+  "expected": {
+    "schema": "joint-smallq-probe/1",
+    "experiment": "joint-smallq-ad/1",
+    "gate_passed": true,
+    "error": null,
+    "same_weight_storage_verified": true,
+    "frozen_files_unchanged": true,
+    "timing_entries": 9,
+    "rounds_per_entry": 4,
+    "arms": [
+      "A",
+      "D"
+    ],
+    "samples_per_arm_round": 20,
+    "warmup_per_arm_block": 5,
+    "orders": [
+      [
+        "A",
+        "D"
+      ],
+      [
+        "D",
+        "A"
+      ],
+      [
+        "D",
+        "A"
+      ],
+      [
+        "A",
+        "D"
+      ]
+    ],
+    "core_atol": 0.0078125,
+    "head_atol": 0.03125,
+    "prob_atol": 0.005,
+    "fallback": "both cases bitwise vs A and B with zero replacement backend calls",
+    "single_variable_verified": true,
+    "raw_count": 1440,
+    "gate_reference": "A exact f810; B extra gate-only frozen reference for D/B bitwise",
+    "D_vs_B": "bitwise equality for all core/head/fallback gates",
+    "default_off": "bitwise vs A; zero backend"
+  },
+  "cleanup": "Use frozen wrapper lifecycle. No separate stop/restore. Revert f810 and remove smallQ kernel, cleanup unknown/residual empty, restore health/workers/text/image all rc0/oktrue.",
+  "variable": "Direct exact f810 A methods versus frozen D. D/head/kernel and B provenance unchanged; no new kernel or tiling.",
+  "decision": "Direct same-window D-A three complete head lengths: retain per-round delta/range/direction, core separately. No service adoption before S1/S2 and full OD/ERQA <=2pp.",
+  "frozen_D_commit": "9b803fefba4d1aa3beab1125bb4cbc7a3daae12f"
+}
