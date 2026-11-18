@@ -17,7 +17,7 @@
 
 - conv+QKV 融合与 chunk128 都改变最后几位浮点，当前与适配 baseline **不再逐位一致**；
 - 相对官方公开 as-served 的三项最大偏差 **0.284 pp**，按 2PP 口径**通过**；
-- 全量 OD 相对适配 baseline：2 条 choice 变化、accuracy +0.18 pp，三项均在 2PP 内；
+- 全量 OD 相对适配 baseline：**4 条 choice 变化、accuracy −0.09 pp（1906→1904）**，三项均在 2PP 内；
 - 相对上一版（74.3107）：Capability −0.063 pp、accuracy +2 题；
 - 论文的 with-temperatures 结果（83.4 / 65.4 / 74.4）**已忽略**，官方列全部为 as-served；
 - 官方未公布 accuracy、Score MAE，不能做这两项的官方对照；
@@ -57,7 +57,7 @@
 
 完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[首轮工程 baseline 记录](../docs/baseline-2026-11-12.md)
 
-比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；当时 baseline 为 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 1906/2352，Score MAE 0.401389。2026-11-16 接入 GDN 边界融合后，当前提交值为 Calibration **82.7092**、Intelligence **65.9122**、Capability **74.3107**、accuracy **1902/2352**、Score MAE **0.401545**；相对 baseline 三项均在 2PP 内，4 条 choice 变化。ERQA 官方 400 题由 219/400 变为 **217/400 = 0.5425**（−0.50 pp），仍在 2PP 内。[OpenDecisions 记录](../docs/opendecisions-baseline-2026-11-13.md) · [ERQA 报告](../docs/erqa-baseline-2026-11-14.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
+比赛质量按 **OpenDecisions + ERQA** 准备。2026-11-13 全新 OpenDecisions 1.0.1 全量评测完成，2,352/2,352 成功、0 错误；当时 baseline 为 Calibration 82.7941、Intelligence 66.0568、Capability 74.4255，accuracy 1906/2352，Score MAE 0.401389。2026-11-16 接入 GDN 边界融合后的**阶段值**为 Calibration **82.7092**、Intelligence **65.9122**、Capability **74.3107**、accuracy **1902/2352**、Score MAE **0.401545**，ERQA **217/400 = 0.5425**。该阶段已于 2026-11-17 被 conv+QKV 融合与 chunk128 取代：**当前提交值**为 Calibration **82.4112**、Intelligence **66.0840**、Capability **74.2476**、accuracy **1904/2352**、Score MAE **0.402610**，ERQA **216/400 = 0.5400**；相对 baseline 三项均在 2PP 内，4 条 choice 变化。[OpenDecisions 记录](../docs/opendecisions-baseline-2026-11-13.md) · [ERQA 报告](../docs/erqa-baseline-2026-11-14.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
 
 2026-11-14 第四轮复核确认：seqs4 合批配置（13.764 decisions/s @ C8）的全量质量未通过 0.03/0.05 工程门槛（Capability 74.200，4 条 choice 变化，最大概率差 0.097399）；该轮将质量配置定为 **seqs1/B1**，当时 S1 P95 **217.036 ms**、S2 **5.715 decisions/s @ C16**。后续 GDN 决策路径与 BIC 在不改变质量的前提下将 S1 降至 **198.42 ms**，S2 改用 seqs4 达到 **14.689 @ C16（C8 14.652）**。完整根因、GDN 覆盖和接口验收见 [第四轮报告](../docs/tuning4-2026-11-14.md)。
 

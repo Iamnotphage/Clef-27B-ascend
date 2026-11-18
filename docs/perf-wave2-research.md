@@ -243,6 +243,25 @@ profile 的 op 列表里没有显式的 ATB 算子名，但 `SwiGlu`（2.39 ms�
 > `SwiGlu` 是否由 ATB 下发（例如打开 ATB 日志或按算子名查 profiler 的 module 归属），否则可能只是改了一个无人读的变量。
 > 本项仍为**建议/未测**，且需要上板，本轮不执行。
 
+### 2026-11-18 调用路径核实（结论：关闭，不需要 A/B）
+
+三项只读证据合起来足以判定 ATB 不在本服务热路径：
+
+1. **env 确实被库读取**：服务进程映射的 `/usr/local/Ascend/nnal/atb/9.2.1/atb/cxx_abi_1/lib/libatb.so` 中可检索到
+   `ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT`、`ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT`、`ATB_MATMUL_SHUFFLE_K_ENABLE`
+   三个字符串；`libatb_mixops.so` 中没有。
+2. **SwiGLU 不走 ATB**：`vllm_ascend/ops/activation.py:37-40` 的 `AscendSiluAndMul.forward_oot` 调用
+   `torch_npu.npu_swiglu(x)`（aclnn 路径）；`vllm_ascend/ops`、`vllm_ascend/device` 与 `fla_npu` 中没有任何
+   `atb_ops` / `torch_npu.atb` / `_atb` 调用点。
+3. **trace 里没有 ATB 算子**：2026-11-18 的 967 token profile（`perf-wave2-20261118/profile/window-967`）
+   共 370 个算子，其中 40 个非 aclnn，全部为 HCCL（`hcom_allReduce`、`allreduceAicpuKernel`）、
+   自研 `ClefGdnConvQkv`，以及 torch/FLA kernel（`SwiGlu`、`_layer_norm_fwd_1pass_kernel_npu`、
+   `split_qkv_rmsnorm_mrope_kernel`、`fused_gdn_gating_kernel`、`_zero_kv_blocks_kernel`、`GemmaRmsNorm`）。
+   没有任何 ATB 形态的算子名或 `atb::` 前缀。
+
+**判定**：放大 ATB ops-runner cache 对当前服务延迟不可能有影响；不为无热路径的变量消耗 A/B 窗口。
+若未来引入 ATB 算子（例如上游 `fuse_allreduce_rms`），需要重新做第 1 项的映射核查。
+
 ### 做法与门槛
 
 1. **探查（零风险、几分钟）**：设 `ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT=1000000`、`LOCAL_COUNT=1000000`，

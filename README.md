@@ -37,7 +37,7 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 | OpenDecisions | Score MAE | 未公布 | 0.401389（588） | 0.402615（588） | — |
 | ERQA | 总体 accuracy | 未找到 | 0.5475（219/400） | 0.5400（216/400） | N/A |
 
-- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.284 pp**，满足 2PP；相对适配 baseline 2 条 choice 变化、accuracy +0.18 pp，三项均在 2PP 内；论文温度校准值已忽略。
+- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.284 pp**，满足 2PP；相对适配 baseline **4 条 choice 变化、accuracy −0.09 pp（1906→1904）**，三项均在 2PP 内；论文温度校准值已忽略。
 - ERQA 当前 216/400，相对适配 baseline **−0.75 pp**，在 2PP 内；官方没有公开 Clef 的 ERQA 分数，官方列只能记 N/A。
 - 官方公开 OpenDecisions 值是数据卡榜单的 `Cloudflare/clef` as-served 参考，不是主办方正式 baseline。
 
