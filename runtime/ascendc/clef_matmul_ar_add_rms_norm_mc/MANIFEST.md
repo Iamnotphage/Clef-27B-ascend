@@ -8,16 +8,16 @@
 | --- | --- |
 | vendor 名 | `clef_matmul_ar_add_rms_norm_mc`（与归档的 nzguard 包**不同 vendor**） |
 | op 名 | `ClefMatmulArAddRmsNorm`（**与归档包同名**，两者不可同时安装） |
-| 源提交 | `aacf371` |
+| 源提交 | `85b3028` |
 | 构建目录 | `/workspace/yangchen/work/wave3-e-build-22-mc`（独立，非 21 共享目录） |
 
 ## 构建产物 SHA-256
 
 | 产物 | SHA-256 |
 | --- | --- |
-| `custom_opp_ubuntu_aarch64.run` | `65260db799d208e3e7c7d0f6d20fb72120a91c14d24d15350d48125976249e79` |
-| `ClefMatmulArAddRmsNorm_b87a0f8f….o`（kernel） | `e60aea4fad532d467d7969827c3c2458d48591b92ebfe291d12a08e303761edf` |
-| `libcust_opmaster_rt2.0.so` | `290cc31e3ea593b0f11e6c1f24f583938bd8afcf59a6cadc0be470c262ceaaae` |
+| `custom_opp_ubuntu_aarch64.run` | `873ef8fb56df860978802584b3cbdea8ca9b2435d479a43239847abe29ee81d1` |
+| `ClefMatmulArAddRmsNorm_b87a0f8f….o`（kernel） | `05cf6bd218ce15ac483a4f7ac338d1ef60edbf03d5bd71bca03c2249c12574c2` |
+| `libcust_opmaster_rt2.0.so` | `1ecdb91fb2f12f85dca27c74ad64c314d839d5df90039a8377c2e54c37c5db18` |
 | `libcust_opapi.so` | `9d62051f0d7da2efafd741ed68640becd9b9ea88eb8d08e07d050271d56cc227`（与 nzguard 包**逐字节相同**） |
 
 kernel `.o` 的文件名 hash `b87a0f8f…` 与 nzguard 包相同（名字由 op 与配置派生），**内容不同**。
@@ -64,6 +64,16 @@ kernel `.o` 的文件名 hash `b87a0f8f…` 与 nzguard 包相同（名字由 op
 `vllm-ascend/csrc/gmm/grouped_matmul_swiglu_quant/op_kernel/grouped_matmul_swiglu_quant.h:222-231`
 `GetWOffset(tailN,k) = tailN * AlignUp<16>(k)`（NZ 分支），`tailN = 0` 时恒为 0；
 其 M 切分调用方只偏移 A 与 C（`:169-172`），仅在 N 切分时才加 `GetWOffset`（`:174`）。
+
+## 生成 schema 证据（只读，构建产物）
+
+`build_out/autogen/aclnn_clef_matmul_ar_add_rms_norm.h` 的
+`aclnnClefMatmulArAddRmsNormGetWorkspaceSize` 参数为 4 个输入张量 + **14 个 `int64_t/double/char*` 属性**
+（`eps…normFromX`，止于 `normFromX`）+ 4 个输出张量。
+在本包产物里 `grep -c mcDiag` = **0**、`grep -c int64_t` = **14**：
+**属性个数与归档包一致，没有第 15 个属性**，adapter 调用**无需改动**。
+（`libcust_opapi.so` 与 nzguard 包逐字节相同，但这只说明**文件同字节**，
+不代表符号解析选中了哪一份；两包 vendor 不同，不可同时安装。）
 
 ## 未证 / 需设备验证
 
