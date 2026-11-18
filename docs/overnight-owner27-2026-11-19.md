@@ -34,6 +34,18 @@
 
 probe rc0、gate_passed=true，清理 reaped=true/unknown=[]/residual=[]，随后 revert f810 并删除 kernel。窗口 overall_rc0；02:36:15 CST 恢复四检闭合，标签 `d0-restore-20261118T183442Z-d3301487`，root1193641，worker1193787/1193788。完整 [原始 probe（gzip）](../Clef-27B/logs/overnight-20261119-owner27/smallq-first/probe/head-probe.json.gz)、[配对汇总](../Clef-27B/logs/overnight-20261119-owner27/smallq-first/paired-summary.json)、[恢复原件](../Clef-27B/logs/overnight-20261119-owner27/smallq-first/restore.json) 已归档；23 已独立从 raw samples 重算并核验。
 
+## N1 ARon/cores1：数值与生命周期通过
+
+owner27 入口 commit `397d8fb4751230438b4c11012e9a1db49b00558b`，payload `f548b3689b91cfa2e81f5ba5282ef022aa050cc8cc58542b214c0d5b32eb409e`，plan `59da5843df72fdd1b668302d5bd1d0c711768360beb14b7488e5802910f0f8a6`。实际执行 owner27，冻结 runner 元数据的 owner21 作为兼容标记保留。输入 rows967、seed20261118、cores1、use_hccl1；包、adapter、runner 和固定门保持原冻结字节。
+
+远端 `/workspace/yangchen/logs/n1-v2-aron-c1-owner27-20261119T0230/`。两 rank 的输入元数据与先前 ARoff 格相同；每 rank 12 个真实二进制的 SHA/大小均通过独立校验，reduced、Y、residual、rstd 的 candidate/ref 逐字节相等。两 rank reduced SHA 均为 `02215064e0e393b3ab21a3bf0aca14c51281435ce74b3840e26647810adbfcd1`，固定 shape/dtype/finite/混合误差门全部通过。诊断槽覆盖 [0,967)，FNV 校验和通过，余47槽全零。23 与25分别完成原件/CPU复核。
+
+probe child_rc0、无 timeout、reaped=true、unknown/residual为空；独立 vendor 已退役。窗口 overall_rc0，02:38:31 CST 完成四检恢复：label `d0-restore-20261118T183704Z-b8572d6f`，root1195216，双 worker1195493/1195494。源码 f810，guard 76595657，health/workers/text/image 均 rc0/ok=true。
+
+原件：[window](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c1/window.json)、[probe](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c1/probe/head-probe.json)、[rank0](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c1/probe/cell/rank0/result.json)、[rank1](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c1/probe/cell/rank1/result.json)、[恢复](../Clef-27B/logs/overnight-20261119-owner27/n1-aron-c1/restore.json)。大体积原始二进制保留远端；每文件哈希/大小在 rank 元数据中。
+
+本格证明相同输入下 cores1 ARon 的数值与生命周期通过；多核和性能继续单独验证。
+
 ## 后续执行
 
-按已核顺序继续 N1 ARon/cores1 owner27 bundle，再执行经启动 guard 有限修复的 head 服务 A/B。后续结果在本文件续记。当前两项记录仅证明交接恢复与 smallQ 局部探针，最终 S1/S2/完整质量尚待执行。
+head 服务 A/B 已在 `/workspace/yangchen/logs/joint-fused-service-ab-27-8b46-first/` 启动，采用经23核准的 `8b46a2d57f0c91493d614e64218f53190983fc74`，rounds4/reps5/warmup3。后续结果在本文件续记。最终 S1/S2/完整质量尚待执行。
