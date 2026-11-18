@@ -93,14 +93,36 @@ def gate_cases():
     check("y relative-only failure", (not o1["pass"]) and o1["max_abs"] <= 0.02
           and o1["max_rel"] > 0.01, o1)
 
-    # near-zero abs failure still counts
-    g = evaluate({"residual": r[:1, :1], "y": torch.tensor([[5e-6]], dtype=torch.bfloat16),
+    # near-zero element breaching the absolute bound must fail the gate
+    g = evaluate({"residual": r[:1, :1], "y": torch.tensor([[0.03]], dtype=torch.bfloat16),
                   "rstd": rs[:1]},
                  {"residual": r[:1, :1], "y": torch.tensor([[0.0]], dtype=torch.bfloat16),
                   "rstd": rs[:1]})
     out1 = g["outputs"][1]
-    check("near-zero abs counted", out1["near_zero_count"] == 1
-          and out1["near_zero_max_abs"] > 0, out1)
+    check("near-zero abs failure rejected", (not out1["pass"]) and (not g["pass"])
+          and out1["near_zero_count"] == 1 and out1["max_abs"] > 0.02, out1)
+
+    # reference Inf on the rstd output
+    bad_rstd = rs.clone(); bad_rstd[0] = float("inf")
+    g = evaluate(base, {"residual": r, "y": y, "rstd": bad_rstd})
+    check("reference Inf rejected", not g["pass"] and not g["outputs"][2]["ref_finite"])
+
+    # candidate rstd with a wrong (2-D) shape must be caught, not reshaped away
+    g = evaluate({"residual": r, "y": y, "rstd": rs.reshape(1, -1)}, base)
+    check("candidate rstd shape enforced", not g["pass"] and not g["outputs"][2]["shape_ok"],
+          g["outputs"][2])
+
+    # mask threshold: just below vs just above 1e-5, on representable values
+    below = torch.tensor([[9.9e-6]], dtype=torch.float32).to(torch.bfloat16)
+    above = torch.tensor([[1.1e-5]], dtype=torch.float32).to(torch.bfloat16)
+    gb = evaluate({"residual": r[:1, :1], "y": below, "rstd": rs[:1]},
+                  {"residual": r[:1, :1], "y": torch.zeros(1, 1, dtype=torch.bfloat16),
+                   "rstd": rs[:1]})
+    ga = evaluate({"residual": r[:1, :1], "y": above, "rstd": rs[:1]},
+                  {"residual": r[:1, :1], "y": below, "rstd": rs[:1]})
+    check("mask threshold both sides",
+          gb["outputs"][1]["near_zero_count"] == 1,
+          (gb["outputs"][1], ga["outputs"][1]))
 
 
 def restore_cases():
@@ -200,7 +222,8 @@ def main() -> int:
                            log, runner=lambda c, **k: R(rc=0, out={
                                "h": '{"status":"ready"}', "w": rows,
                                "t": '{"answers":{"answer":{"type":"score"}}}',
-                               "i": '{"answers":{"answer":{"type":"choice"}}}'}[c[0]]))
+                               "i": '{"answers":{"answer":{"type":"choice"}}}'}[c[0]]),
+                           service_pids={111, 222})
 
     check("two workers accepted", ok and log["workers"].get("workers") == 2, log["workers"])
     check("worker count scoped helper",
@@ -219,6 +242,8 @@ import d0_run, d0_restore
 def fake_child(cmd, out_dir, timeout, env=None):
     (Path(out_dir) / "raw-rc.json").write_text(json.dumps(
         {{"wrapper_rc": 7, "child_raw_rc": 7, "timed_out": False, "pgid": 1}}))
+    (Path(out_dir) / "root-child.json").write_text(json.dumps(
+        {{"child_pid": 1, "pgid": 1, "starttime": "1", "boot_id": "b"}}))
     return 7
 d0_run.run_child = fake_child                   # test fails with rc 7
 calls = {{}}
@@ -235,13 +260,19 @@ try:
 except SystemExit as e:
     rc = e.code
 log = json.loads((Path({str(d)!r}) / "restore.json").read_text())
-print("RC", rc, "TEST", log["test_rc"], "OK", log["restore_ok"], "LAUNCH", calls.get("launch"))
+raw = json.loads((Path({str(d)!r}) / "raw-rc.json").read_text())
+pf = (Path({str(d)!r}) / "parse-failure.json")
+print("RC", rc, "TEST", log["test_rc"], "CHILD", raw.get("child_raw_rc"),
+      "OK", log["restore_ok"],
+      "PARSE", (json.loads(pf.read_text())["failure"] if pf.exists() else None),
+      "LAUNCH", calls.get("launch"))
 """
         p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
         out = p.stdout.strip()
         check("restore failure keeps test rc",
-              "TEST 7" in out and "OK False" in out and "launch.sh" in out
-              and ("RC 7" in out or "RC 5" in out), out + p.stderr[-300:])
+              "TEST 7" in out and "CHILD 7" in out and "OK False" in out
+              and "PARSE None" in out and "launch.sh" in out,
+              out + p.stderr[-300:])
 
     print("RESULT:", "ALL PASS" if not fails else f"FAILURES: {fails}")
     return 0 if not fails else 1

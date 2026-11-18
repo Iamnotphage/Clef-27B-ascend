@@ -209,26 +209,65 @@ def main() -> int:
     # Real executor lives in its own module; this process only supervises it.
     env = dict(os.environ)
     env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
-    test_rc = 0
+    test_rc = None                      # null until the child actually reports
+    test_exc = None
     try:
-        rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
-        test_rc = rc
+        test_rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
+    except Exception as exc:                                  # noqa: BLE001
+        test_exc = f"{type(exc).__name__}: {exc}"
     finally:
         # Restore runs on every exit path and keeps its own record; a restore
         # failure never overwrites the test rc.
         try:
-            from d0_restore import SERVICE_LAUNCH, SERVICE_WAIT, restore, verify
-            rlog = {"test_rc": test_rc}
-            restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
-            verified = verify({"health": [], "workers": [], "text": [], "image": []},
-                              rlog) if restored else False
+            from d0_restore import (SERVICE_LAUNCH, SERVICE_WAIT, _identity,
+                                    query_group, restore, verify)
+            rlog = {"test_rc": test_rc, "test_exception": test_exc}
+
+            # The test group must be gone before a restore can start; a failed
+            # or incomplete query blocks rather than launching over it.
+            root = a.out_dir / "root-child.json"
+            blocked = None
+            pgid = None
+            if root.exists():
+                info = json.loads(root.read_text())
+                pgid = info.get("pgid")
+                if isinstance(pgid, int):
+                    try:
+                        q = query_group(pgid)
+                    except Exception as exc:                 # noqa: BLE001
+                        q = {"survivor_check": "unavailable",
+                             "members": None, "query_exception": str(exc)}
+                    rlog["prelaunch_group"] = q
+                    if q.get("survivor_check") != "ok":
+                        blocked = "survivor query unavailable"
+                    elif q.get("members"):
+                        blocked = f"{len(q['members'])} members still alive"
+            else:
+                blocked = "missing root-child identity"
+            rlog["restore_blocked"] = blocked
+            if blocked:
+                restored = verified = False
+            else:
+                restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
+                verified = verify({"health": [], "workers": [], "text": [], "image": []},
+                                  rlog) if restored else False
             rlog["restore_ok"], rlog["verify_ok"] = restored, verified
             (a.out_dir / "restore.json").write_text(
                 json.dumps(rlog, ensure_ascii=False, indent=1) + "\n")
+            rlog_written = True
         except Exception as exc:                              # noqa: BLE001
+            (a.out_dir / "restore.json").write_text(json.dumps(
+                {"test_rc": test_rc, "test_exception": test_exc,
+                 "restore_ok": False, "verify_ok": False,
+                 "restore_error": f"{type(exc).__name__}: {exc}"},
+                ensure_ascii=False) + "\n")
             (a.out_dir / "restore-failure.json").write_text(json.dumps(
                 {"failure": type(exc).__name__, "message": str(exc),
-                 "test_rc": test_rc}, ensure_ascii=False) + "\n")
+                 "traceback": __import__("traceback").format_exc(),
+                 "test_rc": test_rc, "test_exception": test_exc},
+                ensure_ascii=False) + "\n")
+    if test_exc is not None:
+        return 4
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
     try:

@@ -116,10 +116,20 @@ def restore(launch_cmd: list, wait_cmd: list | None, log: dict, runner=subproces
     log["restore"] = {"at": _now(), "launch_rc": started.returncode,
                       "stdout": started.stdout[-2000:], "stderr": started.stderr[-2000:]}
     if wait_cmd:
-        waited = runner(wait_cmd, capture_output=True, text=True)
-        log["restore"].update({"wait_rc": waited.returncode,
-                               "wait_stdout": waited.stdout[-2000:]})
-    return started.returncode == 0
+        w_started = _now()
+        try:
+            waited = runner(wait_cmd, capture_output=True, text=True, timeout=timeout)
+            log["restore"].update({"wait_started": w_started, "wait_finished": _now(),
+                                   "wait_rc": waited.returncode,
+                                   "wait_stdout": waited.stdout, "wait_stderr": waited.stderr})
+            wait_ok = waited.returncode == 0
+        except Exception as exc:                             # noqa: BLE001
+            log["restore"].update({"wait_started": w_started, "wait_finished": _now(),
+                                   "wait_exception": f"{type(exc).__name__}: {exc}"})
+            wait_ok = False
+    else:
+        wait_ok = True
+    return started.returncode == 0 and wait_ok
 
 
 def _parse_health(text: str) -> bool:
@@ -130,16 +140,23 @@ def _parse_health(text: str) -> bool:
 
 
 def _count_workers(text: str, service_pids: set[int] | None = None) -> int:
-    """Count worker rows, optionally restricted to the restored service tree.
+    """Count worker rows whose PID field is exactly one of the service pids.
 
-    A whole-machine count would include unrelated rows, so when the service
-    pids are known only those are attributed.
+    Substring matching would confuse 111 with 1111, and an empty service set
+    would silently degrade to a whole-machine count, so attribution is exact
+    and a missing set simply matches nothing.
     """
-    rows = [ln for ln in text.splitlines() if "VLLMWorker_TP" in ln]
-    if service_pids:
-        rows = [ln for ln in rows
-                if any(str(pid) in ln for pid in service_pids)]
-    return len(rows)
+    want = service_pids or set()
+    n = 0
+    for line in text.splitlines():
+        if "VLLMWorker_TP" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        for c in cells:
+            if c.isdigit() and int(c) in want:
+                n += 1
+                break
+    return n
 
 
 def _parse_answer(text: str, expect: str) -> bool:
@@ -149,7 +166,8 @@ def _parse_answer(text: str, expect: str) -> bool:
         return False
 
 
-def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120) -> bool:
+def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120,
+           service_pids: set[int] | None = None) -> bool:
     """Each stage keeps its own rc, payload and timing; non-empty is not enough."""
     ok = True
     for stage in ("health", "workers", "text", "image"):
@@ -162,8 +180,10 @@ def verify(cmds: dict, log: dict, runner=subprocess.run, timeout: int = 120) -> 
             if stage == "health":
                 entry["ok"] = r.returncode == 0 and _parse_health(r.stdout)
             elif stage == "workers":
-                entry["workers"] = _count_workers(r.stdout)
-                entry["ok"] = r.returncode == 0 and entry["workers"] == 2
+                entry["workers"] = _count_workers(r.stdout, service_pids)
+                entry["service_pids"] = sorted(service_pids or [])
+                entry["ok"] = (r.returncode == 0 and bool(service_pids)
+                               and entry["workers"] == 2)
             elif stage == "text":
                 entry["ok"] = r.returncode == 0 and _parse_answer(r.stdout, "score")
             else:
@@ -193,9 +213,9 @@ def main() -> int:
         a.out.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
         print(json.dumps({"dry_run": True, "stages": list(STAGES)}))
         return 0
-    cleanup(a.pid, a.pgid, log)
-    restored = restore([], None, log)          # commands supplied by the caller
-    verified = verify([], [], [], [], log)
+    cleanup([{"pid": p} for p in a.pid], log)
+    restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, log)
+    verified = verify({"health": [], "workers": [], "text": [], "image": []}, log)
     log["restore_ok"] = restored
     log["verify_ok"] = verified
     log["finished"] = _now()
