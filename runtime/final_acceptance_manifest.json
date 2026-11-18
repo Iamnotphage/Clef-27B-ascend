@@ -1460,8 +1460,8 @@
     }
   ],
   "candidate_interface": {
-    "status": "not_adopted_pending_real_results",
-    "source": "24 messages; 23 approval reported by24; final run results pending",
+    "status": "internal_ab_complete_production_adoption_pending",
+    "source": "24 result commit 918b263; 28 read-only verification of original ab.json/restore.json and local CPU recomputation",
     "ab_commit": "c0a176d14d66836226202fbb2602b510776d103a",
     "ab_runner_sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648",
     "staging": "/workspace/yangchen/work/scratch-24/joint-fused-service-ab-c0a176d",
@@ -1472,6 +1472,155 @@
     "guard_env": {
       "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
     },
-    "guard_mode": "check-only"
+    "guard_mode": "check-only",
+    "fixed_input_ab_result": {
+      "scope": "aa3e internal CLEF_JOINT_FUSED_ATTN=0/1 only; final production adoption pending f810 control and full acceptance",
+      "execution_owner": 27,
+      "run_dir": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first",
+      "runner_commit": "c0a176d14d66836226202fbb2602b510776d103a",
+      "runner_sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648",
+      "source_document": {
+        "commit": "918b263002e21646084974629d60ef9e20d30cbf",
+        "path": "docs/joint-fused-service-ab-result-2026-11-19.md",
+        "sha256": "8122ba10bde4ab599b1a40fa96780f978a78fad2f3fcc34152485c1633a5a281"
+      },
+      "source_files": {
+        "ab.json": {
+          "path": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first/ab.json",
+          "bytes": 294790,
+          "sha256": "c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003"
+        },
+        "restore.json": {
+          "path": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first/restore.json",
+          "bytes": 5375,
+          "sha256": "fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f"
+        }
+      },
+      "started_utc": "2026-11-18T18:52:21Z",
+      "finished_utc": "2026-11-18T19:07:03Z",
+      "finished_cst": "2026-11-19T03:07:03+08:00",
+      "overall_rc": 0,
+      "rounds": 4,
+      "order": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "reps_per_arm_per_input": 5,
+      "warmup_per_arm_per_input": 3,
+      "fixed_input_results": {
+        "od-0105": {
+          "paired_round_delta_ms": [
+            2.3751002736389637,
+            -2.722729928791523,
+            6.033820100128651,
+            -2.2391099482774734
+          ],
+          "paired_median_delta_ms": 0.06799516268074512,
+          "paired_median_percent": 0.06561341716666558,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        },
+        "od-1534": {
+          "paired_round_delta_ms": [
+            -1.1120797134935856,
+            -2.668249886482954,
+            -0.6079399026930332,
+            -0.9678499773144722
+          ],
+          "paired_median_delta_ms": -1.039964845404029,
+          "paired_median_percent": -0.6681686361449168,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        },
+        "erqa-0000": {
+          "paired_round_delta_ms": [
+            -1.0884799994528294,
+            -0.9437301196157932,
+            -0.6969398818910122,
+            9.19842952862382
+          ],
+          "paired_median_delta_ms": -0.8203350007534027,
+          "paired_median_percent": -0.7506303674524539,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        }
+      },
+      "restore": {
+        "label": "d0-restore-20261118T190530Z-150b9178",
+        "verify_ok": true,
+        "steps_ok": {
+          "initial_stop": true,
+          "apply": true,
+          "service_check_apply": true,
+          "revert": true,
+          "service_check_revert": true,
+          "restore": true
+        },
+        "checks": {
+          "health": {
+            "rc": 0,
+            "ok": true
+          },
+          "workers": {
+            "rc": 0,
+            "ok": true
+          },
+          "text": {
+            "rc": 0,
+            "ok": true
+          },
+          "image": {
+            "rc": 0,
+            "ok": true
+          }
+        },
+        "historical_service_pids": [
+          1212699,
+          1212822,
+          1212823,
+          1212859,
+          1212860
+        ],
+        "identity_use": "historical evidence; obtain fresh root and descendants before execution"
+      }
+    }
   }
 }

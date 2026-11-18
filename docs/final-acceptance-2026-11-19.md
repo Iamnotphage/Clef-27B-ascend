@@ -127,6 +127,25 @@ CPU验证涵盖真实CLI参数、原请求/评分入口、HTTP错误/无效JSON�
 
 CPU验证记录：真实CLI/本地HTTP测试覆盖成功、HTTP503完整body、非法JSON、NaN/Infinity及数值溢出原文保存；ERQA ±8题（恰好2pp）通过、±9题失败，失败覆盖阻断；目录复用与源漂移拒绝。既有Wave2 r3响应在本地以原作者评分器重算，Cal **82.4112222748262** / Int **66.08398222582059** / Cap **74.2476022503234**、1904/2352、MAE **0.4026147325655452**，与原质量JSON精确一致。聚合器以同一历史r3复制到三个临时夹具路径验证三轮汇总代码，明确属于CPU测试数据；实际最终三轮仍未执行。
 
-24交付候选接口（等待候选实际结果，当前生产清单保持f810）：head installer SHA `b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406`；guardadapter installer `1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c`，guard post `36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7`，仅`--check`及`CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503`放行。23已放行的最新AB runner commit `c0a176d14d66836226202fbb2602b510776d103a` / SHA `127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648`，staging `/workspace/yangchen/work/scratch-24/joint-fused-service-ab-c0a176d`；`ab.json` schema `joint-fused-service-ab/1`，每臂provenance/label/samples/error/stop_error先落盘。该AB内部flag0/1数据与f810生产对照分开引用。
+24交付候选接口（已完成内部flag A/B，生产采用待完整对照，当前生产清单保持f810）：head installer SHA `b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406`；guardadapter installer `1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c`，guard post `36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7`，仅`--check`及`CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503`放行。23已放行的最新AB runner commit `c0a176d14d66836226202fbb2602b510776d103a` / SHA `127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648`，staging `/workspace/yangchen/work/scratch-24/joint-fused-service-ab-c0a176d`；`ab.json` schema `joint-fused-service-ab/1`，每臂provenance/label/samples/error/stop_error先落盘。该AB内部flag0/1数据与f810生产对照分开引用。
 
 补充执行前输入冻结：已只读核对23个模型运行文件大小，10个非safetensors文件（含tokenizer.json、processor_config.json、chat_template.jinja）SHA全部匹配下载manifest；13个权重文件维持原完整哈希证据与本轮大小核对。封装在首个请求前复制OD完整请求列表或ERQA完整样本JSONL到`expected-inputs.json/jsonl`，中断后据此核对固定分母及缺题。
+
+
+## 7. 候选实测证据更新：aa3e 内部 flag A/B
+
+27已完成 `/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first`，runner为上述 `c0a176d` / `127e47ae…`。UTC `2026-11-18T18:52:21Z`～`19:07:03Z`，对应北京时间 `2026-11-19 02:52:21`～`03:07:03`。4轮ABBA顺序、每臂每输入3次预热+5次正式，overall RC0；8次stop均无alive/unknown/zombies。24结果文档位于commit `918b263` 的 `docs/joint-fused-service-ab-result-2026-11-19.md`，完整commit和文档SHA已写入manifest。
+
+28只读取得原始 `ab.json` 与 `restore.json`，按每轮5次正式样本中位计算配对差，再取四轮中位，复算如下：
+
+| 输入 | 配对中位 Δms（flag1−flag0） | 配对中位变化 | 固定输入质量 |
+| --- | ---: | ---: | --- |
+| od-0105 短文本 | +0.067995 | +0.065613% | 两臂各20个正式样本，全valid，答案签名集合相同 |
+| od-1534 长文本 | −1.039965 | −0.668169% | 两臂各20个正式样本，全valid，答案签名集合相同 |
+| erqa-0000 图文 | −0.820335 | −0.750630% | 两臂各20个正式样本，全valid，答案签名集合相同 |
+
+三个输入两臂各只有一个唯一答案签名，最大数值差0.0。图文其中一轮+9.198ms，保留四轮全部差值。该结果明确限定于同源aa3e的flag0/1增量；生产f810总收益与最终全量S1/S2、OD2352/ERQA400验收仍待执行，winner继续pending。
+
+恢复label为 `d0-restore-20261118T190530Z-150b9178`，`verify_ok=true`；revert/service_check_revert/restore全ok，health/workers/text/image均RC0且ok；恢复源f810、原guard765956。历史PID只作原件身份，下一次执行重新抓fresh运行期树。
+
+原件身份：`ab.json` 294,790字节、SHA `c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003`；`restore.json` 5,375字节、SHA `fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f`。此次更新仅扩充候选证据元数据；冻结phase、生产源码、guard、env、argv、评分门和所有runner保持原值。
