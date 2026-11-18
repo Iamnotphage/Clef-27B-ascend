@@ -158,6 +158,12 @@ def main() -> int:
         if n_bad:
             bad_idx = bad.flatten().nonzero().flatten()
             out["fail_total"] = int(bad_idx.numel())
+            cf = cand.float().flatten(); rf = ref.float().flatten()
+            tl = tol.flatten(); df = d.flatten(); rt = ratio.flatten()
+            out["fail_points"] = [{"idx": int(i), "actual": float(cf[i].cpu()),
+                                   "ref": float(rf[i].cpu()), "tol": float(tl[i].cpu()),
+                                   "abs": float(df[i].cpu()), "ratio": float(rt[i].cpu())}
+                                  for i in bad_idx.cpu().tolist()]
             out["fail_idx"] = [int(i) for i in bad_idx.cpu().tolist()]
             flat = ratio.flatten()
             top = torch.topk(flat, min(3, flat.numel()))
@@ -189,6 +195,41 @@ def main() -> int:
             "y_max_rel": y_max_rel(out, refb_y),
             "criterion": "|c-r| <= 1e-5 + 0.016*|r| (torch.bfloat16 defaults), every element",
             "seed": a.seed}
+    # One-shot export over the union of residual and Y failures: both outputs'
+    # values at every index, plus row/col and the row/col factors.
+    def _fail_idx(gg, key):
+        return set(int(i) for i in gg[key].get("fail_idx", []))
+    union = sorted(_fail_idx(gate, "residual_sum") | _fail_idx(gate, "y"))
+    if union:
+        rc = res_out.float().flatten(); rr = refb_res.float().flatten()
+        yc = out.float().flatten(); yr = refb_y.float().flatten()
+        rsc = rstd.float().flatten(); rsr = refb_rstd.float().flatten()
+        gfl = gamma.float().flatten(); rfl = r.float().flatten()
+        pfl = (res_out.float() - r).flatten()      # partial_cand = z - residual
+        prfl = (refb_res.float() - r).flatten()
+        def _pt(i):
+            tol_r = 1e-5 + 0.016 * abs(float(rr[i].cpu()))
+            tol_y = 1e-5 + 0.016 * abs(float(yr[i].cpu()))
+            row, col = i // n, i % n
+            return {"idx": int(i), "row": int(row), "col": int(col),
+                    "residual": {"actual": float(rc[i].cpu()), "ref": float(rr[i].cpu()),
+                                 "tol": tol_r, "ratio": abs(float(rc[i].cpu()) - float(rr[i].cpu())) / tol_r},
+                    "y": {"actual": float(yc[i].cpu()), "ref": float(yr[i].cpu()),
+                          "tol": tol_y, "ratio": abs(float(yc[i].cpu()) - float(yr[i].cpu())) / tol_y},
+                    "rstd": {"cand": float(rsc[row].cpu()), "ref": float(rsr[row].cpu())},
+                    "gamma": float(gfl[col].cpu()),
+                    "partial": {"cand": float(pfl[i].cpu()), "ref": float(prfl[i].cpu())},
+                    "residual_input": float(rfl[i].cpu())}
+        export = {"rank": rank, "seed": a.seed, "union_count": len(union),
+                  "residual_fail": gate["residual_sum"]["fail_count"],
+                  "y_fail": gate["y"]["fail_count"],
+                  "intersection": gate["residual_sum"]["fail_count"] + gate["y"]["fail_count"] - len(union),
+                  "points": [_pt(i) for i in union]}
+        a.output.parent.mkdir(parents=True, exist_ok=True)
+        a.output.with_name(a.output.stem + f"-rank{rank}-union76.json").write_text(
+            json.dumps(export, ensure_ascii=False, indent=1) + "\n")
+        print(json.dumps({"rank": rank, "union": len(union)}, ensure_ascii=False), flush=True)
+
     summary = {"rank": rank, "group": group, "m": m, "k": k, "n": n, "gate": gate,
                "bf16_ar_ref": {"max_abs_y": float(dyb.max().cpu()),
                                "max_abs_residual_sum": float(dresb.max().cpu()),

@@ -389,3 +389,22 @@
 - 预固定 seed 20261119 的同协议确认格；
 - 同 seed 的 rank-local 诊断格（AR 关闭，参考同步关闭）。
 
+
+## 17. 并集导出与字段来源说明（2026-11-18 21:13 CST，script `83679100`）
+
+- 导出文件：`e-full-rt-rank{0,1}-union76.json`（各 40,023 B），并集 **76 点**（residual 68 ∪ Y 68，交集 60）。
+- **字段来源必须标注**：
+  - `residual.actual/ref`、`y.actual/ref`、`rstd.cand/ref`、`gamma`、`residual_input` —— 均为本次 run 实际输出/参考，可直接使用；
+  - **`partial.cand/ref` 是由已舍入的 BF16 z 反推（`z − residual`），不是真实 GEMM/AR 前或 AR 后 partial**。BF16 舍入不可逆，因此该字段**不得**用于证明上游误差或抵消机制，只作占位。
+- 口径更正：此前"所有失败点都是相消、差额恒定、BF16 内不可能满足"的推断**撤回**——实测 `|ref|` 跨 0.0029–0.89、`abs_diff` 有 4 种取值、Y 的 diff 有 37 种，不支持该概括。
+- 真实 partial 只能来自 `residual=0` 的 probe 臂，且必须与该臂的输入/hash/AR 开关绑定，不能与本 run 混用。
+
+### 17.1 交给 22 的 CPU FP64 诊断所需数据（尚未采集）
+
+| 组 | 内容 | 状态 |
+| --- | --- | --- |
+| A 点级 | `x_row[row][0..K-1]`、`w_col_logical[col][0..K-1]` 的 **BF16 uint16 位模式**；真实 `partial`（每 rank）、`residual_in`、`gamma`、`eps` | 未采集 |
+| B 行级 | 去重 row 的 `z_cand_row`/`z_ref_row`（各 5120 个 BF16 位模式）、`rstd_cand/ref` | 未采集 |
+| C 控制点 | 4 个未失败 idx，字段同 A+B | 未采集 |
+
+- 位模式（`"3f80"` 形式）而非十进制，避免参考自身引入截断误差；只针对现有失败坐标与去重行，不导出整模型、不扩形状矩阵。
