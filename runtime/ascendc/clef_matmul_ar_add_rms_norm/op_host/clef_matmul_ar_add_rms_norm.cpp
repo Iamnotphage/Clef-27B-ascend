@@ -133,6 +133,13 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const int64_t normSrcReq = (normSrcAttr == nullptr) ? 0 : *normSrcAttr;
     if (normSrcReq < 0 || normSrcReq > 1) { return ge::GRAPH_FAILED; }
     t->normFromResidual = static_cast<uint32_t>(normSrcReq);
+    // norm_from_x=1 binds the norm input to the x operand itself (add kept).
+    // This is the requested norm-only path: pass the partial in x, keep
+    // r/gamma/eps identical to the reference, and set mm_enable=0.
+    const auto* normXAttr = context->GetAttrs()->GetAttrPointer<int64_t>(13);
+    const int64_t normXReq = (normXAttr == nullptr) ? 0 : *normXAttr;
+    if (normXReq < 0 || normXReq > 1) { return ge::GRAPH_FAILED; }
+    t->normFromX = static_cast<uint32_t>(normXReq);
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
@@ -263,6 +270,7 @@ public:
         this->Attr("mm_btrans").Int(0);
         this->Attr("mm_stage").Int(0);
         this->Attr("norm_from_residual").Int(0);
+        this->Attr("norm_from_x").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");

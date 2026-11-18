@@ -276,9 +276,21 @@ public:
         // Without it there is no way to inject a partial: with mm_enable=0 the
         // norm would read partialGm_, which is framework workspace that nothing
         // has written.
-        GM_ADDR srcGm = (tiling_->normFromResidual != 0u)
-                            ? residualGm_
-                            : ((hcclMode_ == 1u && arGm_ != nullptr) ? arGm_ : partialGm_);
+        // norm_from_x=1 binds the norm input straight to the x operand and
+        // keeps the residual add, so the caller can feed an arbitrary
+        // [M,N] partial in the x slot and compare against the reference with
+        // the identical r/gamma/eps.  norm_from_residual=1 instead uses the
+        // residual slot as the whole partial and skips the add.  Both are
+        // diagnostic-only; with neither set the norm reads the AllReduce
+        // result, or the matmul output when no collective is published.
+        GM_ADDR srcGm = partialGm_;
+        if (tiling_->normFromX != 0u) {
+            srcGm = xGm_;
+        } else if (tiling_->normFromResidual != 0u) {
+            srcGm = residualGm_;
+        } else if (hcclMode_ == 1u && arGm_ != nullptr) {
+            srcGm = arGm_;
+        }
         x_.SetGlobalBuffer((__gm__ bfloat16_t*)srcGm, static_cast<uint64_t>(m_) * n_);
         PipeBarrier<PIPE_ALL>();
         DataCacheCleanAndInvalid<bfloat16_t, CacheLine::ENTIRE_DATA_CACHE,
