@@ -88,6 +88,23 @@ def launch_cmd(a) -> list:
             "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)]
 
 
+def render_request(kind: str) -> str:
+    """Serialise the recorded request body for the text or image probe.
+
+    Both bodies come from files already on disk; nothing is synthesised.
+    """
+    from d0_restore import IMAGE_SOURCE, TEXT_SAMPLE, TEXT_SOURCE
+    if kind == "text":
+        doc = json.loads(Path(TEXT_SOURCE).read_text())
+        for sample in doc["samples"]:
+            if sample["name"] == TEXT_SAMPLE:
+                return json.dumps(sample["request"], ensure_ascii=False)
+        raise RuntimeError(f"sample {TEXT_SAMPLE} not found in {TEXT_SOURCE}")
+    if kind == "image":
+        return Path(IMAGE_SOURCE).read_text()
+    raise ValueError(kind)
+
+
 def query_group(pgid: int) -> dict:
     """List members of a process group, or say why the listing is unavailable."""
     try:
@@ -219,8 +236,10 @@ def main() -> int:
     finally:
         # Restore runs on every exit path and keeps its own record; a restore
         # failure never overwrites the test rc.
+        wrapper_rc = test_rc if isinstance(test_rc, int) else 4
         try:
-            from d0_restore import SERVICE_LAUNCH, SERVICE_WAIT, restore, verify
+            from d0_restore import (SERVICE_LAUNCH, SERVICE_WAIT, build_commands,
+                                    restore, verify)
             rlog = {"test_rc": test_rc, "test_exception": test_exc}
 
             # The test group must be gone before a restore can start; a failed
@@ -254,8 +273,9 @@ def main() -> int:
                 restored = verified = False
             else:
                 restored = restore(SERVICE_LAUNCH, SERVICE_WAIT, rlog)
-                verified = verify({"health": [], "workers": [], "text": [], "image": []},
-                                  rlog) if restored else False
+                service_pids = rlog.get("service_pids") or set()
+                verified = verify(build_commands(render_request), rlog,
+                                  service_pids=service_pids) if restored else False
             rlog["restore_ok"], rlog["verify_ok"] = restored, verified
             (a.out_dir / "restore.json").write_text(
                 json.dumps(rlog, ensure_ascii=False, indent=1) + "\n")
@@ -271,9 +291,7 @@ def main() -> int:
                  "traceback": __import__("traceback").format_exc(),
                  "test_rc": test_rc, "test_exception": test_exc},
                 ensure_ascii=False) + "\n")
-    if test_exc is not None:
-        return 4
-    return rc if "rc" in dir() else test_rc
+
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
     try:
@@ -294,8 +312,8 @@ def main() -> int:
         prev = json.loads(rc_file.read_text()) if rc_file.exists() else {}
         prev["wrapper_rc"] = 5                 # child_raw_rc is left untouched
         rc_file.write_text(json.dumps(prev, ensure_ascii=False) + "\n")
-        rc = 5
-    return rc
+        wrapper_rc = 5
+    return wrapper_rc if isinstance(wrapper_rc, int) else (test_rc or 0)
 
 
 if __name__ == "__main__":
