@@ -98,3 +98,37 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 - 24 未触 NPU/真实服务/安装/加载；未在真实设备上运行 probe 或客户端。
 - 未改输入、参考、容差、协议、token/span 或多字段语义；未缓存答案。
 - 未测质量；fused attention 的 BF16 数值差异需完整 OD/ERQA 2pp 判定。
+
+## 9. 完整真实执行包装（21 单命令）
+
+文件：`runtime/joint_fused_attention_window.py`
+SHA-256 `069d16e08e2d34842613634c2e5208a8bc12c68b8c8758bef0e6ac4b7ead8157`。
+CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `da928dda20c0b363e7caa38db6cfe8eb2fd5bfafc0984cc939654a07080aa9cd`），
+8/8 通过（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
+
+单次命令（21 执行；run-dir 必须不存在）：
+
+```bash
+PY=/workspace/yangchen/venvs/clef-py312/bin/python
+REPO=<perf/wave4-joint-fused-20261119 检出>
+RUN=/workspace/yangchen/logs/joint-fused-attention-$(date -u +%Y%m%dT%H%M%SZ)
+$PY "$REPO/runtime/joint_fused_attention_window.py" \
+  --run-dir "$RUN" --repo "$REPO" \
+  --stop-script /tmp/d0cc/d0_stop.py \
+  --expect-stop-sha <21 修好后的 stop SHA> \
+  --tree /workspace/yangchen/work/src/vllm --device 0
+```
+
+- preflight：stage installer+postimage+probe+client+stop，逐文件 SHA；activate/launch/wait SHA；
+  source activate 后 CPU loader 预检（libhccl + torch_npu ldd，无 torch_npu import）；target 必须
+  `f8101b98`；LISTEN 用 socket（0=open、ECONNREFUSED=closed、其它 unknown 阻断）；保存 root
+  start/boot/PGID/cmdline/descendants、`npu-smi info` 与**选定** env 键。
+- stop：调用 21 的 `d0_stop.py --api-pid <saved root> --saved-identity <root-identity.json>`，非 0 立即阻断；
+  wrapper 再验 saved 身份全退出且端口 closed。当前 stop `3c55ee5` 的正常退出误拒绝由 21 修，等新 SHA 再跑。
+- apply → probe：probe 独立进程组、900s timeout；超时只 kill 该 PGID；raw 日志在 `probe/`。
+- finally：已 apply 必 revert 并验 `f8101b98`；已 stop 必 restore（新 `d0-restore-…` label、
+  `CLEF_LAUNCH_CONFIG=s1`、launch.sh/wait.sh、`d0_restore.discover/verify` 四检）；stop 失败且旧服务仍
+  健康则保留旧服务，不再启动第二个。
+- 每步 RC 与阶段 flush 在 `window.json`；test/probe/apply/revert/restore 分列，任一必要失败整体非 0。
+- env：无独立备份文件声明；运行时从 `/proc/<root>/environ` 只保存选定性能/库键到
+  `env-prod-selected.json`，与 activate clean env 比较；候选键不进入 restore。公开日志不展开无关变量。
