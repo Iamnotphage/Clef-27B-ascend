@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 TRACE_SLOTS = 72
