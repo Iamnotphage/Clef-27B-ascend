@@ -134,7 +134,7 @@ CPU验证记录：真实CLI/本地HTTP测试覆盖成功、HTTP503完整body、�
 
 ## 7. 候选实测证据更新：aa3e 内部 flag A/B
 
-27已完成 `/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first`，runner为上述 `c0a176d` / `127e47ae…`。UTC `2026-11-18T18:52:21Z`～`19:07:03Z`，对应北京时间 `2026-11-19 02:52:21`～`03:07:03`。4轮ABBA顺序、每臂每输入3次预热+5次正式，overall RC0；8次stop均无alive/unknown/zombies。24结果文档位于commit `918b263` 的 `docs/joint-fused-service-ab-result-2026-11-19.md`，完整commit和文档SHA已写入manifest。
+27已完成 `/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first`，runner为上述 `c0a176d` / `127e47ae…`。UTC `2026-11-18T18:52:21Z`～`19:07:03Z`，对应北京时间 `2026-11-19 02:52:21`～`03:07:03`。4轮ABBA顺序、每臂每输入3次预热+5次正式，overall RC0；8次stop均无alive/unknown/zombies。24结果文档位于commit `61199e2765a843fe6e2f716fa12ff6cca163167e` 的 `docs/joint-fused-service-ab-result-2026-11-19.md`，完整commit和文档SHA已写入manifest。
 
 28只读取得原始 `ab.json` 与 `restore.json`，按每轮5次正式样本中位计算配对差，再取四轮中位，复算如下：
 
@@ -149,3 +149,5 @@ CPU验证记录：真实CLI/本地HTTP测试覆盖成功、HTTP503完整body、�
 恢复label为 `d0-restore-20261118T190530Z-150b9178`，`verify_ok=true`；revert/service_check_revert/restore全ok，health/workers/text/image均RC0且ok；恢复源f810、原guard765956。历史PID只作原件身份，下一次执行重新抓fresh运行期树。
 
 原件身份：`ab.json` 294,790字节、SHA `c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003`；`restore.json` 5,375字节、SHA `fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f`。此次更新仅扩充候选证据元数据；冻结phase、生产源码、guard、env、argv、评分门和所有runner保持原值。
+
+23独立复核已并入上述61199e2文档：24份raw JSONL共192行（120正式、72预热），HTTP200/valid/finite、bodySHA对齐及跨8臂答案/概率精确相等；28另外只读重计192/120/72与全valid均匹配。此次只更新结果文档引用及覆盖元数据。
