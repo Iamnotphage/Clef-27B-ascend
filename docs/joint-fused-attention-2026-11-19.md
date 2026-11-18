@@ -39,7 +39,8 @@ torch_npu `2.10.0.post7`（git `3363ea59…`）对应的 op-plugin
 
 因此本候选的收益预算改为 **未知/接近 0，必须由设备 head probe 的稳定 delta 决定**；若 probe 无同向
 ≥0.3 ms 收益即关闭。26 的专用小 Q vector tiling/去 BNSD 重排是独立实验，不能用本候选预算外推。
-probe 现在同时记录 `sdpa_flags`（flash/math/mem-efficient）与 `compatible_impl`，供 21 核对底层实现。
+probe 现在分列记录 `sdpa_flags`（flash/math/mem-efficient）、`torch_npu_git_version` 与
+`compatible_impl`（COMPATIBLE_IMPL/NPU_COMPATIBLE_IMPL 环境值），供 21 核对底层实现；不推断实际核。
 
 ## 4. 安装/回退
 
@@ -114,7 +115,7 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `66503dc0afa0ede4bf1de52ef85c3859bde2736597e3ac545bea282cedf87040`。
+SHA-256 `9c81b54142d45aeca1635e4ad31b754e4694f0815f75725a7c669daa047604d5`。
 CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `4b9fe1f4e450fdebdbf9a45742b44758521a0311a91b2c92afba2caa37ec95a3`），
 18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 

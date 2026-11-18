@@ -178,17 +178,22 @@ def main() -> int:
             sdpa[name] = bool(getattr(torch.backends.cuda, name)())
         except Exception:
             sdpa[name] = None
-    compatible = None
+    torch_npu_git_version = None
     try:
         version_mod = getattr(torch_npu, "version", None)
-        compatible = getattr(version_mod, "git_version", None) or str(version_mod)
+        torch_npu_git_version = getattr(version_mod, "git_version", None) or str(version_mod)
     except Exception:
         pass
+    compatible_impl = {
+        "COMPATIBLE_IMPL": os.environ.get("COMPATIBLE_IMPL"),
+        "NPU_COMPATIBLE_IMPL": os.environ.get("NPU_COMPATIBLE_IMPL"),
+    }
     report = {
         "schema": "joint-fused-attention-probe/2",
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "sdpa_flags": sdpa,
-        "compatible_impl": compatible,
+        "torch_npu_git_version": torch_npu_git_version,
+        "compatible_impl": compatible_impl,
         "args": vars(args) | {"output": str(args.output)},
         "versions": {"torch": torch.__version__, "torch_npu": torch_npu.__version__},
         "input": {"length": length, "options": options,
