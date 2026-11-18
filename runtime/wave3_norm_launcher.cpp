@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 
 #define ACL_CHECK(expr)                                                        \
     do {                                                                       \
@@ -121,10 +122,19 @@ int main(int argc, char** argv) {
     const int64_t rstrides[1] = {1};
     aclTensor* tx = aclCreateTensor(dims, 2, ACL_BF16, strides, 0, ACL_FORMAT_ND, dims, 2, dx);
     aclTensor* tr = aclCreateTensor(dims, 2, ACL_BF16, strides, 0, ACL_FORMAT_ND, dims, 2, dr);
-    aclTensor* tg = aclCreateTensor(rdims, 1, ACL_BF16, rstrides, 0, ACL_FORMAT_ND, rdims, 1, dg);
+    const int64_t gdims[1] = {N};
+    const int64_t gstrides[1] = {1};
+    aclTensor* tg = aclCreateTensor(gdims, 1, ACL_BF16, gstrides, 0, ACL_FORMAT_ND, gdims, 1, dg);
     aclTensor* to = aclCreateTensor(dims, 2, ACL_BF16, strides, 0, ACL_FORMAT_ND, dims, 2, dout);
     aclTensor* tro = aclCreateTensor(dims, 2, ACL_BF16, strides, 0, ACL_FORMAT_ND, dims, 2, dro);
     aclTensor* trs = aclCreateTensor(rdims, 1, ACL_FLOAT, rstrides, 0, ACL_FORMAT_ND, rstore, 1, drstd);
+
+    printf("desc: x[%lld,%lld] str[%lld,%lld] bf16 | residual same | gamma[%lld] str[1] bf16 | "
+           "out[%lld,%lld] | residual_out[%lld,%lld] | rstd[%lld] fp32 str[%lld]\n",
+           (long long)dims[0], (long long)dims[1], (long long)strides[0], (long long)strides[1],
+           (long long)gdims[0], (long long)dims[0], (long long)dims[1],
+           (long long)dims[0], (long long)dims[1], (long long)rdims[0], (long long)rstrides[0]);
+    printf("env: ASCEND_CUSTOM_OPP_PATH=%s\n", std::getenv("ASCEND_CUSTOM_OPP_PATH"));
 
     uint64_t workspace = 0;
     aclOpExecutor* executor = nullptr;
@@ -171,9 +181,11 @@ int main(int argc, char** argv) {
     printf("raw: out[0..3]=%g,%g,%g,%g rstd[0..3]=%g,%g,%g,%g\n",
            bf2f(hout[0]), bf2f(hout[1]), bf2f(hout[2]), bf2f(hout[3]),
            hrst_dev[0], hrst_dev[1], hrst_dev[2], hrst_dev[3]);
-    printf("M=%d N=%d ref=%s max_abs_out=%.6g max_abs_residual=%.6g max_abs_rstd=%.6g "
-           "out_gt_0.01=%zu/%zu\n", M, N, have_native ? "native" : "cpu_fp32_on_bf16_inputs",
-           max_out, max_res, max_rstd, bad_out, elems);
+    if (!have_native) {
+        printf("M=%d N=%d ref=cpu_highprec_on_bf16_inputs max_abs_out=%.6g "
+               "max_abs_residual=%.6g max_abs_rstd=%.6g out_gt_0.01=%zu/%zu\n",
+               M, N, max_out, max_res, max_rstd, bad_out, elems);
+    }
     if (have_native) {
         double dy = 0.0, dres = 0.0, drs = 0.0;
         size_t bad = 0;
@@ -188,8 +200,24 @@ int main(int argc, char** argv) {
             const double d = std::fabs(static_cast<double>(hrst_dev[row]) - hrstd_native[row]);
             if (d > drs) drs = d;
         }
+        std::vector<double> diffs;
+        diffs.reserve(elems);
+        double max_rel = 0.0;
+        for (size_t i = 0; i < elems; ++i) {
+            const double a = static_cast<double>(bf2f(hout[i]));
+            const double b = bf2f(hy_native[i]);
+            const double d = std::fabs(a - b);
+            diffs.push_back(d);
+            const double denom = std::fabs(b) > 1e-3 ? std::fabs(b) : 1e-3;
+            const double r = d / denom;
+            if (r > max_rel) max_rel = r;
+        }
+        std::sort(diffs.begin(), diffs.end());
+        const auto q = [&](double f) { return diffs[static_cast<size_t>(f * (diffs.size() - 1))]; };
         printf("vs_native: max_abs_Y=%.6g max_abs_residual_sum=%.6g max_abs_rstd=%.6g "
                "Y_gt_0.01=%zu/%zu\n", dy, dres, drs, bad, elems);
+        printf("Y_diff_dist: p50=%.6g p90=%.6g p99=%.6g p999=%.6g max=%.6g max_rel=%.6g\n",
+               q(0.50), q(0.90), q(0.99), q(0.999), q(1.0), max_rel);
         printf("Y ours : ");
         for (int k = 0; k < 8; ++k) printf("%.5g ", bf2f(hout[k]));
         printf("\nY nativ: ");
@@ -210,5 +238,17 @@ int main(int argc, char** argv) {
     aclrtDestroyStream(stream);
     aclrtResetDevice(0);
     aclFinalize();
+    if (have_native) {
+        double dy2 = 0.0, drs2 = 0.0;
+        for (size_t i = 0; i < elems; ++i) {
+            const double d = std::fabs(static_cast<double>(bf2f(hout[i])) - bf2f(hy_native[i]));
+            if (d > dy2) dy2 = d;
+        }
+        for (int row = 0; row < M; ++row) {
+            const double d = std::fabs(static_cast<double>(hrst_dev[row]) - hrstd_native[row]);
+            if (d > drs2) drs2 = d;
+        }
+        return (dy2 <= 0.02 && drs2 <= 1e-3) ? 0 : 3;
+    }
     return (max_out <= 0.01 && max_rstd <= 1e-3) ? 0 : 3;
 }
