@@ -1,0 +1,130 @@
+# 2026-11-19 最终验收冻结计划
+
+状态：**计划已准备，实际验收未运行**。28 仅进行 CPU 实现、只读 SSH 核验及本地 HTTP 边界模拟；27 独占设备、服务生命周期和真实请求执行。北京时间 06:30 停新增候选，07:40 前收口，08:00 授权窗口结束。所有 UTC 时间保存原值，再按 UTC+08:00 换算；远端 timezone 标签不参与判断。
+
+本文件与 [`runtime/final_acceptance_manifest.json`](../runtime/final_acceptance_manifest.json)、[`runtime/final_acceptance.py`](../runtime/final_acceptance.py) 构成同一交付。机器清单保留完整路径、SHA、有效 argv/env、数据版本、分母、阈值、阶段命令参数及待填字段。服务生命周期由 27 的已审流程执行，封装仅对已就绪服务发评测请求。
+
+## 1. 真实来源与冻结身份
+
+初次核对 `date -u` 为 `2026-11-18T18:46:11Z`，即北京时间 `2026-11-19 02:46:11`；清单采集原值为 `2026-11-18T18:48:21Z`，即 `02:48:21`。
+
+| 对象 | 真实来源 / 精确身份 | 核验范围 |
+| --- | --- | --- |
+| 生产工程 | `/workspace/yangchen/Clef-27B-ascend`，HEAD `3e83ae17df7b559ec2dd6b2a38aa029c2777e061` | 只读 `git rev-parse`，评测封装另行部署 |
+| 生产 head | `/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py`；`f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863` | 当前文件 SHA 实测 |
+| 原 guard | `runtime/apply_joint_single_field_patch.py`；`76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9` | 当前文件 SHA 实测 |
+| 软件树 | vLLM `24420b7a341af37a9bc3186e6fc6062512e0aa58`；Ascend `89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d` | Git HEAD、全部 tracked 修改文件与运行用 untracked Python、两组 vendor 文件 SHA 在 manifest |
+| 软件包 | Python 3.12.16；CANN 9.2.1；torch 2.10.0+cpu；torch_npu 2.10.0.post7；Triton Ascend 3.6.0.post2；Transformers 5.19.0 | 包版本只读 `importlib.metadata`，未 import torch/NPU；CANN 来自成功 launch 的实际路径 |
+| 模型 | `/workspace/yangchen/models/Clef-27B`，`local-65e5a3c5ffb6` | `model_manifest.json` SHA `98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68`，清单含逐文件 revision/大小/预期 SHA；本轮未重新读取全部权重计算 SHA |
+| OD 原数据 | `/workspace/yangchen/datasets/clef-full-20261112/full-data/open-decisions2352.jsonl` | 1.0.1 / test / revision `ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe`；SHA `78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6` |
+| OD 冻结请求 | `/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json` | 2352 条；SHA `74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141` |
+| OD 模板 | `/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl` | SHA `29fe80b8062b9966277f0d34b1aed76d8ef80ac260eed3c53f2bd0a83f25e915`；执行前逐题 request 比较 |
+| OD 作者评分器 | `/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.py` | SHA `478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377`；调用既有 `od_raw_acceptance.py` |
+| ERQA | `/workspace/yangchen/datasets/erqa-official-20261114/` | 官方 commit `5bba488252c5b345a43335bfb9239b6bf12bd91c`，400 条、630 图、单题最多16图 |
+| ERQA TFRecord | `/workspace/yangchen/work/src/ERQA/data/erqa.tfrecord` | 91,402,921 字节；SHA `1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2` |
+| ERQA 提取文件 | `manifest.json` / `samples.jsonl` | SHA `a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb` / `35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af`；原顺序 `erqa-0000..0399`，每图 SHA 由原请求构建器检查 |
+
+当前 f810 生产对照与 aa3e 候选严格分开记录。`aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503` 在 `CLEF_JOINT_FUSED_ATTN=0` 时已共享 routing KV；flag 0/1 仅说明内部增量。采用候选前须有 f810 总收益对照、完整质量和审定 guardadapter。当前清单冻结 f810；选定候选后由 27 与 24 更新清单的实际 source/guard/env/argv，重新审查并保存新的清单 SHA。
+
+## 2. 原始成功协议与统计
+
+原件优先级：成功运行原始 JSON/launch manifest → 对应源码 → 已提交报告。历史报告中的复现命令用于校验参数；以下显式命令由这些来源组装，**没有声称存在完整历史 shell transcript**。
+
+| 阶段 | 真实成功原件（均在 `/workspace/yangchen/logs/perf-wave2-20261118/`） | 最终计划 |
+| --- | --- | --- |
+| S1 | `s1-final/r1..r5/s1.json`，`s1-final-r1/launch-manifest.json` | C1，全量2352，至少3轮；每轮独立统计，报告 p95 中位与范围，保留各轮 mean/p50/p95/p99/吞吐 |
+| S2 B8 | `s2-b8/s2-b8c16.json`，`s2-b8-c16/launch-manifest.json` | B8/token8192，C8、C16 各2352；历史完整扫描范围见 `docs/batching-seqs8-16-2026-11-16.md` |
+| S2 B16 | `s2-b16/s2-b16c64.json`，`s2-b16-c64/launch-manifest.json` | B16/token16384，C32、C64 各2352；每点独立离线质量，不提前确定提交点 |
+| OD 质量 | `s1-final/r3/quality.json`；原 baseline `opendecisions-baseline-20261113-1600/author-score.json` | 每个正式 S1/S2 结果用冻结作者 scorer 计算原始概率质量 |
+| ERQA | `erqa/summary.json`、`erqa/offline-score.json`、`erqa-final/launch-manifest.json` | B1/C1，完整400；原 `erqa_baseline.py` 后接 `erqa_score.py --verify-requests` |
+
+OD 沿 `runtime/od_full_benchmark.py`：固定顺序每题一次，`--warmup 0 --timeout 300`；C>1 由 ThreadPoolExecutor 同时排队全部 futures。历史 raw 未写入 warmup/timeout 字段，零预热/300秒来自已成功复现命令未传覆盖项及当时源码默认值；此次显式冻结并写入 configuration。百分位是排序后 `(n-1)*q` 线性插值；延迟包括客户端序列化、HTTP、解析、答案提取；吞吐分母是正式测量 wall time，成功响应数为分子。失败记录保留；覆盖不足或失败时不输出通过验收结论。预热策略保持零，不将全量首轮暗中移作预热。
+
+ERQA 沿原协议：完整题干与选项、图片按 visual_indices 稳定排序、原始 choice 精确匹配规则；3 次最大尝试、每次600秒、重试间隔5秒，客户端C1、无resume、零额外预热。原成功记录400/400、0重试。准确率固定400分母，失败计错；始终保留重试数、失败分类和每题全部概率。保留8类、单/多图、候选数及visual模式分项。
+
+新增记录层仅补证据：OD 逐完成请求 JSONL、微秒 UTC 起止、HTTP 错误原文与成功响应文本；ERQA 每次尝试响应 `.bin`。原请求构造、调度、延迟测量范围和评分逻辑沿用。JSONL 落盘在客户端完成收集处，wall time 包含其开销，最终报告需保留该脚本版本。异常中止留下已完成响应、冻结输入和步骤日志；未完成题按固定输入索引核对，整轮记为不完整。
+
+历史 `od_raw_acceptance.py` 对新 runner 的性能 schema 读出部分 null；最终封装从 raw `summary` 直接读性能，质量沿作者评分结果，避免将 null 当作成功证据。
+
+## 3. 质量阈值与源配置
+
+原 baseline：Calibration **82.79411494415206**、Intelligence **66.0568428084581**、Capability **74.42547887630508**；OD accuracy **1906/2352**；Score MAE **0.4013893127**（588题，等级单位）；ERQA **219/400 = 0.5475**。
+
+按 [规则4.3/4.4](submission-rules-2026-11-13.md)：三项 OD 绝对波动各≤2.0分，ERQA总体 accuracy 绝对波动≤0.02；原始概率、无温度校准、BF16固定、禁止答案缓存。OD accuracy 和 Score MAE 继续报告。逐题概率差与choice变化可离线追加比较，历史0.03/0.05只作诊断记录。
+
+共通：TP2/BF16/eager、pooling、模型名clef、prefix/chunked/schema缓存关、物理卡7/chip0、1/逻辑0、1/phy14、15。GDN decision/BIC/convQKV、chunk128源码、MLP BF16 NZ、ACLNN cache limit1000000以 source SHA 与实际 launch/env 双重冻结。清单含完整 argv、service_environment；额外 profile/候选开关默认拒绝。
+
+ERQA 必须显式使用 `--max-model-len 16384 --max-num-batched-tokens 16384 --limit-mm-per-prompt '{"image":16,"video":0}'`，以及
+
+```json
+{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}
+```
+
+默认 s1 的图像 longest_edge 是65536；上列1048576来自 ERQA 成功 launch 原件。ERQA最长实测10294 tokens。
+
+## 4. 单命令执行接口（仅27执行）
+
+先将本提交的文件以固定 commit staging 到独立目录，例如 `/workspace/yangchen/work/final-acceptance-<完整提交SHA>`。保留生产源码与已有成功日志原位；清单冻结的新 runner SHA 必须匹配 staging 文件。`CLEF_ACCEPT_CODE`、`CLEF_ACCEPT_RUN`、`CLEF_READY_IDS`、`CLEF_READY_LAUNCH`、`CLEF_OWNER_EVIDENCE` 为**27填写的实际路径**，下列模板具有显式依赖，尚未运行。
+
+```bash
+# 单阶段单命令；phase取 s1 / s2_b8 / s2_b16 / erqa。
+# --execute去掉后仅输出完整命令计划，不创建输出目录、不访问服务。
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  "$CLEF_ACCEPT_CODE/runtime/final_acceptance.py" \
+  --manifest "$CLEF_ACCEPT_CODE/runtime/final_acceptance_manifest.json" \
+  --phase s1 --output-dir "$CLEF_ACCEPT_RUN" \
+  --identities "$CLEF_READY_IDS" --launch-manifest "$CLEF_READY_LAUNCH" \
+  --owner-evidence "$CLEF_OWNER_EVIDENCE" --execute
+```
+
+`--identities` 接受 ready 后 root 在首位的列表（27的`service-identities.json`），或 `{root, descendants}`。每个元素必含 pid/ppid/pgid(int)、starttime(str)、boot_id、完整空格连接argv的cmdline；实际 argv另从/proc读取。封装对全/proc扫描、树成员、五身份、launch/api.pid、源码/guard、配置/env、port、health/info做前后校验。资源证据按原样保存，**NPU同卡与无竞争的解释、审定及准入由27执行**；封装未实现新的npu-smi文本解析器。
+
+输出目录必须不存在；每次失败换新目录，旧目录完整保留。步骤stdout/stderr、实际argv、UTC起止和退出码写入`execution.json`及每步log；输出包括`frozen-manifest.json`、before/after身份、每轮raw+JSONL+quality、`acceptance.json`。ERQA保留每题request/meta/record/attempts/response与离线核验。
+
+## 5. 合法切换与恢复顺序（27生命周期边界）
+
+06:30冻结赢家；先保存最终源码、guard、完整运行态与实际env，之后 S1三轮 → B8两点 → B16两点 → ERQA400 → 恢复选定最佳服务。S1/质量失败保留原始证据并回到已验证生产栈；不得把64条短样本p95作为全量S1对照。若候选最终采用，恢复目标必须与通过全量验收的源/配置身份一致。
+
+每次切换前：fresh全/proc、源/guard SHA、唯一label/api.pid、运行期root+descendants、port状态与NPU卡7两chip表归档；状态冲突立即阻断。初始bash PID在exec后必须证明 pid/starttime/boot_id/PGID 连续，更新为最终vLLM cmdline并重抓后代。
+
+已审停服模板（动态变量由27的fresh记录取得）：
+
+```bash
+timeout 120 /workspace/yangchen/venvs/clef-py312/bin/python \
+  /tmp/d0cc/d0_stop.py --api-pid "$CLEF_READY_PID" \
+  --saved-identity "$CLEF_SWITCH_RUN/root-identity.json" \
+  --out "$CLEF_SWITCH_RUN/stop.json"
+```
+
+stop SHA：`d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`。非零或残留阻断；0=open、111=closed，其它port结果为unknown并阻断。禁用旧宽pgrep与旧`final-default-s1`label。
+
+已核启动入口 `/workspace/yangchen/logs/perf-wave2-20261118/launch.sh` SHA `a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321`，内部source `/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh` SHA `3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a`。唯一label由27生成并先断言其目录不存在；下面三条是分别选择的配置，逐阶段运行：
+
+```bash
+# S1与最后恢复：选定源码/原guard先由27恢复到已验身份。
+env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL"
+# S2 B8，仍使用s1优化栈。
+env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 8 --max-num-batched-tokens 8192
+# S2 B16。
+env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-num-seqs 16 --max-num-batched-tokens 16384
+# ERQA。
+env CLEF_LAUNCH_CONFIG=s1 bash /workspace/yangchen/logs/perf-wave2-20261118/launch.sh "$CLEF_UNIQUE_LABEL" --max-model-len 16384 --max-num-batched-tokens 16384 --limit-mm-per-prompt '{"image":16,"video":0}' --mm-processor-kwargs '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}'
+# 每次launch后：
+timeout 600 bash /workspace/yangchen/logs/perf-wave2-20261118/wait.sh
+```
+
+wait SHA `e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0`。上面启动模板依赖27已清理profiling/候选环境并选定审定源码；清单中的运行时env断言会拒绝泄漏。源恢复必须使用27已审D0恢复流程，原guard恢复顺序保持其现有约定。
+
+恢复原件入口：`/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py` SHA `9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`；六D0模块哈希由它钉住。该wrapper入口还承担候选AB，本文不猜测新的restore-only参数。27直接复用已成功恢复操作及`restore.json`的health/workers/text/image真实RC/ok、进程树与同卡检查。历史可核身份：`/workspace/yangchen/logs/handoff27-restore-20261118T183212Z-dc78478b/service-identities.json`；该PID只作历史证据，执行前取fresh。
+
+## 6. 验证与待完成事项
+
+CPU验证涵盖真实CLI参数、原请求/评分入口、HTTP错误/无效JSON保存、目录复用拒绝、清单漂移阻断、S1三轮与2pp汇总逻辑。NPU性能、真实服务身份断言与最终恢复仍由27实测。最终权重完整内容SHA复核沿用原已校验下载证据，本封装检查冻结manifest、文件存在和大小；本轮未冒充新的全权重哈希扫描。
+
+尚待实际填写：最终选中的源/配置、每阶段fresh身份与资源证据、至少3轮S1原件、全部S2扫描/质量、ERQA400原件、最终恢复结果与提交点。所有新输出保持`plan_not_executed`，直到实际子步骤与验收完成。
+
+执行监督边界：封装的子进程调用没有总墙钟timeout，也未实现signal转发或进程组cleanup。**27必须用既有外层监督器绑定评测客户端进程组与本阶段截止时间**，记录runner及子进程身份；中断/超时后确认该组客户端全部退出，再切换或恢复服务。HTTP单请求timeout 300/600秒不能替代阶段截止。06:30后的验收预算由27按剩余时间分配，07:40收口前先清理评测客户端，再进行最终恢复；阶段失败保留已有原始文件，汇总状态按不完整处理。
+
+CPU验证记录：真实CLI/本地HTTP测试覆盖成功、HTTP503完整body、非法JSON、NaN/Infinity及数值溢出原文保存；ERQA ±8题（恰好2pp）通过、±9题失败，失败覆盖阻断；目录复用与源漂移拒绝。既有Wave2 r3响应在本地以原作者评分器重算，Cal **82.4112222748262** / Int **66.08398222582059** / Cap **74.2476022503234**、1904/2352、MAE **0.4026147325655452**，与原质量JSON精确一致。聚合器以同一历史r3复制到三个临时夹具路径验证三轮汇总代码，明确属于CPU测试数据；实际最终三轮仍未执行。
+
+24交付候选接口（等待候选实际结果，当前生产清单保持f810）：head installer SHA `b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406`；guardadapter installer `1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c`，guard post `36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7`，仅`--check`及`CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503`放行。23已放行的最新AB runner commit `c0a176d14d66836226202fbb2602b510776d103a` / SHA `127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648`，staging `/workspace/yangchen/work/scratch-24/joint-fused-service-ab-c0a176d`；`ab.json` schema `joint-fused-service-ab/1`，每臂provenance/label/samples/error/stop_error先落盘。该AB内部flag0/1数据与f810生产对照分开引用。

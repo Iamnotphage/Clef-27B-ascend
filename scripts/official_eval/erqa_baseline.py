@@ -143,6 +143,7 @@ def run_one(sample, data_dir, sample_dir, args):
         try:
             status, raw = post(args.api_url, body, args.timeout)
             latency_ms = (time.monotonic() - started) * 1000
+            (sample_dir / f"response-attempt-{attempt}.bin").write_bytes(raw)
             (sample_dir / "response.json").write_bytes(raw)
             response = json.loads(raw)
             answer = response["answers"]["answer"]
@@ -175,7 +176,9 @@ def run_one(sample, data_dir, sample_dir, args):
             })
             if isinstance(exc, urllib.error.HTTPError):
                 try:
-                    attempt_record["error_body"] = exc.read().decode("utf-8", "replace")[:4000]
+                    raw = exc.read()
+                    (sample_dir / f"response-attempt-{attempt}.bin").write_bytes(raw)
+                    attempt_record["error_body"] = raw.decode("utf-8", "replace")[:4000]
                 except Exception:
                     pass
         record["attempts"].append(attempt_record)

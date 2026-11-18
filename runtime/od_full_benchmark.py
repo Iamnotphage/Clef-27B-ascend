@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 import json
 import math
 import threading
@@ -30,7 +31,7 @@ def percentile(values, fraction):
 
 
 def now():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    return datetime.now(timezone.utc).isoformat()
 
 
 def post(url, payload, timeout):
@@ -41,7 +42,7 @@ def post(url, payload, timeout):
         url, data=body, headers={"Content-Type": "application/json"}
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.status, json.loads(response.read())
+        return response.status, response.read().decode("utf-8")
 
 
 def probabilities(answer):
@@ -49,6 +50,17 @@ def probabilities(answer):
         return dict(answer["probabilities"])
     value = answer["noul"]
     return {"yes": value, "no": 1.0 - value}
+
+
+def finite_float(value):
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError(f"non-finite JSON number: {value}")
+    return parsed
+
+
+def reject_constant(value):
+    raise ValueError(f"non-standard JSON constant: {value}")
 
 
 class Inflight:
@@ -76,8 +88,10 @@ def run_one(index, sample, url, timeout, inflight):
     }
     begin = time.perf_counter()
     try:
-        status, response = post(url, sample["request"], timeout)
+        status, raw = post(url, sample["request"], timeout)
         record["http_status"] = status
+        record["response_text"] = raw
+        response = json.loads(raw, parse_float=finite_float, parse_constant=reject_constant)
         record["response"] = response
         record["input_tokens"] = response.get("usage", {}).get("input_tokens")
         answer = response["answers"]["answer"]
@@ -86,6 +100,9 @@ def run_one(index, sample, url, timeout, inflight):
         record["errors"] = []
         record["status"] = "ok"
     except Exception as exc:  # noqa: BLE001 - keep every failure
+        if isinstance(exc, urllib.error.HTTPError):
+            record["http_status"] = exc.code
+            record["response_text"] = exc.read().decode("utf-8", "replace")
         record["status"] = "error"
         record["passed"] = False
         record["errors"] = [f"{type(exc).__name__}: {exc}"]
@@ -93,6 +110,7 @@ def run_one(index, sample, url, timeout, inflight):
     finally:
         inflight.leave()
     record["elapsed_ms"] = (time.perf_counter() - begin) * 1000.0
+    record["finished_at"] = now()
     return record
 
 
@@ -105,6 +123,8 @@ def main():
     parser.add_argument("--concurrency", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=300.0)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--journal", type=Path,
+                        help="Append completed requests immediately; refuses an existing file")
     args = parser.parse_args()
     if args.concurrency < 1:
         parser.error("--concurrency must be positive")
@@ -120,10 +140,16 @@ def main():
         "sample_file": str(args.sample_file),
         "concurrency": args.concurrency,
         "samples": len(samples),
-        "configuration": {"requests": len(samples), "concurrency": args.concurrency},
+        "configuration": {"requests": len(samples), "concurrency": args.concurrency,
+                          "warmup": args.warmup, "timeout": args.timeout},
         "requests": [],
         "summary": {},
     }
+
+    journal = None
+    if args.journal:
+        args.journal.parent.mkdir(parents=True, exist_ok=True)
+        journal = args.journal.open("x", encoding="utf-8", buffering=1)
 
     if args.warmup:
         warmup = samples[: min(args.warmup, len(samples))]
@@ -144,6 +170,8 @@ def main():
         for future in as_completed(futures):
             index = futures[future]
             results[index] = future.result()
+            if journal:
+                journal.write(json.dumps(results[index], ensure_ascii=False, allow_nan=False) + "\n")
             with progress_lock:
                 done += 1
                 if done % 200 == 0:
@@ -174,6 +202,8 @@ def main():
         "percentile_method": "linear interpolation at (n-1)*quantile",
     }
     report["finished_at"] = now()
+    if journal:
+        journal.close()
     args.report.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.report.with_name(f".{args.report.name}.tmp")
     temporary.write_text(
