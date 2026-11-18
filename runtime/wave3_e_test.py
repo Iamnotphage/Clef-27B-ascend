@@ -119,7 +119,13 @@ def main() -> int:
     if a.probe_partial:
         r = torch.zeros_like(r)
         gamma = torch.ones_like(gamma)
+    if a.w_nz:
+        print("fmt_before_cast", torch_npu.get_npu_format(w), flush=True)
+        torch.npu.config.allow_internal_format = True
+        print("allow_internal_format=True", flush=True)
     w_op = torch_npu.npu_format_cast(w, 29) if a.w_nz else w
+    if a.w_nz:
+        print("fmt_after_cast", torch_npu.get_npu_format(w_op), flush=True)
     out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w_op, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step, a.norm_from_residual, a.norm_from_x, 1 if a.w_nz else 0)
     torch.npu.synchronize()
 
