@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import traceback
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -285,6 +286,80 @@ class InvokeHostControlFlowTests(unittest.TestCase):
         self.assertEqual(events, [('binding_call_enter', {})])
         self.assertEqual(norm_calls, [])
         self.assertEqual(env['meta'], {})
+
+
+class ExceptionHandlerHostControlFlowTests(unittest.TestCase):
+    """Run only the real outer exception handler and flush on CPU fixtures."""
+    def run_handler_case(self, emit_fails, close_fails):
+        source = ROOT / 'run_probe.py'
+        tree = ast.parse(source.read_text(), filename=str(source))
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'main')
+        outer_tries = [node for node in main.body if isinstance(node, ast.Try)]
+        self.assertEqual(len(outer_tries), 1)
+        handler = outer_tries[0].handlers[0]
+        self.assertIsInstance(handler.type, ast.Name)
+        self.assertEqual(handler.type.id, 'BaseException')
+        flushes = [node for node in main.body if isinstance(node, ast.FunctionDef) and node.name == 'flush']
+        self.assertEqual(len(flushes), 1)
+        # Include no main-body imports or device setup: only raise the original
+        # CPU error, then execute the exact production handler and disk flush.
+        raise_original = ast.Raise(exc=ast.Name(id='original', ctx=ast.Load()), cause=None)
+        fixture = ast.Try(body=[raise_original], handlers=[handler], orelse=[], finalbody=[])
+        module = ast.fix_missing_locations(ast.Module(body=[flushes[0], fixture], type_ignores=[]))
+        attempts = []
+
+        class TraceStub:
+            def emit(self, stage, **fields):
+                attempts.append(('emit', stage, fields))
+                if emit_fails:
+                    raise OSError('trace emit failed')
+
+            def close(self):
+                attempts.append(('close',))
+                if close_fails:
+                    raise OSError('trace close failed')
+
+        original = RuntimeError('prepare rc=161002')
+        meta = {'performance_valid': True, 'files': {}}
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {'original': original, 'trace': TraceStub(), 'meta': meta,
+                   'out': Path(tmp), 'json': json, 'traceback': traceback}
+            with self.assertRaisesRegex(RuntimeError, 'prepare rc=161002') as raised:
+                exec(compile(module, str(source), 'exec'), env)
+            self.assertIs(raised.exception, original)
+            result = Path(tmp) / 'result.json'
+            self.assertTrue(result.is_file())
+            persisted = json.loads(result.read_text())
+            self.assertEqual(persisted, meta)
+            self.assertIs(persisted['performance_valid'], False)
+            self.assertTrue(persisted['error'].rstrip().endswith('RuntimeError: prepare rc=161002'))
+            self.assertNotIn('trace emit failed', persisted['error'])
+            self.assertNotIn('trace close failed', persisted['error'])
+            self.assertEqual(persisted['files'], {})
+            expected_keys = {'performance_valid', 'files', 'error'}
+            if emit_fails:
+                expected_keys.add('trace_error')
+                self.assertEqual(persisted['trace_error'], "OSError('trace emit failed')")
+            if close_fails:
+                expected_keys.add('trace_close_error')
+                self.assertEqual(persisted['trace_close_error'], "OSError('trace close failed')")
+            self.assertEqual(set(persisted), expected_keys)
+            self.assertEqual(attempts,
+                             [('emit', 'python_exception',
+                               {'exception_type': 'RuntimeError', 'message': 'prepare rc=161002'}),
+                              ('close',)])
+
+    def test_actual_handler_flushes_original_error_when_emit_fails(self):
+        self.run_handler_case(emit_fails=True, close_fails=False)
+
+    def test_actual_handler_flushes_original_error_when_close_fails(self):
+        self.run_handler_case(emit_fails=False, close_fails=True)
+
+    def test_actual_handler_flushes_original_error_when_emit_and_close_fail(self):
+        self.run_handler_case(emit_fails=True, close_fails=True)
+
+    def test_actual_handler_flushes_original_error_when_trace_succeeds(self):
+        self.run_handler_case(emit_fails=False, close_fails=False)
 
 
 if __name__ == '__main__':

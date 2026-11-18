@@ -284,7 +284,10 @@ def main():
             except Exception as trace_error:
                 meta['trace_error'] = repr(trace_error)
             finally:
-                trace.close()
+                try:
+                    trace.close()
+                except Exception as trace_close_error:
+                    meta['trace_close_error'] = repr(trace_close_error)
         meta['performance_valid'] = False
         meta['error'] = traceback.format_exc(); flush()
         raise
