@@ -103,8 +103,8 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 
 文件：`runtime/joint_fused_attention_window.py`
 SHA-256 `dc9db18dd3a1241aaee0a2a5c59618720f87d822868f1024f4522acdaa3effd7`。
-CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `da928dda20c0b363e7caa38db6cfe8eb2fd5bfafc0984cc939654a07080aa9cd`），
-8/8 通过（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
+CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `d69667ed78a1ff3009148911b2eecf2f51c5abe0573ea83e51d516d1261d72e9`），
+18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
 单次命令（21 执行；run-dir 必须不存在）：
 
@@ -115,7 +115,7 @@ RUN=/workspace/yangchen/logs/joint-fused-attention-$(date -u +%Y%m%dT%H%M%SZ)
 $PY "$REPO/runtime/joint_fused_attention_window.py" \
   --run-dir "$RUN" --repo "$REPO" \
   --stop-script /tmp/d0cc/d0_stop.py \
-  --expect-stop-sha <21 修好后的 stop SHA> \
+  --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 \
   --tree /workspace/yangchen/work/src/vllm --device 0
 # 若候选需要 D0 vendor，只给 probe 子进程前插；默认空
 #  --candidate-opp-prepend <vendor opp> --candidate-lib-prepend <op_api/lib>
@@ -125,8 +125,9 @@ $PY "$REPO/runtime/joint_fused_attention_window.py" \
   source activate 后 CPU loader 预检（libhccl + torch_npu ldd，无 torch_npu import）；target 必须
   `f8101b98`；LISTEN 用 socket（0=open、ECONNREFUSED=closed、其它 unknown 阻断）；保存 root
   start/boot/PGID/cmdline/descendants、`npu-smi info` 与**选定** env 键。
-- stop：调用 21 的 `d0_stop.py --api-pid <saved root> --saved-identity <root-identity.json>`，非 0 立即阻断；
-  wrapper 再验 saved 身份全退出且端口 closed。当前 stop `3c55ee5` 的正常退出误拒绝由 21 修，等新 SHA 再跑。
+- stop：冻结 21 `d0_stop.py` 来自 `96ed1b494a808e285c5d5ed858b8c23e136cb521`，文件 SHA
+  `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`；调用 `--api-pid <saved root>
+  --saved-identity <root-identity.json>`，非 0 立即阻断；wrapper 再验 saved 身份全退出且端口 closed。
 - apply → probe：probe 独立进程组、900s timeout；超时只 kill 该 PGID；raw 日志在 `probe/`。
 - finally：已 apply 必 revert 并验 `f8101b98`；已 stop 必 restore（新 `d0-restore-…` label、
   `CLEF_LAUNCH_CONFIG=s1`、launch.sh/wait.sh、`d0_restore.discover/verify` 四检）；stop 失败且旧服务仍
@@ -135,3 +136,11 @@ $PY "$REPO/runtime/joint_fused_attention_window.py" \
 - env：无独立备份文件声明；运行时从 `/proc/<root>/environ` 只保存选定性能/库键到
   `env-prod-selected.json`，与 activate clean env 比较；probe 只用生产 env（可选前插候选 vendor 路径，仅子进程），
   restore 复用 launch.sh，候选键不进入 restore。公开日志不展开无关变量。
+
+
+## 10. 与 26 独立 Triton 路线的隔离
+
+26 使用独立的 Triton Ascend attention 融合核、独立 installer/postimage，默认 off，不使用
+`npu_fusion_attention`。本候选的 installer 只接受 `f8101b98`，26 安装后本窗口 preflight 会拒绝；
+反过来 26 的 check 也会拒绝本 postimage。21 必须串行：任一路线测试前先 `--revert` 到 `f8101b98`，
+检查 SHA 后再装另一路线；禁止混装或同时保持两个 postimage。

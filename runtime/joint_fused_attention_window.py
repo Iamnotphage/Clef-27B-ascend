@@ -29,6 +29,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -62,7 +63,20 @@ ENV_KEYS = {"PATH", "LD_LIBRARY_PATH", "PYTHONPATH", "PYTHONUNBUFFERED",
 
 
 class StepError(RuntimeError):
-    pass
+    def __init__(self, message: str, rc: int = 1, detail: dict | None = None):
+        super().__init__(message)
+        self.rc = rc
+        self.detail = detail or {}
+
+
+def json_safe(value):
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    return value
 
 
 def sha256(path: Path) -> str:
@@ -130,6 +144,23 @@ def descendants(root: int) -> list[dict]:
     return out
 
 
+def identity_matches(saved: dict, live: dict | None) -> bool:
+    return bool(saved and live and saved["pid"] == live["pid"]
+                and saved["starttime"] == live["starttime"]
+                and saved["boot_id"] == live["boot_id"])
+
+
+def group_members(pgid: int) -> dict[int, dict]:
+    out = {}
+    for entry in Path("/proc").iterdir():
+        if not entry.name.isdigit():
+            continue
+        ident = proc_identity(int(entry.name))
+        if ident is not None and ident["pgid"] == pgid:
+            out[ident["pid"]] = ident
+    return out
+
+
 def port_open(port: int) -> str:
     """Return 'open', 'closed' (ECONNREFUSED), or 'unknown'."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -169,10 +200,12 @@ class Window:
         self.run_dir = Path(args.run_dir).expanduser().resolve()
         self.stage = self.run_dir / "stage"
         self.state = {"schema": "joint-fused-window/1", "run_dir": str(self.run_dir),
-                      "started_at": now(), "steps": {}, "args": vars(args)}
+                      "started_at": now(), "steps": {}, "args": json_safe(vars(args))}
         self.applied = False
         self.stopped = False
+        self.stop_attempted = False
         self.restored = False
+        self.probe_residual = False
         self.identity = None
         self.prod_env = {}
         self.source_env = {}
@@ -181,7 +214,7 @@ class Window:
     def flush(self):
         self.run_dir.mkdir(parents=True, exist_ok=True)
         (self.run_dir / "window.json").write_text(
-            json.dumps(self.state, ensure_ascii=False, indent=1) + "\n")
+            json.dumps(self.state, ensure_ascii=False, indent=1, default=str) + "\n")
 
     def step(self, name: str, required: bool = True):
         started = now()
@@ -190,8 +223,8 @@ class Window:
             entry = {"rc": 0, "ok": True, "started_at": started,
                      "finished_at": now(), **(result or {})}
         except StepError as exc:
-            entry = {"rc": 1, "ok": False, "started_at": started,
-                     "finished_at": now(), "error": str(exc)}
+            entry = {"rc": exc.rc, "ok": False, "started_at": started,
+                     "finished_at": now(), "error": str(exc), **exc.detail}
             if required:
                 self.overall_failed = True
         except Exception as exc:
@@ -240,12 +273,16 @@ class Window:
         stop_path = Path(self.args.stop_script)
         if not stop_path.is_file():
             raise StepError(f"stop script missing: {stop_path}")
+        if not self.args.expect_stop_sha:
+            raise StepError("--expect-stop-sha is required for this window")
         stop_sha = sha256(stop_path)
-        if self.args.expect_stop_sha and stop_sha != self.args.expect_stop_sha:
+        if stop_sha != self.args.expect_stop_sha:
             raise StepError(f"stop script SHA mismatch: {stop_sha}")
         stop_stage = self.stage / "runtime" / "stop.py"
         stop_stage.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(stop_path, stop_stage)
+        if sha256(stop_stage) != self.args.expect_stop_sha:
+            raise StepError("staged stop script SHA mismatch")
         self.state["preflight"] = {"staged": staged, "stop_sha256": stop_sha,
                                    "activate_sha256": ACTIVATE_SHA,
                                    "launch_sha256": LAUNCH_SHA,
@@ -298,7 +335,7 @@ class Window:
         return {"api_pid": root}
 
     def _source_env(self) -> dict:
-        script = 'set -a; source "$1" >/dev/null 2>&1; env -0'
+        script = 'set -a; source "$1" >/dev/null 2>&1 || exit 3; env -0'
         result = subprocess.run(["bash", "-c", script, "bash", self.args.activate],
                                 capture_output=True, timeout=60)
         if result.returncode != 0:
@@ -319,9 +356,13 @@ class Window:
         hccl = next((p for p in paths if Path(p, "libhccl.so").is_file()), None)
         if not hccl:
             raise StepError("libhccl.so not on LD_LIBRARY_PATH")
-        python = Path(env["PYTHON_BIN"]).resolve()
-        site = python.parent.parent / "lib" / "python3.12" / "site-packages"
-        ext = next(iter(sorted(site.glob("torch_npu/_C*.so"))), None) if site.is_dir() else None
+        venv = env.get("VIRTUAL_ENV")
+        if not venv:
+            raise StepError("VIRTUAL_ENV is not set after activate_env")
+        site = Path(venv) / "lib" / "python3.12" / "site-packages"
+        if not site.is_dir():
+            raise StepError(f"venv site-packages not found: {site}")
+        ext = next(iter(sorted(site.glob("torch_npu/_C*.so"))), None)
         if ext is None:
             raise StepError("torch_npu extension not found")
         torch_lib = site / "torch" / "lib"
@@ -336,7 +377,7 @@ class Window:
         if "libhccl.so" not in result.stdout:
             raise StepError("libhccl.so is not resolved")
         self.state["preflight"].setdefault("loader", {})[label] = {
-            "hccl_dir": hccl, "extension": str(ext), "ok": True}
+            "hccl_dir": hccl, "extension": str(ext), "venv": venv, "ok": True}
 
     def _installer(self, action: list) -> dict:
         cmd = [self.args.python, str(self.stage / INSTALLER_REL),
@@ -350,6 +391,7 @@ class Window:
 
     # ------------------------------------------------------------------
     def stop(self):
+        self.stop_attempted = True
         root = self.identity["root"]["pid"]
         out = self.run_dir / "stop.json"
         cmd = [self.args.python, str(self.stage / "runtime" / "stop.py"),
@@ -360,7 +402,15 @@ class Window:
                                 timeout=self.args.stop_timeout)
         (self.run_dir / "stop.log").write_text(result.stdout + result.stderr)
         if result.returncode != 0:
-            raise StepError(f"stop returned {result.returncode}")
+            detail = {}
+            if out.is_file():
+                detail["stop_json"] = str(out)
+                try:
+                    detail["stop"] = json.loads(out.read_text()).get("stop")
+                except Exception:
+                    pass
+            raise StepError(f"stop returned {result.returncode}",
+                            rc=result.returncode, detail=detail)
         record = json.loads(out.read_text())
         survivors = (record.get("stop") or {}).get("survivors") or []
         if survivors:
@@ -377,13 +427,57 @@ class Window:
         return {"stop_json": str(out), "port": port_state}
 
     def apply(self):
-        report = self._installer(["--apply", "--manifest", str(self.run_dir / "apply.json")])
-        if report.get("state_after") != "postimage":
-            raise StepError(f"apply state: {report.get('state_after')}")
-        if sha256(self.args.tree / "vllm/model_executor/models/clef_joint_schema.py") != POSTIMAGE_SHA:
-            raise StepError("postimage SHA mismatch after apply")
-        self.applied = True
+        target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
+        try:
+            report = self._installer(["--apply", "--manifest", str(self.run_dir / "apply.json")])
+        finally:
+            # The file may already be the postimage when manifest parsing fails;
+            # finish() must still revert it.
+            self.applied = target.is_file() and sha256(target) == POSTIMAGE_SHA
+        if report.get("state_after") != "postimage" or not self.applied:
+            raise StepError(f"apply state: {report.get('state_after')}",
+                            detail={"postimage": self.applied})
         return {"postimage": POSTIMAGE_SHA}
+
+    def _probe_cleanup(self, proc, saved: list[dict], timed_out: bool) -> dict:
+        killed, unknown = [], []
+        leader = saved[0] if saved else None
+        live_leader = proc_identity(proc.pid)
+        if timed_out and leader and identity_matches(leader, live_leader):
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+                killed.append({"pid": proc.pid, "signal": "pgid"})
+            except OSError:
+                pass
+        for target in saved:
+            live = proc_identity(target["pid"])
+            if live is None:
+                continue
+            if not identity_matches(target, live):
+                unknown.append({"pid": target["pid"], "reason": "identity changed"})
+                continue
+            if timed_out or proc.poll() is not None:
+                try:
+                    os.kill(target["pid"], signal.SIGKILL)
+                    killed.append({"pid": target["pid"], "signal": "pid"})
+                except OSError:
+                    pass
+        deadline = time.monotonic() + 10.0
+        while time.monotonic() < deadline:
+            if all(proc_identity(item["pid"]) is None for item in saved):
+                break
+            time.sleep(0.2)
+        residual = [item["pid"] for item in saved
+                    if proc_identity(item["pid"]) is not None]
+        saved_pids = {item["pid"] for item in saved}
+        for pid, ident in group_members(proc.pid).items():
+            if pid not in saved_pids:
+                unknown.append({"pid": pid, "reason": "unattributed group member"})
+            elif pid not in residual:
+                residual.append(pid)
+        return {"rc": proc.returncode if proc.returncode is not None else -9,
+                "timed_out": timed_out, "killed": killed,
+                "unknown": unknown, "residual": sorted(set(residual))}
 
     def probe(self):
         probe_dir = self.run_dir / "probe"
@@ -415,40 +509,56 @@ class Window:
         started = now()
         proc = subprocess.Popen(cmd, env=env, stdout=stdout, stderr=stderr,
                                 start_new_session=True)
-        identity = proc_identity(proc.pid)
+        saved = [proc_identity(proc.pid)]
+        saved.extend(descendants(proc.pid))
+        saved = [item for item in saved if item]
         timed_out = False
         try:
-            rc = proc.wait(timeout=self.args.probe_timeout)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            if identity and proc_identity(proc.pid):
-                os.killpg(proc.pid, signal.SIGKILL)
             try:
-                rc = proc.wait(timeout=30)
+                rc = proc.wait(timeout=self.args.probe_timeout)
             except subprocess.TimeoutExpired:
-                rc = -9
+                timed_out = True
+                rc = None
+            cleanup = self._probe_cleanup(proc, saved, timed_out)
         finally:
             stdout.close()
             stderr.close()
-        record = {"rc": rc, "timed_out": timed_out, "pid": proc.pid,
-                  "identity": identity, "started_at": started, "finished_at": now(),
+        record = {"rc": cleanup["rc"], "timed_out": timed_out,
+                  "pid": proc.pid, "saved": saved, "cleanup": cleanup,
+                  "started_at": started, "finished_at": now(),
                   "probe_json": str(output)}
-        if not timed_out and rc == 0 and output.is_file():
-            data = json.loads(output.read_text())
-            record["interface_ok"] = (data.get("interface") or {}).get("ok")
-            record["candidate_error"] = data.get("candidate_error")
-            record["delta"] = data.get("delta")
-            if not record["interface_ok"] or record["candidate_error"] is not None:
-                raise StepError("probe interface/candidate failure")
-        else:
-            raise StepError(f"probe failed rc={rc} timed_out={timed_out}")
+        if output.is_file():
+            try:
+                data = json.loads(output.read_text())
+                record["interface_ok"] = (data.get("interface") or {}).get("ok")
+                record["candidate_error"] = data.get("candidate_error")
+                record["delta"] = data.get("delta")
+            except Exception as exc:
+                record["probe_parse_error"] = f"{type(exc).__name__}: {exc}"
+        (probe_dir / "record.json").write_text(
+            json.dumps(record, ensure_ascii=False, indent=1) + "\n")
+        if cleanup["unknown"] or cleanup["residual"]:
+            self.probe_residual = True
+            raise StepError("probe left unknown/residual processes",
+                            rc=record["rc"], detail={"probe_record": record})
+        if timed_out:
+            raise StepError("probe timed out", rc=record["rc"],
+                            detail={"probe_record": record})
+        if rc != 0:
+            raise StepError(f"probe failed rc={rc}", rc=rc,
+                            detail={"probe_record": record})
+        if not record.get("interface_ok") or record.get("candidate_error") is not None:
+            raise StepError("probe interface/candidate failure", rc=rc,
+                            detail={"probe_record": record})
         return record
 
     def revert(self):
         report = self._installer(["--revert", "--manifest", str(self.run_dir / "revert.json")])
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
-        if report.get("state_after") != "preimage" or sha256(target) != PREIMAGE_SHA:
-            raise StepError("revert did not restore f8101b98")
+        actual = sha256(target) if target.is_file() else None
+        if report.get("state_after") != "preimage" or actual != PREIMAGE_SHA:
+            raise StepError("revert did not restore f8101b98",
+                            detail={"target_sha256": actual})
         self.applied = False
         return {"preimage": PREIMAGE_SHA}
 
@@ -492,23 +602,64 @@ class Window:
                 "verify_ok": True, "restore_json": str(self.run_dir / "restore.json")}
 
     # ------------------------------------------------------------------
+    def verify_existing(self) -> tuple[bool, str]:
+        if not self.identity:
+            return False, "no saved identity"
+        saved = self.identity["root"]
+        live = proc_identity(saved["pid"])
+        if not identity_matches(saved, live):
+            return False, "saved root identity no longer matches"
+        if live["pgid"] != saved["pgid"] or live["cmdline"] != saved["cmdline"]:
+            return False, "saved root pgid/cmdline changed"
+        if port_open(self.args.port) != "open":
+            return False, "port is not open"
+        try:
+            with urllib.request.urlopen(
+                    f"http://127.0.0.1:{self.args.port}/health", timeout=5) as response:
+                health = json.loads(response.read())
+        except Exception as exc:
+            return False, f"health failed: {type(exc).__name__}: {exc}"
+        return (health.get("status") == "ready",
+                "health ready" if health.get("status") == "ready" else "health not ready")
+
     def finish(self):
-        # Revert is attempted even when the candidate failed after apply.
-        if self.applied:
+        target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
+        target_sha = sha256(target) if target.is_file() else None
+        if self.applied or target_sha == POSTIMAGE_SHA:
             entry = self.step("revert", required=True)
             if not entry["ok"]:
                 self.overall_failed = True
-        # If the old service is still healthy, do not launch a second one.
-        port_state = port_open(self.args.port)
-        if self.stopped:
-            if not self.restored:
-                entry = self.step("restore", required=True)
-                if not entry["ok"]:
-                    self.overall_failed = True
-        elif port_state == "open":
+            target_sha = sha256(target) if target.is_file() else None
+        if target_sha != PREIMAGE_SHA:
             self.state["steps"]["restore"] = {
-                "rc": 0, "ok": True, "action": "existing_service_kept",
-                "port": port_state, "finished_at": now()}
+                "rc": 1, "ok": False, "action": "blocked_source_not_preimage",
+                "target_sha256": target_sha, "finished_at": now()}
+            self.overall_failed = True
+            self.flush()
+            return
+        if self.probe_residual:
+            self.state["steps"]["restore"] = {
+                "rc": 1, "ok": False, "action": "blocked_probe_residual",
+                "finished_at": now()}
+            self.overall_failed = True
+            self.flush()
+            return
+        if self.restored:
+            self.flush()
+            return
+        port_state = port_open(self.args.port)
+        if self.stopped or (self.stop_attempted and port_state == "closed"):
+            entry = self.step("restore", required=True)
+            if not entry["ok"]:
+                self.overall_failed = True
+        elif port_state == "open":
+            healthy, detail = self.verify_existing()
+            self.state["steps"]["restore"] = {
+                "rc": 0 if healthy else 1, "ok": healthy,
+                "action": "existing_service_verified" if healthy else "existing_service_invalid",
+                "detail": detail, "finished_at": now()}
+            if not healthy:
+                self.overall_failed = True
             self.flush()
         else:
             self.state["steps"]["restore"] = {
@@ -541,6 +692,11 @@ def main() -> int:
     ap.add_argument("--preflight-only", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+    requested = Path(args.run_dir).expanduser().resolve()
+    if requested.exists():
+        print(json.dumps({"error": f"run dir already exists: {requested}"},
+                         ensure_ascii=False))
+        return 1
     window = Window(args)
     code = 0
     if args.dry_run:
