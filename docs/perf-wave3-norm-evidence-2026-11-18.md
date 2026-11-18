@@ -649,11 +649,12 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 
 | 产物 | SHA-256 |
 | --- | --- |
-| `custom_opp_ubuntu_aarch64.run` | `65260db799d208e3e7c7d0f6d20fb72120a91c14d24d15350d48125976249e79` |
-| kernel `.o` | `e60aea4fad532d467d7969827c3c2458d48591b92ebfe291d12a08e303761edf` |
-| `libcust_opmaster_rt2.0.so` | `290cc31e3ea593b0f11e6c1f24f583938bd8afcf59a6cadc0be470c262ceaaae` |
+| `custom_opp_ubuntu_aarch64.run` | **`873ef8fb56df860978802584b3cbdea8ca9b2435d479a43239847abe29ee81d1`**（重编后；旧 `65260db7…` 作废） |
+| kernel `.o` | **`05cf6bd218ce15ac483a4f7ac338d1ef60edbf03d5bd71bca03c2249c12574c2`** |
+| `libcust_opmaster_rt2.0.so` | **`1ecdb91fb2f12f85dca27c74ad64c314d839d5df90039a8377c2e54c37c5db18`**（注：此前记录的 `290cc31e…` 作废） |
 | `libcust_opapi.so` | `9d62051f0d7da2efafd741ed68640becd9b9ea88eb8d08e07d050271d56cc227`（与 nzguard 包**逐字节相同**） |
 
+- **`mc_diag` 缺陷的成因（22 自述）**：属性只加进包 json，**未进 OpDef** 的 `this->Attr(...)`；生成头因此没有它（`grep -c mcDiag` = 0、`grep -c int64_t` = 14），而 tiling 读 `GetAttrPointer<int64_t>(14)` 会**越界**。已整条移除，diag 恢复 `usedCoreNum/baseM/depthA1`，**8 float、14 属性、adapter 无需改动**。
 - **集成前置（2026-11-18 22:33 CST 更正，已闭）**：22 实际生成的 aclnn 头**没有 `mcDiag`**；随后确认**第 15 属性从未进入 OpDef**，现已**移除该属性并保持原 14 参数 ABI**。
   因此：**不要**按此前说法把 adapter 改到 15 参数，**也不要**安装旧 `65260db7…` 包（仅归档待替换）。等 22 的**最终新包与生成头证据**再核对。
 - vendor 名 `clef_matmul_ar_add_rms_norm_mc`、op 名仍 `ClefMatmulArAddRmsNorm`。**安装目录共存**与**运行时实际选用**必须分开记录；**不得**仅据同名自行卸载既有包，也不**推断**唯一装载方式。
