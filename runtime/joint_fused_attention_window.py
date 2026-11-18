@@ -52,6 +52,7 @@ STOP_DEFAULT = "/tmp/d0cc/d0_stop.py"
 DEFAULT_TREE = Path("/workspace/yangchen/work/src/vllm")
 DEFAULT_PYTHON = "/workspace/yangchen/venvs/clef-py312/bin/python"
 SERVICE_LOG_ROOT = "/workspace/yangchen/logs/perf-wave2-20261118"
+PROC_ROOT = Path("/proc")
 CANDIDATE_KEYS = {"CLEF_JOINT_FUSED_ATTN"}
 CLEANUP_KEYS = ("CLEF_PROFILE_MARKERS", "CLEF_PROFILE_OBSERVE_DIR",
                 "CLEF_PROFILE_SCOPE_FILTER", "CLEF_GDN_NORM_BLOCK_M")
@@ -99,22 +100,22 @@ def parse_environ(blob: bytes) -> dict:
 
 def proc_identity(pid: int) -> dict | None:
     try:
-        raw = Path(f"/proc/{pid}/stat").read_text()
+        raw = (PROC_ROOT / f"{pid}/stat").read_text()
         fields = raw.split(") ", 1)[1].split()
         ppid, pgrp, start = int(fields[1]), int(fields[2]), fields[19]
     except (OSError, IndexError, ValueError):
         return None
     try:
-        boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        boot = (PROC_ROOT / "sys/kernel/random/boot_id").read_text().strip()
     except OSError:
         boot = ""
     try:
-        cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode(
-            errors="replace").strip()
+        cmdline = (PROC_ROOT / f"{pid}/cmdline").read_bytes().replace(
+            b"\0", b" ").decode(errors="replace").strip()
     except OSError:
         cmdline = ""
     return {"pid": pid, "ppid": ppid, "pgid": pgrp, "starttime": start,
-            "boot_id": boot, "cmdline": cmdline}
+            "boot_id": boot, "cmdline": cmdline, "state": fields[0]}
 
 
 def selected_env(env: dict) -> dict:
@@ -125,7 +126,7 @@ def selected_env(env: dict) -> dict:
 def descendants(root: int) -> list[dict]:
     children: dict[int, list[int]] = {}
     identities: dict[int, dict] = {}
-    for entry in Path("/proc").iterdir():
+    for entry in PROC_ROOT.iterdir():
         if not entry.name.isdigit():
             continue
         ident = proc_identity(int(entry.name))
@@ -152,7 +153,7 @@ def identity_matches(saved: dict, live: dict | None) -> bool:
 
 def group_members(pgid: int) -> dict[int, dict]:
     out = {}
-    for entry in Path("/proc").iterdir():
+    for entry in PROC_ROOT.iterdir():
         if not entry.name.isdigit():
             continue
         ident = proc_identity(int(entry.name))
@@ -181,7 +182,7 @@ def port_open(port: int) -> str:
 def find_api_pid(port: int) -> list[int]:
     needle = f"--port {port}"
     found = []
-    for entry in Path("/proc").iterdir():
+    for entry in PROC_ROOT.iterdir():
         if not entry.name.isdigit():
             continue
         try:
@@ -203,6 +204,7 @@ class Window:
                       "started_at": now(), "steps": {}, "args": json_safe(vars(args))}
         self.applied = False
         self.stopped = False
+        self.candidate_started = False
         self.stop_attempted = False
         self.restored = False
         self.probe_residual = False
@@ -305,7 +307,7 @@ class Window:
         if identity is None or "vllm.entrypoints.cli.main" not in identity["cmdline"]:
             raise StepError(f"api identity invalid: {identity}")
         self.identity = {"root": identity, "descendants": descendants(root)}
-        self.prod_env = parse_environ(Path(f"/proc/{root}/environ").read_bytes())
+        self.prod_env = parse_environ((PROC_ROOT / f"{root}/environ").read_bytes())
         for key in CANDIDATE_KEYS:
             self.prod_env.pop(key, None)
         for key in CLEANUP_KEYS:
@@ -392,6 +394,7 @@ class Window:
     # ------------------------------------------------------------------
     def stop(self):
         self.stop_attempted = True
+        self.candidate_started = True
         root = self.identity["root"]["pid"]
         out = self.run_dir / "stop.json"
         cmd = [self.args.python, str(self.stage / "runtime" / "stop.py"),
@@ -440,10 +443,12 @@ class Window:
         return {"postimage": POSTIMAGE_SHA}
 
     def _probe_cleanup(self, proc, saved: list[dict], timed_out: bool) -> dict:
-        killed, unknown = [], []
+        killed, unknown, zombies = [], [], []
         leader = saved[0] if saved else None
         live_leader = proc_identity(proc.pid)
-        if timed_out and leader and identity_matches(leader, live_leader):
+        if (timed_out and leader and identity_matches(leader, live_leader)
+                and live_leader.get("state") != "Z"
+                and live_leader["pgid"] == proc.pid and leader["pgid"] == proc.pid):
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
                 killed.append({"pid": proc.pid, "signal": "pgid"})
@@ -452,6 +457,9 @@ class Window:
         for target in saved:
             live = proc_identity(target["pid"])
             if live is None:
+                continue
+            if live.get("state") == "Z":
+                zombies.append(target["pid"])
                 continue
             if not identity_matches(target, live):
                 unknown.append({"pid": target["pid"], "reason": "identity changed"})
@@ -462,22 +470,36 @@ class Window:
                     killed.append({"pid": target["pid"], "signal": "pid"})
                 except OSError:
                     pass
+        reaped = False
+        try:
+            proc.wait(timeout=10)
+            reaped = True
+        except subprocess.TimeoutExpired:
+            pass
         deadline = time.monotonic() + 10.0
         while time.monotonic() < deadline:
-            if all(proc_identity(item["pid"]) is None for item in saved):
+            if all((proc_identity(item["pid"]) is None
+                    or proc_identity(item["pid"]).get("state") == "Z")
+                   for item in saved):
                 break
             time.sleep(0.2)
-        residual = [item["pid"] for item in saved
-                    if proc_identity(item["pid"]) is not None]
+        residual = []
+        for item in saved:
+            live = proc_identity(item["pid"])
+            if live is not None and live.get("state") != "Z":
+                residual.append(item["pid"])
         saved_pids = {item["pid"] for item in saved}
         for pid, ident in group_members(proc.pid).items():
+            if ident.get("state") == "Z":
+                continue
             if pid not in saved_pids:
                 unknown.append({"pid": pid, "reason": "unattributed group member"})
             elif pid not in residual:
                 residual.append(pid)
         return {"rc": proc.returncode if proc.returncode is not None else -9,
-                "timed_out": timed_out, "killed": killed,
-                "unknown": unknown, "residual": sorted(set(residual))}
+                "timed_out": timed_out, "killed": killed, "reaped": reaped,
+                "zombies": sorted(set(zombies)), "unknown": unknown,
+                "residual": sorted(set(residual))}
 
     def probe(self):
         probe_dir = self.run_dir / "probe"
@@ -571,7 +593,7 @@ class Window:
         label_dir = Path(SERVICE_LOG_ROOT) / label
         if label_dir.exists():
             raise StepError(f"fresh label already exists: {label_dir}")
-        before = {int(p.name) for p in Path("/proc").iterdir() if p.name.isdigit()}
+        before = {int(p.name) for p in PROC_ROOT.iterdir() if p.name.isdigit()}
         env = dict(self.prod_env)
         env["CLEF_LAUNCH_CONFIG"] = "s1"
         for key in CANDIDATE_KEYS:
@@ -602,27 +624,64 @@ class Window:
                 "verify_ok": True, "restore_json": str(self.run_dir / "restore.json")}
 
     # ------------------------------------------------------------------
-    def verify_existing(self) -> tuple[bool, str]:
+    def service_stopped_verified(self) -> tuple[bool, dict]:
         if not self.identity:
-            return False, "no saved identity"
+            return False, {"error": "no saved identity"}
+        targets = [self.identity["root"], *self.identity["descendants"]]
+        alive, unknown, zombies = [], [], []
+        for item in targets:
+            live = proc_identity(item["pid"])
+            if live is None:
+                continue
+            if live.get("state") == "Z":
+                zombies.append(item["pid"])
+                continue
+            if identity_matches(item, live):
+                alive.append(item["pid"])
+            else:
+                unknown.append({"pid": item["pid"], "reason": "identity changed"})
+        root = self.identity["root"]
+        for pid, ident in group_members(root["pgid"]).items():
+            if ident.get("state") == "Z":
+                continue
+            if pid not in {item["pid"] for item in targets}:
+                unknown.append({"pid": pid, "reason": "unattributed group member"})
+        return (not alive and not unknown,
+                {"alive": alive, "unknown": unknown, "zombies": zombies})
+
+    def verify_existing(self) -> tuple[bool, dict]:
+        if not self.identity:
+            return False, {"error": "no saved identity"}
         saved = self.identity["root"]
         live = proc_identity(saved["pid"])
-        if not identity_matches(saved, live):
-            return False, "saved root identity no longer matches"
+        if not identity_matches(saved, live) or live.get("state") == "Z":
+            return False, {"error": "saved root identity no longer matches"}
         if live["pgid"] != saved["pgid"] or live["cmdline"] != saved["cmdline"]:
-            return False, "saved root pgid/cmdline changed"
+            return False, {"error": "saved root pgid/cmdline changed"}
         if port_open(self.args.port) != "open":
-            return False, "port is not open"
+            return False, {"error": "port is not open"}
+        sys.path.insert(0, str(Path(self.args.repo) / "runtime" / "d0"))
+        import d0_restore
+        import d0_run
+        pids = {saved["pid"]} | {item["pid"] for item in self.identity["descendants"]}
+        log = {"source": "existing-service"}
         try:
-            with urllib.request.urlopen(
-                    f"http://127.0.0.1:{self.args.port}/health", timeout=5) as response:
-                health = json.loads(response.read())
+            verified = d0_restore.verify(
+                d0_restore.build_commands(d0_run.render_request), log,
+                service_pids=pids)
         except Exception as exc:
-            return False, f"health failed: {type(exc).__name__}: {exc}"
-        return (health.get("status") == "ready",
-                "health ready" if health.get("status") == "ready" else "health not ready")
+            return False, {"error": f"{type(exc).__name__}: {exc}", "stages": log}
+        (self.run_dir / "existing-verify.json").write_text(
+            json.dumps(log, ensure_ascii=False, indent=1) + "\n")
+        return verified, {"stages": log}
 
     def finish(self):
+        if not self.candidate_started:
+            self.state["steps"]["finish"] = {
+                "rc": 0, "ok": True, "action": "read_only_noop",
+                "finished_at": now()}
+            self.flush()
+            return
         target = self.args.tree / "vllm/model_executor/models/clef_joint_schema.py"
         target_sha = sha256(target) if target.is_file() else None
         if self.applied or target_sha == POSTIMAGE_SHA:
@@ -647,24 +706,26 @@ class Window:
         if self.restored:
             self.flush()
             return
+        stopped_ok, detail = self.service_stopped_verified()
+        self.state["service_stopped_check"] = detail
         port_state = port_open(self.args.port)
-        if self.stopped or (self.stop_attempted and port_state == "closed"):
+        if stopped_ok and port_state == "closed":
             entry = self.step("restore", required=True)
             if not entry["ok"]:
                 self.overall_failed = True
-        elif port_state == "open":
-            healthy, detail = self.verify_existing()
+        elif not stopped_ok and port_state == "open":
+            healthy, verify_detail = self.verify_existing()
             self.state["steps"]["restore"] = {
                 "rc": 0 if healthy else 1, "ok": healthy,
                 "action": "existing_service_verified" if healthy else "existing_service_invalid",
-                "detail": detail, "finished_at": now()}
+                "detail": verify_detail, "finished_at": now()}
             if not healthy:
                 self.overall_failed = True
             self.flush()
         else:
             self.state["steps"]["restore"] = {
-                "rc": 1, "ok": False, "action": "service_absent_after_stop_failure",
-                "port": port_state, "finished_at": now()}
+                "rc": 1, "ok": False, "action": "blocked_service_not_proven_stopped",
+                "stopped": detail, "port": port_state, "finished_at": now()}
             self.overall_failed = True
             self.flush()
 

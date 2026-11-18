@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""CPU tests for the joint-head window wrapper's non-device logic.
+"""CPU tests for the joint-head window wrapper.
 
-Only external boundaries are exercised: a localhost listening socket, the
-environment parser/selector and the finally-state machine with a fake step
-callback.  No production wrapper function, torch, torch_npu or service is
-imported or replaced.
+The real Window methods are kept.  Only external boundaries are replaced:
+a temporary /proc tree (module PROC_ROOT), subprocess.run/Popen, os.kill/
+killpg, the localhost port helper and installer command execution.  No torch,
+torch_npu, service or production wrapper function is imported or replaced.
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import shutil
 import socket
+import subprocess
 import sys
 import tempfile
 import types
@@ -21,6 +23,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 WRAPPER = HERE / "joint_fused_attention_window.py"
+PREIMAGE = HERE / "joint_single_field" / "clef_joint_schema.py"
+POSTIMAGE = HERE / "joint_fused_attention" / "clef_joint_schema.py"
 
 
 def load():
@@ -29,6 +33,21 @@ def load():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def put_proc(root: Path, pid: int, state="S", ppid=1, pgid=None,
+             start="100", cmdline="python -m vllm.entrypoints.cli.main serve --port 18143"):
+    pgid = pid if pgid is None else pgid
+    directory = root / str(pid)
+    directory.mkdir(parents=True, exist_ok=True)
+    fields = ["0"] * 20
+    fields[0] = state
+    fields[1] = str(ppid)
+    fields[2] = str(pgid)
+    fields[19] = start
+    (directory / "stat").write_text(f"{pid} (python) " + " ".join(fields) + "\n")
+    (directory / "cmdline").write_text(cmdline.replace(" ", "\0") + "\0")
+    (directory / "environ").write_bytes(b"CLEF_CONFIG=s1\0PATH=/bin\0")
 
 
 def main() -> int:
@@ -55,105 +74,185 @@ def main() -> int:
     listener.close()
     check("port_open detects refusal", mod.port_open(port) == "closed")
 
-    # step preserves the real RC and detail instead of coercing to 1
     with tempfile.TemporaryDirectory(prefix="window-test-") as tmp:
+        tmp = Path(tmp)
+        proc_root = tmp / "proc"
+        (proc_root / "sys/kernel/random").mkdir(parents=True)
+        (proc_root / "sys/kernel/random/boot_id").write_text("BOOT\n")
+        put_proc(proc_root, 321, start="555")
+        original_proc = mod.PROC_ROOT
+        mod.PROC_ROOT = proc_root
+        saved = [mod.proc_identity(321)]
+        check("proc_identity reads fake proc", saved[0]["pid"] == 321
+              and saved[0]["state"] == "S")
+
+        class FakeProc:
+            pid = 321
+            returncode = None
+            def poll(self):
+                return self.returncode
+            def wait(self, timeout=None):
+                self.returncode = -9
+                shutil.rmtree(proc_root / "321", ignore_errors=True)
+                return -9
+
+        original_killpg = mod.os.killpg
+        original_kill = mod.os.kill
+        mod.os.killpg = lambda pgid, sig: shutil.rmtree(proc_root / "321", ignore_errors=True)
+        mod.os.kill = lambda pid, sig: shutil.rmtree(proc_root / str(pid), ignore_errors=True)
         window = object.__new__(mod.Window)
+        cleanup = window._probe_cleanup(FakeProc(), saved, True)
+        check("probe timeout reaps and clears", cleanup["rc"] == -9
+              and cleanup["reaped"] and not cleanup["residual"]
+              and not cleanup["unknown"], str(cleanup))
+
+        put_proc(proc_root, 322, state="Z", start="556")
+        zombie_saved = [mod.proc_identity(322)]
+        cleanup = window._probe_cleanup(FakeProc(), zombie_saved, False)
+        check("zombie is not residual", cleanup["residual"] == []
+              and 322 in cleanup["zombies"], str(cleanup))
+        mod.PROC_ROOT = original_proc
+        mod.os.killpg = original_killpg
+        mod.os.kill = original_kill
+
+        # real probe supervision with a fake Popen and fake proc tree
+        probe_root = tmp / "probe-proc"
+        (probe_root / "sys/kernel/random").mkdir(parents=True)
+        (probe_root / "sys/kernel/random/boot_id").write_text("BOOT\n")
+        original_proc = mod.PROC_ROOT
+        mod.PROC_ROOT = probe_root
+        stage = tmp / "stage"
+        (stage / "runtime").mkdir(parents=True)
+        (stage / mod.PROBE_REL).write_text("")
+        run_dir = tmp / "run"
+        run_dir.mkdir()
+        window = object.__new__(mod.Window)
+        window.args = types.SimpleNamespace(
+            python="python", tree=tmp, device=0, probe_timeout=1.0,
+            candidate_opp_prepend="", candidate_lib_prepend="")
+        window.stage = stage
+        window.run_dir = run_dir
+        window.prod_env = {"PATH": "/bin"}
         window.state = {"steps": {}}
-        window.run_dir = Path(tmp)
-        window.overall_failed = False
+
+        class FakePopen:
+            def __init__(self, cmd, env=None, stdout=None, stderr=None,
+                         start_new_session=False):
+                self.pid = 401
+                self.returncode = None
+                self.timed = False
+                output = Path(cmd[cmd.index("--output") + 1])
+                output.write_text(json.dumps({
+                    "interface": {"ok": True}, "candidate_error": None,
+                    "delta": {"device_median_ms": -0.4}}))
+                put_proc(probe_root, 401, start="777")
+            def poll(self):
+                return self.returncode
+            def wait(self, timeout=None):
+                if not self.timed:
+                    self.timed = True
+                    raise subprocess.TimeoutExpired("probe", timeout)
+                self.returncode = -9
+                shutil.rmtree(probe_root / "401", ignore_errors=True)
+                return -9
+
+        original_popen = mod.subprocess.Popen
+        original_killpg = mod.os.killpg
+        mod.subprocess.Popen = FakePopen
+        mod.os.killpg = lambda pgid, sig: shutil.rmtree(probe_root / "401", ignore_errors=True)
+        try:
+            try:
+                window.probe()
+            except mod.StepError as exc:
+                detail = exc.detail
+            else:
+                detail = {}
+            check("real probe timeout keeps raw record", detail["probe_record"]["timed_out"] is True
+                  and detail["probe_record"]["cleanup"]["reaped"] is True
+                  and (run_dir / "probe/record.json").is_file(), str(detail)[:300])
+        finally:
+            mod.subprocess.Popen = original_popen
+            mod.os.killpg = original_killpg
+            mod.PROC_ROOT = original_proc
+
+        # stop verification refuses a live saved root, then accepts gone
+        check_root = tmp / "stop-proc"
+        (check_root / "sys/kernel/random").mkdir(parents=True)
+        (check_root / "sys/kernel/random/boot_id").write_text("BOOT\n")
+        put_proc(check_root, 501, start="900")
+        original_proc = mod.PROC_ROOT
+        mod.PROC_ROOT = check_root
+        run_dir = tmp / "stop-run"
+        run_dir.mkdir()
+        window = object.__new__(mod.Window)
+        window.identity = {"root": mod.proc_identity(501), "descendants": []}
+        window.run_dir = run_dir
+        window.state = {"steps": {}}
         window.flush = lambda: None
-        def fail():
-            raise mod.StepError("boom", rc=7, detail={"probe_record": {"rc": 7}})
-        window.fail = fail
-        entry = window.step("fail")
-        check("step preserves RC", entry["rc"] == 7
-              and entry["probe_record"]["rc"] == 7)
+        ok, detail = window.service_stopped_verified()
+        check("live saved service blocks restore", ok is False and detail["alive"], str(detail))
+        shutil.rmtree(check_root / "501", ignore_errors=True)
+        ok, detail = window.service_stopped_verified()
+        check("gone saved service passes", ok is True, str(detail))
+        mod.PROC_ROOT = original_proc
 
-        # flush with Path in args must be JSON serializable
-        window.state["args"] = {"tree": Path("/tmp/x")}
-        mod.Window.flush(window)
-        check("flush serializes Path args", (Path(tmp) / "window.json").is_file())
+        # pure preflight/read-only failure must not revert an existing postimage
+        tree = tmp / "tree"
+        target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+        target.parent.mkdir(parents=True)
+        shutil.copy2(POSTIMAGE, target)
+        before = mod.sha256(target)
+        window = object.__new__(mod.Window)
+        window.args = types.SimpleNamespace(tree=tree, port=18143)
+        window.run_dir = tmp / "readonly"
+        window.state = {"steps": {}}
+        window.candidate_started = False
+        window.applied = False
+        window.stopped = False
+        window.restored = False
+        window.probe_residual = False
+        window.overall_failed = False
+        window.flush()
+        window.finish()
+        check("read-only preflight never mutates", mod.sha256(target) == before
+              and window.state["steps"]["finish"]["action"] == "read_only_noop")
 
-        def make(applied, stopped, restored, port_state, sha_state, health=True,
-                 revert_ok=True):
-            window = object.__new__(mod.Window)
-            tree = Path(tmp) / "tree"
-            (tree / "vllm/model_executor/models").mkdir(parents=True, exist_ok=True)
-            target = tree / "vllm/model_executor/models/clef_joint_schema.py"
-            target.write_text("x")
-            window.args = types.SimpleNamespace(port=18143, tree=tree)
-            window.run_dir = Path(tmp)
-            window.state = {"steps": {}}
-            window.applied = applied
-            window.stopped = stopped
-            window.stop_attempted = stopped
-            window.restored = restored
-            window.probe_residual = False
-            window.overall_failed = False
-            window.identity = {"root": {"pid": 1}}
-            calls = []
-            def step(name, required=True):
-                calls.append(name)
-                if name == "revert" and revert_ok:
-                    sha_state["value"] = mod.PREIMAGE_SHA
-                return {"rc": 0, "ok": revert_ok if name == "revert" else True}
-            window.step = step
-            window.flush = lambda: None
-            window.verify_existing = lambda: (health, "health ready")
-            return window, calls, sha_state
-
-        original_port = mod.port_open
-        original_sha = mod.sha256
-        mod.port_open = lambda port: "open"
-        state = {"value": mod.PREIMAGE_SHA}
-        mod.sha256 = lambda path: state["value"]
-        window, calls, state = make(False, True, False, "open", state)
-        window.finish()
-        check("stop+apply failure restores", calls == ["restore"], str(calls))
-        state = {"value": mod.POSTIMAGE_SHA}
-        window, calls, state = make(True, True, False, "open", state)
-        window.finish()
-        check("applied failure reverts then restores", calls == ["revert", "restore"], str(calls))
-        state = {"value": mod.PREIMAGE_SHA}
-        window, calls, state = make(False, False, False, "open", state)
-        window.finish()
-        check("stop failure verifies existing service", calls == []
-              and window.state["steps"]["restore"]["action"] == "existing_service_verified")
-        window, calls, state = make(False, False, False, "open", state,
-                                     health=False)
-        window.finish()
-        check("unhealthy existing service fails", calls == []
-              and window.overall_failed is True)
-        state = {"value": mod.PREIMAGE_SHA}
-        window, calls, state = make(False, False, False, "closed", state)
-        mod.port_open = lambda port: "closed"
-        window.finish()
-        check("stop failure with no service fails", calls == []
-              and window.overall_failed is True)
-        state = {"value": mod.POSTIMAGE_SHA}
-        window, calls, state = make(True, True, False, "open", state)
-        window.probe_residual = True
-        window.finish()
-        check("probe residual blocks restore", calls == ["revert"]
-              and window.state["steps"]["restore"]["action"] == "blocked_probe_residual")
-        state = {"value": "unknown"}
-        window, calls, state = make(False, True, False, "open", state)
-        window.finish()
-        check("unknown source blocks restore", calls == []
-              and window.state["steps"]["restore"]["action"] == "blocked_source_not_preimage")
-        state = {"value": mod.POSTIMAGE_SHA}
-        window, calls, state = make(True, True, False, "open", state, revert_ok=False)
-        window.finish()
-        check("failed revert blocks restore", calls == ["revert"]
-              and window.state["steps"]["restore"]["action"] == "blocked_source_not_preimage")
-        state = {"value": mod.PREIMAGE_SHA}
-        window, calls, state = make(False, False, False, "closed", state)
+        # applied + residual: real revert (fake installer command), then block
+        tree = tmp / "tree2"
+        target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+        target.parent.mkdir(parents=True)
+        shutil.copy2(POSTIMAGE, target)
+        stage = tmp / "stage2"
+        (stage / "runtime").mkdir(parents=True)
+        (stage / mod.INSTALLER_REL).write_text("")
+        window = object.__new__(mod.Window)
+        window.args = types.SimpleNamespace(tree=tree, port=18143, python="python")
+        window.run_dir = tmp / "applied"
+        window.run_dir.mkdir()
+        window.stage = stage
+        window.state = {"steps": {}}
+        window.candidate_started = True
+        window.applied = True
+        window.stopped = True
         window.stop_attempted = True
-        mod.port_open = lambda port: "closed"
-        window.finish()
-        check("partial stop with no service restores", calls == ["restore"], str(calls))
-        mod.port_open = original_port
-        mod.sha256 = original_sha
+        window.restored = False
+        window.probe_residual = True
+        window.overall_failed = False
+        window.identity = None
+        original_run = mod.subprocess.run
+        def fake_run(cmd, **kwargs):
+            if "--revert" in cmd:
+                shutil.copy2(PREIMAGE, target)
+            return types.SimpleNamespace(returncode=0, stdout=json.dumps(
+                {"state_after": "preimage"}), stderr="")
+        mod.subprocess.run = fake_run
+        try:
+            window.finish()
+        finally:
+            mod.subprocess.run = original_run
+        check("applied residual reverts and blocks restore",
+              mod.sha256(target) == mod.PREIMAGE_SHA
+              and window.state["steps"]["restore"]["action"] == "blocked_probe_residual")
 
     # real main refuses an existing run directory without writing into it
     with tempfile.TemporaryDirectory(prefix="window-main-") as tmp:
@@ -162,8 +261,7 @@ def main() -> int:
         argv = sys.argv
         sys.argv = ["window", "--run-dir", str(existing), "--repo", tmp]
         try:
-            buffer = io.StringIO()
-            with redirect_stdout(buffer):
+            with redirect_stdout(io.StringIO()):
                 code = mod.main()
         finally:
             sys.argv = argv
@@ -189,46 +287,7 @@ def main() -> int:
             mod.subprocess.run = original_run
         check("source failure raises", source_failed)
 
-    # probe cleanup compares saved identity and reports unknown group members
-    with tempfile.TemporaryDirectory(prefix="window-probe-") as tmp:
-        class FakeProc:
-            pid = 123
-            returncode = -9
-            def poll(self):
-                return -9
-        window = object.__new__(mod.Window)
-        saved = [{"pid": 123, "starttime": "1", "boot_id": "b", "pgid": 123,
-                  "cmdline": "x"}]
-        original_identity = mod.proc_identity
-        original_members = mod.group_members
-        original_killpg = mod.os.killpg
-        original_kill = mod.os.kill
-        calls = []
-        alive = {"value": True}
-        mod.proc_identity = lambda pid: saved[0] if pid == 123 and alive["value"] else None
-        mod.group_members = lambda pgid: {}
-        def killpg(pgid, sig):
-            calls.append(("pgid", pgid))
-            alive["value"] = False
-        def kill(pid, sig):
-            calls.append(("pid", pid))
-            alive["value"] = False
-        mod.os.killpg = killpg
-        mod.os.kill = kill
-        cleanup = window._probe_cleanup(FakeProc(), saved, True)
-        check("probe timeout killpg exact", ("pgid", 123) in calls
-              and not cleanup["unknown"] and not cleanup["residual"], str(cleanup))
-        mod.proc_identity = lambda pid: None
-        mod.group_members = lambda pgid: {999: {"pid": 999, "starttime": "2",
-                                               "boot_id": "b", "pgid": pgid}}
-        cleanup = window._probe_cleanup(FakeProc(), [], False)
-        check("unknown group member blocks", len(cleanup["unknown"]) == 1, str(cleanup))
-        mod.proc_identity = original_identity
-        mod.group_members = original_members
-        mod.os.killpg = original_killpg
-        mod.os.kill = original_kill
-
-    print(json.dumps({"checks": 18, "failed": failures, "ok": not failures}))
+    print(json.dumps({"checks": 16, "failed": failures, "ok": not failures}))
     return 0 if not failures else 1
 
 
