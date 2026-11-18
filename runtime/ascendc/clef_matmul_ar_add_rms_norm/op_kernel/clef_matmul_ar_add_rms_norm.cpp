@@ -339,7 +339,10 @@ public:
             LocalTensor<float> z = bz_.Get<float>();
             LocalTensor<float> tmp = bw_.Get<float>();
             Cast(z, xl, RoundMode::CAST_NONE, n_);
-            if (tiling_->normFromResidual == 0u) {
+            // The add is skipped only when the residual slot is itself the
+            // partial, i.e. norm_from_residual is set AND it actually won the
+            // source precedence.  norm_from_x keeps the add.
+            if (!(tiling_->normFromResidual != 0u && tiling_->normFromX == 0u)) {
                 Cast(tmp, rl, RoundMode::CAST_NONE, n_);
                 Add(z, z, tmp, n_);
             }
