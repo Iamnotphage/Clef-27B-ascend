@@ -44,6 +44,7 @@ def main() -> int:
     ap.add_argument("--mm-bufspace", type=int, default=0)
     ap.add_argument("--norm-ub-late", type=int, default=1)
     ap.add_argument("--mm-btrans", type=int, default=0)
+    ap.add_argument("--mm-step", type=int, default=0)
     ap.add_argument("--adapter-dir", type=Path, required=True)
     ap.add_argument("--op-api-dir", type=Path, required=True)
     ap.add_argument("--build-dir", type=Path, required=True)
@@ -67,7 +68,7 @@ def main() -> int:
     r = torch.randn(m, n, generator=g).to(torch.bfloat16).npu()
     gamma = torch.rand(n, generator=g).to(torch.bfloat16).npu()
 
-    out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans)
+    out, res_out, rstd, diag = torch.ops.clef_e.mm_ar_norm(x, w, r, gamma, a.eps, 1, group, a.use_hccl, a.block_dim, a.mm_enable, a.mm_dim, a.mm_mode, a.mm_bufspace, a.norm_ub_late, a.mm_btrans, a.mm_step)
     torch.npu.synchronize()
 
     partial = torch.matmul(x, w).float()

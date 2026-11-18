@@ -18,7 +18,7 @@ aclTensor* mk(const at::Tensor& t, aclDataType dt) {
 }
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> mm_ar_norm(
     const at::Tensor& x, const at::Tensor& w, const at::Tensor& residual,
-    const at::Tensor& gamma, double eps, int64_t repeat, std::string group, int64_t use_hccl, int64_t block_dim, int64_t mm_enable, int64_t mm_dim, int64_t mm_mode, int64_t mm_bufspace, int64_t norm_ub_late, int64_t mm_btrans) {
+    const at::Tensor& gamma, double eps, int64_t repeat, std::string group, int64_t use_hccl, int64_t block_dim, int64_t mm_enable, int64_t mm_dim, int64_t mm_mode, int64_t mm_bufspace, int64_t norm_ub_late, int64_t mm_btrans, int64_t mm_step) {
     auto out = at::empty({x.size(0), w.size(1)}, x.options());
     auto res_out = at::empty_like(out);
     auto rstd = at::empty({x.size(0)}, x.options().dtype(at::kFloat));
@@ -30,7 +30,7 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> mm_ar_norm(
     aclOpExecutor* ex = nullptr;
     char* g = const_cast<char*>(group.c_str());
     aclnnStatus st = aclnnClefMatmulArAddRmsNormGetWorkspaceSize(
-        tx, tw, tr, tg, eps, repeat, g, use_hccl, block_dim, mm_enable, mm_dim, mm_mode, mm_bufspace, norm_ub_late, mm_btrans, to, tro, trs, td, &ws_size, &ex);
+        tx, tw, tr, tg, eps, repeat, g, use_hccl, block_dim, mm_enable, mm_dim, mm_mode, mm_bufspace, norm_ub_late, mm_btrans, mm_step, to, tro, trs, td, &ws_size, &ex);
     TORCH_CHECK(st == 0 && ex != nullptr, "E GetWorkspaceSize failed ", (int)st, " ", aclGetRecentErrMsg());
     fprintf(stderr, "[e-adapter] after GetWorkspaceSize ws=%llu\n", (unsigned long long)ws_size);
     void* ws = nullptr;
@@ -51,6 +51,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor> mm_ar_norm(
     return {out, res_out, rstd, diag};
 }
 TORCH_LIBRARY(clef_e, m) {
-    m.def("mm_ar_norm(Tensor x, Tensor w, Tensor residual, Tensor gamma, float eps, int repeat, str group, int use_hccl, int block_dim, int mm_enable, int mm_dim, int mm_mode, int mm_bufspace, int norm_ub_late, int mm_btrans) -> (Tensor, Tensor, Tensor, Tensor)");
+    m.def("mm_ar_norm(Tensor x, Tensor w, Tensor residual, Tensor gamma, float eps, int repeat, str group, int use_hccl, int block_dim, int mm_enable, int mm_dim, int mm_mode, int mm_bufspace, int norm_ub_late, int mm_btrans, int mm_step) -> (Tensor, Tensor, Tensor, Tensor)");
 }
 TORCH_LIBRARY_IMPL(clef_e, PrivateUse1, m) { m.impl("mm_ar_norm", &mm_ar_norm); }
