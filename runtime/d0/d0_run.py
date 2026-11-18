@@ -78,6 +78,58 @@ def snapshot_tree(root_pid: int) -> dict:
             "processes": procs, "descendants": desc}
 
 
+def launch_cmd(a) -> list:
+    """Two ranks under torchrun: env:// needs RANK, WORLD_SIZE and MASTER_ADDR,
+    and the cell is defined for exactly two ranks on one card."""
+    return [sys.executable, "-m", "torch.distributed.run", "--standalone",
+            "--nproc-per-node=2", str(Path(__file__).with_name("d0_launch.py")),
+            "--out-dir", str(a.out_dir), "--rows", str(a.rows), "--seed", str(a.seed),
+            "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl),
+            "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)]
+
+
+def run_child(cmd: list, out_dir: Path, timeout: int, env: dict | None = None) -> int:
+    """Supervise one child tree. Reused by the cpu fixture, so it takes cmd."""
+    env = dict(os.environ if env is None else env)
+    env.setdefault("WORLD_SIZE", "2")
+    child = subprocess.Popen(cmd, start_new_session=True, env=env,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    pgid = child.pid                                   # leader of its own session
+    timed_out = False
+    try:
+        out, err = child.communicate(timeout=timeout)
+        child_raw_rc = child.returncode
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        # The leader may already be gone while grandchildren still hold the pipe,
+        # so signal the whole group and then reap with a bound of its own.
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except OSError:
+            try:
+                child.kill()
+            except OSError:
+                pass
+        try:
+            out, err = child.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            out, err = "", "reap timed out after 30s; descendants may survive"
+        child_raw_rc = child.returncode
+        (out_dir / "trace-unavailable.json").write_text(json.dumps(
+            {"reason": "timeout", "timeout_s": timeout, "pgid": pgid,
+             "note": "trace could not be copied back; slot count is not recoverable"},
+            ensure_ascii=False) + "\n")
+    (out_dir / "raw-rc.json").write_text(json.dumps(
+        {"wrapper_rc": 2 if timed_out else child_raw_rc,
+         "child_raw_rc": child_raw_rc, "timed_out": timed_out, "pgid": pgid},
+        ensure_ascii=False) + "\n")
+    (out_dir / "stdout.log").write_text(out or "")
+    (out_dir / "stderr.log").write_text(err or "")
+    (out_dir / "tree-after.json").write_text(
+        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
+    return 2 if timed_out else child_raw_rc
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", type=Path, required=True)
@@ -122,54 +174,7 @@ def main() -> int:
     # Real execution path. Kept explicit so the failure modes are visible:
     # a timeout kills the child and still writes a trace-unavailable record.
     # Real executor lives in its own module; this process only supervises it.
-    # Two ranks under torchrun: env:// in the executor needs RANK, WORLD_SIZE
-    # and MASTER_ADDR, and the cell is defined for exactly two ranks on one card.
-    env = dict(os.environ)
-    env.update({"WORLD_SIZE": "2", "OMP_NUM_THREADS": "1"})
-    child = subprocess.Popen(
-        [sys.executable, "-m", "torch.distributed.run", "--standalone",
-         "--nproc-per-node=2", str(Path(__file__).with_name("d0_launch.py")),
-         "--out-dir", str(a.out_dir), "--rows", str(a.rows), "--seed", str(a.seed),
-         "--mm-dim", str(a.mm_dim), "--use-hccl", str(a.use_hccl),
-         "--adapter", str(a.adapter), "--adapter-sha", str(a.adapter_sha)],
-        start_new_session=True,                       # child.pid is the pgid leader
-        env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    (a.out_dir / "process-tree.json").write_text(
-        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
-    pgid = child.pid                                   # leader of its own session
-    timed_out = False
-    try:
-        out, err = child.communicate(timeout=a.timeout)
-        child_raw_rc = child.returncode
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        # The leader may already be gone while grandchildren still hold the pipe,
-        # so signal the whole group and then reap with a bound of its own.
-        try:
-            os.killpg(pgid, signal.SIGKILL)
-        except OSError:
-            try:
-                child.kill()
-            except OSError:
-                pass
-        try:
-            out, err = child.communicate(timeout=30)
-        except subprocess.TimeoutExpired:
-            out, err = "", "reap timed out after 30s; descendants may survive"
-        child_raw_rc = child.returncode
-        (a.out_dir / "trace-unavailable.json").write_text(json.dumps(
-            {"reason": "timeout", "timeout_s": a.timeout, "pgid": pgid,
-             "note": "trace could not be copied back; slot count is not recoverable"},
-            ensure_ascii=False) + "\n")
-    (a.out_dir / "raw-rc.json").write_text(json.dumps(
-        {"wrapper_rc": 2 if timed_out else child_raw_rc,
-         "child_raw_rc": child_raw_rc, "timed_out": timed_out, "pgid": pgid},
-        ensure_ascii=False) + "\n")
-    rc = 2 if timed_out else child_raw_rc
-    (a.out_dir / "stdout.log").write_text(out or "")
-    (a.out_dir / "stderr.log").write_text(err or "")
-    (a.out_dir / "tree-after.json").write_text(
-        json.dumps(snapshot_tree(os.getpid()), ensure_ascii=False) + "\n")
+    rc = run_child(launch_cmd(a), a.out_dir, a.timeout, env)
 
     # Wire the parser: normalise, decode, and keep raw plus parsed side by side.
     try:
