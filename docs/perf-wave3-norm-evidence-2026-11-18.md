@@ -606,3 +606,54 @@
 **可检验的单变量控制臂（未执行）**：只把 `mm_dim: 1 → -1`（走已有 `mmDimReq==-1 → GetCoreNumAic()` 路径，**无需改代码/重建包**），预期 `usedCoreNum=24`。**预先登记预测**：多核切分切 M/N 不切 K，数值预期不变（全元素数值差 0）——若变则说明"M/N 划分影响累加"模型不成立，属新证据；若不变则多核配置被排除。**该差异不预判为精度根因，仅是把并行划分拉回预期。**
 
 **其他源码判断**：每 block 的 A/B/C 偏移由 `IterateAll` 依 `TCubeTiling` 自行推导，我们未写也不需要写（非缺口）；`SetSingleShape`/`SetTail` 未调用且该路径不需要，但 **tail 行为属未证明**（M=967、baseM=128 确有尾部）；`REGIST_MATMUL_OBJ` 在所有 block 执行，仅计算调用受 `GetBlockIdx() < usedCoreNum` 门控。
+
+## 26. 多核 M 分片修复（22 交付，2026-11-18 22:26 CST，未安装未上板）
+
+### 26.1 实现要点（最小差异）
+
+```
+workers = usedCoreNum (0→1)
+singleM = singleCoreM ?: ceil(m/workers)
+if (singleM==0 || singleM*workers < m) singleM = ceil(m/workers)   // 覆盖守卫
+startM  = blockIdx * singleM;  curSingleM = min(m-startM, singleM)
+SetOrgShape(m,n,k); SetSingleShape(curSingleM, n, k)
+SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,false,true)
+```
+
+- **B 完全不偏移**（不切 N、不切 K）；直接依据：`grouped_matmul_swiglu_quant.h:222-231` 的 `GetWOffset(tailN,k)` 在 `tailN=0` 时恒为 0，其调用方仅在 N 切分时加它（`:174`），M 切分只偏移 A 与 C（`:169-172`）。
+- 参与者映射：同栈生产算子把 matmul 放在 **AIC**（`CubeProcess` 在 `if ASCEND_IS_AIC` 内，用 AIC `blockIdx`）；我们的包走 **AIV 客户端**范式，matmul 头里**没有** `GetBlockIdx`（server 只认 `subBlockID`，`matmul_server.h:57`）→ **不依赖 AIV→AIC 索引映射**。
+
+### 26.2 CPU 覆盖与控制流
+
+- `tests/slicing_cpu_check.py` **140 例**：区间不重叠、恰好覆盖 `[0,m)`、单核等价；**测试先抓到真 bug**（`singleCoreM < ceil(m/workers)` 会漏行），因此加覆盖守卫；`workers=1` 时守卫把 `singleCoreM` 折成 `m` → **固定 `mm_dim=1` 路径行为不变**。
+- cube 段后 `SyncAll<true>()`（`kernel_operator_block_sync_intf.h:77-87`）。
+
+### 26.3 未证部分（需设备核）
+
+| 项 | 状态 |
+| --- | --- |
+| 该 AIV-only 屏障是否把 fixpipe/GM 写序化到其他 AIV 的 GM 读之前 | **未证**（头文件无内存序契约） |
+| `usedCoreNum` 超过 AIC 数时，屏障集合是否等于实际发起集合 | **未证** |
+| 本点是否还需 AIC 参与 | **未证**（旧"AIC 已退出"因果已撤回） |
+
+- 模板默认值本身**不构成**可用性证明。
+
+### 26.4 diag ABI 与三个数字
+
+- `diag` 仍 8 float（`InitBuffer(diagT_,32)`、三处 `DataCopy(...,8)` 未改）；
+- 新增可选属性 **`mc_diag=1`**：`diag[5..7] = workers / singleCoreM / GetBlockNum()`；缺省仍 `usedCoreNum / baseM / depthA1`；
+- **三者不混同**：请求预算 `mmDim`（host tiling）/ tiling 回答 `cubeTiling.usedCoreNum`（diag[5]）/ 实际 launch `GetBlockNum()`（`mc_diag=1` 的 diag[7]）。
+- **不预保证** `usedCoreNum=24`，**不预保证**数值不变（`GetTiling` 只有声明、实现预编译，无法判断是否改 `baseK`/`step`）。
+
+### 26.5 构建归档与集成前置
+
+| 产物 | SHA-256 |
+| --- | --- |
+| `custom_opp_ubuntu_aarch64.run` | `65260db799d208e3e7c7d0f6d20fb72120a91c14d24d15350d48125976249e79` |
+| kernel `.o` | `e60aea4fad532d467d7969827c3c2458d48591b92ebfe291d12a08e303761edf` |
+| `libcust_opmaster_rt2.0.so` | `290cc31e3ea593b0f11e6c1f24f583938bd8afcf59a6cadc0be470c262ceaaae` |
+| `libcust_opapi.so` | `9d62051f0d7da2efafd741ed68640becd9b9ea88eb8d08e07d050271d56cc227`（与 nzguard 包**逐字节相同**） |
+
+- **集成前置（重要）**：新增**第 15 个属性 `mc_diag`**，我的 adapter 调用参数需由 **14 调为 15**；`libcust_opapi.so` 与旧包相同说明 aclnn 层未变，但**属性个数已变**，必须先核 adapter 再安装。
+- vendor 名 `clef_matmul_ar_add_rms_norm_mc`、op 名仍 `ClefMatmulArAddRmsNorm` → **两个包不可同时安装**。
+- 源提交 `aacf371`，MANIFEST 在 `836b8b6`；已归档的 nzguard/ND 包与单核对照**未动**。
