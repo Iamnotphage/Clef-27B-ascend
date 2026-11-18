@@ -246,7 +246,13 @@ static graphStatus InferShape(gert::InferShapeContext* context) {
     const auto* x = context->GetInputShape(0);
     const auto* r = context->GetInputShape(2);
     if (x->GetDimNum() != 2 || r->GetDimNum() != 2) { return GRAPH_FAILED; }
-    *context->GetOutputShape(0) = *x;              // out      [M,N]
+    // D0: out is [M,N] (N from w input 1), NOT [M,K] copied from x
+    const auto* w = context->GetInputShape(1);
+    if (w->GetDimNum() != 2) { return GRAPH_FAILED; }
+    gert::Shape outShape;
+    outShape.AppendDim(x->GetDim(0));
+    outShape.AppendDim(w->GetDim(1));
+    *context->GetOutputShape(0) = outShape;        // out [M,N]
     *context->GetOutputShape(1) = *r;              // residual_out [M,N]
     gert::Shape rstd;
     rstd.AppendDim(x->GetDim(0));
@@ -254,6 +260,10 @@ static graphStatus InferShape(gert::InferShapeContext* context) {
     gert::Shape diag;
     diag.AppendDim(8);
     *context->GetOutputShape(3) = diag;
+    gert::Shape trace;
+    trace.AppendDim(72);
+    trace.AppendDim(8);
+    *context->GetOutputShape(4) = trace;           // trace [72,8]
     return GRAPH_SUCCESS;
 }
 static graphStatus InferDataType(gert::InferDataTypeContext* context) {
@@ -261,6 +271,7 @@ static graphStatus InferDataType(gert::InferDataTypeContext* context) {
     context->SetOutputDataType(1, ge::DT_BF16);
     context->SetOutputDataType(2, ge::DT_FLOAT);
     context->SetOutputDataType(3, ge::DT_FLOAT);
+    context->SetOutputDataType(4, ge::DT_UINT32);
     return GRAPH_SUCCESS;
 }
 }  // namespace ge

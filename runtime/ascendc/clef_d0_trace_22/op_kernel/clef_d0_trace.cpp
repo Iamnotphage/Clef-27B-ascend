@@ -182,6 +182,7 @@ public:
         t.SetValue(base + 0, 0xD0D0C0DEu);   // magic
         t.SetValue(base + 1, id);
         t.SetValue(base + 2, domain);
+        TraceBit(0u, 0u);                     // K1: TraceInit complete
     }
 
     __aicore__ inline void TraceBit(uint32_t word, uint32_t bit) {
@@ -255,8 +256,10 @@ public:
             // KfcCommClient and wires it before the object is initialised.
             // Without it the client is uninitialised and Init() walks
             // server-owned internal buffers -- the device fault we saw.
+            TraceBit(0u, 1u);                 // K2: before REGIST
             REGIST_MATMUL_OBJ(&pipe_, GetSysWorkSpacePtr(), mm_,
                               &tiling_->cubeTiling);
+            TraceBit(0u, 2u);                 // K3: after REGIST (AIV only; AIC returned inside)
             // Only the compute calls are gated; the wiring above runs on every
             // block so each per-AIC server collects its MIX_NUM quits.
             // ---- per-worker M slice ------------------------------------------
@@ -293,7 +296,8 @@ public:
             const uint32_t curSingleM =
                 (startM >= m_) ? 0u : (((m_ - startM) < singleM) ? (m_ - startM) : singleM);
             const bool isWorker = (myBlock < workers) && (singleM > 0u) && (curSingleM > 0u);
-            if (isWorker) { TraceWorker(); TraceClaim(startM, curSingleM); }  // K4
+            TraceBit(0u, 3u);                 // K4: reached the worker decision
+            if (isWorker) { TraceWorker(); TraceClaim(startM, curSingleM); }
             if (isWorker) {
                 if (stage == 1u) { WriteStageDiag(1u); }  // after wiring/Init
                 if (stage != 1u) {
@@ -335,6 +339,9 @@ public:
                 }
                 mmRc = 0;
             }
+        }
+        if (tiling_->mmEnable != 0) {
+            TraceBit(1u, 4u);                 // K8': wiring scope closed
         }
         if (tiling_->mmStage >= 1u && tiling_->mmStage <= 5u) {
             // Stage-gated run: leave together, no barrier, no AR, no norm.
