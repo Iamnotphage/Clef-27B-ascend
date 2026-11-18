@@ -98,7 +98,7 @@ def stop(api_pid: int, log: dict, *, saved: dict | None = None,
     if saved is not None:
         # The live process must still be the one we recorded; anything else is
         # refused outright because a recycled pid would be killed by mistake.
-        for field in ("pid", "starttime", "boot_id"):
+        for field in ("pid", "starttime", "boot_id", "pgid", "cmdline"):
             if saved.get(field) is None:
                 log["stop"] = {"error": f"saved identity missing {field}", "api_pid": api_pid}
                 return log["stop"]
@@ -107,8 +107,11 @@ def stop(api_pid: int, log: dict, *, saved: dict | None = None,
             log["stop"] = {"error": "saved identity does not match the live process",
                            "saved": saved, "live": api}
             return log["stop"]
-        if saved.get("pgid") is not None and saved["pgid"] != api["pgid"]:
+        if saved["pgid"] != api["pgid"]:
             log["stop"] = {"error": "saved pgid mismatch", "saved": saved, "live": api}
+            return log["stop"]
+        if saved["cmdline"] != api["cmdline"]:
+            log["stop"] = {"error": "saved cmdline mismatch", "saved": saved, "live": api}
             return log["stop"]
     log["stop_root_identity"] = "verified" if saved is not None else "unbound"
     targets = [api] + [identity(p) for p in descendants(api_pid)]
@@ -136,12 +139,14 @@ def stop(api_pid: int, log: dict, *, saved: dict | None = None,
         time.sleep(0.5)
 
     for pid in record["termed"]:
-        live = identity(pid)
-        if live is None:
+        target = next((t for t in targets if t["pid"] == pid), None)
+        if target is None:
+            record["refused"].append({"pid": pid, "reason": "refused: no recorded target"})
             continue
-        # Identity is rechecked before escalating; a reused pid is refused.
-        if live["starttime"] != next(t["starttime"] for t in targets if t["pid"] == pid):
-            record["refused"].append({"pid": pid, "reason": "refused: identity changed before kill"})
+        # The same full gate used before TERM: start time, boot id and bounds.
+        ok, why = can_signal(target)
+        if not ok:
+            record["refused"].append({"pid": pid, "reason": why})
             continue
         try:
             signaller(pid, signal.SIGKILL)
