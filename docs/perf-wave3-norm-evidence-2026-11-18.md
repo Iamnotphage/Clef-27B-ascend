@@ -755,7 +755,8 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 | `intercoreSync` | `1` |
 | `magic` | `RT_DEV_BINARY_MAGIC_ELF` |
 
-- **`taskRation=1:2` 是本包产物写死的元数据**，不是从 `MIX_NUM` 推的 ⇒ §27.2 的"24→12"只剩**一个**未定条件：`get_block_idx()` 实际取值与 launch 集合是否完整。
+- **口径限定（2026-11-18 22:46 CST）**：`taskRation=1:2` 与 `coreType=MIX` 是**构建产物里的字段**，**不能**据此改写成"已实测 `get_subblockdim()==2`"。二者是不同的东西：前者是产物元数据，后者是**运行时**实际返回值，**尚未取得**。
+- 因此 §27.2 的"24→12"仍依赖：`get_subblockdim()` 运行时实值 **+** `get_block_idx()` 实际取值 **+** launch 集合完整性 —— 三项**均未闭合**。
 - `MIX_NUM` 仍取决于 `__MIX_CORE_AIC_RATION__` 是否定义 —— **两者来源不同，不能互相代替**。
 
 ### 29.2 宏与分支（可证范围）
@@ -764,7 +765,7 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 | --- | --- | --- |
 | `USE_SSBUF` | **未定义** | `matmul_utils.h:26-38`，仅 3510 定义 |
 | `USE_WORKSPACE` | **定义** | 同处 `:36-38` 非 3510 分支 |
-| 选中重载 | `matmul_client.h:931-977`（非 SSBUF GM） | 上两行 + `--compile-options=""`（无外部 `-D`） |
+| 选中重载 | `matmul_client.h:931-977`（非 SSBUF GM），**源内条件层面** | 上两行；`--compile-options=""` **不能**当每 pass 宏表 |
 | `End()` 投 `MMFUN_END` | **投**（`isSyncGetC = sync = true`，默认模板实参） | `:963/966/968-975/977`、`:695-701` |
 | quit 来源 | `KfcCommClient` 析构，**独立于 End** | `kfc_comm_client.h:100-118` |
 | 无参 `SyncAll` | `SyncAllImpl<true>` → FFTS `SYNC_AIV_ONLY_ALL` | `kernel_operator_sync_impl.h:363-403` |
@@ -772,6 +773,7 @@ SetTensorA(aG[startM*k]); SetTensorB(bG, btrans); IterateAll(cG[startM*n],0,fals
 ### 29.3 缺口（明确）
 
 - 构建系统 `opc` 是**进程内**调用，**不落盘 pass 级 `ccec` 命令行** ⇒ **无法**用真实 flags 复放 `-E -dM` 取得逐 pass 宏表；上表结论是**源内条件 × 构建元数据**的交叉，**不是**伪造的预处理输出。
+- **真实 AIC/AIV 逐 pass 预处理与宏表仍缺**，已转 22 有限补证/收口；`compile-options=''` **不能**当作每 pass 宏表使用。
 - `__MIX_CORE_AIC_RATION__` 是否定义，产物里**查不到**。
 - 仍需**运行时**确认：`get_block_idx()`/`get_subblockid()`/`GetBlockNum()` 实值；launch 集合是否完整（2×AIC）；每 AIC 的 client/quit 是否达 `MIX_NUM`；`SYNC_AIV_ONLY_ALL` 是否序化 GM 数据写。
 
