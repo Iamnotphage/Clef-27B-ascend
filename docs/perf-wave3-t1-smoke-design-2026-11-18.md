@@ -247,7 +247,11 @@
 | **967×5120** | **0.007807** | **0.003906** | **9.54e-7** | **0/4951040** |
 
 - 关键实现教训（已写入 kernel）：TBuf + `DataCopy` 与向量指令之间必须显式 `PipeBarrier<PIPE_ALL>()`，否则会出现大范围垃圾与「只有部分 block 写入」的假象；`rstd` 的 `DataCopy` 必须按 8 个 float（32 B）对齐批次写；`reduce` 的 work buffer 必须独立且 ≥ 一个 tile（512 float）；禁止在 `__aicore__` 内做 float↔unsigned 的 `static_cast`（1/N 由 host tiling 提供）。
+- **参考口径（必须写清）**：比对基准是 **CPU FP32 计算**，输入与 gamma 先量化成 BF16 再转回 FP32 参与参考计算（即「BF16 输入 + FP32 数学」参考），**不是** `torch_npu.npu_add_rms_norm` 原生算子对照。
+- 输入与参数（确定性，无随机种子）：`x[i]=bf16(sin(i*1e-3)*0.75)`、`residual[i]=bf16(cos(i*7e-4)*0.5)`、`gamma[c]=bf16(0.5+0.5*sin(c*1e-2))`、`eps=1e-6`、`repeat=1`、M∈{8,64,967}、N=5120。
+- 判据来源：`>0.01` 元素数与 `max_abs` 是**冒烟级**判据（BF16 ulp 量级），**不能替代 2 pp 全量质量验收**；正式验收仍走全量 OpenDecisions + ERQA。
 - 该结果**只证明 Add+RMSNorm 语义**，不证明 AR 或性能；单独耗时不计入 T1 收益。
+- **下一步（设备窗口）**：用同一份真实 BF16 输入对比原生 `torch_npu.npu_add_rms_norm` 的 `Y / rstd / residual_sum` 三输出，覆盖真实残差形状、末行与 buffer 轮换；FP32 参考仅作补充。
 
 ## 13. KFC 接线（待执行，证据已齐）
 
