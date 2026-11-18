@@ -107,7 +107,7 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
 | --- | --- |
 | `bin_param/ClefMatmulArAddRmsNorm-clef_matmul_ar_add_rms_norm-0.sh` | `e0fb4e87f4986c389f95883d3293bc787167613042c92e52cff4534f7cef56e6` |
 | `bin_param/ClefMatmulArAddRmsNorm_b87a0f8f….json` | `9caf2d18153d57555d0f533bde6fdffbf90caec3cdbc637c80c3b1376de8b059` |
-| `dynamic/ClefMatmulArAddRmsNorm.py` | 见目录（`__pycache__` 一并冻结） |
+| `dynamic/ClefMatmulArAddRmsNorm.py` | 见目录；**`__pycache__` 明确排除**（见 `EXCLUSIONS.txt`） |
 | `clef_matmul_ar_add_rms_norm.make` | 同上 |
 | `customize/op_impl/ai_core/tbe/config/ascend910_93/aic-ascend910_93-ops-info.json` | 同上 |
 
@@ -188,3 +188,9 @@ asc_opc $1 --main_func=clef_matmul_ar_add_rms_norm --input_param=<param.json> \
 清单 `audit-frozen/MANIFEST.sha256`：**非自含**（不含自身，另含 3 行 `#` 链接记录），
 当前 SHA `7e9d30b1ef6acaaeeab39ae24cbca97207da9ca960040c9b9d6a35fb36f3fc67`。
 两份日志的 `--src-file` 均指向完整 audit TU（源 SHA `08c412aa…2fb1e1` = `85b3028` blob）。
+
+## 10. 实施验证前置（未做）
+
+新增 `trace` 输出要在**两个 pass** 都真正生效：AIC pass 与 AIV pass 各自能否写该输出、
+写入 API 在该 arch 上是否可用、host 声明的 shape 与 adapter 分配是否一致 ——
+**这些都需要一次编译+上板验证**，本轮只做文档，未验证。
