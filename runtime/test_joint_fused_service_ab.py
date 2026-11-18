@@ -132,6 +132,21 @@ def main() -> int:
               and len(result["x"]["samples"]) == 2
               and result["x"]["samples"][0]["response"]["answers"]["answer"]["probabilities"]["a"] == 0.5)
 
+    with tempfile.TemporaryDirectory(prefix="ab-stage-") as tmp:
+        runner = object.__new__(mod.ServiceAB)
+        runner.args = types.SimpleNamespace(repo=str(HERE.parent), tree="", python="",
+                                            stop_script="", port=18143)
+        runner.run_dir = Path(tmp) / "run"
+        runner.state = {}
+        runner.win = mod.load_window()
+        staged = runner.stage_candidate()
+        ok = (runner.win.sha256(staged / "apply_joint_fused_attention.py") == mod.INSTALLER_SHA
+              and runner.win.sha256(staged / "joint_fused_attention" /
+                                    "clef_joint_schema.py") == mod.POSTIMAGE_SHA
+              and runner.win.sha256(Path(runner.win.__file__)) == mod.WINDOW_SHA)
+        check("stage candidate against approved wrapper", ok)
+        checks[-1] = (checks[-1][0], ok)
+
     failed = [name for name, ok in checks if not ok]
     print(json.dumps({"checks": len(checks), "failed": failed, "ok": not failed}))
     return 0 if not failed else 1

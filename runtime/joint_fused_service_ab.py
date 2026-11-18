@@ -112,7 +112,7 @@ class ServiceAB:
             raise AbError("staged installer SHA mismatch")
         if self.win.sha256(root / "joint_fused_attention" / "clef_joint_schema.py") != POSTIMAGE_SHA:
             raise AbError("staged postimage SHA mismatch")
-        if self.win.sha256(self.win.WIN_PATH) != WINDOW_SHA:
+        if self.win.sha256(Path(self.win.__file__)) != WINDOW_SHA:
             raise AbError("helper window SHA mismatch")
         return root
 

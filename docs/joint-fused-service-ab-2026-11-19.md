@@ -5,9 +5,9 @@
 
 ## 身份
 
-- 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）
-- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `b35cc923867427e9dd32d3143a745843993cb7798cabc403a2b9e5678cb83681`
-- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `2bb812a545d380bb37b68cb54cafcf0d28f2e80dca55ebcf84ef971732260b0f`，7/7
+- 基座：head 已核 `89ebd3f02b17aef100d4fc3cae036138fa94b40e`（wrapper `700cf10d…e8473`，probe `fda7cc8d…3e15f3`）；runner 通过 `Path(win.__file__)` 核 wrapper SHA，不依赖 wrapper 常量。
+- runner：`runtime/joint_fused_service_ab.py`，SHA-256 `8638224f51e56a4b89c16f5d1d29a386278f0a7dd7b12beaa320c0fa2a6fde7f`
+- runner CPU 测试：`runtime/test_joint_fused_service_ab.py`，SHA `1c03c4cfb654bffddb106c5f19a027c9cffce03c45808278ee2212fb727682a9`，8/8
 - stop：`/tmp/d0cc/d0_stop.py`，SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`
 
 ## 命令（新不存在 run-dir）
@@ -47,5 +47,5 @@ runner 读取后重新计算 SHA，任一不符即中止；每请求记录 statu
 
 ## CPU 测试范围
 
-7/7：ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
+8/8：ABBA 顺序、≥4 轮、固定输入 hash、旧 run-dir 拒绝、stop 失败、输入 hash 不符拒绝。仅局部 CPU；
 真实服务启动/性能/质量由 21 现场执行、20 判定；本文件不报告服务收益。
