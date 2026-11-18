@@ -164,9 +164,12 @@ public:
             ok = ok && (sub >= 0) && (sub < 2);
         }
         if (!ok) { trSlot_ = -1; return; }
+        // slot must branch; ASCEND_IS_AIC is only valid in statement form.
         int64_t slot = -1;
+        uint32_t domain = 1u;
         if ASCEND_IS_AIC {
             slot = block;
+            domain = 0u;
         } else {
             slot = 24 + block * 2 + sub;
         }
@@ -178,7 +181,7 @@ public:
         const int64_t base = slot * 8;
         t.SetValue(base + 0, 0xD0D0C0DEu);   // magic
         t.SetValue(base + 1, id);
-        t.SetValue(base + 2, ASCEND_IS_AIC ? 0u : 1u);
+        t.SetValue(base + 2, domain);
     }
 
     __aicore__ inline void TraceBit(uint32_t word, uint32_t bit) {
