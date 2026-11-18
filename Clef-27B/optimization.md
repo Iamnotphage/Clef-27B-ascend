@@ -45,3 +45,105 @@ TP2/4096 的完整公开评测为 2,983 请求、4,583 决策，执行错误为 
 ## 后续比较项
 
 按同一精度判据比较固定 KV 池预算、更长输入、更多字段和更高并发，分别记录缓存容量、设备占用和请求性能。公开文本指标、概率分布及已有多模态自检作为回归依据。
+
+## 第二轮性能调优，2026-11-13
+
+A3 单物理卡内两个逻辑 NPU 边界内完成。完整实验报告见 [docs/tuning2-2026-11-13.md](../docs/tuning2-2026-11-13.md)，远端逐点原始记录与 master-results.csv（43 行）在 `/workspace/yangchen/logs/tuning/20261113-085408-perf2a/`。全部数字为关闭 profiler 的正式测量（每点 ≥300 请求、≥30 秒；稳定结论三轮交错，batch 分布由 Prometheus 直方图差分重建并逐点校验）。
+
+| 改动或配置 | 实测收益（fixed307，TP2/4096/eager） | 决定 |
+| --- | --- | --- |
+| batching seqs4 + 并发 8（真实 B4） | 8.237 → 19.325 rps（CV 0.05%）；dec/s 24.71 → 57.98 | 采纳为 S2 配置 |
+| 独立 `--max-num-batched-tokens` 参数 | 长输入 3868 tokens：4096→16384 预算仅 1.964→2.118 rps（MLP 线性封顶） | 参数保留，默认跟随 max-model-len |
+| 双 TP1 副本（同卡双实例+入口分流） | C2 14.268 rps @ p95 141 ms（容量假设 14.288 获证实） | 低延迟中并发备选 |
+| `weight_nz_mode=2`（BF16 NZ） | 线性层设备时间 −9.3%（46.50→42.17 ms/req/rank）但端到端 −0.8%～−1.4% | 拒绝，保留默认 mode 1 |
+| schema token 有界缓存 | encode CPU −89.6%；s4c8 +0.28%（19.380）；质量逐位同界 | 默认关闭；S2 可开启（env 一行） |
+| PIECEWISE 编译（去 eager） | 编译 +29.7 s、捕获 3 图；s4c8 19.340 rps 持平 | 不采纳 |
+| KV 池 12 GiB（原 28.5） | 307/B4、3868 长输入、冷图全部零回退；回收约 16.5 GiB/rank | 容量可选项 |
+
+质量回归：推荐配置（seqs1）完整 OpenDecisions 1.0.1 2,352 条重跑，Calibration 82.7941149442 / Intelligence 66.0568428085 / Capability 74.4254788763、accuracy 1906/2352、Score MAE 0.401389，与既有 baseline **逐位一致**；B4 混合并发与缓存开启两种条件下 771/771 离散决策一致、概率最大差 0.000851（阈值 0.03）。
+
+S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 130.296 ms（三轮均值）；S2 = seqs4，57.98 dec/s @ 并发 8（关缓存）或 58.14（开缓存）。备选低延迟部署：双 TP1 C2 14.27 rps @ p95 141 ms。
+
+## 第四轮复核与最终配置，2026-11-14
+
+完整报告见 [docs/tuning4-2026-11-14.md](../docs/tuning4-2026-11-14.md)。
+
+- **S2 合批质量**：seqs4/cache-on C8 的全量 2,352 条重算 Capability **74.200178**，4 条 choice 变化、2 条 noul 跨 0.5、26 条概率差 >0.03（最大 0.097399）、3 条 score 差 >0.05（最大 0.076599），未通过 0.03/0.05 工程门槛。C2 与 S1 逐位一致。根因是跨请求合批的批内位置相关 BF16 数值差（相同输入在不同批位置得到不同结果）；GDN 融合算子、conv1d 均验证为多序列隔离正确，差异首先出现在 `in_proj_ba` 的 1 ulp 行差，按序列执行 BA 仍残留 0.104 最大概率差。
+- **最终采用**：seqs1/B1（TP2/4096/eager/cache off）。全量质量 74.425479 与 baseline 逐位一致；S1 P95 **217.036 ms**；S2 **5.715 decisions/s @ C16**（C2/C4/C8 为 5.626/5.673/5.584）。
+- **吞吐候选**：seqs4/C8 13.764 dec/s 保留在 `results.csv`，标注 `throughput-candidate-quality-fail`。
+- **GDN 候选**：旧 guard 在真实 prefill 因非连续 `[1,T,H,D]` 视图 100% 回退；修正后真实服务命中、0 回退、8/8 冻结用例逐位一致；不再声称端到端收益。
+- **启动与补丁**：`start.sh --output-dir` 真实落盘 manifest/log，默认 18143，`--config s1/s2` 显式配置；schema cache v2 安装器支持上游 SHA 校验、版本识别、幂等安装与精确回退。
+- **统计修正**：cgroup v1/v2 单位、unknown 有效性、预注册顺序条件、B4 分母（2.762 ms/req）、输入长度 446.809、每并发点独立证据与 SHA。
+
+## ERQA 图文配置与结果，2026-11-14
+
+完整报告见 [docs/erqa-baseline-2026-11-14.md](../docs/erqa-baseline-2026-11-14.md)。
+
+- **数据**：官方 ERQA TFRecord，commit `5bba488`，91,402,921 字节，SHA-256 `1974f5e5…b4c93e2`；400 题、630 图、8 类，单题 1～16 图。
+- **服务**：TP2 / BF16 / eager / `max_model_len=16384` / `max_num_seqs=1` / 缓存关；`--limit-mm-per-prompt {"image":16,"video":0}`。
+- **图像策略**：`shortest_edge=65536`、`longest_edge=1048576`（`JointSchemaStrategy.IMAGE_SIZE` 参考边界）；全量前逐题 processor 预算最大 10,294 tokens，实测 `usage.input_tokens` 与预算一致。
+- **质量**：219/400 = **0.5475**，400/400 成功、0 重试；单图 0.5923、多图 0.4336；8 类分项见报告。
+- **C1 计时**：wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。该窗口为 ERQA 质量运行，不与 OpenDecisions S1/S2 混用。
+- **适配**：EvalScope ERQAAdapter 修补 `visual_indices` 图文排列、2～4 候选解析与 SystemOne 图文转换；19 题原生路径与直接 `/v1/decide` 逐题一致。补丁与 SHA 见 [logs/erqa-baseline-20261114/adapter-patch/](logs/erqa-baseline-20261114/adapter-patch/)。
+- **边界**：Clef 原生协议将图片放在 `state` 前，未按官方字符索引交错插入；30 条交错样本单独统计。图像上限 1,048,576 像素为 16 图与 16,384 token 的联合约束。
+
+## GDN 决策 prefill 数据路径，2026-11-15
+
+完整报告见 [docs/gdn-data-path-2026-11-15.md](../docs/gdn-data-path-2026-11-15.md)。
+
+- **开关**：在已采用的 `decision_prefill`/`no_recompute` 之上新增 `bsnd`、`skip_initial_state`、`skip_conv_state`，八臂 R/B/I/C/BI/BC/IC/BIC；严格 `epoch`、逐 forward 快照、双 TP rank 日志校验。
+- **契约探针**：`conv_states=None`、`initial_state=None`、连续 BSND 与实际包装器八臂在真实 TP2 形状（含 10,294 token、空 segment）全部逐位一致；BSND 跨步视图被 aclnn 161002 拒绝，保留一次连续拷贝。
+- **筛选与 A/B**：49 条代表样本八臂筛选 BIC 最优（p95 195.72 ms，R 201.97）；588 题 6 对交错 A/B 中 BIC **6/6 更快**，p95 中位 **−7.01%（−13.81 ms）**，吞吐 +0.378 dec/s，响应逐位一致。
+- **质量**：OpenDecisions 全量 2,352 的 R 与 BIC 都 **2,352/2,352 与 baseline 逐位一致**（Capability 74.425479、accuracy 1906、Score MAE 0.401389）。ERQA 400 题 R/BIC 概率逐位一致，accuracy 219/400。
+- **性能**：正常入口 S1 P95 **198.42 ms**（较上一提交入口 213.56 −7.09%）；同进程全量窗口 R 197.95 → BIC **185.62 ms**（−6.23%）；seqs4 C8 14.201 → **14.652 dec/s**、p95 946.54 → **913.93 ms**；C16 14.689。C8 的跨臂响应差异与同臂重跑（85 题、max 0.0656）同量级，归因于既有合批调度，不是本轮开关。
+- **入口**：`--config s1/s2` 默认启用 BIC，manifest 记录配置/生效值/来源；`preprocess_fusion` 默认关闭。
+- **融合原型**：Ascend C `ClefGdnQkvNorm` 短序列 2.0×、Q/K 1 ulp、V 逐位；1595/10,294 token 反而慢 0.86×/0.13×，不接入。
+
+## 2026-11-17 aclnn executor cache（已采用）
+
+- **现象**：S1 按精确 input token 数分快/慢两档，慢档固定多约 55 ms；同长度请求 within-length sd 中位 4.7 ms，快/慢档输出逐位相同。
+- **根因**：CANN aclnn executor 缓存默认只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 走慢路径；MLP、GDN chunk、conv、QKV norm 的纯算子时间无跳变。
+- **修复**：`ACLNN_CACHE_LIMIT=1000000`，写入 `inference.py` 的 service environment，launch manifest 记录。
+- **结果**：官方 `start.sh --config s1` 全量 2,352 条 mean **125.552** / p50 **118.170** / p95 **168.633 ms**、7.960 dec/s；修复前 153.761 / 168.485 / 190.405、6.503。四组独立全量复测 p95 167.28–169.02 ms。
+- **质量**：2,352 条响应逐位一致（max 0.0、0 choice 翻转）；ERQA 217/400 不变；S2 B8 C16 16.398 dec/s 不变。
+- **证据**：`docs/aclnn-cache-shape-fix-2026-11-17.md`、`Clef-27B/logs/tuning5-20261117/`。
+
+## 2026-11-17 MLP BF16 NZ（已采用）
+
+- **改动**：`Qwen2MoeMLP.forward` 首次调用时把 `gate_up_proj` / `down_proj` 权重转为 FRACTAL_NZ（`torch_npu.npu_format_cast(..., 29)`），由 `CLEF_MLP_BF16_NZ=1` 控制；安装器升级为 GDN v4，`patch_qwen3_5.py` 追加该 hook。
+- **正确性**：官方入口全量 2,352 条响应与 cache-only **逐位一致**（max 0.0、0 choice 翻转）；ERQA 217/400、400/400 成功、0 重试。
+- **性能**：官方入口全量 S1 **mean 121.705 / p50 113.656 / p95 166.002 / p99 204.324 ms、8.213 dec/s**；cache-only 为 125.552 / 118.170 / 168.633 / 203.452、7.960。相对 cache-only p95 −1.56%、mean −3.06%、吞吐 +3.18%；三组 NZ 复测 p95 165.53–166.00。
+- **S2**：B8 C16 + NZ **16.376 dec/s**、p95 1803.2 ms、Capability 74.1572（Δ−0.094，2PP）；pre-NZ 16.398。
+- **证据**：`Clef-27B/logs/tuning5-20261117/s1-official-nz-full.json.gz`、`s2/s2-nz-c16-quality.json`、`erqa-nz/`；完整运行目录 `/workspace/yangchen/logs/tuning5-20261117/shape-ab/official-nz/`。
+
+## 2026-11-17 conv+QKV 融合算子（已采用）
+
+完整报告见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md)。
+
+- **改动**：新增 Ascend C 算子 `ClefGdnConvQkv`，一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，替代 conv（3.79 ms）+ `ClefGdnQkvNorm`（4.66 ms，均为 967 token 设备时间）两个 kernel。
+- **免拷贝**：Qwen3.5 把连续 `[T,8192]` 的 QKVZ 投影拆成 QKV `[T,5120]` 与 Z 两个视图；宿主用受存储边界检查的 `as_strided` 把整行 8192 暴露给算子，kernel 只读每行前 5120 通道，省掉逐层 5120 列连续化拷贝。
+- **正确性**：离线探针 v1/v2/v3 共 177 组（10 长度 × 3 seed × tile 32/64 × 输入 5120/8192）与部署版 conv + QKV v2 **逐位一致、0 失败**；单算子 967 token 0.2113 vs 0.3143 ms、1595 0.1296 vs 0.3357。
+- **服务级**：官方 `start.sh --config s1` 生效（两个 TP worker 打印 fused 标志）。与 eager 对照**不是逐位一致**：三个固定样本最大概率差 0.00095 / 0.00240 / 0.00029；把 `CLEF_GDN_CONV_QKV` 设为 0 后与对照逐位一致，差异确定来自融合算子（约 0.6 BF16 ulp）。
+- **性能**：同窗口全量 A/B，p95 **165.091 → 160.419 ms（−2.83%）**、mean 122.762 → 120.926、吞吐 8.137 → 8.259 dec/s；显式 env 组为 p95 160.150、mean 117.344、8.510 dec/s。
+- **质量**：OpenDecisions Capability **73.9636**（−0.347 pp）、accuracy 1902 不变、Score MAE 0.401545 → 0.401678；ERQA **218/400 = 0.5450**（+0.25 pp）。官方 2PP 通过；项目内部 0.03/0.05 逐题门槛不通过（max 0.1447、1 条 choice 变化）。
+- **开关**：vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，`inference.py` 自动注入 `ASCEND_CUSTOM_OPP_PATH` / `CLEF_CONV_QKV_VENDOR` / `CLEF_GDN_CONV_QKV=1`；`CLEF_GDN_CONV_QKV=0` 复现未融合对照臂。
+
+## 2026-11-17 GDN chunk 128（已改为默认）
+
+完整报告见 [docs/gdn-chunk128-2026-11-17.md](../docs/gdn-chunk128-2026-11-17.md)、叠加数据见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md) 第 4.3 节。
+
+- **改动**：`gdn_attn_builder.py` 的 `_GDN_CHUNK_SIZE=128` 与 `device_op.py` 决策分支 `chunk_size=128`，由独立安装器 `runtime/apply_gdn_chunk128_patch.py` 管理；`inference.py` 在决策 prefill 启用时自动 apply，`CLEF_GDN_CHUNK128=0` 回到 64。
+- **性能（叠加融合算子）**：mean 120.926 → **118.733**、p50 114.177 → 111.504、p95 160.419 → **158.301**、p99 197.454 → 194.491、吞吐 8.259 → **8.411 dec/s**；默认入口复跑 **157.745 ms / 8.652 dec/s**。
+- **质量**：OD Capability **74.2476**、accuracy 1904/2352、Score MAE 0.402615；ERQA **216/400 = 0.5400**；S2 B8 C16 **16.727 dec/s**、p95 1768.9、Capability 73.8426、accuracy 1905。全部在 2PP 内。
+- **逐题漂移**：3 条 choice 变化、`max_prob_diff` 0.360、46 条 >0.03、24 条 >0.05；项目内部 0.03/0.05 门槛不达标，用户确认按官方 2PP 口径采纳。
+
+## 2026-11-18 Wave 2 复核（未新增默认改动）
+
+完整报告见 [docs/perf-wave2-20261118.md](../docs/perf-wave2-20261118.md)。
+
+- **重新 profile（967/1595 token，双 rank）**：设备 compute union **132.69 ms**（conv+QKV 融合与 chunk128 之前为 144.60）；MLP gate/up 41.50、MLP down 20.54（cube 94–97%）、GDN 17.97、QKV 5120→8192 14.88（MTE2 0.93）、`ClefGdnConvQkv` 4.17（原 conv+QKV norm 8.45）。通信非重叠 14.17 ms、无 device kernel 11.84 ms。
+- **S2**：B8 C16 **16.738**、B16 C64 **17.462 / 17.475**（两次独立复测）、B16 C64 把预算放大到 24576 仅 17.374 → 17.4–17.5 已饱和，维持 B16 C64 / 16384。
+- **GDN chunk**：96/160/192/256 均返回 `161002` 不支持；128 是唯一快于 64 的受支持取值（1595 token device 0.521 vs 0.608 ms），已默认。
+- **joint head**：门控打点显示 967 token 下 pooler 5.90–6.25 ms，head 4.78–5.05（decoder 2.23–2.33、routing 1.09–1.18、final 0.62–0.67），全部是小算子下发；CPU 卸载不划算（`memory_projection` 10.1 GFLOP 必须留 NPU），不采用。
+- **prefix caching**：Mamba 前缀缓存要求 chunked prefill（关闭态启动即断言失败），且 chunked prefill 会关闭决策快速路径；不启用。
+- **最终验证**：S1 五轮 **8.646 / 8.705 / 8.849 / 8.983 / 9.035 dec/s**、p95 **156.81 / 157.50 / 155.85 / 155.86 / 155.72 ms**，中位 **8.849 dec/s / 155.86 ms**（2352/2352）；全量 OpenDecisions 重评 Cap **74.2476**、Int 66.0840、Cal 82.4112、accuracy 1904/2352、MAE 0.40261，与既有证据逐位一致；ERQA 独立复跑 **216/400**（400/400、0 重试、请求哈希校验通过）。

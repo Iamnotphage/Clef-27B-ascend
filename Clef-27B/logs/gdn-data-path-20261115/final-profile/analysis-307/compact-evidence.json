@@ -1,0 +1,4702 @@
+{
+  "created_at": "2026-11-16T16:20:48.976010+00:00",
+  "profile_root": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces",
+  "analysis_script": {
+    "path": "/workspace/yangchen/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+    "sha256": "5d4d2ef7e69622e8106b22e8ccfd68047d9859f7854f35eb197bce6c5f4e2334"
+  },
+  "analysis_argv": [
+    "scripts/analyze_systemone_profile.py",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces",
+    "--expected-ranks",
+    "2",
+    "--trace-dir",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161817112_ascend_pt",
+    "--trace-dir",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161817112_ascend_pt",
+    "--observations-root",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations",
+    "--benchmark-report",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-307b/profile-requests.json",
+    "--output-dir",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b"
+  ],
+  "expected_rank_count": 2,
+  "errors": [],
+  "timing_unit": "us",
+  "critical_path_method": "Requires request markers and dependencies; cumulative time is reported separately",
+  "discovered_trace_count": 2,
+  "identified_rank_ids": [
+    0,
+    1
+  ],
+  "duplicate_rank_ids": [],
+  "passed": true,
+  "cross_rank_alignment": {
+    "status": "Clock-aligned comparison requires profiler metadata establishing a common clock; rank spans retained separately",
+    "rank_windows": [
+      {
+        "rank": 0,
+        "window_us": [
+          1794845897249120.8,
+          1794845898938425.5
+        ]
+      },
+      {
+        "rank": 1,
+        "window_us": [
+          1794845897249648.0,
+          1794845898946872.5
+        ]
+      }
+    ]
+  },
+  "request_association": {
+    "matched_module_instances": 1469,
+    "unmatched_module_instances": 971,
+    "tolerance_ns": 1000000,
+    "method": "Nearest same-pid and exact-name observer interval with start/containment checks in exported wall-clock domain; explicit trace flows supply device provenance",
+    "limitation": "Temporal scope matching requires validated host/export clock calibration. Exact input token IDs and execution order remain independent checks"
+  },
+  "compact_authoring_script": {
+    "path": "/workspace/yangchen/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+    "sha256": "5d4d2ef7e69622e8106b22e8ccfd68047d9859f7854f35eb197bce6c5f4e2334"
+  },
+  "ranks": [
+    {
+      "rank": 0,
+      "rank_identity": {
+        "rank": 0,
+        "source": "profiler metadata",
+        "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161817112_ascend_pt/profiler_info_0.json",
+        "json_path": [
+          "rank_id"
+        ]
+      },
+      "profiler_metadata": [
+        {
+          "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161817112_ascend_pt/profiler_info_0.json",
+          "sha256": "d345610afd93e1d753a90c15b5c6c775ff3fb566bae8c4ea5b3c178823b78e02",
+          "data": {
+            "config": {
+              "common_config": {
+                "activities": [
+                  "ProfilerActivity.CPU",
+                  "ProfilerActivity.NPU"
+                ],
+                "schedule": {},
+                "record_shapes": false,
+                "profile_memory": false,
+                "with_stack": false,
+                "with_flops": false,
+                "with_modules": false
+              },
+              "experimental_config": {
+                "_profiler_level": "Level1",
+                "_aic_metrics": "ACL_AICORE_PIPE_UTILIZATION",
+                "_l2_cache": false,
+                "_msprof_tx": false,
+                "_mstx": false,
+                "_data_simplification": true,
+                "record_op_args": false,
+                "_export_type": [
+                  "text"
+                ],
+                "_host_sys": [],
+                "_op_attr": false,
+                "_gc_detect_threshold": null,
+                "_mstx_domain_include": [],
+                "_mstx_domain_exclude": [],
+                "_sys_io": false,
+                "_sys_interconnection": false
+              }
+            },
+            "start_info": {
+              "syscnt_enable": true,
+              "freq": 100,
+              "start_cnt": 376298253722470,
+              "start_monotonic": 3762877112191720
+            },
+            "end_info": {
+              "collectionTimeEnd": 1794845899277071770,
+              "MonotonicTimeEnd": 3762879263722740
+            },
+            "torch_npu_version": "2.10.0.post7",
+            "cann_version": "9.2.1",
+            "rank_id": 0
+          }
+        }
+      ],
+      "directory": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161817112_ascend_pt",
+      "relative_directory": "rank0_767352_20261116161817112_ascend_pt",
+      "completeness": {
+        "raw_ascend_pt_directory": true,
+        "raw_framework_or_prof_directory": true,
+        "export_directory": true,
+        "timed_kernel_count": 20220,
+        "valid_device_timeline": true,
+        "valid": true
+      },
+      "raw_file_count": 109,
+      "total_bytes": 285277442,
+      "exported_file_index": [
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+          "bytes": 475136,
+          "sha256": "98651e528cd99af73184a9f8cf69119aebf596d9cc93a46c085a804d4cf37871"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+          "bytes": 5655,
+          "sha256": "07f6ef79f8a4c6fcedef981bc1fbba2402ce3265b8d4fe2cdf8044433e39f9e9"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_0.db",
+          "bytes": 46710784,
+          "sha256": "927ba4016c24a1bafba74c414d372a3c69bc549cd9664bdabbd089530b62f105"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "bytes": 1589557,
+          "sha256": "7a5cf2949112acb63dde325acfdb4d97fba6e6b1e3145cee7aa2e0de26e7885d"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+          "bytes": 2297,
+          "sha256": "7c15e47c52a73ffc3ee16363ff26dc13f7b0f347d96d151971f9c5fb60f703c1"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "bytes": 6792769,
+          "sha256": "72fcc397dfa1745b5c50f628b59618772dcc509b06353b481f5ea962e1a8a3a1"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+          "bytes": 3988,
+          "sha256": "f14531d706d79bc4f039134f27bf3fefd17e63339da705615ffc7bcddc99b7c9"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+          "bytes": 5304102,
+          "sha256": "3df0cdd9a064a555767ea0b24aa3f5503e1fbd57b4ba4f477cecd5e7e04e6ef7"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+          "bytes": 278,
+          "sha256": "7a40e3ca734ac9227fcd08527110a175fc441aec2e61c55653f337e08ec6699d"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+          "bytes": 8455982,
+          "sha256": "220635e573607d241673c53ee1a73a1b7ce0a2012253b214238a2179f85ac760"
+        },
+        {
+          "path": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "bytes": 152196033,
+          "sha256": "5edf4062c94deca3c9935e8f835d988a50e3f4d8950c9e1face8f9b685f70b8d"
+        }
+      ],
+      "kernel_source": "kernel CSV",
+      "shape_status": "present in exported kernel rows",
+      "kernel_window_ns": [
+        1794845897249120783,
+        1794845898938425553
+      ],
+      "kernel_window_span_us": 1689304.77,
+      "kernel_cumulative_us": 1779472.199,
+      "kernel_union_us": 1575480.87,
+      "compute_kernel_union_us": 750851.806,
+      "communication_union_us": 921710.797,
+      "compute_communication_overlap_us": 97081.733,
+      "synchronization_union_us": 0.0,
+      "sync_wait_union_us": 0.0,
+      "communication_nonoverlapped_us": 824629.064,
+      "no_device_kernel_within_window_us": 113823.8999999999,
+      "kernel_count": 20220,
+      "communication_kernel_count": 2600,
+      "warnings": [],
+      "request_device_window_count": 10,
+      "top_operations": [
+        {
+          "name": "hcom_allReduce",
+          "op_type": "hcom_allReduce_",
+          "shape": null,
+          "dtype": null,
+          "count": 1300,
+          "cumulative_us": 823891.155,
+          "mean_us": 633.762426923077,
+          "interval_union_us": 823891.155,
+          "nonoverlapped_device_coverage_us": 716981.559,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 823891.155,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::candidate_embedding_tp",
+            "clef::joint_pooler",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "hcom_allReduce__503_0_1",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 43,
+              "start_us": 1794845897255393.5,
+              "end_us": 1794845897258129.8,
+              "start_ns": 1794845897255393459,
+              "end_ns": 1794845897258129803,
+              "stream": null
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;17408,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 212023.645,
+          "mean_us": 331.2869453125,
+          "interval_union_us": 212023.645,
+          "nonoverlapped_device_coverage_us": 183745.992,
+          "active_compute_unique_coverage_us": 212023.645,
+          "active_compute_time_removal_upper_bound_us": 212023.645,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.28237748555138986,
+          "device_time_removal_upper_bound_us": 212023.645,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.012365
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.536296
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.454607
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.980951
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 94.497568
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 71,
+              "start_us": 1794845897261325.8,
+              "end_us": 1794845897261676.5,
+              "start_ns": 1794845897261325795,
+              "end_ns": 1794845897261676556,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "allreduceAicpuKernel",
+          "op_type": "allreduceAicpuKernel",
+          "shape": null,
+          "dtype": null,
+          "count": 1300,
+          "cumulative_us": 204729.238,
+          "mean_us": 157.48402923076924,
+          "interval_union_us": 204729.238,
+          "nonoverlapped_device_coverage_us": 737.909,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 204729.238,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::candidate_embedding_tp",
+            "clef::joint_pooler",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "allreduceAicpuKernel",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 44,
+              "start_us": 1794845897255486.0,
+              "end_us": 1794845897255794.5,
+              "start_ns": 1794845897255486024,
+              "end_ns": 1794845897255794543,
+              "stream": "10"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+          "op_type": "ChunkGatedDeltaRuleFwd",
+          "shape": "\"1,307,8,128;1,307,8,128;1,307,24,128;1,24,307;1,24,307,64;1,307,24;2;10\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;FLOAT;DT_BF16;FLOAT;INT64;INT64",
+          "count": 480,
+          "cumulative_us": 111542.218,
+          "mean_us": 232.37962083333332,
+          "interval_union_us": 111542.218,
+          "nonoverlapped_device_coverage_us": 95269.588,
+          "active_compute_unique_coverage_us": 111542.218,
+          "active_compute_time_removal_upper_bound_us": 111542.218,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.1485542381448304,
+          "device_time_removal_upper_bound_us": 111542.218,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.185627
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.050093
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.028207
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.035696
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.150891
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.047899
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.097862
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.06191
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.131237
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 96.9951
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 61,
+              "start_us": 1794845897258474.8,
+              "end_us": 1794845897258704.2,
+              "start_ns": 1794845897258474664,
+              "end_ns": 1794845897258704277,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,8704;5120,8704\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 106996.528,
+          "mean_us": 167.182075,
+          "interval_union_us": 106996.528,
+          "nonoverlapped_device_coverage_us": 92791.876,
+          "active_compute_unique_coverage_us": 106996.528,
+          "active_compute_time_removal_upper_bound_us": 106996.528,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.14250019397303015,
+          "device_time_removal_upper_bound_us": 106996.528,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.037662
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.534949
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.464737
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.958505
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 95.000519
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 73,
+              "start_us": 1794845897261698.8,
+              "end_us": 1794845897261865.5,
+              "start_ns": 1794845897261698657,
+              "end_ns": 1794845897261865527,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;8192,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 69434.114,
+          "mean_us": 144.65440416666667,
+          "interval_union_us": 69434.114,
+          "nonoverlapped_device_coverage_us": 60273.332,
+          "active_compute_unique_coverage_us": 69434.114,
+          "active_compute_time_removal_upper_bound_us": 69434.114,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.09247379235843511,
+          "device_time_removal_upper_bound_us": 69434.114,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.012935
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 4.2e-05
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.55906
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.4689
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.972278
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.718866
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 49,
+              "start_us": 1794845897258165.5,
+              "end_us": 1794845897258311.5,
+              "start_ns": 1794845897258165445,
+              "end_ns": 1794845897258311414,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,3072;5120,3072\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 41580.169,
+          "mean_us": 64.96901406250001,
+          "interval_union_us": 41580.169,
+          "nonoverlapped_device_coverage_us": 36465.612,
+          "active_compute_unique_coverage_us": 41580.169,
+          "active_compute_time_removal_upper_bound_us": 41580.169,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.05537733100957608,
+          "device_time_removal_upper_bound_us": 41580.169,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.087744
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.003778
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.494484
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.429981
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.859974
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 93.216211
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 65,
+              "start_us": 1794845897258734.0,
+              "end_us": 1794845897258800.8,
+              "start_ns": 1794845897258733899,
+              "end_ns": 1794845897258800663,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+          "op_type": "AddRmsNorm",
+          "shape": "\"307,5120;307,5120;5120\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 1280,
+          "cumulative_us": 30082.314,
+          "mean_us": 23.501807812499997,
+          "interval_union_us": 30082.314,
+          "nonoverlapped_device_coverage_us": 26373.629,
+          "active_compute_unique_coverage_us": 30082.314,
+          "active_compute_time_removal_upper_bound_us": 30082.314,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.04006424937599471,
+          "device_time_removal_upper_bound_us": 30082.314,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.038534
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.369257
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.167242
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.353265
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 70,
+              "start_us": 1794845897261297.2,
+              "end_us": 1794845897261325.8,
+              "start_ns": 1794845897261297273,
+              "end_ns": 1794845897261325775,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;7168,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 160,
+          "cumulative_us": 21169.914,
+          "mean_us": 132.3119625,
+          "interval_union_us": 21169.914,
+          "nonoverlapped_device_coverage_us": 18244.198,
+          "active_compute_unique_coverage_us": 21169.914,
+          "active_compute_time_removal_upper_bound_us": 21169.914,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.028194530306556925,
+          "device_time_removal_upper_bound_us": 21169.914,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.062608
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.541227
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.46542
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.95001
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.579239
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 133,
+              "start_us": 1794845897267516.2,
+              "end_us": 1794845897267648.0,
+              "start_ns": 1794845897267516306,
+              "end_ns": 1794845897267647914,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "CausalConv1d",
+          "op_type": "CausalConv1d",
+          "shape": "\"307,5120;4,5120;;;2;;;;;;;\"",
+          "dtype": "DT_BF16;DT_BF16;DT_UNDEFINED;DT_UNDEFINED;INT32;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED",
+          "count": 480,
+          "cumulative_us": 19462.222,
+          "mean_us": 40.54629583333334,
+          "interval_union_us": 19462.222,
+          "nonoverlapped_device_coverage_us": 17211.606,
+          "active_compute_unique_coverage_us": 19462.222,
+          "active_compute_time_removal_upper_bound_us": 19462.222,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.02592019070138589,
+          "device_time_removal_upper_bound_us": 19462.222,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.039417
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.147667
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.116943
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.356018
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "CausalConv1d",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 56,
+              "start_us": 1794845897258357.0,
+              "end_us": 1794845897258404.8,
+              "start_ns": 1794845897258356996,
+              "end_ns": 1794845897258404799,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "ClefGdnQkvNorm",
+          "op_type": "ClefGdnQkvNorm",
+          "shape": "\"40,307,128\"",
+          "dtype": "DT_BF16",
+          "count": 480,
+          "cumulative_us": 17381.279,
+          "mean_us": 36.21099791666666,
+          "interval_union_us": 17381.279,
+          "nonoverlapped_device_coverage_us": 15230.271,
+          "active_compute_unique_coverage_us": 17381.279,
+          "active_compute_time_removal_upper_bound_us": 17381.279,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.02314874767711486,
+          "device_time_removal_upper_bound_us": 17381.279,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "AscendCL@aclnnClefGdnQkvNorm"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.01519
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.097763
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.129868
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.539681
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "ClefGdnQkvNorm",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 57,
+              "start_us": 1794845897258405.5,
+              "end_us": 1794845897258441.8,
+              "start_ns": 1794845897258405539,
+              "end_ns": 1794845897258441702,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "SwiGlu",
+          "op_type": "SwiGlu",
+          "shape": "\"307,17408\"",
+          "dtype": "DT_BF16",
+          "count": 640,
+          "cumulative_us": 14274.725,
+          "mean_us": 22.3042578125,
+          "interval_union_us": 14274.725,
+          "nonoverlapped_device_coverage_us": 12366.637,
+          "active_compute_unique_coverage_us": 14274.725,
+          "active_compute_time_removal_upper_bound_us": 14274.725,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.0190113746626588,
+          "device_time_removal_upper_bound_us": 14274.725,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.064679
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.437475
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.142932
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.372954
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "SwiGlu",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 72,
+              "start_us": 1794845897261676.5,
+              "end_us": 1794845897261698.8,
+              "start_ns": 1794845897261676596,
+              "end_ns": 1794845897261698637,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;48,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 10236.706,
+          "mean_us": 21.326470833333335,
+          "interval_union_us": 10236.706,
+          "nonoverlapped_device_coverage_us": 9077.275,
+          "active_compute_unique_coverage_us": 10236.706,
+          "active_compute_time_removal_upper_bound_us": 10236.706,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.013633457252415533,
+          "device_time_removal_upper_bound_us": 10236.706,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.008045
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.009941
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.156099
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.226598
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.246998
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 74.556256
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 51,
+              "start_us": 1794845897258311.5,
+              "end_us": 1794845897258331.5,
+              "start_ns": 1794845897258311434,
+              "end_ns": 1794845897258331375,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+          "op_type": "FusedInferAttentionScore",
+          "shape": "\"307,12,256;7284,128,512;7284,128,512;2048,2048;1;1;1,32\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;BOOL;INT64;INT64;INT32",
+          "count": 160,
+          "cumulative_us": 9546.078,
+          "mean_us": 59.6629875,
+          "interval_union_us": 9546.078,
+          "nonoverlapped_device_coverage_us": 8418.969,
+          "active_compute_unique_coverage_us": 9546.078,
+          "active_compute_time_removal_upper_bound_us": 9546.078,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.012713664565654651,
+          "device_time_removal_upper_bound_us": 9546.078,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0956
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.042364
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.05134
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.056131
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.181294
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.11613
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.139655
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.057424
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.068099
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 86.283773
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 142,
+              "start_us": 1794845897267755.2,
+              "end_us": 1794845897267808.5,
+              "start_ns": 1794845897267755240,
+              "end_ns": 1794845897267808523,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "_layer_norm_fwd_1pass_kernel_npu",
+          "op_type": "_layer_norm_fwd_1pass_kernel_npu",
+          "shape": "\"7368,128;128;7368,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 7897.536,
+          "mean_us": 16.4532,
+          "interval_union_us": 7897.536,
+          "nonoverlapped_device_coverage_us": 6870.595,
+          "active_compute_unique_coverage_us": 7897.536,
+          "active_compute_time_removal_upper_bound_us": 7897.536,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.01051810215663249,
+          "device_time_removal_upper_bound_us": 7897.536,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.107509
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.258978
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.110923
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.421937
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "_layer_norm_fwd_1pass_kernel_npu",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 64,
+              "start_us": 1794845897258717.8,
+              "end_us": 1794845897258734.0,
+              "start_ns": 1794845897258717798,
+              "end_ns": 1794845897258733879,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "fused_gdn_gating_kernel",
+          "op_type": "fused_gdn_gating_kernel",
+          "shape": "\"24;307,24;307,24\"",
+          "dtype": "FLOAT;DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 7279.877,
+          "mean_us": 15.166410416666668,
+          "interval_union_us": 7279.877,
+          "nonoverlapped_device_coverage_us": 6247.719,
+          "active_compute_unique_coverage_us": 7279.877,
+          "active_compute_time_removal_upper_bound_us": 7279.877,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.009695491096681202,
+          "device_time_removal_upper_bound_us": 7279.877,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.096373
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.136871
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.046587
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.37244
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "fused_gdn_gating_kernel",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 58,
+              "start_us": 1794845897258441.8,
+              "end_us": 1794845897258455.8,
+              "start_ns": 1794845897258441722,
+              "end_ns": 1794845897258455862,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnIndex_IndexAiCore_Index",
+          "op_type": "Index",
+          "shape": "\"262144,64;1;3;3,307\"",
+          "dtype": "DT_BF16;INT64;INT64;INT64",
+          "count": 160,
+          "cumulative_us": 6954.342,
+          "mean_us": 43.464637499999995,
+          "interval_union_us": 6954.342,
+          "nonoverlapped_device_coverage_us": 5944.164,
+          "active_compute_unique_coverage_us": 6954.342,
+          "active_compute_time_removal_upper_bound_us": 6954.342,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.00926193683550919,
+          "device_time_removal_upper_bound_us": 6954.342,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.055363
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.25696
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.226913
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.000972
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnIndex_IndexAiCore_Index",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 137,
+              "start_us": 1794845897267666.2,
+              "end_us": 1794845897267709.2,
+              "start_ns": 1794845897267666175,
+              "end_ns": 1794845897267709257,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+          "op_type": "Transpose",
+          "shape": "\"1,307,24;3\"",
+          "dtype": "FLOAT;INT64",
+          "count": 480,
+          "cumulative_us": 6738.946,
+          "mean_us": 14.039470833333333,
+          "interval_union_us": 6738.946,
+          "nonoverlapped_device_coverage_us": 5730.07,
+          "active_compute_unique_coverage_us": 6738.946,
+          "active_compute_time_removal_upper_bound_us": 6738.946,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.008975067977661627,
+          "device_time_removal_upper_bound_us": 6738.946,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.199834
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.211241
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.014626
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.003667
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 60,
+              "start_us": 1794845897258458.0,
+              "end_us": 1794845897258473.5,
+              "start_ns": 1794845897258458063,
+              "end_ns": 1794845897258473543,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnInplaceZero_ZerosLikeAiCore_ZerosLike",
+          "op_type": "ZerosLike",
+          "shape": "\"307,24,128\"",
+          "dtype": "DT_BF16",
+          "count": 480,
+          "cumulative_us": 4685.909,
+          "mean_us": 9.762310416666667,
+          "interval_union_us": 4685.909,
+          "nonoverlapped_device_coverage_us": 4199.553,
+          "active_compute_unique_coverage_us": 4685.909,
+          "active_compute_time_removal_upper_bound_us": 4685.909,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.006240790742667535,
+          "device_time_removal_upper_bound_us": 4685.909,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.197666
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.330264
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.059854
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnInplaceZero_ZerosLikeAiCore_ZerosLike",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 54,
+              "start_us": 1794845897258339.5,
+              "end_us": 1794845897258348.0,
+              "start_ns": 1794845897258339435,
+              "end_ns": 1794845897258347996,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "split_qkv_rmsnorm_mrope_kernel",
+          "op_type": "split_qkv_rmsnorm_mrope_kernel",
+          "shape": "\"307,7168;256;256;3,307,64\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;DT_BF16",
+          "count": 160,
+          "cumulative_us": 4531.749,
+          "mean_us": 28.32343125,
+          "interval_union_us": 4531.749,
+          "nonoverlapped_device_coverage_us": 3889.553,
+          "active_compute_unique_coverage_us": 4531.749,
+          "active_compute_time_removal_upper_bound_us": 4531.749,
+          "active_compute_union_denominator_us": 750851.806,
+          "active_compute_coverage_fraction": 0.006035477259010548,
+          "device_time_removal_upper_bound_us": 4531.749,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.03786
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.259296
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.073021
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.404788
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "split_qkv_rmsnorm_mrope_kernel",
+              "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 140,
+              "start_us": 1794845897267712.5,
+              "end_us": 1794845897267739.5,
+              "start_ns": 1794845897267712377,
+              "end_ns": 1794845897267739379,
+              "stream": "45"
+            }
+          ]
+        }
+      ],
+      "communication_export_summary": {
+        "by_collective": [
+          {
+            "collective_type": "all_reduce",
+            "operation_count": 1300,
+            "reported_elapsed_us_sum": 823891.155,
+            "reported_elapsed_us_samples": 1300,
+            "reported_wait_us_sum": 794396.3835,
+            "reported_wait_us_samples": 1300,
+            "reported_synchronization_us_sum": 781247.736,
+            "reported_synchronization_us_samples": 1300,
+            "evidence_operation_paths": [
+              "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_1_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_2_1@5862276106100383503"
+            ]
+          }
+        ],
+        "aggregate_entries_excluded": 1,
+        "method": "Counts distinct non-aggregate communication.json entries; HCCL phase/kernel counts are reported separately. Elapsed sums can overlap and are not critical-path duration"
+      },
+      "communication_size_distribution": [
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680,
+          "operation_count": 1290,
+          "transit_ms_sum": 28.739265000000017,
+          "elapsed_us_sum": 802043.2269999988
+        },
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 1423360,
+          "operation_count": 10,
+          "transit_ms_sum": 0.1097065,
+          "elapsed_us_sum": 21847.928
+        }
+      ],
+      "communication_size_scope": "One preferred transport per call (SIO first); MB converted with 1024**2. SIO/SDMA aliases are not added. Values describe reported transit bytes; tensor payload interpretation depends on collective algorithm",
+      "communication_examples": [
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_223_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 12242.993999999999,
+          "reported_wait_us": 12220.8325,
+          "reported_synchronization_us": 12210.432499999999,
+          "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_223_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_1000_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 11845.571,
+          "reported_wait_us": 11823.61,
+          "reported_synchronization_us": 11813.249000000002,
+          "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_1000_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_260_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 5717.543,
+          "reported_wait_us": 5640.237499999999,
+          "reported_synchronization_us": 5627.9574999999995,
+          "evidence_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_260_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        }
+      ],
+      "timeline_metadata": [
+        {
+          "event_count": 665112,
+          "timed_event_count": 505107,
+          "device_kernel_event_count": 94943,
+          "categories": {
+            "cpu_op": 132980,
+            "dequeue": 25768,
+            "async_task_queue": 51536,
+            "enqueue": 25768,
+            "": 320660,
+            "HostToDevice": 54680,
+            "async_npu": 53720
+          },
+          "process_names": {
+            "767352": "Python",
+            "785768928": "AI Core Freq",
+            "785768960": "Communication",
+            "785769440": "Overlap Analysis",
+            "785768896": "Ascend Hardware",
+            "785768703": "CANN"
+          },
+          "timed_event_range_us": [
+            1794845897160341.2,
+            1794845898960725.8
+          ],
+          "timed_event_range_ns": [
+            1794845897160341159,
+            1794845898960725731
+          ],
+          "file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "module_flow_correlation": {
+            "flow_endpoint_count": 159936,
+            "paired_flow_count": 79967,
+            "flow_pairs_assigned_to_modules": 27330,
+            "method": "Explicit flow s/f endpoints: source lies within host marker and target within device kernel on its exact pid/tid",
+            "scope": "Module kernel totals include nested modules; totals across modules overlap and remain separate from request critical paths",
+            "evidence": [
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249120783"
+                ],
+                "source_event_index": 611392,
+                "target_event_index": 611393,
+                "kernel_event_index": 340230,
+                "source_ts_us": 1794845897249043.0,
+                "target_ts_us": 1794845897249120.8,
+                "source_ts_ns": 1794845897249043000,
+                "target_ts_ns": 1794845897249120783,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "aclnnInplaceFillScalar_FillAiCore_Fill"
+              },
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249281712"
+                ],
+                "source_event_index": 611394,
+                "target_event_index": 611395,
+                "kernel_event_index": 459152,
+                "source_ts_us": 1794845897249154.0,
+                "target_ts_us": 1794845897249281.8,
+                "source_ts_ns": 1794845897249154110,
+                "target_ts_ns": 1794845897249281712,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "MEMCPY_ASYNC"
+              },
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249285593"
+                ],
+                "source_event_index": 611396,
+                "target_event_index": 611397,
+                "kernel_event_index": 459154,
+                "source_ts_us": 1794845897249222.0,
+                "target_ts_us": 1794845897249285.5,
+                "source_ts_ns": 1794845897249221940,
+                "target_ts_ns": 1794845897249285593,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "MEMCPY_ASYNC"
+              }
+            ]
+          }
+        }
+      ],
+      "module_averages": [
+        {
+          "module": "clef::backbone",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 123.662051,
+            "device_span_ms_mean": 151.877917,
+            "compute_kernel_union_ms_mean": 71.358241,
+            "communication_union_ms_mean": 85.771416,
+            "sync_wait_union_ms_mean": 149.197044,
+            "active_kernel_union_ms_mean": 147.724236
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11706,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25004,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38302,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::backbone_decoder_layer",
+          "instances": 640,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 1.768096,
+            "device_span_ms_mean": 18.015502,
+            "compute_kernel_union_ms_mean": 1.114676,
+            "communication_union_ms_mean": 1.494637,
+            "sync_wait_union_ms_mean": 2.332091,
+            "active_kernel_union_ms_mean": 2.609079
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1056,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1234,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1412,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::candidate_embedding_tp",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.563781,
+            "device_span_ms_mean": 30.49886,
+            "compute_kernel_union_ms_mean": 0.066558,
+            "communication_union_ms_mean": 2.347128,
+            "sync_wait_union_ms_mean": 2.288359,
+            "active_kernel_union_ms_mean": 2.413686
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11867,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25165,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38463,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_evidence_routing",
+          "instances": 20,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.713388,
+            "device_span_ms_mean": 14.955231,
+            "compute_kernel_union_ms_mean": 0.228624,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 14.883696,
+            "active_kernel_union_ms_mean": 0.228624
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 12144,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 12307,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25442,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_head",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 6.708165,
+            "device_span_ms_mean": 30.890984,
+            "compute_kernel_union_ms_mean": 1.682754,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 30.648919,
+            "active_kernel_union_ms_mean": 1.682754
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13233,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26531,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 39829,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_pooler",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 8.816663,
+            "device_span_ms_mean": 32.293558,
+            "compute_kernel_union_ms_mean": 1.830091,
+            "communication_union_ms_mean": 2.347128,
+            "sync_wait_union_ms_mean": 30.648919,
+            "active_kernel_union_ms_mean": 4.177219
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13263,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26561,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 39859,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::language_backbone",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 123.516584,
+            "device_span_ms_mean": 151.877917,
+            "compute_kernel_union_ms_mean": 71.358241,
+            "communication_union_ms_mean": 85.771416,
+            "sync_wait_union_ms_mean": 149.197044,
+            "active_kernel_union_ms_mean": 147.724236
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11705,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25003,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38301,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::schema_indices_h2d",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.369792,
+            "device_span_ms_mean": 0.007166,
+            "compute_kernel_union_ms_mean": 0.00569,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.0,
+            "active_kernel_union_ms_mean": 0.00569
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11785,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25083,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38381,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::worker_execute_model",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 139.496075,
+            "device_span_ms_mean": 163.488105,
+            "compute_kernel_union_ms_mean": 73.441231,
+            "communication_union_ms_mean": 92.171068,
+            "sync_wait_union_ms_mean": 157.829381,
+            "active_kernel_union_ms_mean": 156.119271
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13277,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26575,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank0_767352_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 39873,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        }
+      ],
+      "memory": {
+        "status": "no memory records exported",
+        "source_files": [],
+        "component_device_peaks": [],
+        "workspace_component_present": false,
+        "observed_operator_allocation_count": 0,
+        "method": "Peak recorded values per explicit component/device; component totals may overlap. Capture can omit earlier allocations and does not classify weights/cache by itself",
+        "units": "MB/KB retained exactly as labelled by exporter; verify exporter byte conversion before unit reinterpretation",
+        "top3_operator_allocations": []
+      }
+    },
+    {
+      "rank": 1,
+      "rank_identity": {
+        "rank": 1,
+        "source": "profiler metadata",
+        "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161817112_ascend_pt/profiler_info_1.json",
+        "json_path": [
+          "rank_id"
+        ]
+      },
+      "profiler_metadata": [
+        {
+          "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161817112_ascend_pt/profiler_info_1.json",
+          "sha256": "dfeb0d69dee295969e27607f65e75c37d79fbec35672ee1141471ca9a0b1a1f6",
+          "data": {
+            "config": {
+              "common_config": {
+                "activities": [
+                  "ProfilerActivity.CPU",
+                  "ProfilerActivity.NPU"
+                ],
+                "schedule": {},
+                "record_shapes": false,
+                "profile_memory": false,
+                "with_stack": false,
+                "with_flops": false,
+                "with_modules": false
+              },
+              "experimental_config": {
+                "_profiler_level": "Level1",
+                "_aic_metrics": "ACL_AICORE_PIPE_UTILIZATION",
+                "_l2_cache": false,
+                "_msprof_tx": false,
+                "_mstx": false,
+                "_data_simplification": true,
+                "record_op_args": false,
+                "_export_type": [
+                  "text"
+                ],
+                "_host_sys": [],
+                "_op_attr": false,
+                "_gc_detect_threshold": null,
+                "_mstx_domain_include": [],
+                "_mstx_domain_exclude": [],
+                "_sys_io": false,
+                "_sys_interconnection": false
+              }
+            },
+            "start_info": {
+              "syscnt_enable": true,
+              "freq": 100,
+              "start_cnt": 376298254304448,
+              "start_monotonic": 3762877118015970
+            },
+            "end_info": {
+              "collectionTimeEnd": 1794845899256709700,
+              "MonotonicTimeEnd": 3762879243361540
+            },
+            "torch_npu_version": "2.10.0.post7",
+            "cann_version": "9.2.1",
+            "rank_id": 1
+          }
+        }
+      ],
+      "directory": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161817112_ascend_pt",
+      "relative_directory": "rank1_767353_20261116161817112_ascend_pt",
+      "completeness": {
+        "raw_ascend_pt_directory": true,
+        "raw_framework_or_prof_directory": true,
+        "export_directory": true,
+        "timed_kernel_count": 20220,
+        "valid_device_timeline": true,
+        "valid": true
+      },
+      "raw_file_count": 109,
+      "total_bytes": 285244649,
+      "exported_file_index": [
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+          "bytes": 479232,
+          "sha256": "3f0d92d9e3ad33bc293e643c1e165fa0e73b89c83fb01b0b2d394efcd530cfb1"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+          "bytes": 5591,
+          "sha256": "779778809a3b9e6c7a73de3603c09f45547be76d8d106c703ccab4906123c145"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_1.db",
+          "bytes": 46710784,
+          "sha256": "90db12fe6bab6b0d805b051fa79bb08ce624bd49d413844d907cb762d9c37596"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "bytes": 1599168,
+          "sha256": "958e0df8af04b6779ed2305115ffa6de5b586b2e2515535ffc35f98e3ffcc53d"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+          "bytes": 2268,
+          "sha256": "44732e0d08865f529f24bcd28901ce2fb40eb123533910929ee0608c42f1acfd"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "bytes": 6801648,
+          "sha256": "b9a968cae3409c941635be842b0c8fdb0d5e842269fde76820ccba3447af9db8"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+          "bytes": 3948,
+          "sha256": "702d6237e11e45be2ed5996e67842586b70dddc625301519be70cec0f57e4b10"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+          "bytes": 5312701,
+          "sha256": "daa10e3ca1e243cb649e55139d47ead076764c6ff0a90a7b56c380a6eb31689c"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+          "bytes": 280,
+          "sha256": "ddb18adc317bfb953e62cdfb2d515381caa426f800d183a5cf08c7b7f5672010"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+          "bytes": 8447101,
+          "sha256": "5a93ac613ff5a15ce4fd8e6095ed4b0e44e1d32819cdf3de212117dbd50913f5"
+        },
+        {
+          "path": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "bytes": 152149207,
+          "sha256": "2de0241e270995eeab425197b632246c412c50708a7c7fadefca5dfb4515f96e"
+        }
+      ],
+      "kernel_source": "kernel CSV",
+      "shape_status": "present in exported kernel rows",
+      "kernel_window_ns": [
+        1794845897249648016,
+        1794845898946872386
+      ],
+      "kernel_window_span_us": 1697224.37,
+      "kernel_cumulative_us": 1106469.75,
+      "kernel_union_us": 905633.273,
+      "compute_kernel_union_us": 755078.743,
+      "communication_union_us": 264206.376,
+      "compute_communication_overlap_us": 113651.846,
+      "synchronization_union_us": 0.0,
+      "sync_wait_union_us": 0.0,
+      "communication_nonoverlapped_us": 150554.52999999997,
+      "no_device_kernel_within_window_us": 791591.0970000001,
+      "kernel_count": 20220,
+      "communication_kernel_count": 2600,
+      "warnings": [],
+      "request_device_window_count": 10,
+      "top_operations": [
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;17408,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 211628.757,
+          "mean_us": 330.6699328125,
+          "interval_union_us": 211628.757,
+          "nonoverlapped_device_coverage_us": 151801.881,
+          "active_compute_unique_coverage_us": 211628.757,
+          "active_compute_time_removal_upper_bound_us": 211628.757,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.28027375815028077,
+          "device_time_removal_upper_bound_us": 211628.757,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.012393
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.537969
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.456032
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.980971
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 94.377611
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 68,
+              "start_us": 1794845897261314.5,
+              "end_us": 1794845897261660.8,
+              "start_ns": 1794845897261314509,
+              "end_ns": 1794845897261660756,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "allreduceAicpuKernel",
+          "op_type": "allreduceAicpuKernel",
+          "shape": null,
+          "dtype": null,
+          "count": 1300,
+          "cumulative_us": 208430.903,
+          "mean_us": 160.33146384615384,
+          "interval_union_us": 208430.903,
+          "nonoverlapped_device_coverage_us": 7594.426,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 208430.903,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::candidate_embedding_tp",
+            "clef::joint_pooler",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "allreduceAicpuKernel",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 44,
+              "start_us": 1794845897257874.5,
+              "end_us": 1794845897258215.8,
+              "start_ns": 1794845897257874540,
+              "end_ns": 1794845897258215707,
+              "stream": "12"
+            }
+          ]
+        },
+        {
+          "name": "hcom_allReduce",
+          "op_type": "hcom_allReduce_",
+          "shape": null,
+          "dtype": null,
+          "count": 1300,
+          "cumulative_us": 142960.104,
+          "mean_us": 109.96931076923076,
+          "interval_union_us": 142960.104,
+          "nonoverlapped_device_coverage_us": 55775.473,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 142960.104,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::candidate_embedding_tp",
+            "clef::joint_pooler",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "hcom_allReduce__503_0_1",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 43,
+              "start_us": 1794845897257781.5,
+              "end_us": 1794845897258119.5,
+              "start_ns": 1794845897257781598,
+              "end_ns": 1794845897258119405,
+              "stream": null
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+          "op_type": "ChunkGatedDeltaRuleFwd",
+          "shape": "\"1,307,8,128;1,307,8,128;1,307,24,128;1,24,307;1,24,307,64;1,307,24;2;10\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;FLOAT;DT_BF16;FLOAT;INT64;INT64",
+          "count": 480,
+          "cumulative_us": 115087.289,
+          "mean_us": 239.76518541666667,
+          "interval_union_us": 115087.289,
+          "nonoverlapped_device_coverage_us": 115087.289,
+          "active_compute_unique_coverage_us": 115087.289,
+          "active_compute_time_removal_upper_bound_us": 115087.289,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.1524175989152432,
+          "device_time_removal_upper_bound_us": 115087.289,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.184844
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.050315
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.027343
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.034531
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.155683
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.047245
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.103104
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.063786
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.127115
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.097856
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 59,
+              "start_us": 1794845897260254.0,
+              "end_us": 1794845897260498.0,
+              "start_ns": 1794845897260253988,
+              "end_ns": 1794845897260497992,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,8704;5120,8704\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 107525.506,
+          "mean_us": 168.00860312499998,
+          "interval_union_us": 107525.506,
+          "nonoverlapped_device_coverage_us": 81758.586,
+          "active_compute_unique_coverage_us": 107525.506,
+          "active_compute_time_removal_upper_bound_us": 107525.506,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.14240303676513377,
+          "device_time_removal_upper_bound_us": 107525.506,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.037444
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.531951
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.462059
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.958854
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 95.057623
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 71,
+              "start_us": 1794845897261681.8,
+              "end_us": 1794845897261849.2,
+              "start_ns": 1794845897261681676,
+              "end_ns": 1794845897261849219,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;8192,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 69190.739,
+          "mean_us": 144.14737291666668,
+          "interval_union_us": 69190.739,
+          "nonoverlapped_device_coverage_us": 69060.513,
+          "active_compute_unique_coverage_us": 69190.739,
+          "active_compute_time_removal_upper_bound_us": 69190.739,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.09163380593274098,
+          "device_time_removal_upper_bound_us": 69190.739,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.012952
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 4.2e-05
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.560258
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.469868
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.972187
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.842706
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 48,
+              "start_us": 1794845897258628.0,
+              "end_us": 1794845897258773.0,
+              "start_ns": 1794845897258627955,
+              "end_ns": 1794845897258772998,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,3072;5120,3072\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 640,
+          "cumulative_us": 41521.396,
+          "mean_us": 64.87718125,
+          "interval_union_us": 41521.396,
+          "nonoverlapped_device_coverage_us": 41521.396,
+          "active_compute_unique_coverage_us": 41521.396,
+          "active_compute_time_removal_upper_bound_us": 41521.396,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.054989491341037526,
+          "device_time_removal_upper_bound_us": 41521.396,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.087904
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.003774
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.49558
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.431141
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.859486
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 93.147461
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 63,
+              "start_us": 1794845897260858.2,
+              "end_us": 1794845897260925.0,
+              "start_ns": 1794845897260858340,
+              "end_ns": 1794845897260925121,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+          "op_type": "AddRmsNorm",
+          "shape": "\"307,5120;307,5120;5120\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 1280,
+          "cumulative_us": 29771.947,
+          "mean_us": 23.25933359375,
+          "interval_union_us": 29771.947,
+          "nonoverlapped_device_coverage_us": 12532.89,
+          "active_compute_unique_coverage_us": 29771.947,
+          "active_compute_time_removal_upper_bound_us": 29771.947,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.039428930129476576,
+          "device_time_removal_upper_bound_us": 29771.947,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.038131
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.35074
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.180444
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.357401
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 67,
+              "start_us": 1794845897261286.5,
+              "end_us": 1794845897261314.5,
+              "start_ns": 1794845897261286428,
+              "end_ns": 1794845897261314489,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;7168,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 160,
+          "cumulative_us": 21165.188,
+          "mean_us": 132.282425,
+          "interval_union_us": 21165.188,
+          "nonoverlapped_device_coverage_us": 21122.608,
+          "active_compute_unique_coverage_us": 21165.188,
+          "active_compute_time_removal_upper_bound_us": 21165.188,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.028030438144647913,
+          "device_time_removal_upper_bound_us": 21165.188,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.062809
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.542417
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.466553
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.949308
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.399171
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 129,
+              "start_us": 1794845897267686.8,
+              "end_us": 1794845897267820.2,
+              "start_ns": 1794845897267686736,
+              "end_ns": 1794845897267820359,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "CausalConv1d",
+          "op_type": "CausalConv1d",
+          "shape": "\"307,5120;4,5120;;;2;;;;;;;\"",
+          "dtype": "DT_BF16;DT_BF16;DT_UNDEFINED;DT_UNDEFINED;INT32;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED;DT_UNDEFINED",
+          "count": 480,
+          "cumulative_us": 19718.0,
+          "mean_us": 41.079166666666666,
+          "interval_union_us": 19718.0,
+          "nonoverlapped_device_coverage_us": 19718.0,
+          "active_compute_unique_coverage_us": 19718.0,
+          "active_compute_time_removal_upper_bound_us": 19718.0,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.02611383273969348,
+          "device_time_removal_upper_bound_us": 19718.0,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.038846
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.175289
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.145001
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.345034
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "CausalConv1d",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 54,
+              "start_us": 1794845897259515.5,
+              "end_us": 1794845897259554.0,
+              "start_ns": 1794845897259515473,
+              "end_ns": 1794845897259554014,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "ClefGdnQkvNorm",
+          "op_type": "ClefGdnQkvNorm",
+          "shape": "\"40,307,128\"",
+          "dtype": "DT_BF16",
+          "count": 480,
+          "cumulative_us": 17572.106,
+          "mean_us": 36.608554166666664,
+          "interval_union_us": 17572.106,
+          "nonoverlapped_device_coverage_us": 17572.106,
+          "active_compute_unique_coverage_us": 17572.106,
+          "active_compute_time_removal_upper_bound_us": 17572.106,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.023271885433013704,
+          "device_time_removal_upper_bound_us": 17572.106,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "AscendCL@aclnnClefGdnQkvNorm"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.01535
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.098408
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.127768
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.531829
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "ClefGdnQkvNorm",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 55,
+              "start_us": 1794845897259850.0,
+              "end_us": 1794845897259886.8,
+              "start_ns": 1794845897259849879,
+              "end_ns": 1794845897259886720,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "SwiGlu",
+          "op_type": "SwiGlu",
+          "shape": "\"307,17408\"",
+          "dtype": "DT_BF16",
+          "count": 640,
+          "cumulative_us": 13696.402,
+          "mean_us": 21.400628125,
+          "interval_union_us": 13696.402,
+          "nonoverlapped_device_coverage_us": 4653.069,
+          "active_compute_unique_coverage_us": 13696.402,
+          "active_compute_time_removal_upper_bound_us": 13696.402,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.018139037983751053,
+          "device_time_removal_upper_bound_us": 13696.402,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.06359
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.447062
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.170588
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.399518
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "SwiGlu",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 69,
+              "start_us": 1794845897261660.8,
+              "end_us": 1794845897261681.8,
+              "start_ns": 1794845897261660796,
+              "end_ns": 1794845897261681656,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"307,5120;48,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 10224.779,
+          "mean_us": 21.301622916666666,
+          "interval_union_us": 10224.779,
+          "nonoverlapped_device_coverage_us": 10224.779,
+          "active_compute_unique_coverage_us": 10224.779,
+          "active_compute_time_removal_upper_bound_us": 10224.779,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.013541341343256434,
+          "device_time_removal_upper_bound_us": 10224.779,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.008186
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.009941
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.156416
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.226894
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.247072
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 74.545594
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 49,
+              "start_us": 1794845897258782.5,
+              "end_us": 1794845897258802.0,
+              "start_ns": 1794845897258782378,
+              "end_ns": 1794845897258802018,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+          "op_type": "FusedInferAttentionScore",
+          "shape": "\"307,12,256;7284,128,512;7284,128,512;2048,2048;1;1;1,32\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;BOOL;INT64;INT64;INT32",
+          "count": 160,
+          "cumulative_us": 10003.781,
+          "mean_us": 62.52363125000001,
+          "interval_union_us": 10003.781,
+          "nonoverlapped_device_coverage_us": 10003.781,
+          "active_compute_unique_coverage_us": 10003.781,
+          "active_compute_time_removal_upper_bound_us": 10003.781,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.013248659285856761,
+          "device_time_removal_upper_bound_us": 10003.781,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.097929
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0425
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.048687
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.053733
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.157587
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.120016
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.136895
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.062662
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.064558
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 86.633727
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 138,
+              "start_us": 1794845897268631.5,
+              "end_us": 1794845897268685.8,
+              "start_ns": 1794845897268631475,
+              "end_ns": 1794845897268685856,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "_layer_norm_fwd_1pass_kernel_npu",
+          "op_type": "_layer_norm_fwd_1pass_kernel_npu",
+          "shape": "\"7368,128;128;7368,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 8292.583,
+          "mean_us": 17.276214583333335,
+          "interval_union_us": 8292.583,
+          "nonoverlapped_device_coverage_us": 8292.583,
+          "active_compute_unique_coverage_us": 8292.583,
+          "active_compute_time_removal_upper_bound_us": 8292.583,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.01098240822811774,
+          "device_time_removal_upper_bound_us": 8292.583,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.107861
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.254177
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.095692
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.399309
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "_layer_norm_fwd_1pass_kernel_npu",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 62,
+              "start_us": 1794845897260684.0,
+              "end_us": 1794845897260700.8,
+              "start_ns": 1794845897260684016,
+              "end_ns": 1794845897260700856,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "fused_gdn_gating_kernel",
+          "op_type": "fused_gdn_gating_kernel",
+          "shape": "\"24;307,24;307,24\"",
+          "dtype": "FLOAT;DT_BF16;DT_BF16",
+          "count": 480,
+          "cumulative_us": 7173.381,
+          "mean_us": 14.944543750000001,
+          "interval_union_us": 7173.381,
+          "nonoverlapped_device_coverage_us": 7173.381,
+          "active_compute_unique_coverage_us": 7173.381,
+          "active_compute_time_removal_upper_bound_us": 7173.381,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.00950017606309439,
+          "device_time_removal_upper_bound_us": 7173.381,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.096198
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.131763
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.046299
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.379513
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "fused_gdn_gating_kernel",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 56,
+              "start_us": 1794845897260053.8,
+              "end_us": 1794845897260068.8,
+              "start_ns": 1794845897260053764,
+              "end_ns": 1794845897260068664,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnIndex_IndexAiCore_Index",
+          "op_type": "Index",
+          "shape": "\"262144,64;1;3;3,307\"",
+          "dtype": "DT_BF16;INT64;INT64;INT64",
+          "count": 160,
+          "cumulative_us": 7089.339,
+          "mean_us": 44.30836875,
+          "interval_union_us": 7089.339,
+          "nonoverlapped_device_coverage_us": 7089.339,
+          "active_compute_unique_coverage_us": 7089.339,
+          "active_compute_time_removal_upper_bound_us": 7089.339,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.009388873764123432,
+          "device_time_removal_upper_bound_us": 7089.339,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.055794
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.242884
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.215263
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.000964
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnIndex_IndexAiCore_Index",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 133,
+              "start_us": 1794845897267838.5,
+              "end_us": 1794845897267883.2,
+              "start_ns": 1794845897267838579,
+              "end_ns": 1794845897267883300,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+          "op_type": "Transpose",
+          "shape": "\"1,307,24;3\"",
+          "dtype": "FLOAT;INT64",
+          "count": 480,
+          "cumulative_us": 6795.284,
+          "mean_us": 14.156841666666667,
+          "interval_union_us": 6795.284,
+          "nonoverlapped_device_coverage_us": 6795.284,
+          "active_compute_unique_coverage_us": 6795.284,
+          "active_compute_time_removal_upper_bound_us": 6795.284,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.008999437559322206,
+          "device_time_removal_upper_bound_us": 6795.284,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.199888
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.216406
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.014075
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.003648
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 58,
+              "start_us": 1794845897260238.0,
+              "end_us": 1794845897260251.5,
+              "start_ns": 1794845897260237967,
+              "end_ns": 1794845897260251467,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "split_qkv_rmsnorm_mrope_kernel",
+          "op_type": "split_qkv_rmsnorm_mrope_kernel",
+          "shape": "\"307,7168;256;256;3,307,64\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;DT_BF16",
+          "count": 160,
+          "cumulative_us": 4589.347,
+          "mean_us": 28.683418749999998,
+          "interval_union_us": 4589.347,
+          "nonoverlapped_device_coverage_us": 4589.347,
+          "active_compute_unique_coverage_us": 4589.347,
+          "active_compute_time_removal_upper_bound_us": 4589.347,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.0060779713937729,
+          "device_time_removal_upper_bound_us": 4589.347,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.036582
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.254485
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.073267
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.394805
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "split_qkv_rmsnorm_mrope_kernel",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 136,
+              "start_us": 1794845897268172.2,
+              "end_us": 1794845897268201.5,
+              "start_ns": 1794845897268172346,
+              "end_ns": 1794845897268201486,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnInplaceZero_ZerosLikeAiCore_ZerosLike",
+          "op_type": "ZerosLike",
+          "shape": "\"307,24,128\"",
+          "dtype": "DT_BF16",
+          "count": 480,
+          "cumulative_us": 4523.774,
+          "mean_us": 9.424529166666668,
+          "interval_union_us": 4523.774,
+          "nonoverlapped_device_coverage_us": 4523.774,
+          "active_compute_unique_coverage_us": 4523.774,
+          "active_compute_time_removal_upper_bound_us": 4523.774,
+          "active_compute_union_denominator_us": 755078.743,
+          "active_compute_coverage_fraction": 0.005991128795424188,
+          "device_time_removal_upper_bound_us": 4523.774,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "clef::backbone",
+            "clef::backbone_decoder_layer",
+            "clef::language_backbone",
+            "clef::worker_execute_model"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.192566
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.240681
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.060795
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnInplaceZero_ZerosLikeAiCore_ZerosLike",
+              "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 52,
+              "start_us": 1794845897258929.8,
+              "end_us": 1794845897258938.5,
+              "start_ns": 1794845897258929741,
+              "end_ns": 1794845897258938581,
+              "stream": "47"
+            }
+          ]
+        }
+      ],
+      "communication_export_summary": {
+        "by_collective": [
+          {
+            "collective_type": "all_reduce",
+            "operation_count": 1300,
+            "reported_elapsed_us_sum": 142960.104,
+            "reported_elapsed_us_samples": 1300,
+            "reported_wait_us_sum": 75124.519,
+            "reported_wait_us_samples": 1300,
+            "reported_synchronization_us_sum": 62065.8975,
+            "reported_synchronization_us_samples": 1300,
+            "evidence_operation_paths": [
+              "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_1_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_2_1@5862276106100383503"
+            ]
+          }
+        ],
+        "aggregate_entries_excluded": 1,
+        "method": "Counts distinct non-aggregate communication.json entries; HCCL phase/kernel counts are reported separately. Elapsed sums can overlap and are not critical-path duration"
+      },
+      "communication_size_distribution": [
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680,
+          "operation_count": 1290,
+          "transit_ms_sum": 28.615365499999967,
+          "elapsed_us_sum": 141413.4100000001
+        },
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 1423360,
+          "operation_count": 10,
+          "transit_ms_sum": 0.102365,
+          "elapsed_us_sum": 1546.694
+        }
+      ],
+      "communication_size_scope": "One preferred transport per call (SIO first); MB converted with 1024**2. SIO/SDMA aliases are not added. Values describe reported transit bytes; tensor payload interpretation depends on collective algorithm",
+      "communication_examples": [
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_68_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 1175.624,
+          "reported_wait_us": 1153.1435000000001,
+          "reported_synchronization_us": 1142.703,
+          "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_68_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 337.807,
+          "reported_wait_us": 209.90449999999998,
+          "reported_synchronization_us": 198.64399999999998,
+          "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_0_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_749_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 293.106,
+          "reported_wait_us": 203.5635,
+          "reported_synchronization_us": 193.3435,
+          "evidence_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_749_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 3143680
+        }
+      ],
+      "timeline_metadata": [
+        {
+          "event_count": 664967,
+          "timed_event_count": 504950,
+          "device_kernel_event_count": 94943,
+          "categories": {
+            "cpu_op": 132890,
+            "dequeue": 25774,
+            "async_task_queue": 51548,
+            "enqueue": 25774,
+            "": 320581,
+            "HostToDevice": 54680,
+            "async_npu": 53720
+          },
+          "process_names": {
+            "767353": "Python",
+            "785769953": "AI Core Freq",
+            "785769985": "Communication",
+            "785770465": "Overlap Analysis",
+            "785769921": "Ascend Hardware",
+            "785769727": "CANN"
+          },
+          "timed_event_range_us": [
+            1794845897174005.2,
+            1794845898961436.2
+          ],
+          "timed_event_range_ns": [
+            1794845897174005184,
+            1794845898961436217
+          ],
+          "file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "module_flow_correlation": {
+            "flow_endpoint_count": 159948,
+            "paired_flow_count": 79896,
+            "flow_pairs_assigned_to_modules": 27329,
+            "method": "Explicit flow s/f endpoints: source lies within host marker and target within device kernel on its exact pid/tid",
+            "scope": "Module kernel totals include nested modules; totals across modules overlap and remain separate from request critical paths",
+            "evidence": [
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249648016"
+                ],
+                "source_event_index": 611247,
+                "target_event_index": 611248,
+                "kernel_event_index": 340142,
+                "source_ts_us": 1794845897249567.5,
+                "target_ts_us": 1794845897249648.0,
+                "source_ts_ns": 1794845897249567410,
+                "target_ts_ns": 1794845897249648016,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "aclnnInplaceFillScalar_FillAiCore_Fill"
+              },
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249826219"
+                ],
+                "source_event_index": 611249,
+                "target_event_index": 611250,
+                "kernel_event_index": 459064,
+                "source_ts_us": 1794845897249725.0,
+                "target_ts_us": 1794845897249826.2,
+                "source_ts_ns": 1794845897249725060,
+                "target_ts_ns": 1794845897249826219,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "MEMCPY_ASYNC"
+              },
+              {
+                "flow_key": [
+                  "async_npu",
+                  "1794845897249832959"
+                ],
+                "source_event_index": 611251,
+                "target_event_index": 611252,
+                "kernel_event_index": 459066,
+                "source_ts_us": 1794845897249812.0,
+                "target_ts_us": 1794845897249833.0,
+                "source_ts_ns": 1794845897249811990,
+                "target_ts_ns": 1794845897249832959,
+                "modules": [
+                  "clef::worker_execute_model"
+                ],
+                "kernel": "MEMCPY_ASYNC"
+              }
+            ]
+          }
+        }
+      ],
+      "module_averages": [
+        {
+          "module": "clef::backbone",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 149.220585,
+            "device_span_ms_mean": 148.977576,
+            "compute_kernel_union_ms_mean": 71.726162,
+            "communication_union_ms_mean": 25.955088,
+            "sync_wait_union_ms_mean": 30.100702,
+            "active_kernel_union_ms_mean": 86.339946
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11706,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 24995,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38284,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::backbone_decoder_layer",
+          "instances": 640,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 2.158118,
+            "device_span_ms_mean": 2.312,
+            "compute_kernel_union_ms_mean": 1.120424,
+            "communication_union_ms_mean": 0.405548,
+            "sync_wait_union_ms_mean": 0.470323,
+            "active_kernel_union_ms_mean": 1.350047
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1056,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1234,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 1412,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::candidate_embedding_tp",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.751751,
+            "device_span_ms_mean": 0.806488,
+            "compute_kernel_union_ms_mean": 0.06963,
+            "communication_union_ms_mean": 0.21913,
+            "sync_wait_union_ms_mean": 0.021664,
+            "active_kernel_union_ms_mean": 0.28876
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11867,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25156,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38445,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_evidence_routing",
+          "instances": 20,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.984915,
+            "device_span_ms_mean": 0.870445,
+            "compute_kernel_union_ms_mean": 0.232364,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.02646,
+            "active_kernel_union_ms_mean": 0.232364
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 12144,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 12307,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25433,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_head",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 8.966576,
+            "device_span_ms_mean": 8.824868,
+            "compute_kernel_union_ms_mean": 1.706348,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.108666,
+            "active_kernel_union_ms_mean": 1.706348
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13233,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26522,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 39811,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::joint_pooler",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 11.448774,
+            "device_span_ms_mean": 11.12225,
+            "compute_kernel_union_ms_mean": 1.860364,
+            "communication_union_ms_mean": 0.21913,
+            "sync_wait_union_ms_mean": 0.130331,
+            "active_kernel_union_ms_mean": 2.06989
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13263,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26552,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 39841,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::language_backbone",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 149.070152,
+            "device_span_ms_mean": 148.977576,
+            "compute_kernel_union_ms_mean": 71.726162,
+            "communication_union_ms_mean": 25.955088,
+            "sync_wait_union_ms_mean": 30.100702,
+            "active_kernel_union_ms_mean": 86.339946
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11705,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 24994,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38283,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::schema_indices_h2d",
+          "instances": 10,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.413216,
+            "device_span_ms_mean": 0.128709,
+            "compute_kernel_union_ms_mean": 0.005884,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.0,
+            "active_kernel_union_ms_mean": 0.005884
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 11785,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 25074,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 38363,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-2"
+              ]
+            }
+          ]
+        },
+        {
+          "module": "clef::worker_execute_model",
+          "instances": 19,
+          "matched_request_count": 10,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 89.116198,
+            "device_span_ms_mean": 88.768818,
+            "compute_kernel_union_ms_mean": 38.869735,
+            "communication_union_ms_mean": 13.905587,
+            "sync_wait_union_ms_mean": 15.942738,
+            "active_kernel_union_ms_mean": 46.793683
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13277,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-0"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 13288,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            },
+            {
+              "trace_file": "rank1_767353_20261116161817112_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 26566,
+              "request_ids": [
+                "clef-bench-1794845897240264740-measured-1"
+              ]
+            }
+          ]
+        }
+      ],
+      "memory": {
+        "status": "no memory records exported",
+        "source_files": [],
+        "component_device_peaks": [],
+        "workspace_component_present": false,
+        "observed_operator_allocation_count": 0,
+        "method": "Peak recorded values per explicit component/device; component totals may overlap. Capture can omit earlier allocations and does not classify weights/cache by itself",
+        "units": "MB/KB retained exactly as labelled by exporter; verify exporter byte conversion before unit reinterpretation",
+        "top3_operator_allocations": []
+      }
+    }
+  ],
+  "methods": {
+    "timing": "Integer ns arithmetic; exported durations in us. Kernel sums, interval unions and host inclusive ranges remain distinct",
+    "active_compute_unique": "Only computation tasks compete for active-only unique coverage. Sync waits/records, HCCL parent ranges and communication AICPU are excluded; denominator is active compute union in the same collection",
+    "modules": "Means over request-associated marker instances; parent and child scopes overlap. Head active compute and upstream EVENT WAIT are separate",
+    "critical_path": "Explicit flow proves provenance. Unique coverage/removal upper bounds measure occupancy; full DAG critical-path improvement requires a follow-up experiment",
+    "pipe_metrics": "Kernel-duration-weighted reported ratios (0..1), plus exporter cube_utilization(%); full min/max/samples in remote summary"
+  },
+  "cpu_observations": {
+    "root": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations",
+    "passed": true,
+    "source_files": [
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-765938.jsonl",
+        "bytes": 39953,
+        "sha256": "7159efe793b76af7a23d4ac99e25370f8059357908be4045c074b8284ee16e25"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-766006.jsonl",
+        "bytes": 11852,
+        "sha256": "c753b6f055ef350f70bdad5780c29ecd977af97051f762116713e6025c9d9b42"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-766068.jsonl",
+        "bytes": 532059,
+        "sha256": "915a60312dbe1b961f67fbeff6a6d4839f66419a3d72dc5facd5c77635bfb83b"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-766069.jsonl",
+        "bytes": 532061,
+        "sha256": "bf187cc62a7eb22545dc2fbc7c3e95267a1339db802795ef5ebcc654b9eab131"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+        "bytes": 235934,
+        "sha256": "602042886cf9bfcf5cada869ab762513757b17c981c5673026cf78382feb008d"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767322.jsonl",
+        "bytes": 71154,
+        "sha256": "137d688336a1d9f94b57547c42bcc341fcf5b01eb09bb8a9360e1ecf8ee26c76"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+        "bytes": 2496612,
+        "sha256": "82fd7543a2fd35ddcc0f0ddfb924cc85bfc47932ba5ec95c097b6aaa360ee5ae"
+      },
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+        "bytes": 2496681,
+        "sha256": "adc8bcc6d33c7c68052318af8f5c510be5baa686013791e70d71de24d554bc9e"
+      }
+    ],
+    "event_count": 1560,
+    "selected_benchmark_reports": [
+      {
+        "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-307b/profile-requests.json",
+        "sha256": "142b01568c672ecab9375bc8325ad363f9ec85087aa1b2797f94efe7e60279f9"
+      }
+    ],
+    "excluded_event_count": 9846,
+    "selection_wall_windows_ns": [
+      [
+        1794845897244205000,
+        1794845897416089000
+      ],
+      [
+        1794845897416137000,
+        1794845897596008000
+      ],
+      [
+        1794845897596043000,
+        1794845897766854000
+      ],
+      [
+        1794845897766883000,
+        1794845897934353000
+      ],
+      [
+        1794845897934381000,
+        1794845898099588000
+      ],
+      [
+        1794845898099617000,
+        1794845898263697000
+      ],
+      [
+        1794845898263726000,
+        1794845898428581000
+      ],
+      [
+        1794845898428611000,
+        1794845898608579000
+      ],
+      [
+        1794845898608609000,
+        1794845898775306000
+      ],
+      [
+        1794845898775335000,
+        1794845898940232000
+      ]
+    ],
+    "errors": [],
+    "native_engine_metric_summaries": {
+      "queue_seconds": {
+        "sample_count": 10,
+        "sum_ms": 1.5715807676315308,
+        "mean_ms": 0.15715807676315308,
+        "p50_ms": 0.14710519462823868,
+        "p95_ms": 0.19196241628378624,
+        "min_ms": 0.14610029757022858,
+        "max_ms": 0.21714018657803535,
+        "scope": "Native differences of same-engine-process monotonic timestamps; no direct cross-process timestamp alignment"
+      },
+      "scheduled_to_output_seconds": {
+        "sample_count": 10,
+        "sum_ms": 1646.5259902179241,
+        "mean_ms": 164.6525990217924,
+        "p50_ms": 162.23522508516908,
+        "p95_ms": 175.04306340124458,
+        "min_ms": 159.2681398615241,
+        "max_ms": 175.24321004748344,
+        "scope": "Native differences of same-engine-process monotonic timestamps; no direct cross-process timestamp alignment"
+      },
+      "scheduled_to_first_output_seconds": {
+        "sample_count": 10,
+        "sum_ms": 1646.5259902179241,
+        "mean_ms": 164.6525990217924,
+        "p50_ms": 162.23522508516908,
+        "p95_ms": 175.04306340124458,
+        "min_ms": 159.2681398615241,
+        "max_ms": 175.24321004748344,
+        "scope": "Native differences of same-engine-process monotonic timestamps; no direct cross-process timestamp alignment"
+      }
+    },
+    "method": {
+      "timing_scope": "host_wall_inclusive; nested stages and concurrent tasks overlap",
+      "end_wall_ns": "start_wall_ns plus monotonic duration_ns; assumes stable wall clock within each scope",
+      "union": "computed per name/pid/rank; stage unions are not additive across names",
+      "device_alignment": "Host wall nanoseconds are retained separately from exported NPU microseconds; clock calibration is required for alignment"
+    },
+    "matched_request_count": 10,
+    "stages": [
+      {
+        "name": "clef::worker_execute_model",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 169.130206,
+        "per_request_inclusive_ms": 169.130206,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2361
+          }
+        ]
+      },
+      {
+        "name": "clef::api_handler_including_json",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 168.323149,
+        "per_request_inclusive_ms": 168.323149,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 250
+          }
+        ]
+      },
+      {
+        "name": "clef::frontend_request",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 168.196341,
+        "per_request_inclusive_ms": 168.19634100000002,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 249
+          }
+        ]
+      },
+      {
+        "name": "clef::frontend_read_including_engine",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 167.709601,
+        "per_request_inclusive_ms": 167.709601,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 248
+          }
+        ]
+      },
+      {
+        "name": "clef::backbone",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 149.240938,
+        "per_request_inclusive_ms": 149.240938,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2354
+          }
+        ]
+      },
+      {
+        "name": "clef::language_backbone",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 149.081114,
+        "per_request_inclusive_ms": 149.081114,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2353
+          }
+        ]
+      },
+      {
+        "name": "clef::worker_execute_model",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 139.517731,
+        "per_request_inclusive_ms": 139.517731,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2361
+          }
+        ]
+      },
+      {
+        "name": "clef::backbone_decoder_layer",
+        "pid": 767353,
+        "rank": 1,
+        "count": 640,
+        "mean_ms": 2.1753048125,
+        "per_request_inclusive_ms": 139.219508,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2289
+          }
+        ]
+      },
+      {
+        "name": "clef::backbone",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 123.678596,
+        "per_request_inclusive_ms": 123.678596,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2354
+          }
+        ]
+      },
+      {
+        "name": "clef::language_backbone",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 123.526655,
+        "per_request_inclusive_ms": 123.526655,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2353
+          }
+        ]
+      },
+      {
+        "name": "clef::backbone_decoder_layer",
+        "pid": 767352,
+        "rank": 0,
+        "count": 640,
+        "mean_ms": 1.78388596875,
+        "per_request_inclusive_ms": 114.16870200000001,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2289
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_pooler",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 11.470186,
+        "per_request_inclusive_ms": 11.470186,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2360
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_head",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 8.989133,
+        "per_request_inclusive_ms": 8.989132999999999,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2359
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_pooler",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 8.835242,
+        "per_request_inclusive_ms": 8.835242,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2360
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_head",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 6.728113,
+        "per_request_inclusive_ms": 6.7281130000000005,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2359
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_evidence_routing",
+        "pid": 767353,
+        "rank": 1,
+        "count": 20,
+        "mean_ms": 1.0071555,
+        "per_request_inclusive_ms": 2.014311,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2357
+          }
+        ]
+      },
+      {
+        "name": "clef::schema_tokenize_encode",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 1.579796,
+        "per_request_inclusive_ms": 1.579796,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 246
+          }
+        ]
+      },
+      {
+        "name": "clef::joint_evidence_routing",
+        "pid": 767352,
+        "rank": 0,
+        "count": 20,
+        "mean_ms": 0.7311225,
+        "per_request_inclusive_ms": 1.462245,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2357
+          }
+        ]
+      },
+      {
+        "name": "clef::candidate_embedding_tp",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 0.772735,
+        "per_request_inclusive_ms": 0.7727350000000001,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2356
+          }
+        ]
+      },
+      {
+        "name": "clef::candidate_embedding_tp",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 0.582411,
+        "per_request_inclusive_ms": 0.582411,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2356
+          }
+        ]
+      },
+      {
+        "name": "clef::schema_indices_h2d",
+        "pid": 767353,
+        "rank": 1,
+        "count": 10,
+        "mean_ms": 0.425615,
+        "per_request_inclusive_ms": 0.42561499999999997,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+            "line": 2355
+          }
+        ]
+      },
+      {
+        "name": "clef::schema_indices_h2d",
+        "pid": 767352,
+        "rank": 0,
+        "count": 10,
+        "mean_ms": 0.381772,
+        "per_request_inclusive_ms": 0.381772,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+            "line": 2355
+          }
+        ]
+      },
+      {
+        "name": "clef::scheduler",
+        "pid": 767322,
+        "rank": null,
+        "count": 20,
+        "mean_ms": 0.1803665,
+        "per_request_inclusive_ms": 0.360733,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767322.jsonl",
+            "line": 92
+          }
+        ]
+      },
+      {
+        "name": "clef::tokenizer",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 0.141665,
+        "per_request_inclusive_ms": 0.14166499999999999,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 245
+          }
+        ]
+      },
+      {
+        "name": "clef::request_finished_metrics",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 0.062891,
+        "per_request_inclusive_ms": 0.062891,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 247
+          }
+        ]
+      },
+      {
+        "name": "clef::scheduler_add_request",
+        "pid": 767322,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 0.053277,
+        "per_request_inclusive_ms": 0.053277,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767322.jsonl",
+            "line": 91
+          }
+        ]
+      },
+      {
+        "name": "clef::state_render",
+        "pid": 767239,
+        "rank": null,
+        "count": 10,
+        "mean_ms": 0.033046,
+        "per_request_inclusive_ms": 0.033046,
+        "evidence": [
+          {
+            "file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767239.jsonl",
+            "line": 244
+          }
+        ]
+      }
+    ],
+    "request_paths_file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/request_paths.csv",
+    "cache_pool_observations": [
+      {
+        "pid": 766068,
+        "rank": 0,
+        "evidence_file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-766068.jsonl",
+        "evidence_line": 68,
+        "cache_memory": {
+          "num_blocks": 1821,
+          "layout": "LBNHC",
+          "unique_storage_bytes": 30551310336,
+          "unique_storage_bytes_by_kind": {
+            "shared:FullAttentionSpec+MambaSpec": 30551310336
+          },
+          "deduplication": "device, untyped_storage.data_ptr and storage.nbytes; mixed-spec shared allocations remain shared"
+        }
+      },
+      {
+        "pid": 766069,
+        "rank": 1,
+        "evidence_file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-766069.jsonl",
+        "evidence_line": 68,
+        "cache_memory": {
+          "num_blocks": 1821,
+          "layout": "LBNHC",
+          "unique_storage_bytes": 30551310336,
+          "unique_storage_bytes_by_kind": {
+            "shared:FullAttentionSpec+MambaSpec": 30551310336
+          },
+          "deduplication": "device, untyped_storage.data_ptr and storage.nbytes; mixed-spec shared allocations remain shared"
+        }
+      },
+      {
+        "pid": 767352,
+        "rank": 0,
+        "evidence_file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767352.jsonl",
+        "evidence_line": 68,
+        "cache_memory": {
+          "num_blocks": 1821,
+          "layout": "LBNHC",
+          "unique_storage_bytes": 30551310336,
+          "unique_storage_bytes_by_kind": {
+            "shared:FullAttentionSpec+MambaSpec": 30551310336
+          },
+          "deduplication": "device, untyped_storage.data_ptr and storage.nbytes; mixed-spec shared allocations remain shared"
+        }
+      },
+      {
+        "pid": 767353,
+        "rank": 1,
+        "evidence_file": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/observations/cpu-767353.jsonl",
+        "evidence_line": 68,
+        "cache_memory": {
+          "num_blocks": 1821,
+          "layout": "LBNHC",
+          "unique_storage_bytes": 30551310336,
+          "unique_storage_bytes_by_kind": {
+            "shared:FullAttentionSpec+MambaSpec": 30551310336
+          },
+          "deduplication": "device, untyped_storage.data_ptr and storage.nbytes; mixed-spec shared allocations remain shared"
+        }
+      }
+    ]
+  },
+  "analysis_file_index": [
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/communication.csv",
+      "bytes": 6983,
+      "sha256": "069c9ae3c4ff75fece623f15fcf034b79cc58217f475ac9fb97998c4f48b43c8"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/cpu-decomposition.csv",
+      "bytes": 20442,
+      "sha256": "6fafa0995e07777bc1083c755b358f7b9b92a8dffcdb54b5ba1e2e7ce7a7c6d5"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/cpu-decomposition.json",
+      "bytes": 38929,
+      "sha256": "25f74a41600ded6cff82113feca12535e296440c80dea7960db0b6a95f01c719"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/cpu_observations.csv",
+      "bytes": 13380,
+      "sha256": "3d1b13fa156d077c7d4177f5d992f776a20abd74dd978156114da776159bfb37"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/cpu_scopes.csv",
+      "bytes": 28585,
+      "sha256": "c7a0b48c1746e11805d04f6eb6b85024bc9c506e157d17e69167c98f6fcd3575"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/module_instances.csv",
+      "bytes": 979491,
+      "sha256": "7d795a9c4fe7933c7207c2f23312ce3a03b94049fc0089baa8d2b5b3188d1648"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/operations.csv",
+      "bytes": 1709318,
+      "sha256": "96616d988e10b8d27ef0b7685bf47711912ee124ee4821a42d0e485d32e8475c"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/request_device_windows.csv",
+      "bytes": 2011679,
+      "sha256": "4fa35110917ca7bc5b7c1384c7ac834a97c1f239598092a3f53b0b8c53728208"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/request_paths.csv",
+      "bytes": 420036,
+      "sha256": "d3866fd193c83c0cfc5936c39f1e949d34e9e1b62f75e56f63a848d87c6ea96e"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/summary.json",
+      "bytes": 33546551,
+      "sha256": "565b151c644b1b1f27e3508587ac640813323f0de08cc56dd6e9ed2968a669e2"
+    },
+    {
+      "path": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/analysis-307b/top20.csv",
+      "bytes": 177685,
+      "sha256": "a61ab1c9d42638ddcf0351b91cf2c81691c33598aa58078d7e1ac9d3d638b43e"
+    }
+  ]
+}

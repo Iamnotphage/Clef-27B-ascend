@@ -1,0 +1,27 @@
+{
+ "argv_equal": true,
+ "cwd_equal": true,
+ "env_equal": true,
+ "phase0_pid": 424593,
+ "restore_pid": 432954,
+ "frozen_phase0": {
+  "cases": 8,
+  "passed": 8
+ },
+ "frozen_restore": {
+  "cases": 8,
+  "passed": 8
+ },
+ "common_hashes": 12,
+ "hash_changes": {},
+ "health_phase0": {
+  "url": "http://127.0.0.1:8000/v1/health",
+  "status_code": 404,
+  "note": "phase-0 helper appended /health to the /v1 base, so this probe hit /v1/health and returned 404; the service's actual /health returns 200 with an empty body as verified on the restored service."
+ },
+ "health_restore": {
+  "url": "http://127.0.0.1:8000/health",
+  "status_code": 200,
+  "body_bytes": 0
+ }
+}

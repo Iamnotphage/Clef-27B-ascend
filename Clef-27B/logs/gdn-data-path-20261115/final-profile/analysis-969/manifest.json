@@ -1,0 +1,118 @@
+{
+  "created_at": "2026-11-16T16:18:19.672657+00:00",
+  "base_url": "http://127.0.0.1:18143",
+  "trace_root": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces",
+  "expected_ranks": 2,
+  "concurrency": 1,
+  "passed": false,
+  "collection_control_passed": true,
+  "trace_completeness_passed": false,
+  "acceptance_scope": "HTTP control and exported rank structure; request-window alignment, rank clocks and service logs also require review",
+  "throughput_scope": "Profiled requests measure instrumentation overhead; use separate unprofiled rounds for performance.",
+  "sample": {
+    "path": "/workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-969.json",
+    "sha256": "c24f2b63d715a51d369f72da5a14e07b9a36919903935e6d0bdec0834a49aff5"
+  },
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "warmup": {
+    "argv": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "/workspace/yangchen/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18143",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-969.json",
+      "--requests",
+      "10",
+      "--report",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/warmup.json"
+    ],
+    "started_at": "2026-11-16T16:18:19.676703+00:00",
+    "log": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/warmup.log",
+    "returncode": 0,
+    "finished_at": "2026-11-16T16:18:21.484576+00:00"
+  },
+  "start": {
+    "url": "http://127.0.0.1:18143/start_profile",
+    "started_at": "2026-11-16T16:18:21.484612+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-16T16:18:21.550606+00:00",
+    "elapsed_seconds": 0.06600325973704457
+  },
+  "request_window_started_at": "2026-11-16T16:18:21.551301+00:00",
+  "requests": {
+    "argv": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "/workspace/yangchen/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18143",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/profile-residual/sample-969.json",
+      "--requests",
+      "10",
+      "--report",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/profile-requests.json"
+    ],
+    "started_at": "2026-11-16T16:18:21.551351+00:00",
+    "log": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/profile-requests.log",
+    "returncode": 0,
+    "finished_at": "2026-11-16T16:18:23.380161+00:00"
+  },
+  "request_window_finished_at": "2026-11-16T16:18:23.380190+00:00",
+  "stop": {
+    "url": "http://127.0.0.1:18143/stop_profile",
+    "started_at": "2026-11-16T16:18:23.380198+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-16T16:18:23.919660+00:00",
+    "elapsed_seconds": 0.5394767504185438
+  },
+  "new_rank_directories": [
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161821486_ascend_pt",
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161821486_ascend_pt"
+  ],
+  "analysis": [],
+  "export_files": {
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161821486_ascend_pt": [],
+    "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161821486_ascend_pt": []
+  },
+  "trace_completeness": {
+    "argv": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "/workspace/yangchen/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces",
+      "--expected-ranks",
+      "2",
+      "--output-dir",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/trace-analysis",
+      "--strict",
+      "--trace-dir",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank0_767352_20261116161821486_ascend_pt",
+      "--trace-dir",
+      "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/traces/rank1_767353_20261116161821486_ascend_pt"
+    ],
+    "started_at": "2026-11-16T16:18:23.922691+00:00",
+    "log": "/workspace/yangchen/logs/gdn-data-path-20261115/final-profile/window-969b/trace-completeness.log",
+    "returncode": 1,
+    "finished_at": "2026-11-16T16:18:23.985562+00:00"
+  },
+  "finished_at": "2026-11-16T16:18:23.985582+00:00"
+}

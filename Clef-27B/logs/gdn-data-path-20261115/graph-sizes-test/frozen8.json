@@ -1,0 +1,329 @@
+{
+ "captured_at": "2026-11-16T03:36:14.361702+00:00",
+ "host": "25e6d0590726",
+ "pid": 657908,
+ "process": {
+  "pid": 657908,
+  "ppid": 1,
+  "state": "S",
+  "argv": [
+   "python",
+   "-m",
+   "vllm.entrypoints.cli.main",
+   "serve",
+   "/workspace/yangchen/models/Clef-27B",
+   "--served-model-name",
+   "clef",
+   "--runner",
+   "pooling",
+   "--dtype",
+   "bfloat16",
+   "--tensor-parallel-size",
+   "2",
+   "--max-model-len",
+   "4096",
+   "--max-num-seqs",
+   "1",
+   "--max-num-batched-tokens",
+   "4096",
+   "--gpu-memory-utilization",
+   "0.9",
+   "--no-enable-prefix-caching",
+   "--no-enable-chunked-prefill",
+   "--skip-mm-profiling",
+   "--compilation-config",
+   "{\"cudagraph_capture_sizes\":[307,967]}",
+   "--cudagraph-metrics",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "18143",
+   "--limit-mm-per-prompt",
+   "{\"image\":1,\"video\":1}",
+   "--distributed-executor-backend",
+   "mp",
+   "--mm-processor-kwargs",
+   "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+  ],
+  "environment": {
+   "ASCEND_AICPU_PATH": "/usr/local/Ascend/cann-9.2.1",
+   "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+   "ASCEND_OPP_PATH": "/usr/local/Ascend/cann-9.2.1/opp",
+   "ASCEND_TOOLKIT_HOME": "/usr/local/Ascend/cann-9.2.1",
+   "ATB_COMPARE_TILING_EVERY_KERNEL": "0",
+   "ATB_HOME_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1",
+   "ATB_MATMUL_SHUFFLE_K_ENABLE": "1",
+   "ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT": "5",
+   "ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT": "1",
+   "ATB_SHARE_MEMORY_NAME_SUFFIX": "",
+   "ATB_STREAM_SYNC_EVERY_KERNEL_ENABLE": "0",
+   "ATB_STREAM_SYNC_EVERY_OPERATION_ENABLE": "0",
+   "ATB_STREAM_SYNC_EVERY_RUNNER_ENABLE": "0",
+   "ATB_WORKSPACE_MEM_ALLOC_ALG_TYPE": "1",
+   "CLEF_ATB_ENV": "/usr/local/Ascend/nnal/atb/set_env.sh",
+   "CLEF_CANN_ENV": "/usr/local/Ascend/cann/set_env.sh",
+   "CLEF_CONFIG": "s1",
+   "CLEF_GDN_BSND": "1",
+   "CLEF_GDN_DECISION_PREFILL": "1",
+   "CLEF_GDN_NO_RECOMPUTE": "1",
+   "CLEF_GDN_SKIP_CONV_STATE": "1",
+   "CLEF_GDN_SKIP_INITIAL_STATE": "1",
+   "CLEF_HEALTH_JSON": "1",
+   "CLEF_LOG_DIR": "/workspace/yangchen/logs",
+   "CLEF_MAX_MODEL_LEN": "4096",
+   "CLEF_MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+   "CLEF_MODEL_NAME": "clef",
+   "CLEF_MODEL_REVISION": "local-graph-sizes-test",
+   "CLEF_PROTOCOL_VERSION": "2026-11-13",
+   "CLEF_SCHEMA_TOKEN_CACHE": "<redacted>",
+   "CLEF_SCHEMA_TOKEN_CACHE_VERSION": "<redacted>",
+   "CLEF_TENSOR_PARALLEL_SIZE": "2",
+   "CLEF_VENV": "/workspace/yangchen/venvs/clef-py312",
+   "CLEF_WORKSPACE": "/workspace/yangchen",
+   "HF_HOME": "/workspace/yangchen/cache/huggingface",
+   "LD_LIBRARY_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+   "MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+   "OMP_NUM_THREADS": "1",
+   "PATH": "/workspace/yangchen/venvs/clef-py312/bin:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/bin:/usr/local/Ascend/cann-9.2.1/bin:/usr/local/Ascend/cann-9.2.1/tools/ccec_compiler/bin:/usr/local/Ascend/cann-9.2.1/tools/profiler/bin:/usr/local/Ascend/cann-9.2.1/tools/ascend_system_advisor/asys:/usr/local/Ascend/cann-9.2.1/tools/show_kernel_debug_data:/usr/local/Ascend/cann-9.2.1/tools/msobjdump:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+   "PYTHONPATH": "/usr/local/Ascend/cann-9.2.1/python/site-packages:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe:",
+   "TASK_QUEUE_ENABLE": "1",
+   "TORCH_HOME": "/workspace/yangchen/cache/torch",
+   "TRITON_CACHE_DIR": "/workspace/yangchen/cache/triton",
+   "VIRTUAL_ENV": "/workspace/yangchen/venvs/clef-py312",
+   "XDG_CACHE_HOME": "/workspace/yangchen/cache"
+  },
+  "cwd": "/workspace/yangchen/Clef-27B-ascend",
+  "ps": {
+   "command": [
+    "ps",
+    "-o",
+    "pid,ppid,lstart,etime,args",
+    "-p",
+    "657908"
+   ],
+   "returncode": 0,
+   "stdout": "    PID    PPID                  STARTED     ELAPSED COMMAND\n 657908       1 Mon Nov 16 03:32:36 2026       03:38 python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --skip-mm-profiling --compilation-config {\"cudagraph_capture_sizes\":[307,967]} --cudagraph-metrics --host 127.0.0.1 --port 18143 --limit-mm-per-prompt {\"image\":1,\"video\":1} --distributed-executor-backend mp --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}\n",
+   "stderr": ""
+  }
+ },
+ "npu_smi": "+------------------------------------------------------------------------------------------------------------------+\n| npu-smi 26.1.1                              Version: 26.1.1                                                      |\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |\n| Chip  Phy-ID              | Bus-Id        | AICore(%)            Memory-Usage(MB)        HBM-Usage(MB)           |\n+===========================+===============+======================================================================+\n| 7     Ascend910           | OK            | 154.0                38                      0    / 0                |\n| 0     14                  | 0000:81:00.0  | 0                    0    / 0                60028/ 65536            |\n+------------------------------------------------------------------------------------------------------------------+\n| 7     Ascend910           | OK            | -                    38                      0    / 0                |\n| 1     15                  | 0000:83:00.0  | 0                    0    / 0                59690/ 65536            |\n+===========================+===============+======================================================================+\n+---------------------------+---------------+----------------------------------------------------------------------+\n| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |\n+===========================+===============+======================================================================+\n| 7       0                 | 658001        | VLLMWorker_TP      | 56861                 | 658001                  |\n| 7       0                 | 657908        | python             | 106                   | 657908                  |\n| 7       1                 | 658002        | VLLMWorker_TP      | 56861                 | 658002                  |\n+===========================+===============+======================================================================+\n",
+ "source": {},
+ "file_sha256": {},
+ "process_tree": [
+  " 657908       1 Sl   Mon Nov 16 03:32:36 2026       03:38 python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size 2 --max-model-len 4096 --max-num-seqs 1 --max-num-batched-tokens 4096 --gpu-memory-utilization 0.9 --no-enable-prefix-caching --no-enable-chunked-prefill --skip-mm-profiling --compilation-config {\"cudagraph_capture_sizes\":[307,967]} --cudagraph-metrics --host 127.0.0.1 --port 18143 --limit-mm-per-prompt {\"image\":1,\"video\":1} --distributed-executor-backend mp --mm-processor-kwargs {\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+  " 657970  657908 S    Mon Nov 16 03:32:59 2026       03:15 /workspace/yangchen/venvs/clef-py312/bin/python -c from multiprocessing.resource_tracker import main;main(46)",
+  " 657971  657908 Sl   Mon Nov 16 03:32:59 2026       03:15 VLLM::EngineCore"
+ ],
+ "process_tree_command": [
+  "ps",
+  "-eo",
+  "pid,ppid,stat,lstart,etime,args",
+  "--sort=pid"
+ ],
+ "health": {
+  "url": "http://127.0.0.1:18143/health",
+  "status_code": 200,
+  "body": "{\"status\":\"ready\",\"model\":\"clef\",\"revision\":\"local-graph-sizes-test\"}",
+  "headers": {
+   "date": "Mon, 16 Nov 2026 03:36:13 GMT",
+   "server": "uvicorn",
+   "content-length": "69",
+   "content-type": "application/json",
+   "vary": "Origin",
+   "connection": "close"
+  }
+ },
+ "frozen_replay": {
+  "url": "http://127.0.0.1:18143/v1/systemone",
+  "baseline": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/baseline-responses.json",
+  "cases": {
+   "verify_choice": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": false,
+    "actual": {
+     "object": "structured_decision",
+     "model": "clef",
+     "answers": {
+      "department": {
+       "type": "choice",
+       "choice": "billing",
+       "probabilities": {
+        "billing": 0.9972637891769409,
+        "shipping": 0.002736221067607403
+       },
+       "confidence": 0.9972637891769409
+      }
+     },
+     "usage": {
+      "input_tokens": 143,
+      "output_tokens": 0
+     },
+     "diagnostics": {
+      "department": {
+       "label_mass": 1.0,
+       "argmax_is_label": true
+      }
+     },
+     "joint": null
+    }
+   },
+   "verify_choice_reordered": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": false,
+    "actual": {
+     "object": "structured_decision",
+     "model": "clef",
+     "answers": {
+      "department": {
+       "type": "choice",
+       "choice": "billing",
+       "probabilities": {
+        "shipping": 0.002736221067607403,
+        "billing": 0.9972637891769409
+       },
+       "confidence": 0.9972637891769409
+      }
+     },
+     "usage": {
+      "input_tokens": 143,
+      "output_tokens": 0
+     },
+     "diagnostics": {
+      "department": {
+       "label_mass": 1.0,
+       "argmax_is_label": true
+      }
+     },
+     "joint": null
+    }
+   },
+   "verify_mixed": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "verify_noul": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": false,
+    "actual": {
+     "object": "structured_decision",
+     "model": "clef",
+     "answers": {
+      "refund_requested": {
+       "type": "noul",
+       "noul": 0.9943799376487732,
+       "probabilities": {
+        "yes": 0.9943799376487732,
+        "no": 0.005620036274194717
+       },
+       "confidence": 0.9943799376487732
+      }
+     },
+     "usage": {
+      "input_tokens": 157,
+      "output_tokens": 0
+     },
+     "diagnostics": {
+      "refund_requested": {
+       "label_mass": 1.0,
+       "argmax_is_label": true
+      }
+     },
+     "joint": null
+    }
+   },
+   "verify_score": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": false,
+    "actual": {
+     "object": "structured_decision",
+     "model": "clef",
+     "answers": {
+      "severity": {
+       "type": "score",
+       "score": 1.9452339000999928,
+       "legend": {
+        "0": "none",
+        "1": "minor",
+        "2": "major"
+       },
+       "probabilities": {
+        "0": 0.01057670172303915,
+        "1": 0.0336126871407032,
+        "2": 0.9558106064796448
+       },
+       "confidence": 0.9558106064796448
+      }
+     },
+     "usage": {
+      "input_tokens": 155,
+      "output_tokens": 0
+     },
+     "diagnostics": {
+      "severity": {
+       "label_mass": 1.0,
+       "argmax_is_label": true
+      }
+     },
+     "joint": null
+    }
+   },
+   "workload_fields-1": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": false,
+    "actual": {
+     "object": "structured_decision",
+     "model": "clef",
+     "answers": {
+      "field_00": {
+       "type": "choice",
+       "choice": "refund",
+       "probabilities": {
+        "cancel": 0.0043033151887357235,
+        "change_address": 0.0016333542298525572,
+        "other": 0.010988899506628513,
+        "refund": 0.9814913272857666,
+        "status": 0.0015831011114642024
+       },
+       "confidence": 0.9814913272857666
+      }
+     },
+     "usage": {
+      "input_tokens": 215,
+      "output_tokens": 0
+     },
+     "diagnostics": {
+      "field_00": {
+       "label_mass": 1.0,
+       "argmax_is_label": true
+      }
+     },
+     "joint": null
+    }
+   },
+   "workload_fields-8": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   },
+   "workload_mm-red-png": {
+    "status": 200,
+    "expected_status": 200,
+    "equal": true,
+    "actual": null
+   }
+  },
+  "passed": false,
+  "summary": {
+   "cases": 8,
+   "passed": 3
+  }
+ }
+}

@@ -1,0 +1,89 @@
+diff --git a/vllm/entrypoints/generate/structured_decisions/api_router.py b/vllm/entrypoints/generate/structured_decisions/api_router.py
+index 5dc8423..53fa2cf 100644
+--- a/vllm/entrypoints/generate/structured_decisions/api_router.py
++++ b/vllm/entrypoints/generate/structured_decisions/api_router.py
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: Apache-2.0
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
++import os
+ from argparse import Namespace
+ from http import HTTPStatus
+ from typing import Any
+@@ -30,6 +31,44 @@ def structured_decisions(request: Request) -> ServingStructuredDecisions | None:
+     return getattr(request.app.state, "serving_structured_decisions", None)
+
+
++def _clef_identity() -> dict[str, Any]:
++    return {
++        "model": os.environ.get("CLEF_MODEL_NAME", "clef"),
++        "revision": os.environ.get("CLEF_MODEL_REVISION", "unknown"),
++        "model_dir": os.environ.get("CLEF_MODEL_DIR", ""),
++        "protocol_version": os.environ.get("CLEF_PROTOCOL_VERSION", "2026-11-13"),
++        "config": os.environ.get("CLEF_CONFIG", "custom"),
++        "tasks": ["choice", "noul", "score"],
++        "modalities": ["text", "image", "video"],
++        "joint": "default",
++        "max_model_len": int(os.environ.get("CLEF_MAX_MODEL_LEN", "0")),
++        "tensor_parallel_size": int(os.environ.get("CLEF_TENSOR_PARALLEL_SIZE", "0")),
++        "cache": {
++            "prefix_caching": False,
++            "chunked_prefill": False,
++            "schema_token_cache": os.environ.get("CLEF_SCHEMA_TOKEN_CACHE", "0") == "1",
++            "schema_token_cache_version": int(
++                os.environ.get("CLEF_SCHEMA_TOKEN_CACHE_VERSION", "0")
++            ),
++        },
++    }
++
++
++@router.get("/v1/decide/info")
++async def decide_info() -> JSONResponse:
++    return JSONResponse(content=_clef_identity())
++
++
++@router.post(
++    "/v1/decide",
++    dependencies=[Depends(validate_json_request)],
++    responses={
++        HTTPStatus.BAD_REQUEST.value: {"model": ErrorResponse},
++        HTTPStatus.NOT_FOUND.value: {"model": ErrorResponse},
++        HTTPStatus.INTERNAL_SERVER_ERROR.value: {"model": ErrorResponse},
++        HTTPStatus.NOT_IMPLEMENTED.value: {"model": ErrorResponse},
++    },
++)
+ @router.post(
+     "/v1/systemone",
+     dependencies=[Depends(validate_json_request)],
+diff --git a/vllm/entrypoints/serve/instrumentator/health.py b/vllm/entrypoints/serve/instrumentator/health.py
+index 5c0b2d1..8cf1aa1 100644
+--- a/vllm/entrypoints/serve/instrumentator/health.py
++++ b/vllm/entrypoints/serve/instrumentator/health.py
+@@ -2,8 +2,11 @@
+ # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
+
+
++import json
++import os
++
+ from fastapi import APIRouter, Request
+-from fastapi.responses import Response
++from fastapi.responses import JSONResponse, Response
+
+ from vllm.engine.protocol import EngineClient
+ from vllm.logger import init_logger
+@@ -28,6 +31,15 @@ async def health(raw_request: Request) -> Response:
+         return Response(status_code=200)
+     try:
+         await client.check_health()
++        if os.environ.get("CLEF_HEALTH_JSON") == "1":
++            return JSONResponse(
++                content={
++                    "status": "ready",
++                    "model": os.environ.get("CLEF_MODEL_NAME", "clef"),
++                    "revision": os.environ.get("CLEF_MODEL_REVISION", "unknown"),
++                },
++                status_code=200,
++            )
+         return Response(status_code=200)
+     except EngineDeadError:
+         return Response(status_code=503)

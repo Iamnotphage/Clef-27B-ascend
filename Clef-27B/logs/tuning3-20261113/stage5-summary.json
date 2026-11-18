@@ -1,0 +1,1156 @@
+{
+ "run_id": "20261114-013000-fix4",
+ "acceptance_data": {
+  "dataset": "OpenDecisions 1.0.1 test",
+  "items": 2352,
+  "revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+  "data_sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6",
+  "scorer_sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377",
+  "request_sequence": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+  "request_sequence_sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141"
+ },
+ "final_config": {
+  "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+  "description": "TP2, BF16, eager, max_model_len 4096, max_num_seqs 1, cache off; the only batching configuration that passes the 0.03/0.05 gate",
+  "service_argv": [
+   "/workspace/yangchen/venvs/clef-py312/bin/python",
+   "-m",
+   "vllm.entrypoints.cli.main",
+   "serve",
+   "/workspace/yangchen/models/Clef-27B",
+   "--served-model-name",
+   "clef",
+   "--runner",
+   "pooling",
+   "--dtype",
+   "bfloat16",
+   "--tensor-parallel-size",
+   "2",
+   "--enforce-eager",
+   "--max-model-len",
+   "4096",
+   "--max-num-seqs",
+   "1",
+   "--max-num-batched-tokens",
+   "4096",
+   "--gpu-memory-utilization",
+   "0.9",
+   "--no-enable-prefix-caching",
+   "--no-enable-chunked-prefill",
+   "--limit-mm-per-prompt",
+   "{\"image\":1,\"video\":0}",
+   "--skip-mm-profiling",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "8000",
+   "--distributed-executor-backend",
+   "mp",
+   "--limit-mm-per-prompt",
+   "{\"image\":1,\"video\":1}",
+   "--mm-processor-kwargs",
+   "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+  ],
+  "source_phase0": {
+   "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py": {
+    "sha256": "2f482eb0bf0ba16a703971d8bff43d1e11e512e97e7fde22fd978e9e3d39dc52",
+    "size": 64940
+   },
+   "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py": {
+    "sha256": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+    "size": 14144
+   },
+   "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_flash.py": {
+    "sha256": "e51277a80e5e6790cd3d4ecb27e1f2a85c4f328425a8262f799a0fc43b1103d9",
+    "size": 1822
+   },
+   "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/device/device_op.py": {
+    "sha256": "e876d6ad5e8eff0b3fb073dc0b886cc5b749adec6e707a2054ac2f7b4a70c57b",
+    "size": 84233
+   },
+   "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn.py": {
+    "sha256": "b235e34d8a2427b167d4ce0e9068312904ecd1473fe288cefe1e9b6f95de030d",
+    "size": 44302
+   },
+   "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn_attn_builder.py": {
+    "sha256": "1f464f9c3c09fc1f8b9f8727dffd53ee93cc251d9631e77b6561d91ae117bec0",
+    "size": 64186
+   }
+  },
+  "source_final": {
+   "device_op.py": "a08d44b41b337d839548c02b7457510968d5c5057ece01243b022a91348a0823",
+   "gdn.py": "b235e34d8a2427b167d4ce0e9068312904ecd1473fe288cefe1e9b6f95de030d",
+   "strategies.py": "0ddd92b44b38ae7a64d6057cacb205b5164b47dfeb330ea3fcab2bf2f2198a4c",
+   "api_router.py": "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f",
+   "health.py": "4c9f301fe7d7f7fe01b45a4014d11662393dce6d8bf5d910033981bff8a749f5",
+   "clef_joint_schema.py": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+   "clef_flash.py": "e51277a80e5e6790cd3d4ecb27e1f2a85c4f328425a8262f799a0fc43b1103d9"
+  }
+ },
+ "s1": {
+  "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+  "source": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s1-final-full.json",
+  "source_sha256": "dae6550127957e7ec50ca84bc717d44c22a0cc9e1fe98a29250b03a52dcf929b",
+  "configuration": {
+   "warmup": 0,
+   "requests": 2352,
+   "concurrency": 1,
+   "timeout_seconds": 300,
+   "minimum_measurement_seconds": 0,
+   "validation_atol": 1e-05,
+   "warmup_policy": "Sequential per sample; each sample receives the requested warmup count and all must pass",
+   "latency_scope": "HTTP transfer, decoding and protocol validation; excludes client queue time",
+   "http_scope": "Client urlopen through full response-body read; includes network, server queue, processing and serialization",
+   "json_decode_scope": "UTF-8 response text conversion and JSON parsing",
+   "client_queue_scope": "executor.submit timestamp through worker function entry; separately reported from elapsed_ms",
+   "server_queue_scope": "Unavailable in client-only timing; correlate client_request_id with server telemetry",
+   "concurrency_scope": "ThreadPoolExecutor max workers bounds active HTTP requests; observed peak excludes queued futures",
+   "throughput_window": "First submission through completion of all measured requests; excludes warmup",
+   "sample_selection": "Measured requests round-robin in sample-file order; each sample prewarmed separately"
+  },
+  "requested": 2352,
+  "successful": 2352,
+  "failed": 0,
+  "wall_seconds": 423.84603661997244,
+  "rps": 5.54918483786329,
+  "decisions_per_second": 5.54918483786329,
+  "input_tokens_per_second": 2479.4262755894315,
+  "p50_ms": 205.033770063892,
+  "p95_ms": 217.0359064126387,
+  "p99_ms": 222.13856239337474,
+  "mean_ms": 180.06856769179217,
+  "input_tokens_total": 1050895,
+  "input_tokens_mean": 446.8090986394558
+ },
+ "s2": {
+  "accepted_config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+  "max_decisions_per_second": 5.7150774673156715,
+  "max_concurrency": 16,
+  "points": [
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-final-c2",
+    "labels": "od-s2-final-c2",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c2.json",
+    "source_sha256": "d0e723fc05f677427213c1bf71e462d9963418342c99e2dc5db16fad6cfa889d",
+    "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 1,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "off",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 418.0612878599204,
+    "rps": 5.625969369323867,
+    "decisions_per_second": 5.625969369323867,
+    "input_tokens_per_second": 2513.7343028807845,
+    "p50_ms": 385.1660250220448,
+    "p95_ms": 426.461180113256,
+    "p99_ms": 446.96903800126165,
+    "percentile_basis": "per_run",
+    "batch_evidence": "B1 (seqs1), concurrency 2 queues",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "accepted S2 config (B1); full 2352 at concurrency 2"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-final-c4",
+    "labels": "od-s2-final-c4",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c4.json",
+    "source_sha256": "2236d81a8166a4baf06486b4515e8e8ce446e1ff33c7dd842392eb1b5aa55d25",
+    "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 1,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "off",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 414.5693617500365,
+    "rps": 5.673357022987464,
+    "decisions_per_second": 5.673357022987464,
+    "input_tokens_per_second": 2534.907537700855,
+    "p50_ms": 736.5387149620801,
+    "p95_ms": 831.1694119591266,
+    "p99_ms": 839.2473565228282,
+    "percentile_basis": "per_run",
+    "batch_evidence": "B1 (seqs1), concurrency 4 queues",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "accepted S2 config (B1); full 2352 at concurrency 4"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-final-c8",
+    "labels": "od-s2-final-c8",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c8.json",
+    "source_sha256": "29c99380cd87c96760dc09db7c9f24ffd8b1c108fc636034b8135f3ffd75fd12",
+    "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 1,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "off",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 421.23311394033954,
+    "rps": 5.58360661154745,
+    "decisions_per_second": 5.58360661154745,
+    "input_tokens_per_second": 2494.806237262822,
+    "p50_ms": 1477.056689793244,
+    "p95_ms": 1723.7910795258358,
+    "p99_ms": 1789.2185594141483,
+    "percentile_basis": "per_run",
+    "batch_evidence": "B1 (seqs1), concurrency 8 queues",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "accepted S2 config (B1); full 2352 at concurrency 8"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-final-c16",
+    "labels": "od-s2-final-c16",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c16.json",
+    "source_sha256": "f7cc07e128d4bb1d3ce0cc05261d25cf24b3dc842f796576351f4a920c54eebe",
+    "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 1,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "off",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 411.5429779300466,
+    "rps": 5.7150774673156715,
+    "decisions_per_second": 5.7150774673156715,
+    "input_tokens_per_second": 2553.5486118259787,
+    "p50_ms": 2863.2242248859257,
+    "p95_ms": 3292.69365882501,
+    "p99_ms": 3330.493622403592,
+    "percentile_basis": "per_run",
+    "batch_evidence": "B1 (seqs1), concurrency 16 queues",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "accepted S2 config (B1); full 2352 at concurrency 16"
+   }
+  ],
+  "throughput_candidate_config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+  "throughput_candidate_points": [
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-throughput-candidate-c2",
+    "labels": "od-s2-throughput-candidate-c2",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c2.json",
+    "source_sha256": "41cca6c4dc511a99a48f734c19240e4cac55453e0ee35a4bd0e4d010f036d54d",
+    "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "on",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 416.31306118005887,
+    "rps": 5.649594546308842,
+    "decisions_per_second": 5.649594546308842,
+    "input_tokens_per_second": 2524.290246914639,
+    "p50_ms": 387.5459951814264,
+    "p95_ms": 416.0045710625127,
+    "p99_ms": 433.0379128456115,
+    "percentile_basis": "per_run",
+    "batch_evidence": "seqs4, concurrency 2",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c2)"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-throughput-candidate-c4",
+    "labels": "od-s2-throughput-candidate-c4",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c4.json",
+    "source_sha256": "5b89ef4110a4874bba23985ac55cfe59aba1f8c9fbc35e89037cc83ca3e64fa4",
+    "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "on",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 250.70355256972834,
+    "rps": 9.381598209885105,
+    "decisions_per_second": 9.381598209885105,
+    "input_tokens_per_second": 4191.783439956296,
+    "p50_ms": 413.0401450674981,
+    "p95_ms": 586.0225214622913,
+    "p99_ms": 635.9934001881603,
+    "percentile_basis": "per_run",
+    "batch_evidence": "seqs4, concurrency 4",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c4)"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-throughput-candidate-c8",
+    "labels": "od-s2-throughput-candidate-c8",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c8.json",
+    "source_sha256": "457207e85e50053c0f940c6b2e97c535be47ddfffa6c5fa619ca0d79d6f1d783",
+    "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "on",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 170.88094583014026,
+    "rps": 13.763968759500806,
+    "decisions_per_second": 13.763968759500806,
+    "input_tokens_per_second": 6149.866475134183,
+    "p50_ms": 495.1741297263652,
+    "p95_ms": 938.6587539222091,
+    "p99_ms": 1086.4097426552223,
+    "percentile_basis": "per_run",
+    "batch_evidence": "seqs4, concurrency 8",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c8)"
+   },
+   {
+    "schema_version": "2.0",
+    "measurement_id": "od-s2-throughput-candidate-c16",
+    "labels": "od-s2-throughput-candidate-c16",
+    "phase": "stage5-s2",
+    "run_id": "20261114-013000-fix4",
+    "workload": "opendecisions-1.0.1",
+    "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c16.json",
+    "source_sha256": "36d7bad7fb6f7d6e16ed37eeee0f2e38acf2ea2aed6b8eced3fec08ef1021ae3",
+    "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+    "deployment": "single-tp2",
+    "tp_size": 2,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 4096,
+    "max_model_len": 4096,
+    "weight_nz_mode": 1,
+    "schema_cache": "on",
+    "kv_pool": "default",
+    "compile_mode": "eager",
+    "requests": 2352,
+    "wall_seconds": 171.3269577701576,
+    "rps": 13.728137303151719,
+    "decisions_per_second": 13.728137303151719,
+    "input_tokens_per_second": 6133.856654419909,
+    "p50_ms": 1025.0996802933514,
+    "p95_ms": 1900.738276261836,
+    "p99_ms": 2111.4847576990715,
+    "percentile_basis": "per_run",
+    "batch_evidence": "seqs4, concurrency 16",
+    "failed": 0,
+    "hbm_total_mib": "",
+    "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c16)"
+   }
+  ]
+ },
+ "quality": {
+  "source": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/author-score-final.json",
+  "source_sha256": "9160cce30a22886230abed168d517450fd882adfc10484171b464dad07157a68",
+  "calibration": 82.79411494415206,
+  "intelligence": 66.0568428084581,
+  "capability": 74.42547887630508,
+  "items": 2352,
+  "predicted": 2352,
+  "tvd_129": 0.23756445782618107,
+  "accuracy_per_type": {
+   "choice": 83.276740237691,
+   "noul": 85.6655290102389,
+   "score": 71.93877551020408
+  },
+  "accuracy": 0.810374149659864,
+  "correct": 1906,
+  "accuracy_denominator": 2352,
+  "score_mae": 0.4013893126938128,
+  "score_mae_denominator": 588,
+  "baseline": {
+   "calibration": 82.79411494415206,
+   "intelligence": 66.0568428084581,
+   "capability": 74.42547887630508,
+   "tvd_129": 0.23756445782618107
+  },
+  "bitwise_equal_to_baseline_predictions": true,
+  "max_probability_difference_vs_baseline": 0.0,
+  "shared_items": 2352
+ },
+ "batching_diff": {
+  "source": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/raw-acceptance-recompute.json",
+  "source_sha256": "87c096f6dee0bc8e513216d07fc87b0e8a00c0f39d4773cbf7b592e6b7cc7724",
+  "reference": "s1-final/s1-full.json",
+  "comparisons": {
+   "c2": {
+    "choice_changes": 0,
+    "noul_crossings": 0,
+    "prob_diff_over_0_03": 0,
+    "max_prob_diff": 0.0,
+    "score_diff_over_0_05": 0,
+    "max_score_ev_diff": 0.0
+   },
+   "c4": {
+    "choice_changes": 4,
+    "noul_crossings": 0,
+    "prob_diff_over_0_03": 18,
+    "max_prob_diff": 0.10270249843597412,
+    "score_diff_over_0_05": 4,
+    "max_score_ev_diff": 0.13026137743145227
+   },
+   "c8": {
+    "choice_changes": 4,
+    "noul_crossings": 2,
+    "prob_diff_over_0_03": 26,
+    "max_prob_diff": 0.09739887714385986,
+    "score_diff_over_0_05": 3,
+    "max_score_ev_diff": 0.0765992533415556
+   },
+   "c16": {
+    "choice_changes": 6,
+    "noul_crossings": 2,
+    "prob_diff_over_0_03": 24,
+    "max_prob_diff": 0.09739887714385986,
+    "score_diff_over_0_05": 3,
+    "max_score_ev_diff": 0.14506864314898849
+   }
+  },
+  "b2_subset": {
+   "source": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/b2-subset16-c4.json",
+   "source_sha256": "b470fb3fd8180240e0f42e4117ca348b39fd318d277c6dd49c3f10f9d0d89fe4",
+   "items": 16,
+   "successful": 16,
+   "max_prob_diff": 0.179360032081604,
+   "over_0_03": [
+    {
+     "sample": "od-0678",
+     "max_prob_diff": 0.0455629825592041
+    },
+    {
+     "sample": "od-0833",
+     "max_prob_diff": 0.179360032081604
+    },
+    {
+     "sample": "od-0985",
+     "max_prob_diff": 0.06059184670448303
+    },
+    {
+     "sample": "od-1099",
+     "max_prob_diff": 0.07544682919979095
+    }
+   ],
+   "verdict": "seqs2 (B2) also fails the 0.03 gate; B1 is the only passing batch config"
+  },
+  "verdict": "seqs4 batching fails the 0.03 probability / 0.05 score gate; the accepted config is seqs1 (B1)"
+ },
+ "gdn_bsnd": {
+  "legacy_guard": {
+   "log": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/gdn-bsnd-legacy/service.log",
+   "replay": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/gdn-legacy-replay.json",
+   "replay_passed": true,
+   "reason": "non-contiguous",
+   "input_q_shape": [
+    1,
+    143,
+    8,
+    128
+   ],
+   "input_q_stride": [
+    18304,
+    128,
+    18304,
+    1
+   ],
+   "input_contiguous": false
+  },
+  "fixed_guard": {
+   "log": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/gdn-bsnd-fixed2/service.log",
+   "replay": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/gdn-fixed2-replay.json",
+   "replay_passed": true,
+   "hits_logged_through": 1000,
+   "fallbacks_logged": 0
+  },
+  "microbench": {
+   "batch_isolation": [
+    {
+     "case": "three-606",
+     "state": "zero",
+     "lengths": [
+      606,
+      606,
+      606
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "three-977",
+     "state": "zero",
+     "lengths": [
+      977,
+      977,
+      977
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "three-430",
+     "state": "zero",
+     "lengths": [
+      430,
+      430,
+      430
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "hetero-606-977-430",
+     "state": "zero",
+     "lengths": [
+      606,
+      977,
+      430
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "hetero-307-64-129-205",
+     "state": "zero",
+     "lengths": [
+      307,
+      64,
+      129,
+      205
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "pair-100-207",
+     "state": "zero",
+     "lengths": [
+      100,
+      207
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "three-606",
+     "state": "random",
+     "lengths": [
+      606,
+      606,
+      606
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "three-977",
+     "state": "random",
+     "lengths": [
+      977,
+      977,
+      977
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "three-430",
+     "state": "random",
+     "lengths": [
+      430,
+      430,
+      430
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "hetero-606-977-430",
+     "state": "random",
+     "lengths": [
+      606,
+      977,
+      430
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "hetero-307-64-129-205",
+     "state": "random",
+     "lengths": [
+      307,
+      64,
+      129,
+      205
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "case": "pair-100-207",
+     "state": "random",
+     "lengths": [
+      100,
+      207
+     ],
+     "out_max_abs_diff_per_seq": [
+      0.0,
+      0.0
+     ],
+     "state_max_abs_diff_per_seq": [
+      0.0,
+      0.0
+     ],
+     "out_all_equal": true,
+     "state_all_equal": true
+    },
+    {
+     "fails": 0,
+     "cases": 12
+    }
+   ],
+   "conv_isolation": [
+    {
+     "state_cache": "zero",
+     "has_initial_state": "false",
+     "batch_vs_isolated_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "isolated_all_equal": true
+    },
+    {
+     "state_cache": "zero",
+     "has_initial_state": "true",
+     "batch_vs_isolated_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "isolated_all_equal": true
+    },
+    {
+     "state_cache": "dirty",
+     "has_initial_state": "false",
+     "batch_vs_isolated_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "isolated_all_equal": true
+    },
+    {
+     "state_cache": "dirty",
+     "has_initial_state": "true",
+     "batch_vs_isolated_max_abs_diff_per_seq": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "isolated_all_equal": true
+    },
+    {
+     "gather_has_initial_state": false,
+     "max_abs_diff_vs_expected": 0.0,
+     "all_equal": true
+    },
+    {
+     "gather_has_initial_state": true,
+     "max_abs_diff_vs_expected": 0.0,
+     "all_equal": true
+    },
+    {
+     "fails": 0,
+     "cases": 6
+    }
+   ]
+  },
+  "verdict": "the old guard rejected real prefill inputs; the fixed guard runs the candidate and stays bit-identical on the frozen 8 cases"
+ },
+ "cache_ab": {
+  "source": "Clef-27B/logs/tuning3-20261113/cache-ab-analysis.json",
+  "order": "fixed OFF->ON for all three pairs (archived); future runs are balanced",
+  "verdict": "fields-8 +2.81% is a fixed-order observation; no causal claim"
+ },
+ "sixpair": {
+  "source": "Clef-27B/logs/tuning3-20261113/gdn-s1-sixpair-analysis.json",
+  "decision": "reject-incomplete-validity",
+  "valid_pairs": 3,
+  "note": "first three pairs lack cgroup sampling; only the last three have known zero throttling; order conflict remains"
+ },
+ "restored_service": {
+  "pid": 424593,
+  "argv_sha256": null,
+  "cwd": "/workspace/yangchen/Clef-27B-ascend",
+  "baseline_replay": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/restored-replay.json",
+  "baseline_replay_passed": true
+ },
+ "measurements": [
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s1-final-c1",
+   "labels": "od-s1-final-c1",
+   "phase": "stage5-s1",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s1-final-full.json",
+   "source_sha256": "dae6550127957e7ec50ca84bc717d44c22a0cc9e1fe98a29250b03a52dcf929b",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 423.84603661997244,
+   "rps": 5.54918483786329,
+   "decisions_per_second": 5.54918483786329,
+   "input_tokens_per_second": 2479.4262755894315,
+   "p50_ms": 205.033770063892,
+   "p95_ms": 217.0359064126387,
+   "p99_ms": 222.13856239337474,
+   "percentile_basis": "per_run",
+   "batch_evidence": "c1 sequential (B1)",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "accepted S1 config; full 2352 after a full ramp pass"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-final-c2",
+   "labels": "od-s2-final-c2",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c2.json",
+   "source_sha256": "d0e723fc05f677427213c1bf71e462d9963418342c99e2dc5db16fad6cfa889d",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 418.0612878599204,
+   "rps": 5.625969369323867,
+   "decisions_per_second": 5.625969369323867,
+   "input_tokens_per_second": 2513.7343028807845,
+   "p50_ms": 385.1660250220448,
+   "p95_ms": 426.461180113256,
+   "p99_ms": 446.96903800126165,
+   "percentile_basis": "per_run",
+   "batch_evidence": "B1 (seqs1), concurrency 2 queues",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "accepted S2 config (B1); full 2352 at concurrency 2"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-final-c4",
+   "labels": "od-s2-final-c4",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c4.json",
+   "source_sha256": "2236d81a8166a4baf06486b4515e8e8ce446e1ff33c7dd842392eb1b5aa55d25",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 414.5693617500365,
+   "rps": 5.673357022987464,
+   "decisions_per_second": 5.673357022987464,
+   "input_tokens_per_second": 2534.907537700855,
+   "p50_ms": 736.5387149620801,
+   "p95_ms": 831.1694119591266,
+   "p99_ms": 839.2473565228282,
+   "percentile_basis": "per_run",
+   "batch_evidence": "B1 (seqs1), concurrency 4 queues",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "accepted S2 config (B1); full 2352 at concurrency 4"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-final-c8",
+   "labels": "od-s2-final-c8",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c8.json",
+   "source_sha256": "29c99380cd87c96760dc09db7c9f24ffd8b1c108fc636034b8135f3ffd75fd12",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 421.23311394033954,
+   "rps": 5.58360661154745,
+   "decisions_per_second": 5.58360661154745,
+   "input_tokens_per_second": 2494.806237262822,
+   "p50_ms": 1477.056689793244,
+   "p95_ms": 1723.7910795258358,
+   "p99_ms": 1789.2185594141483,
+   "percentile_basis": "per_run",
+   "batch_evidence": "B1 (seqs1), concurrency 8 queues",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "accepted S2 config (B1); full 2352 at concurrency 8"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-final-c16",
+   "labels": "od-s2-final-c16",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/s2-final-c16.json",
+   "source_sha256": "f7cc07e128d4bb1d3ce0cc05261d25cf24b3dc842f796576351f4a920c54eebe",
+   "config_id": "tp2-seqs1-t4096-len4096-eager-nz1-cacheoff-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "off",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 411.5429779300466,
+   "rps": 5.7150774673156715,
+   "decisions_per_second": 5.7150774673156715,
+   "input_tokens_per_second": 2553.5486118259787,
+   "p50_ms": 2863.2242248859257,
+   "p95_ms": 3292.69365882501,
+   "p99_ms": 3330.493622403592,
+   "percentile_basis": "per_run",
+   "batch_evidence": "B1 (seqs1), concurrency 16 queues",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "accepted S2 config (B1); full 2352 at concurrency 16"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-throughput-candidate-c2",
+   "labels": "od-s2-throughput-candidate-c2",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c2.json",
+   "source_sha256": "41cca6c4dc511a99a48f734c19240e4cac55453e0ee35a4bd0e4d010f036d54d",
+   "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 4,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "on",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 416.31306118005887,
+   "rps": 5.649594546308842,
+   "decisions_per_second": 5.649594546308842,
+   "input_tokens_per_second": 2524.290246914639,
+   "p50_ms": 387.5459951814264,
+   "p95_ms": 416.0045710625127,
+   "p99_ms": 433.0379128456115,
+   "percentile_basis": "per_run",
+   "batch_evidence": "seqs4, concurrency 2",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c2)"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-throughput-candidate-c4",
+   "labels": "od-s2-throughput-candidate-c4",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c4.json",
+   "source_sha256": "5b89ef4110a4874bba23985ac55cfe59aba1f8c9fbc35e89037cc83ca3e64fa4",
+   "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 4,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "on",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 250.70355256972834,
+   "rps": 9.381598209885105,
+   "decisions_per_second": 9.381598209885105,
+   "input_tokens_per_second": 4191.783439956296,
+   "p50_ms": 413.0401450674981,
+   "p95_ms": 586.0225214622913,
+   "p99_ms": 635.9934001881603,
+   "percentile_basis": "per_run",
+   "batch_evidence": "seqs4, concurrency 4",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c4)"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-throughput-candidate-c8",
+   "labels": "od-s2-throughput-candidate-c8",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c8.json",
+   "source_sha256": "457207e85e50053c0f940c6b2e97c535be47ddfffa6c5fa619ca0d79d6f1d783",
+   "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 4,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "on",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 170.88094583014026,
+   "rps": 13.763968759500806,
+   "decisions_per_second": 13.763968759500806,
+   "input_tokens_per_second": 6149.866475134183,
+   "p50_ms": 495.1741297263652,
+   "p95_ms": 938.6587539222091,
+   "p99_ms": 1086.4097426552223,
+   "percentile_basis": "per_run",
+   "batch_evidence": "seqs4, concurrency 8",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c8)"
+  },
+  {
+   "schema_version": "2.0",
+   "measurement_id": "od-s2-throughput-candidate-c16",
+   "labels": "od-s2-throughput-candidate-c16",
+   "phase": "stage5-s2",
+   "run_id": "20261114-013000-fix4",
+   "workload": "opendecisions-1.0.1",
+   "source_file": "/workspace/yangchen/logs/tuning/20261113-120651-perf3/opendecisions/s2-final-b/s2-c16.json",
+   "source_sha256": "36d7bad7fb6f7d6e16ed37eeee0f2e38acf2ea2aed6b8eced3fec08ef1021ae3",
+   "config_id": "tp2-seqs4-t4096-len4096-eager-nz1-cacheon-pooldefault",
+   "deployment": "single-tp2",
+   "tp_size": 2,
+   "max_num_seqs": 4,
+   "max_num_batched_tokens": 4096,
+   "max_model_len": 4096,
+   "weight_nz_mode": 1,
+   "schema_cache": "on",
+   "kv_pool": "default",
+   "compile_mode": "eager",
+   "requests": 2352,
+   "wall_seconds": 171.3269577701576,
+   "rps": 13.728137303151719,
+   "decisions_per_second": 13.728137303151719,
+   "input_tokens_per_second": 6133.856654419909,
+   "p50_ms": 1025.0996802933514,
+   "p95_ms": 1900.738276261836,
+   "p99_ms": 2111.4847576990715,
+   "percentile_basis": "per_run",
+   "batch_evidence": "seqs4, concurrency 16",
+   "failed": 0,
+   "hbm_total_mib": "",
+   "notes": "throughput candidate (seqs4, cache v2 on); quality gate failed (see batching_diff.c16)"
+  }
+ ]
+}

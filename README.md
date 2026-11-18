@@ -4,7 +4,11 @@ Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
-2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
+2026-11-17 完成 **aclnn executor cache 修复**：默认缓存只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 固定多约 55 ms；`ACLNN_CACHE_LIMIT=1000000` 后全部快档且输出逐位不变。官方 `start.sh --config s1` 全量 S1 **168.633 ms**（原 190.405）、7.960 dec/s，ERQA 217/400、S2 16.398 不变。[报告](docs/aclnn-cache-shape-fix-2026-11-17.md) · [最终汇总](docs/final-summary-2026-11-17.md)
+
+2026-11-17 继续完成 **MLP BF16 NZ 服务化**：`Qwen2MoeMLP` 的 gate_up/down 权重在首次前向时转为 FRACTAL_NZ，输出逐位不变；官方入口全量 S1 **166.002 ms / 8.213 dec/s**（mean 121.705、p50 113.656），ERQA 217/400、S2 16.376。[最终汇总](docs/final-summary-2026-11-17.md)
+
+2026-11-13 用户补充的比赛交付规范指定 **OpenDecisions 文本质量、ERQA 图文质量、S1 单并发 P95 与 S2 最大有效 decisions/s**。Clef-27B 按多模态型号准备两个数据集的结果：OpenDecisions 全量 2,352 条与 ERQA 官方 400 题均已完成，规则全文、CSV 格式和待对齐项见[比赛提交规范](docs/submission-rules-2026-11-13.md)。
 
 资源限制：**允许并行，限用 A3 单物理卡内两个逻辑 NPU，禁止跨物理卡**。TP1、TP2 与并发调优均遵循该限制；当前映射为 `npu-smi` 卡号 7、Chip 0 / 1、逻辑设备 0 / 1。
 
@@ -13,6 +17,43 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 发布方对照评测采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，BFCL、API-Bank 等为 Decision Index 子项。2026-11-13 WorkflowEvals 已全量完成；Decision Index 于北京时间 **15:55 按用户要求终止**，其部分输出按未完成记录保留。[对照评测口径](docs/evaluation-protocol.md) · [终止记录](Clef-27B/logs/decision-index-stopped-20261113.json)
 
 2026-11-13 两套评测数据已下载到 `/workspace/yangchen/datasets/clef-official-20261113/`，共 41 文件、106,784,678 字节（106.78 MB），服务器逐文件 SHA-256 复核通过。Decision Index 为 84.04 MB（含官方校验元数据），第三方镜像的两份数据解压 SHA-256 与行数均匹配官方 0.2.1；WorkflowEvals 四个官方固定版本快照为 22.75 MB，12 个 Parquet 均可读取。下载采用本地 HTTPS 与 SSH 传输，保留完整来源、revision 和校验记录。[逐文件校验报告](Clef-27B/logs/official-datasets-download-20261113.json)
+
+2026-11-14 完成发布方参考实现的 **CPU BF16 独立前向**验收：OpenDecisions 2,352 条与 ERQA 400 条的编码 token 数与 NPU 实测 `usage.input_tokens` **逐题相等**（含 16 图 10,294 token 极值题），参考媒体布局与服务策略一致、无需补丁；8 条冻结请求在当前服务复放 24/24 次逐位一致。逐题前向按用户要求在完成 OpenDecisions 154/2352 后终止：该子集最大概率差 p50 0.00048、max 0.0385、1 次近边界翻转，非竞争候选最大差 p95 0.0016，未发现输入、候选映射或加载错误。[CPU 参考对照报告](docs/cpu-npu-reference-2026-11-14.md) · [证据目录](Clef-27B/logs/cpu-reference-20261114/)
+
+2026-11-15 完成 **GDN 决策专用 prefill 路径**，省去最终循环状态导出、写回和反向中间量（`A`、`g_cumsum`）输出。OpenDecisions 全量 2,352 题在开关 OFF/ON 下**逐位一致**（max 0.0），同进程交错 A/B 6/6 对更快，p95 降幅中位数 **3.80%（7.68 ms）**，单并发吞吐增量中位数 +0.17 decisions/s。补丁已接入 **S1 默认启用**，启动时安装并校验，manifest 记录实际状态。正常入口全量 S1 P95 **213.56 ms**、5.760 decisions/s（后续 BIC 为 **198.42 ms**），ERQA 400 ON/OFF 逐题一致。S2 的 5.715 decisions/s 来自优化前扫描，CSV 分别记录 S1、S2 的 GDN 开关与测量来源。原服务按 phase-0 快照恢复为 PID 498272，argv/cwd/env 一致、8/8 冻结回归。[GDN 报告](docs/gdn-decision-prefill-2026-11-15.md) · [证据](Clef-27B/logs/gdn-decision-20261115/)
+
+## 当前提交指标（2026-11-17）
+
+详细对照、逐题证据与服务配置见 [Clef-27B/README.md](Clef-27B/README.md#当前提交指标2026-11-17)。
+
+### 精度指标
+
+| 数据集 | 指标 | 官方公开 as-served | 适配后 baseline | 当前优化（conv+QKV 融合 + chunk128） | 当前 − 官方 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| OpenDecisions | Calibration | 82.3 | 82.7941 | 82.4112 | +0.1112 |
+| OpenDecisions | Intelligence | 65.8 | 66.0568 | 66.0840 | +0.2840 |
+| OpenDecisions | Capability | 74.1 | 74.4255 | 74.2476 | +0.1476 |
+| OpenDecisions | Accuracy | 未公布 | 0.8104（1906/2352） | 0.8095（1904/2352） | — |
+| OpenDecisions | Score MAE | 未公布 | 0.401389（588） | 0.402615（588） | — |
+| ERQA | 总体 accuracy | 未找到 | 0.5475（219/400） | 0.5400（216/400） | N/A |
+
+- OpenDecisions 三项相对官方公开 as-served 最大偏差 **0.284 pp**，满足 2PP；相对适配 baseline 2 条 choice 变化、accuracy +0.18 pp，三项均在 2PP 内；论文温度校准值已忽略。
+- ERQA 当前 216/400，相对适配 baseline **−0.75 pp**，在 2PP 内；官方没有公开 Clef 的 ERQA 分数，官方列只能记 N/A。
+- 官方公开 OpenDecisions 值是数据卡榜单的 `Cloudflare/clef` as-served 参考，不是主办方正式 baseline。
+
+### 性能指标
+
+| 版本 | S1 P95 | S1 mean | S2 decisions/s | ERQA P95 |
+| --- | ---: | ---: | ---: | ---: |
+| 适配后 baseline | 217.036 ms | 180.069 ms | 5.715 @ C16 | 325.84 ms |
+| 上一版（BIC+GDN v2+SF+aclnn cache+MLP NZ） | 166.002 ms | 121.705 ms | 16.376 @ C16 | 313.506 ms |
+| **当前优化（conv+QKV 融合 + chunk128，2026-11-18 五轮复核）** | **155.86 ms** | **112.98 ms** | **17.462 @ C64** | **309.926 ms** |
+| 变化 | −61.18 ms（−28.19%） | −67.09 ms（−37.26%） | **约 3.06×** | −15.91 ms（−4.88%） |
+
+- S1 为 seqs1 单并发全量 2,352 题：2026-11-18 默认入口五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50），mean 112.98、p50 102.87；历史链路为 2026-11-17 aclnn cache 168.633 ms、MLP NZ 166.002 ms、conv+QKV 融合 165.091→160.419、chunk128 →157.745 ms / 8.652 dec/s。S2 最大吞吐为 B16 C64 **17.462 dec/s**（同日两次 17.462/17.475；历史 17.446；Capability 74.1388、accuracy 1902），B8 C16 为 16.738 dec/s、p95 1772 ms。以上均在 host load 18–24 下测得。
+- ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不同。
+- 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照。
+- **BF16 B8/B16 S2 历史对照**：B8 C16 v2+head **16.398 dec/s**、p95 1803 ms、Capability 74.2510/accuracy 1909（2PP）；B10 C20 16.670/2249；B12 C24 16.841/2598；B16 C64 17.110/6088；OD 三项与 ERQA 合批均在 2PP 内（B8 C16 ERQA 218/400；B16 C32 216/400）。
 
 ## 发布方对照评测与后台运行
 
@@ -65,6 +106,24 @@ ssh clef
 ```
 
 复测时为 `--output-dir` 指定全新的空目录。入口校验完整数据 SHA-256 和 2,352 条记录，保存实际命令、原生输出及退出码。输出中的 `native.log` 为执行日志；`evalscope/predictions/` 保存请求和完整响应概率，`evalscope/reviews/` 保存逐题评分，`evalscope/reports/` 保存总体与分项指标。本轮完整原始概率导出见 [author-predictions.jsonl](Clef-27B/logs/opendecisions-baseline-20261113/author-predictions.jsonl)，作者复核的精确分数为 0～100 分；EvalScope 顶层 0～1 值保留了四位小数。
+
+## ERQA 当前全量评测
+
+2026-11-14 使用官方 ERQA TFRecord（commit `5bba488`，91,402,921 字节，SHA-256 `1974f5e5…b4c93e2`）完成全量 **400 题、630 图**评测：**219/400 = 0.5475**，400/400 成功、0 失败、0 重试。8 类分项中 Pointing 0.7353、State Estimation 0.6182、Spatial Reasoning 0.5952、Action Reasoning 0.5833、Task Reasoning 0.5526、Trajectory Reasoning 0.5152、Multi-view Reasoning 0.2703、Other 0.2143；单图 170/287 = 0.5923，多图 49/113 = 0.4336。[完整报告与数据清单](docs/erqa-baseline-2026-11-14.md) · [结果汇总](Clef-27B/logs/erqa-baseline-20261114/summary.json) · [逐题预测](Clef-27B/logs/erqa-baseline-20261114/predictions.jsonl)
+
+服务沿用 **TP2 / BF16 / eager / max_model_len 16384 / max_num_seqs 1 / 缓存关**，`--limit-mm-per-prompt {"image":16,"video":0}`，图像像素上限 `65,536～1,048,576`。全量输入 tokens 最大 10,294、均值 931.7；C1 wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。客户端并发 1，正式请求走 `POST /v1/decide`。
+
+```bash
+ssh clef
+/workspace/yangchen/venvs/clef-eval-py312/bin/python \
+  /workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_baseline.py \
+  --data-dir /workspace/yangchen/datasets/erqa-official-20261114 \
+  --output-dir /workspace/yangchen/logs/erqa-repeat-01 --scope full
+```
+
+复测使用全新空目录；`--resume` 按样本 ID 与请求结构化 SHA-256 续跑。`scripts/official_eval/erqa_score.py --verify-requests` 从固定数据重建 400 条请求并离线重算，本轮 219/400 与 400/400 请求哈希均通过。EvalScope ERQAAdapter 的 `visual_indices` 与图文 SystemOne 转换缺口已修补，19 题交叉验证与直接路径 **19/19 逐题一致**。[适配补丁](Clef-27B/logs/erqa-baseline-20261114/adapter-patch/erqa-evalscope.patch)
+
+`metrics.csv` 的 ERQA 行记 accuracy 0.5475，`score_mae`、`calibration`、`intelligence`、`capability` 为 `NA`，表示这些字段不适用于 ERQA 的字母准确率协议；S1/S2 仍以 OpenDecisions 性能工作负载的 `results.csv` 为准，本轮 ERQA C1 延迟单独记录，不与 S1/S2 混用。
 
 ## 模型与工作区
 

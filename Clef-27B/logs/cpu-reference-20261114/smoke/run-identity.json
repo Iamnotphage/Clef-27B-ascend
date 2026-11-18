@@ -1,0 +1,140 @@
+{
+  "created_at": "2026-11-14T14:17:08.074447+00:00",
+  "schema": 1,
+  "run_fingerprint": "015a60401901610dcec7809568c65682bb6fd51d02f3eca2fa960b9769591034",
+  "fingerprint_payload": {
+    "schema": 1,
+    "dataset": "erqa",
+    "model_dir": "/workspace/yangchen/models/Clef-27B",
+    "weights": [
+      {
+        "name": "joint_head.safetensors",
+        "bytes": 256125024,
+        "sha256_prefix": "a010ac04f078e699"
+      },
+      {
+        "name": "model-00001-of-00012.safetensors",
+        "bytes": 2542796928,
+        "sha256_prefix": "54d83c1d36631de2"
+      },
+      {
+        "name": "model-00002-of-00012.safetensors",
+        "bytes": 4842451920,
+        "sha256_prefix": "464086af08be8e2e"
+      },
+      {
+        "name": "model-00003-of-00012.safetensors",
+        "bytes": 4965227944,
+        "sha256_prefix": "092212d3a02fafac"
+      },
+      {
+        "name": "model-00004-of-00012.safetensors",
+        "bytes": 4912819264,
+        "sha256_prefix": "d06ff197668c7821"
+      },
+      {
+        "name": "model-00005-of-00012.safetensors",
+        "bytes": 4986198544,
+        "sha256_prefix": "cc693b8829614a72"
+      },
+      {
+        "name": "model-00006-of-00012.safetensors",
+        "bytes": 4912819320,
+        "sha256_prefix": "e7cce15da2443cb8"
+      },
+      {
+        "name": "model-00007-of-00012.safetensors",
+        "bytes": 4932703272,
+        "sha256_prefix": "75fc7e76b57d5d17"
+      },
+      {
+        "name": "model-00008-of-00012.safetensors",
+        "bytes": 4966314576,
+        "sha256_prefix": "189b15cb6b1af48d"
+      },
+      {
+        "name": "model-00009-of-00012.safetensors",
+        "bytes": 4964162248,
+        "sha256_prefix": "8101e2664bb14684"
+      },
+      {
+        "name": "model-00010-of-00012.safetensors",
+        "bytes": 4933789824,
+        "sha256_prefix": "a8e69016a1a8dab1"
+      },
+      {
+        "name": "model-00011-of-00012.safetensors",
+        "bytes": 4965228032,
+        "sha256_prefix": "b328d21c36ab3846"
+      },
+      {
+        "name": "model-00012-of-00012.safetensors",
+        "bytes": 2789094896,
+        "sha256_prefix": "7505eed910a84ea1"
+      }
+    ],
+    "weight_index_sha256": "a600c6626eb1eb653a3f078ab3dd1c7a8fab2e71185c7ef3aa923a39aaa637be",
+    "reference_sha256": "0e304cf7c6500e8bb59bef7e2afd2c6373f82596dfb3b57d1aa93c175e2dc3a3",
+    "runner_sha256": "6c7fa4027b3ad0c785cc050233c8b0d09a10fc567017d761fe78d6ed66ccc641",
+    "media_kwargs": {
+      "images_kwargs": {
+        "size": {
+          "shortest_edge": 65536,
+          "longest_edge": 1048576
+        }
+      }
+    },
+    "dtype": "bfloat16",
+    "device": "cpu",
+    "attn_implementation": "eager",
+    "use_kernels": false,
+    "max_length": 16384,
+    "threads": 32,
+    "versions": {
+      "torch": "2.10.0+cpu",
+      "transformers": "5.19.0",
+      "accelerate": "1.10.1",
+      "safetensors": "0.8.0",
+      "pillow": "13.0.0",
+      "numpy": "1.26.4"
+    },
+    "data": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114",
+      "sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af",
+      "manifest_sha256": "a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb",
+      "npu_run": "/workspace/yangchen/logs/erqa-baseline-20261114/full",
+      "npu_summary_accuracy": {
+        "correct": 219,
+        "total": 400,
+        "value": 0.5475,
+        "denominator": "fixed 400-sample set; failures count as incorrect",
+        "ok_only_correct": 219,
+        "ok_only_total": 400,
+        "ok_only_value": 0.5475
+      },
+      "records": 400
+    }
+  },
+  "selected_samples": 1,
+  "sample_ids_sha256": "983756af6b33b0a0f38fea90e836b1b2d26fe00bfde8697e6abceb9a1e111bb4",
+  "selection": {
+    "sample_ids": "/tmp/smoke4.ids.json",
+    "offset": 0,
+    "limit": null
+  },
+  "command": [
+    "scripts/official_eval/cpu_reference_baseline.py",
+    "--dataset",
+    "erqa",
+    "--data-dir",
+    "/workspace/yangchen/datasets/erqa-official-20261114",
+    "--npu-run",
+    "/workspace/yangchen/logs/erqa-baseline-20261114/full",
+    "--output-dir",
+    "/workspace/yangchen/logs/cpu-reference-20261114/smoke-erqa-hash",
+    "--sample-ids",
+    "/tmp/smoke4.ids.json",
+    "--threads",
+    "32"
+  ]
+}

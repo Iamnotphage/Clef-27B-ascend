@@ -1,0 +1,87 @@
+{
+ "run": "perf-wave2-20261118",
+ "baseline_tip": "df7cb1a (ao/docs-new-handoff/perf-next)",
+ "adopted_changes": [],
+ "s1_final": {
+  "rounds": {
+   "r1": {
+    "decisions_per_second": 8.7052,
+    "mean_ms": 114.84,
+    "p50_ms": 106.39,
+    "p95_ms": 157.5,
+    "p99_ms": 193.87
+   },
+   "r2": {
+    "decisions_per_second": 8.9831,
+    "mean_ms": 111.3,
+    "p50_ms": 100.63,
+    "p95_ms": 155.86,
+    "p99_ms": 192.36
+   },
+   "r3": {
+    "decisions_per_second": 9.0352,
+    "mean_ms": 110.66,
+    "p50_ms": 99.82,
+    "p95_ms": 155.72,
+    "p99_ms": 192.12
+   },
+   "r4": {
+    "decisions_per_second": 8.646,
+    "mean_ms": 115.64,
+    "p50_ms": 107.28,
+    "p95_ms": 156.81,
+    "p99_ms": 193.3
+   },
+   "r5": {
+    "decisions_per_second": 8.849,
+    "mean_ms": 112.98,
+    "p50_ms": 102.87,
+    "p95_ms": 155.85,
+    "p99_ms": 192.62
+   }
+  },
+  "median": {
+   "decisions_per_second": 8.849,
+   "mean_ms": 112.98,
+   "p50_ms": 102.87,
+   "p95_ms": 155.86,
+   "p99_ms": 192.62,
+   "rounds": 5
+  },
+  "requests": 2352,
+  "successful": 2352
+ },
+ "s2_final": {
+  "config": "B16 C64 16384",
+  "decisions_per_second": 17.462,
+  "second_run": 17.475,
+  "mean_ms": 3628.8,
+  "p95_ms": 5945.8,
+  "concurrency": 64
+ },
+ "quality": {
+  "calibration": 82.4112222748262,
+  "intelligence": 66.08398222582059,
+  "capability": 74.2476022503234,
+  "accuracy": "1904/2352",
+  "score_mae": 0.40261,
+  "erqa": "216/400"
+ },
+ "negative_results": [
+  "S2 token budget 24576 at B16: 17.374 dec/s, no gain over 16384",
+  "GDN chunk 96/160/192/256: FLA 161002 unsupported; 128 already default",
+  "joint head CPU offload: memory_projection 10.1 GFLOP must stay on NPU; residual ~70 MFLOP at OMP=1",
+  "prefix caching: refused for Mamba without chunked prefill"
+ ],
+ "profile_967": {
+  "compute_union_ms": 132.69,
+  "communication_nonoverlapped_ms": 14.17,
+  "no_device_kernel_ms": 11.84,
+  "mlp_gate_up_ms": 41.5,
+  "mlp_down_ms": 20.54,
+  "gdn_ms": 17.97,
+  "qkv_8192_ms": 14.88,
+  "clef_conv_qkv_ms": 4.17
+ },
+ "source": "/workspace/yangchen/logs/perf-wave2-20261118"
+}

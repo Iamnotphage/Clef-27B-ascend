@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-15T03:09:33.615725+00:00",
+  "passed": true,
+  "source_directory": "/workspace/yangchen/models/Clef-27B",
+  "output_directory": "/workspace/yangchen/models/Clef-27B-mlp-gateup-w8a8",
+  "execution": {
+    "device": "cpu",
+    "torch_device_backend_autoload": "0",
+    "torch_version": "2.10.0+cpu",
+    "npu_backend_imported": false
+  },
+  "manifest": {
+    "path": "/workspace/yangchen/models/Clef-27B-mlp-gateup-w8a8/conversion-manifest.json",
+    "sha256": "3908d31af292206b8916ea14834c0ce44843b53e87e46d7e9f268893711ae087",
+    "plan_sha256": "abbd95222e6719828469c7cf4ae77bf3925422da9c7740ff32c57024ec715384",
+    "checks": {
+      "manifest_complete": true,
+      "plan_sha256": true,
+      "exact_64_gate_up_selection": true,
+      "all_64_layers": true,
+      "exact_projections": true,
+      "output_file_sizes": true,
+      "output_index_exact": true,
+      "tensor_bytes": true,
+      "config_change": true,
+      "quant_description": true
+    },
+    "quantized_weight_count": 128,
+    "tensor_count": 1440,
+    "dtype_counts": {
+      "BF16": 1312,
+      "I8": 128
+    },
+    "tensor_bytes": 43313863136
+  },
+  "retained_backbone_tensors": {
+    "other_backbone": {
+      "tensors": 131,
+      "bytes": 5086914560,
+      "all_equal": true,
+      "source_tensor_set_sha256": "43ba54ad2f8f3af89f318000d41775f30853401191365c2d4f80390b893b96d0",
+      "output_tensor_set_sha256": "43ba54ad2f8f3af89f318000d41775f30853401191365c2d4f80390b893b96d0"
+    },
+    "attention": {
+      "tensors": 528,
+      "bytes": 14479561728,
+      "all_equal": true,
+      "source_tensor_set_sha256": "99197e7c51c04cc3c63c973f7dc12629939a1410beade9af966fa8775590cec3",
+      "output_tensor_set_sha256": "99197e7c51c04cc3c63c973f7dc12629939a1410beade9af966fa8775590cec3"
+    },
+    "down": {
+      "tensors": 64,
+      "bytes": 11408506880,
+      "all_equal": true,
+      "source_tensor_set_sha256": "c77a47ee323f7083f0df35316726c7f71864badfdf6a638a6641678c3dc461ab",
+      "output_tensor_set_sha256": "c77a47ee323f7083f0df35316726c7f71864badfdf6a638a6641678c3dc461ab"
+    },
+    "vision": {
+      "tensors": 333,
+      "bytes": 921460192,
+      "all_equal": true,
+      "source_tensor_set_sha256": "f5ecb245be9a57a6c1d7464a5740231e72fe5c4de578d2a96d35be6ec6fc2577",
+      "output_tensor_set_sha256": "f5ecb245be9a57a6c1d7464a5740231e72fe5c4de578d2a96d35be6ec6fc2577"
+    }
+  },
+  "joint_head": {
+    "tensor_count": 122,
+    "same_inode": true,
+    "source_sha256": "a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953",
+    "output_sha256": "a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953",
+    "matches_source_and_manifest": true
+  },
+  "quantized_tp_checks": [
+    {
+      "layer": 0,
+      "projection": "gate",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "084e57401f61197b900cacc2e729aa529e0f9d351b6c8ae8a488b44b847ae0ce",
+      "scale_sha256": "2d2e9fe6251e9dbcba6676fcef77fd03c6a026c8f780b907cdf46a3fea9fc81d",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l00-r0.json",
+      "probe_report_sha256": "7cebe9f5e23530396da5cae381fbd296ff7f3186ef0634a5b6bdebdfcbc05a72",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 0,
+      "projection": "gate",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "e1781b4c43289af4e064060b8f41cc246b3085edfffa1ddaabcb2720962ff2b0",
+      "scale_sha256": "baa4a0b6b88f92cff6fe3eff9306fd1d3b9ba4d5204c2a9b7a974eed0effa137",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    },
+    {
+      "layer": 0,
+      "projection": "up",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "e0aaf5ccddde773ae1b54184bd44591b9721295ef290b37865ff939d754b74b4",
+      "scale_sha256": "dcf35d16a818d6fd25d240a5cc2c320a77e65d7dbe83c89f64b70a81b130f9e7",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l00-r0.json",
+      "probe_report_sha256": "7cebe9f5e23530396da5cae381fbd296ff7f3186ef0634a5b6bdebdfcbc05a72",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 0,
+      "projection": "up",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "0cfa0d300ccef0616a78856642c5a5fb4f4e2cca4787f00db1771befd5768bbc",
+      "scale_sha256": "7502f0bcc99782fbabecd7ae372d129bc65d7bf143bd100c436e773fd2f280e5",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    },
+    {
+      "layer": 31,
+      "projection": "gate",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "70c5a567566606a4999020ad6dcaab9deea509ad3ae595594c159a7235eb3dc2",
+      "scale_sha256": "fc107bcb514fe1a0524ae3eb79c01bd866045c9701a19593888493212e04eb6d",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l31-r0.json",
+      "probe_report_sha256": "0d6495c3e3662beee6d8e4ff1f760b630adcb404a3dbc9ef40208559a75a314c",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 31,
+      "projection": "gate",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "70b7c76f35887f4d7ce3f70dfd5af94d5d13b705cb2ff37a40656128d50d69a2",
+      "scale_sha256": "1791cdeedd6d034b52e374e8a1a373193e4b5f6b197acb33cbbcb07bb2c6c00f",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    },
+    {
+      "layer": 31,
+      "projection": "up",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "17c63cad5b23d201a72a11ae27b1998df53f77e6839dab9cbe08e28510acb0c2",
+      "scale_sha256": "42b8ae52ab529e63bd6afba6aa2e6551b92149cbd9b538534ef6665c572a9d50",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l31-r0.json",
+      "probe_report_sha256": "0d6495c3e3662beee6d8e4ff1f760b630adcb404a3dbc9ef40208559a75a314c",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 31,
+      "projection": "up",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "6e0315d57d4522c21c638d8e120ced7f004c23455c7d65288962094c87c02934",
+      "scale_sha256": "6abc513471839c54750f54a5c82713e7a0a99fbc32be1d8f6194a6085ced368f",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    },
+    {
+      "layer": 63,
+      "projection": "gate",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "32adb2e88089b75be00de5ed947cc16c5e97c9fbb425728edb2b95a0534b8435",
+      "scale_sha256": "621b5b560ecd9cbe0f966ff22956c69410235d833a0c21c54559292b168857fd",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l63-r0.json",
+      "probe_report_sha256": "09e528ced633af0411b278f8d220b9836aef8f112db65a2094ab6d049829ea3f",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 63,
+      "projection": "gate",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "3b01cbca2501b86daec4014e6e71f89477d3268281cc2ac00eff72f12113353e",
+      "scale_sha256": "645e0ce81890a94fd89ce950224a794d1ce76cf5f739959d1b9f0b0859e5175f",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    },
+    {
+      "layer": 63,
+      "projection": "up",
+      "rank": 0,
+      "slice_rows": [
+        0,
+        8704
+      ],
+      "qweight_sha256": "11ad2c83ae87f4a2543b9f4c456bcdc234987a21d5ba5b21758b9dd96b7fae01",
+      "scale_sha256": "909d585dc650170e690baada192c04d42b6a72b26ebc4af3bd77f6d4016959e2",
+      "independent_cpu_match": true,
+      "offset_zero": true,
+      "probe_report": "Clef-27B/logs/mlp-20261115/w8a8-nz-v2/od-0105-l63-r0.json",
+      "probe_report_sha256": "09e528ced633af0411b278f8d220b9836aef8f112db65a2094ab6d049829ea3f",
+      "probe_qweight_match": true,
+      "probe_scale_match": true,
+      "probe_source_bf16_match": true
+    },
+    {
+      "layer": 63,
+      "projection": "up",
+      "rank": 1,
+      "slice_rows": [
+        8704,
+        17408
+      ],
+      "qweight_sha256": "780b861c86393971872f3fcb3024b6962abd1c82843a962884b1fe5be48e284a",
+      "scale_sha256": "877302a163f6d95f889b58ba04f62b8b59aa9ac2096d63a71a0bf73d5f5f145f",
+      "independent_cpu_match": true,
+      "offset_zero": true
+    }
+  ],
+  "probe_coverage": "rank0 compared against separate gate/up hashes from w8a8-nz-v2; rank0 and rank1 independently recomputed from original BF16",
+  "errors": [],
+  "wall_seconds": 48.82512710010633
+}

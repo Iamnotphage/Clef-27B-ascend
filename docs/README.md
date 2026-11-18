@@ -1,8 +1,8 @@
 # Clef-27B baseline 调查与执行计划
 
-更新：2026-11-13（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching，原TP2/4096服务已恢复并验收。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [安装记录](installation-2026-11-12.md)
+更新：2026-11-14（北京时间）。完整环境与首轮工程 baseline 已完成；新增端到端 profiling 覆盖各900请求的TP1/TP2对照、14窗口/24 rank trace、全输入矩阵、冷/热多模态和batching。比赛质量交付已完成 OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题，最终性能配置为 seqs1/B1。CPU 独立参考完成两套数据的全量输入等价验收与部分逐题对照（OpenDecisions 154/2352），按用户要求终止。2026-11-15 完成 GDN 决策专用 prefill 路径并接入 S1 默认启用：全量 2,352 题逐位不变，同进程交错 A/B 6/6 对更快（p95 中位 −3.80%），正常入口 S1 P95 213.56 ms；ERQA 400 ON/OFF 逐题一致。提交入口 profile 显示 MLP 占 31.6%、TP2 allreduce 20.1%、GDN 主核 10.4%、布局 6.6%。[profiling实测](profiling-2026-11-12.md) · [实测 baseline](baseline-2026-11-12.md) · [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) · [ERQA 全量](erqa-baseline-2026-11-14.md) · [CPU 参考对照](cpu-npu-reference-2026-11-14.md) · [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md)
 
-主评测统一采用 **Decision Index 0.2.1** 与 **Typesafe WorkflowEvals**，当前均待接入与运行。JevBench、OpenDecisions、Typed Decisions 的既有实测结果作为工程回归记录保留。[统一评测口径](evaluation-protocol.md)
+比赛质量验收采用 **OpenDecisions + ERQA**，性能验收采用 **S1 单并发 P95 / S2 最大有效 decisions/s**；Decision Index 与 Typesafe WorkflowEvals 保留为发布方对照记录。[比赛提交规范](submission-rules-2026-11-13.md)
 
 当前机器已切换为 `root@199.88.54.221`，用户选择沿用新机的 CANN 9.2.1 并配套 PyTorch 2.10。当前状态、SSH 模板、环境查看命令及分阶段实施顺序见新机器执行计划。[新机器执行计划](new-machine-plan.md)
 
@@ -24,6 +24,27 @@
 | [实际安装与验收](installation-2026-11-12.md) | Python 与 wheel 哈希、真实版本、双卡误差、依赖补丁、复现命令与构建日志 |
 | [实测 baseline](baseline-2026-11-12.md) | 完整加载、TP1/TP2 精度性能、完整公开评测、HCCL 和多模态证据 |
 | [统一评测口径](evaluation-protocol.md) | Decision Index 0.2.1 子项、WorkflowEvals 四工作流、同协议对照与执行状态 |
+| [OpenDecisions 全量](opendecisions-baseline-2026-11-13.md) | 2,352 条原始概率、作者评分复核、EvalScope 固定源码与复现命令 |
+| [ERQA 全量](erqa-baseline-2026-11-14.md) | 官方 400 题数据清单、图文协议、图像预算、8 类分项、离线复核与适配补丁 |
+| [CPU 参考对照](cpu-npu-reference-2026-11-14.md) | 发布方参考实现的 CPU BF16 独立前向、全量输入等价、逐题概率差与终止范围 |
+| [GDN 决策专用路径](gdn-decision-prefill-2026-11-15.md) | 纯 prefill 特化：状态与反向中间量裁剪、guard 设计、6 对 A/B 与服务恢复 |
+| [提交入口 profile](profile-entry-2026-11-15.md) | 优化后设备预算：MLP、TP2 allreduce、GDN 主核与布局、attention |
+| [MLP W8A16 与平滑](mlp-w8a16-2026-11-15.md) | W8A16 候选全量结果、激活平滑仿真与 MLP 量化收益上限 |
+| [seqs4 批处理](batching-seqs4-2026-11-15.md) | C1–C16 吞吐/质量扫描、S1 不变性与合批质量边界 |
+| [当前进展总览](current-progress-2026-11-15.md) | 供外部专家评审的自包含状态：结果、预算、已排除方向与开放问题 |
+| [5090 GPU ERQA 执行 Prompt](gpu-5090-erqa-prompt-2026-11-16.md) | 在 4×RTX 5090 上下载 Clef-27B/ERQA 并跑 400 题质量参考的完整执行 prompt |
+| [NPU GEMM 融合/重叠方案](npu-gemm-fusion-overlap-plan-2026-11-16.md) | MC2/Dense SP、GDN 边界融合、通信重叠的可行性、门槛与建议顺序 |
+| [GDN 边界融合](gdn-boundary-fusion-2026-11-16.md) | `ClefGdnQkvNorm` 的 S1 收益、2PP 质量、v4 打包与回退 |
+| [GDN kernel v2](gdn-kernel-v2-2026-11-16.md) | 单次 ReduceSum + Broadcast/Mul、cap 1600、服务级对照与质量 |
+| [单字段 joint head](joint-single-field-2026-11-16.md) | Q=1 self-attention/routing 特化、服务级 −2.91%、打包与质量 |
+| [最终版 profile](profile-final-2026-11-17.md) | 最终 v2+head 的 CPU scope、设备 compute/通信/非 kernel 与后续判断 |
+| [conv+QKV 融合算子](gdn-conv-qkv-2026-11-17.md) | conv 与 QKV norm 合一、packed QKVZ 免拷贝、逐位探针与服务级对照 |
+| [Wave 2 攻关](perf-wave2-20261118.md) | 默认栈重新 profile、S2 预算复测、GDN chunk 扩展扫描、joint head 分解与最终三轮验证 |
+| [Wave 2 调研](perf-wave2-research.md) | 只读调研：T1 allreduce+RMSNorm 融合、T2 K 维流水、T4 ATB cache、T5 分桶 graph；T3 已实测关闭 |
+| [交接文档 11-17](handoff-11-17.md) | 当前状态、baseline 对比、已采用优化、负结果、profile、复现与开放问题 |
+| [输入长度与特征分布](input-distribution-2026-11-16.md) | OD/ERQA 的 token 桶、延迟/时间占比、字段/候选/图片结构 |
+| [B10/B12 合批扫描](batching-b10-b12-2026-11-16.md) | B8/B10/B12/B16 吞吐、p95 与质量，S2 工作点结论 |
+| [第四轮复核](tuning4-2026-11-14.md) | seqs1/B1 最终配置、S1/S2、合批精度根因与恢复记录 |
 | [端到端 profiling](profiling-2026-11-12.md) | 稳定TP对照、Top20、CPU/NPU/通信分解、全矩阵、内存、优化排序和服务恢复 |
 | [环境调查](environment.md) | 实测资源配额、NPU 映射、软件缺项、模型资产、网络与磁盘约束 |
 | [上游与 NPU 适配](upstream-npu-baseline.md) | 固定提交、版本组合、模型语义、启动候选命令、三类请求与 A3/TP2 风险 |
@@ -43,8 +64,8 @@
 | 6 | 精度和公开回归评测 | CPU 参考对齐与逐题结果 | TP1/TP2 对齐通过，2,983 请求执行错误 0 |
 | 7 | 性能基线 | 固定长度/问题/候选/并发/预热，记录延迟吞吐与采样 HBM | TP1/TP2 各 30 次通过，CSV 与 raw 已保存 |
 | 8 | TP2 与多模态 | HCCL、TP2、图片/视频及长输入 | HCCL 与 MM 4/4 通过，4096 完整输入无截断；更高并发留作扩展 |
-| 9 | 发布方同口径主评测 | Decision Index 0.2.1 与 WorkflowEvals 的逐项、逐工作流成绩 | 待固定版本、接入与运行 |
-| 10 | 比赛交付整理 | 入口、说明、CSV、图和日志 | 项目产物已整理；正式协议及原生截图要求按主办方对齐 |
+| 9 | 比赛质量评测 | OpenDecisions 1.0.1 全量 2,352 条与 ERQA 官方 400 题 | 均已完成；Decision Index 与 WorkflowEvals 保留发布方对照 |
+| 10 | 比赛交付整理 | 入口、说明、CSV、图和日志 | OpenDecisions 与 ERQA 结果、复现命令和轻量证据已归档 |
 
 阶段 5 是“最小功能跑通”的完成点；阶段 7 形成可复现的首轮工程 baseline；阶段 9 补齐与 Cloudflare 发布成绩对应的主评测。赛题完整多模态路径和正式指标覆盖继续按主办方要求补齐。
 
