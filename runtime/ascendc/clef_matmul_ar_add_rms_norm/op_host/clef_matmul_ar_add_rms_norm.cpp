@@ -141,6 +141,23 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     if (normXReq < 0 || normXReq > 1) { return ge::GRAPH_FAILED; }
     t->normFromX = static_cast<uint32_t>(normXReq);
 
+    // Four-way consistency: (a) the storage format the framework reports for
+    // the weight descriptor, (b) the format combination selected from the
+    // OpDef, (c) host SetBType, (d) the kernel MatmulType.  (b)(c)(d) are fixed
+    // at FRACTAL_NZ in this package, so (a) is checked and recorded here.  A
+    // source tensor that was once format-cast, or an OpDef that merely allows
+    // NZ, proves nothing about what reached aclnn; this does.
+    {
+        const auto* wDesc = context->GetInputDesc(1);
+        if (wDesc != nullptr) {
+            t->wStorageFormat = static_cast<uint32_t>(wDesc->GetStorageFormat());
+        }
+        if (t->mmEnable != 0 &&
+            (wDesc == nullptr || wDesc->GetStorageFormat() != ge::FORMAT_FRACTAL_NZ)) {
+            return ge::GRAPH_FAILED;   // ND (or anything else) must not reach an NZ kernel
+        }
+    }
+
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
     // "scalar access to the internal buffer of AICore is out of bounds"),

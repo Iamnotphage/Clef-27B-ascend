@@ -36,6 +36,7 @@ struct ClefMatmulArAddRmsNormTilingData {
     uint32_t mmStage;
     uint32_t normFromResidual;
     uint32_t normFromX;
+    uint32_t wStorageFormat;
     float eps;
     float invN;
 };
