@@ -142,8 +142,18 @@ tiling 契约（23 15:44 补）：`__gm__ TCubeTiling*` 的 `Init` 重载只对 
 与 block 数无关，故 `block_dim` 扫描已放弃。）
 
 
-kernel 用 `usedCoreNum` 做门控（只有 `GetBlockIdx() < usedCoreNum` 的核进 matmul），所以
-`mm_dim` 与 `block_dim` 解耦是安全的，不会让未分配 cube 内部缓冲的核进入 matmul。
+kernel 用 `usedCoreNum` 做门控（只有 `GetBlockIdx() < usedCoreNum` 的核进 matmul），因此
+**当 `usedCoreNum == 1` 时** `mm_dim` 与 `block_dim` 解耦是安全的。
+
+> **多核未接线（2026-11-18 源码更正）**：本 kernel **没有**跨核切片——只传
+> `SetOrgShape(m,n,k)` 与整张 A/B/C，**没有** `SetSingleShape`、没有按 `GetBlockIdx()`
+> 派生 `startM`、也没有 C 偏移。随包 matmul 源码里 `GetBlockIdx` **一处都没有**
+> （`asc/impl` 全树 31 个文件命中，matmul 目录 0 处），server 只认 `subBlockID`
+> （`matmul_server.h:57`）。同栈生产算子是自己算切片的：
+> `vllm-ascend/csrc/gmm/.../grouped_matmul_swiglu_quant.h:110/179/180/183`
+> （`GetBlockIdx()` → `SetOrgShape` → `SetSingleShape(curSingleM,curSingleN,k)` → `IterateAll`）。
+> **所以 `mm_dim > 1` 现在不可用**：各核会重复计算同一块。要把并行划分拉回多核，必须先补
+> 切片 + `SetSingleShape` + C 偏移（见 `EVIDENCE.md` 第 6 节），属代码改动。
 
 `diag[0..5]` = rankId / rankDim / arRc / hcclMode / mmRc / **cubeTiling.usedCoreNum**
 （最后一槽用来核对 tiling 是否真的按 `mm_dim` 设了 `usedCoreNum`）。
