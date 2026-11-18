@@ -1,0 +1,238 @@
+FILE /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/nn/functional.py SHA256 f6335e443ce93ddf21ecf9d94bbb4d4a4d92e128c5bfb59826f35495c9c28703
+FUNCTION _in_projection_packed
+5785: def _in_projection_packed(
+5786:     q: Tensor,
+5787:     k: Tensor,
+5788:     v: Tensor,
+5789:     w: Tensor,
+5790:     b: Optional[Tensor] = None,
+5791: ) -> list[Tensor]:
+5792:     r"""Perform the in-projection step of the attention operation, using packed weights.
+5793: 
+5794:     Output is a triple containing projection tensors for query, key and value.
+5795: 
+5796:     Args:
+5797:         q, k, v: query, key and value tensors to be projected. For self-attention,
+5798:             these are typically the same tensor; for encoder-decoder attention,
+5799:             k and v are typically the same tensor. (We take advantage of these
+5800:             identities for performance if they are present.) Regardless, q, k and v
+5801:             must share a common embedding dimension; otherwise their shapes may vary.
+5802:         w: projection weights for q, k and v, packed into a single tensor. Weights
+5803:             are packed along dimension 0, in q, k, v order.
+5804:         b: optional projection biases for q, k and v, packed into a single tensor
+5805:             in q, k, v order.
+5806: 
+5807:     Shape:
+5808:         Inputs:
+5809:         - q: :math:`(..., E)` where E is the embedding dimension
+5810:         - k: :math:`(..., E)` where E is the embedding dimension
+5811:         - v: :math:`(..., E)` where E is the embedding dimension
+5812:         - w: :math:`(E * 3, E)` where E is the embedding dimension
+5813:         - b: :math:`E * 3` where E is the embedding dimension
+5814: 
+5815:         Output:
+5816:         - in output list :math:`[q', k', v']`, each output tensor will have the
+5817:             same shape as the corresponding input tensor.
+5818:     """
+5819:     E = q.size(-1)
+5820:     if k is v:
+5821:         if q is k:
+5822:             # self-attention
+5823:             proj = linear(q, w, b)
+5824:             # reshape to 3, E and not E, 3 is deliberate for better memory coalescing and keeping same order as chunk()
+5825:             proj = (
+5826:                 proj.unflatten(-1, (3, E))
+5827:                 .unsqueeze(0)
+5828:                 .transpose(0, -2)
+5829:                 .squeeze(-2)
+5830:                 .contiguous()
+5831:             )
+5832:             # pyrefly: ignore [bad-return]
+5833:             return proj[0], proj[1], proj[2]
+5834:         else:
+5835:             # encoder-decoder attention
+5836:             w_q, w_kv = w.split([E, E * 2])
+5837:             if b is None:
+5838:                 b_q = b_kv = None
+5839:             else:
+5840:                 b_q, b_kv = b.split([E, E * 2])
+5841:             q_proj = linear(q, w_q, b_q)
+5842:             kv_proj = linear(k, w_kv, b_kv)
+5843:             # reshape to 2, E and not E, 2 is deliberate for better memory coalescing and keeping same order as chunk()
+5844:             kv_proj = (
+5845:                 kv_proj.unflatten(-1, (2, E))
+5846:                 .unsqueeze(0)
+5847:                 .transpose(0, -2)
+5848:                 .squeeze(-2)
+5849:                 .contiguous()
+5850:             )
+5851:             # pyrefly: ignore [bad-return]
+5852:             return (q_proj, kv_proj[0], kv_proj[1])
+5853:     else:
+5854:         w_q, w_k, w_v = w.chunk(3)
+5855:         if b is None:
+5856:             b_q = b_k = b_v = None
+5857:         else:
+5858:             b_q, b_k, b_v = b.chunk(3)
+5859:         # pyrefly: ignore [bad-return]
+5860:         return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
+FUNCTION multi_head_attention_forward
+6431:     if not use_separate_proj_weight:
+6432:         assert in_proj_weight is not None, (
+6433:             "use_separate_proj_weight is False but in_proj_weight is None"
+6434:         )
+6435:         q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
+6436:     else:
+6437:         assert q_proj_weight is not None, (
+6438:             "use_separate_proj_weight is True but q_proj_weight is None"
+6439:         )
+6440:         assert k_proj_weight is not None, (
+6441:             "use_separate_proj_weight is True but k_proj_weight is None"
+6442:         )
+6443:         assert v_proj_weight is not None, (
+6444:             "use_separate_proj_weight is True but v_proj_weight is None"
+6445:         )
+6446:         if in_proj_bias is None:
+6447:             b_q = b_k = b_v = None
+6448:         else:
+6449:             b_q, b_k, b_v = in_proj_bias.chunk(3)
+6450:         q, k, v = _in_projection(
+6500:     #
+6501:     # reshape q, k, v for multihead attention and make them batch first
+6502:     #
+6503:     # pyrefly: ignore [no-matching-overload]
+6504:     q = q.view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
+6505:     if static_k is None:
+6506:         # pyrefly: ignore [no-matching-overload]
+6507:         k = k.view(k.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
+6508:     else:
+6509:         # TODO finish disentangling control flow so we don't do in-projections when statics are passed
+6510:         assert static_k.size(0) == bsz * num_heads, (
+6511:             f"expecting static_k.size(0) of {bsz * num_heads}, but got {static_k.size(0)}"
+6512:         )
+6513:         assert static_k.size(2) == head_dim, (
+6514:             f"expecting static_k.size(2) of {head_dim}, but got {static_k.size(2)}"
+6515:         )
+6516:         k = static_k
+6517:     if static_v is None:
+6518:         # pyrefly: ignore [no-matching-overload]
+6519:         v = v.view(v.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
+6592:             attn_output_weights = dropout(attn_output_weights, p=dropout_p)
+6593: 
+6594:         attn_output = torch.bmm(attn_output_weights, v)
+6595: 
+6596:         attn_output = (
+6597:             # pyrefly: ignore [no-matching-overload]
+6598:             attn_output.transpose(0, 1).contiguous().view(tgt_len * bsz, embed_dim)
+6599:         )
+6600:         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
+6601:         attn_output = attn_output.view(tgt_len, bsz, attn_output.size(1))
+6602: 
+6603:         # optionally average attention weights over heads
+6604:         attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
+6605:         if average_attn_weights:
+6606:             attn_output_weights = attn_output_weights.mean(dim=1)
+6607: 
+6608:         if not is_batched:
+6609:             # squeeze the output if input was unbatched
+6610:             attn_output = attn_output.squeeze(1)
+6611:             attn_output_weights = attn_output_weights.squeeze(0)
+6619:                 attn_mask = attn_mask.unsqueeze(0)
+6620:             else:
+6621:                 attn_mask = attn_mask.view(bsz, num_heads, -1, src_len)
+6622: 
+6623:         q = q.view(bsz, num_heads, tgt_len, head_dim)
+6624:         # pyrefly: ignore [no-matching-overload]
+6625:         k = k.view(bsz, num_heads, src_len, head_dim)
+6626:         # pyrefly: ignore [no-matching-overload]
+6627:         v = v.view(bsz, num_heads, src_len, head_dim)
+6628: 
+6629:         attn_output = scaled_dot_product_attention(
+6630:             q, k, v, attn_mask, dropout_p, is_causal
+6631:         )
+6632:         attn_output = (
+6633:             # pyrefly: ignore [no-matching-overload]
+6634:             attn_output.permute(2, 0, 1, 3).contiguous().view(bsz * tgt_len, embed_dim)
+6635:         )
+6636: 
+6637:         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
+6638:         attn_output = attn_output.view(tgt_len, bsz, attn_output.size(1))
+6628: 
+6629:         attn_output = scaled_dot_product_attention(
+6630:             q, k, v, attn_mask, dropout_p, is_causal
+6631:         )
+6632:         attn_output = (
+6633:             # pyrefly: ignore [no-matching-overload]
+6634:             attn_output.permute(2, 0, 1, 3).contiguous().view(bsz * tgt_len, embed_dim)
+6635:         )
+6636: 
+6637:         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
+6638:         attn_output = attn_output.view(tgt_len, bsz, attn_output.size(1))
+6639:         if not is_batched:
+6640:             # squeeze the output if input was unbatched
+6641:             attn_output = attn_output.squeeze(1)
+6642:         return attn_output, None
+FILE /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/nn/modules/activation.py SHA256 d2929845da0371704b4fa75d9ef487ac3842525e6a979c526016a740926aa900
+1453:         if self.batch_first and is_batched:
+1454:             # make sure that the transpose op does not affect the "is" property
+1455:             if key is value:
+1456:                 if query is key:
+1457:                     query = key = value = query.transpose(1, 0)
+1458:                 else:
+1459:                     query, key = (x.transpose(1, 0) for x in (query, key))
+1460:                     value = key
+1461:             else:
+1462:                 query, key, value = (x.transpose(1, 0) for x in (query, key, value))
+1463: 
+1464:         if not self._qkv_same_embed_dim:
+1465:             attn_output, attn_output_weights = F.multi_head_attention_forward(
+1466:                 query,
+1467:                 key,
+1468:                 value,
+1469:                 self.embed_dim,
+1470:                 self.num_heads,
+1471:                 self.in_proj_weight,
+1472:                 self.in_proj_bias,
+1473:                 self.bias_k,
+1474:                 self.bias_v,
+1475:                 self.add_zero_attn,
+1476:                 self.dropout,
+1477:                 self.out_proj.weight,
+1478:                 self.out_proj.bias,
+1479:                 training=self.training,
+1480:                 key_padding_mask=key_padding_mask,
+1481:                 need_weights=need_weights,
+1482:                 attn_mask=attn_mask,
+1483:                 use_separate_proj_weight=True,
+1484:                 q_proj_weight=self.q_proj_weight,
+1485:                 k_proj_weight=self.k_proj_weight,
+1486:                 v_proj_weight=self.v_proj_weight,
+1487:                 average_attn_weights=average_attn_weights,
+1488:                 is_causal=is_causal,
+1489:             )
+1490:         else:
+1491:             attn_output, attn_output_weights = F.multi_head_attention_forward(
+1492:                 query,
+1493:                 key,
+1494:                 value,
+1495:                 self.embed_dim,
+1496:                 self.num_heads,
+1497:                 self.in_proj_weight,
+1498:                 self.in_proj_bias,
+1499:                 self.bias_k,
+1500:                 self.bias_v,
+1501:                 self.add_zero_attn,
+1502:                 self.dropout,
+1503:                 self.out_proj.weight,
+1504:                 self.out_proj.bias,
+1505:                 training=self.training,
+1506:                 key_padding_mask=key_padding_mask,
+1507:                 need_weights=need_weights,
+1508:                 attn_mask=attn_mask,
+1509:                 average_attn_weights=average_attn_weights,
+1510:                 is_causal=is_causal,
+1511:             )
+1512:         if self.batch_first and is_batched:
+1513:             return attn_output.transpose(1, 0), attn_output_weights
+1514:         else:
+1515:             return attn_output, attn_output_weights

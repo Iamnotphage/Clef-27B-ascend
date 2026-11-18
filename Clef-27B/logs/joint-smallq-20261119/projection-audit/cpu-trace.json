@@ -1,0 +1,305 @@
+{
+  "scope": "CPU actual installed torch; D projection-only AST slice, guards/backend excluded; no device timing or precision claim",
+  "torch": "2.10.0+cpu",
+  "source_D_sha256": "086357bddbe4fbfbda1630e5ac70503c44f06113d582089c5c54669720d3260a",
+  "cases": [
+    {
+      "shared_KV": true,
+      "Q": 1,
+      "L": 307,
+      "paths": {
+        "f810_MHA": {
+          "linear_calls": [
+            {
+              "input_shape": [
+                1,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                2048,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            }
+          ],
+          "packed_calls": [
+            {
+              "k_is_v": true,
+              "q_is_k": false,
+              "q_shape": [
+                1,
+                1,
+                1024
+              ],
+              "k_shape": [
+                307,
+                1,
+                1024
+              ]
+            }
+          ],
+          "python_contiguous_sites": [
+            {
+              "shape": [
+                2,
+                307,
+                1,
+                1024
+              ],
+              "stride": [
+                1024,
+                2048,
+                2048,
+                1
+              ],
+              "was_contiguous": false,
+              "new_storage": true
+            },
+            {
+              "shape": [
+                1,
+                1,
+                16,
+                64
+              ],
+              "stride": [
+                64,
+                1024,
+                64,
+                1
+              ],
+              "was_contiguous": true,
+              "new_storage": false
+            }
+          ]
+        },
+        "D_projection_only": {
+          "linear_calls": [
+            {
+              "input_shape": [
+                1,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                2048,
+                1024
+              ]
+            }
+          ],
+          "packed_calls": [
+            {
+              "k_is_v": true,
+              "q_is_k": false,
+              "q_shape": [
+                1,
+                1,
+                1024
+              ],
+              "k_shape": [
+                307,
+                1,
+                1024
+              ]
+            }
+          ],
+          "python_contiguous_sites": [
+            {
+              "shape": [
+                2,
+                307,
+                1,
+                1024
+              ],
+              "stride": [
+                1024,
+                2048,
+                2048,
+                1
+              ],
+              "was_contiguous": false,
+              "new_storage": true
+            }
+          ]
+        }
+      },
+      "projected_outputs_bitwise_CPU": true
+    },
+    {
+      "shared_KV": false,
+      "Q": 4,
+      "L": 307,
+      "paths": {
+        "f810_MHA": {
+          "linear_calls": [
+            {
+              "input_shape": [
+                4,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                4,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            }
+          ],
+          "packed_calls": [
+            {
+              "k_is_v": false,
+              "q_is_k": false,
+              "q_shape": [
+                4,
+                1,
+                1024
+              ],
+              "k_shape": [
+                307,
+                1,
+                1024
+              ]
+            }
+          ],
+          "python_contiguous_sites": [
+            {
+              "shape": [
+                4,
+                1,
+                16,
+                64
+              ],
+              "stride": [
+                1024,
+                1024,
+                64,
+                1
+              ],
+              "was_contiguous": true,
+              "new_storage": false
+            }
+          ]
+        },
+        "D_projection_only": {
+          "linear_calls": [
+            {
+              "input_shape": [
+                4,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            },
+            {
+              "input_shape": [
+                307,
+                1,
+                1024
+              ],
+              "weight_shape": [
+                1024,
+                1024
+              ]
+            }
+          ],
+          "packed_calls": [
+            {
+              "k_is_v": false,
+              "q_is_k": false,
+              "q_shape": [
+                4,
+                1,
+                1024
+              ],
+              "k_shape": [
+                307,
+                1,
+                1024
+              ]
+            }
+          ],
+          "python_contiguous_sites": []
+        }
+      },
+      "projected_outputs_bitwise_CPU": true
+    }
+  ],
+  "no_device_backends_imported": true
+}

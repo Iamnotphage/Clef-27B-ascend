@@ -231,3 +231,24 @@ python3 runtime/analyze_joint_smallq_bd.py \
   --expect-sha 8aea817c7b220a8c681578a39d9ee4bc6bf75cb782cb68c879278fdc9feadfcd \
   --output /tmp/smallq-bd-paired-summary.json
 ```
+
+## Packed-KV 路径核验：E 假设关闭
+
+20 要求在 CPU 侧核查 D decoder 是否丢失 f810 的 shared-KV packed 投影。实际固定源码与 CPU 调用跟踪均表明：**D 与 f810 已使用相同 packed-KV 分支**。该差异不存在，关闭“恢复 packed-KV”这一 E 假设，B/D 保持冻结，不创建 E。
+
+实读链路：f810 head 第255–256行将同一个 memory 对象作为 K/V。固定 torch `nn/modules/activation.py` 第1453–1462行在 batch_first 转置后保持 `value=key`，并调用 `F.multi_head_attention_forward`；非 self-attention 在第1361行排除 native fastpath。`nn/functional.py` 第6435行调用 `_in_projection_packed`。D helper 第112–118行同样使用 `v_in=k_in`，调用完全相同的 helper。
+
+`_in_projection_packed` 第5820、5835–5852行：K is V、Q is not K 时，权重拆成 `[W,W]` 与 `[2W,W]`，仅两次 linear：Q 和 packed-KV。routing 的两个 memory_norm 保持独立对象，两源均进入第5853–5860行的三个 linear 分支。
+
+| cross-attention类型 | 每层输入projection linear/GEMM请求 | 每层out projection | 层数 | 两源总数 |
+|---|---:|---:|---:|---:|
+|routing Q=O、独立K/V|3|1|2|8|
+|decoder Q=1、共享K/V|2|1|4|12|
+
+因此两源的六次 cross-attention 都有14次输入projection、6次out projection，共20个linear/GEMM请求。4层单token self-attention另外各有V+out两个linear，两源也保持。上述为前端数学请求计数，不等同NPU内部launch计数。
+
+布局方面，两源每个decoder都在同一packed helper执行 `unflatten/unsqueeze/transpose/squeeze/contiguous`，全头共4处KV拆包contiguous；routing输入projection没有该复制。D前后转置均为view，kernel直接写BSH，随后out projection。f810另有每cross输出 `permute(...).contiguous()` 的6处调用点；是否分配取决于实际SDPA返回stride。本次CPU代表Q1与Q4中该输出contiguous均复用原storage，不能据Python调用点数量宣称NPU发生6次复制。
+
+纯CPU跟踪使用实际固定torch2.10.0+cpu、BF16、width1024、L307、Q1共享KV/Q4独立KV。对照为真实 `nn.MultiheadAttention` 调用与从冻结D提取的投影AST切片；该切片明确跳过guard/backend，用于核对投影分支。两者投影输出CPU逐位一致；Q1输入projection确为Q与 `[2048,1024]` packed-KV两次linear，Q4确为三次；packed-KV contiguous两路径都产生一个新storage。`torch_npu`/Triton均未导入，未产生NPU精度/性能结论。torch_npu安装树的该函数名称检索仅命中testing字符串，未发现Python MHA/projection替换。
+
+源摘录、CPU trace与SHA清单在 `Clef-27B/logs/joint-smallq-20261119/projection-audit/`，复现脚本 `runtime/audit_joint_smallq_projection.py`。实读完整源文件SHA：functional.py `f6335e443ce93ddf21ecf9d94bbb4d4a4d92e128c5bfb59826f35495c9c28703`；activation.py `d2929845da0371704b4fa75d9ef487ac3842525e6a979c526016a740926aa900`。
