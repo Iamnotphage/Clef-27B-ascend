@@ -1848,5 +1848,79 @@
     "author_scorer_sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377",
     "quality_wrapper_sha256": "8d8f7c0e7cbcaf40cb16d111e8b4d6b66c6a2c26240ce36d8bb9a3b5502df4d3",
     "supervisor_requirement": "owner27 forwards flag explicitly and pins new runner hash; client lifecycle unchanged"
+  },
+  "owner_phase_interface": {
+    "status": "reviewed_plan_not_executed",
+    "execution_owner": 27,
+    "reviewer": 23,
+    "commit": "d4464ac2c32fc122a9c6a391a45806cdaac17916",
+    "staging": "/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916",
+    "layout": "flat",
+    "files": {
+      "final_service_phase.py": {
+        "bytes": 13585,
+        "sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"
+      },
+      "test_final_service_phase.py": {
+        "bytes": 9201,
+        "sha256": "901d50e3226d418b91d4abe801ab5d6e254d24ee9775e1e07dbbda3c2ac22bd1"
+      },
+      "final_acceptance_supervisor.py": {
+        "bytes": 11957,
+        "sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"
+      },
+      "test_final_acceptance_supervisor.py": {
+        "bytes": 8598,
+        "sha256": "044a4ef7033a8a2d7929aa3ea3413a0b1f0b1883274a18ba3cd70fada82e3ff0"
+      }
+    },
+    "scope": "Frozen f810 and original guard service transitions only; default plan-only; device execution solely by owner27",
+    "acceptance": {
+      "commit": "cc7f32842a78786a8f0e5da373f66597752ea9ab",
+      "staging": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab",
+      "manifest_sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2",
+      "runner_sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+    },
+    "client_modes": {
+      "mutually_exclusive_required": true,
+      "first": {
+        "flag": "--first-phase-no-client",
+        "only_from_phase": "s1",
+        "only_to_phase": "s1"
+      },
+      "later": {
+        "flag": "--prior-client-record",
+        "artifact": "actual previous records-dir/supervision.json",
+        "required_clients_exited": true,
+        "fresh_absence": "previous client PGID and all observed PIDs have no non-Z member"
+      }
+    },
+    "old_service_gate": [
+      "current restore SHA and four rc0/ok checks",
+      "fresh source/guard/helper/launch/wait/stop and strict supervisor SHA",
+      "old label/api.pid + pid/starttime/boot_id + pgid=root + ppid=1 + complete expected argv",
+      "every old descendant in root PGID; every non-Z PGID member belongs to old tree",
+      "fresh full process table; no pending clients; card7 chip0/1 attributed TP2"
+    ],
+    "stop_gate": "original hash-pinned d0_stop with fresh runtime identity; post-stop old tree and whole old PGID have no non-Z member; fresh closed port and empty card7 required",
+    "launch_gate": "fresh unique label; original launcher; exact clean two-key parent and original phase overrides; ready lifetime continuity, full cc7 argv/env/info check, original four checks and card7 TP2 attribution",
+    "outputs": {
+      "complete": "complete.json",
+      "identities": "ready-identities.json",
+      "launch_manifest": "complete.json.launch_manifest",
+      "owner_evidence": "restore.json",
+      "next_current_restore": "restore.json",
+      "stop": "stop.json",
+      "phase_check": "service-check.json"
+    },
+    "supervision_boundary": "This entry switches services; v5 supervises evaluation clients separately. Owner27 binds each phase to its scheduling window and deadline.",
+    "verification": {
+      "cpu_tests_reported_by_27": 17,
+      "cpu_tests_reviewed_by_23": true,
+      "local_git_blob_sha_verified_by_28": true,
+      "remote_sha_verified_utc_raw": "2026-11-18T19:58:14Z",
+      "remote_sha_verified_cst": "2026-11-19T03:58:14+08:00",
+      "overrides_and_clean_seed_exact_match": true
+    }
   }
 }

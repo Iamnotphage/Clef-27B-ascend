@@ -196,7 +196,7 @@ B8/B16/ERQA在此命令末尾使用第5节原覆盖参数。27监督器中等价
 | cc7 `runtime/final_acceptance.py` | `7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab` |
 | cc7 `runtime/final_acceptance_manifest.json` | `0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2` |
 
-**已审单轮完整监督命令，当前未执行。** 27先完成当前unknown阻断的恢复、四检与严格env检查，再现场填写六个必填变量：两个全新输出目录、ready后identity/launch/owner证据路径、含UTC时区的绝对截止。变量缺失时shell直接阻断；身份与截止不能复用历史值。
+**已审单轮完整监督命令，当前未执行。** 27先确认本次服务恢复、四检与严格env检查均已闭合，再现场填写六个必填变量：两个全新输出目录、ready后identity/launch/owner证据路径、含UTC时区的绝对截止。变量缺失时shell直接阻断；身份与截止不能复用历史值。
 
 ```bash
 /workspace/yangchen/venvs/clef-py312/bin/python \
@@ -250,3 +250,43 @@ helper SHA仍为 `9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747
 | LD_LIBRARY_PATH | 12 | `ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c` |
 
 该外层前置检查补足runner在最终restore时才读取expected的时序。restore四检后，runner从fresh root `/proc/PID/environ`逐字节比较，保存expected/actual/compare三份JSON，失败阻断且不fallback。生产源、guard、最终三轮门和四phase执行参数均未因本次候选元数据更新而改变。
+
+## 11. 已审phase v3服务切换入口（仅27，尚未真实执行）
+
+来源提交 `d4464ac2c32fc122a9c6a391a45806cdaac17916`，独立stage `/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916`，四文件平铺。phase SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`、test SHA `901d50e3226d418b91d4abe801ab5d6e254d24ee9775e1e07dbbda3c2ac22bd1`，依赖同目录supervisor `172c2838…1876` / test `044a4ef7…3ff0`。23已有限核通过17项CPU测试；28实算git blob与远端四SHA一致，并用AST读取确认四phase覆盖参数及clean seed逐字段等于本manifest。远端UTC原值`2026-11-18T19:58:14Z`对应北京时间03:58:14。该入口尚未产生真实服务切换证据。
+
+入口固定f810/原guard，当前source-control排程保持。执行前由27fresh核helper/源/guard/旧restore SHA、label、root完整运行期身份与同卡资源。停前旧PGID全部非Z成员必须归属已核服务树，停后整PGID无非Z；端口unknown或卡7未清空即阻断launch。新服务保持原launcher、两键clean父环境、完整cc7配置检查及原四检。
+
+首次格显式选 `--first-phase-no-client`，仅允许S1→S1。下面命令默认plan-only，三个变量均为27现场核出的实际值；执行开关由27在全部门闭合及排程允许时追加：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916/final_service_phase.py \
+  --code /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab \
+  --manifest /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
+  --manifest-sha 0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2 \
+  --runner-sha 7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab \
+  --current-restore "${CLEF_CURRENT_RESTORE:?27填写已核完整四检restore原件}" \
+  --current-restore-sha "${CLEF_CURRENT_RESTORE_SHA:?27填写该原件fresh SHA256}" \
+  --run-dir "${CLEF_PHASE_RUN:?27填写全新phase输出目录}" \
+  --from-phase s1 --phase s1 --first-phase-no-client
+```
+
+后续各格使用真实上一客户端监督原件，必须存在`clients_exited=true`，fresh查询还须证明其PGID及已观测PID均无非Z成员。两个客户端模式互斥且必选。下面同样为plan-only模板；`from-phase`须与当前完整argv对应，目标按S1→B8→B16→ERQA→S1恢复的实际排程选择：
+
+```bash
+/workspace/yangchen/venvs/clef-py312/bin/python \
+  /workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916/final_service_phase.py \
+  --code /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab \
+  --manifest /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
+  --manifest-sha 0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2 \
+  --runner-sha 7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab \
+  --current-restore "${CLEF_CURRENT_RESTORE:?27填写当前服务完整四检restore原件}" \
+  --current-restore-sha "${CLEF_CURRENT_RESTORE_SHA:?27填写该原件fresh SHA256}" \
+  --run-dir "${CLEF_PHASE_RUN:?27填写全新phase输出目录}" \
+  --from-phase "${CLEF_FROM_PHASE:?27填写当前phase}" \
+  --phase "${CLEF_NEXT_PHASE:?27填写目标phase}" \
+  --prior-client-record "${CLEF_PRIOR_SUPERVISION:?27填写实际上一records目录的supervision.json}"
+```
+
+成功后 `complete.json` 的 `identities`、`launch_manifest`、`owner_evidence` 直接衔接第8节v5监督器；对应原件为`ready-identities.json`、本次label下的`launch-manifest.json`、`restore.json`。下一次切换以本次`restore.json`及其fresh SHA作为current restore，同时绑定上一评测的真实`supervision.json`。旧stage完整保留，cc7/0338执行包继续固定。phase入口仅使用各子步骤原timeout；总窗口与截止由27按第9节安排，v5单独监督评测客户端。
