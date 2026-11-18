@@ -328,29 +328,25 @@
 
 ## 15. 完整 E 链数值判据（2026-11-18 20:49 CST 定稿）
 
-### 15.1 有范围的判据版本
+### 15.1 有范围的判据版本（2026-11-18 21:28 CST 整段修正）
 
-| 范围 | 判据 | 来源 |
-| --- | --- | --- |
-| 同 partial AddRMS 隔离 smoke | `residual max_abs ≤ 0.01`、`rstd ≤ 1e-3`、`Y max_abs ≤ 0.02 且 max_rel ≤ 1%` | 既有准则（不外推到含自定义 GEMM 的完整链） |
-| **完整 E 链**（GEMM 输出 / AR 后输出 / residual / Y / rstd） | 逐元素 `|cand − ref| ≤ 1e-5 + 0.016·|ref|`，全元素、shape/dtype 一致、finite；显式 `rtol=0.016, atol=1e-5` | `torch/testing/_comparison.py:54-57` 的 BF16 默认容差 |
+| 范围 | 判据 |
+| --- | --- |
+| 同 partial AddRMS 隔离 smoke | `residual max_abs ≤ 0.01`、`rstd ≤ 1e-3`、`Y max_abs ≤ 0.02 且 max_rel ≤ 1%` |
+| **完整 E 的 GEMM / AR 后 / residual** | 逐元素 `|cand − ref| ≤ 1e-5 + 0.016·|ref|`（显式 `rtol=0.016, atol=1e-5`，来源 `torch/testing/_comparison.py:54-57` 的 BF16 默认值） |
+| **完整 E 的 Y** | 仍用 `max_abs ≤ 0.02` **且** `max_rel ≤ 1%`（**不并入** mixed 门） |
+| **完整 E 的 rstd** | 仍用 `max_abs ≤ 1e-3`（**不并入** mixed 门） |
 
-- `Y max_rel` 定义：`|Δ| / max(|ref|, 1e-5)`，`|ref| < 1e-5` 的元素不计入相对值（零附近处理显式写死，事后不调）。
-- 变更理由：`residual ≤ 0.01` 只在 `z ≈ x + r`、`|z| ≈ O(1)` 的隔离场景有意义；完整链的 `z` 量级达数十，1 个 BF16 lsb 就有 0.03125–0.125，不能直接沿用绝对门。
+- mixed 门**只**用于 GEMM 输出 / AR 后输出 / residual；Y 与 rstd 的 BF16 统计仅作**辅助描述**，单列报告，不能替代各自的门。
+- `Y max_rel` 定义：`|Δ| / max(|ref|, 1e-5)`；`|ref| < 1e-5` 的元素**仅从相对统计中排除**，其 abs/finite/shape/dtype 检查**仍然全纳**。
 - 这是**本轮研发准则选择**，不是厂家 GEMM 误差保证，也不等于服务 2 pp。
 
-### 15.2 按新判据的实测（`ndrt` `2ee1c9ce…`，ND 权重，seed 20261119）
+### 15.2 旧 run（seed 20261119）的记录更正
 
-| 输出 | 失败元素 | max_abs | max_ratio |
-| --- | ---: | ---: | ---: |
-| `residual_sum` | **78** / 4,951,040 | 0.125 | **57.87** |
-| `Y` | **78** | 0.0625 | **53.36** |
-| `rstd` | **0** | 1.14e-4 | 0.0124 |
-
-- residual 与 Y 的失败索引**完全相同**（如 1956071、2344545、2005413），即 Y 的偏差由 z 的偏差驱动，与 §14.3 的算术论证一致。
-- 极致失败点 `ratio = 57.87` 对应 `|ref| ≈ 0.008`、`|Δ| = 0.0078125`：**近零抵消元素**，绝对差很小但相对容差被击穿。
-- `finite` 两 rank 均为 true；两 rank 数值完全一致。
-- 旧观测 `residual 0.03125` 保留为观测值，**不追认**为已通过新门。
+- 该 run 的参考是 **FP32 SUM**，按约定的 **BF16 SUM 协议并未在该 run 上执行**；78 项只作**当时观测**，既非新协议的 pass 也非 fail。
+- 当时只保存了 `fail_count` 与 top3，**没有完整索引集合**；因此此前"residual 与 Y 的失败索引完全相同、故 Y 由 z 驱动"的表述**撤回**，因果不作断言。
+- 该 run 的 `finite` 仅检查了 candidate，**未检查 reference**；`shape/dtype` 检查当时也**未实现**，不得追写为"已测"。
+- 近零相对 mask 仅用于相对统计描述；任何点都**未从** abs/finite 检查中移除。
 
 ### 15.3 结论边界
 
