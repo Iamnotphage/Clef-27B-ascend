@@ -1,6 +1,8 @@
 # D0 有限诊断设计（只设计，未实施；不改 kernel、不编译、不上板）
 
-基线源码：`85b3028`（包 `873ef8fb`）。**行号以该提交为准。**
+基线源码：**`85b3028`**（包 `873ef8fb`）。**下列行号经 `git show 85b3028:<kernel>` 实测**：
+`WriteTilingDiag()` 调用 `:151`、`REGIST_MATMUL_OBJ` `:184`、worker 判定 `:221-222`、`IterateAll` `:249`、`End()` `:255`、**无参屏障 `:295`**。
+> 此前文中的 `:308` 取自**后续（仅改注释/文档的）提交**的 HEAD，**已更正**。
 
 ## 0. 本轮只回答什么
 
@@ -17,28 +19,58 @@
 因此**不能**把 trace 塞进 8 float，**也不能**与 workspace 复用同一块 (会与
 `partial[M,N] | reduced[M,N] | flag` 重叠)。
 
-**方案（需新增 ABI，属待实现）**：
-- **新增独立输出** `trace`（dtype `int32`/`float`，ND），由 **host 声明 shape**
-  `trace[slots][fields]`，**adapter 侧显式分配**并按 shape 读取；
-- **容量上界**在 host 侧计算并写入 tiling：`slots = 2 * AIC_max`（AIC、AIV 各一域），
-  `fields = 8`；超出即在 host 侧 `GRAPH_FAILED`，**不进 kernel**；
-- workspace 划分**追加**一段 `trace_bytes`，与 `partial/reduced/flag` **显式分段**，
-  互不覆盖；host 校验总 workspace ≥ 各段之和。
+**数据归属只选一种：独立输出**（不采用"workspace 追加一段"的写法，两者此前混写已删除）。
+- **新增独立输出** `trace`：dtype **`uint32`**、format ND、**host 声明 shape `trace[slots][fields]`**、
+  **adapter 侧显式分配**并按该 shape 读取；
+- **容器与 workspace 完全分离**：`trace` 是算子第 5 个输出，不占 user workspace 的
+  `partial | reduced | flag` 任何一段；host 另行校验总 workspace 与 trace 字节数互不相关；
+- **容量**：`slots = AIC_CAP * (1 + SUB_CAP)`，`fields` 见 §2 字段表；
+  `AIC_CAP` 来自 host 侧平台 AIC 数（tiling 时写入），`SUB_CAP = 2` 为**声明上界**。
 
 ## 2. 每参与者唯一槽（分 AIC/AIV 域，用原始值）
 
-**槽位公式（不依赖待验证 ratio / `GetBlockIdx()` 推导）**：
+**槽位公式（分域紧凑；实测已消除别名与越界）**：
 ```
-domain  = (ASCEND_IS_AIC ? 0 : 1)          // 分域，避免 AIC/AIV 别名
-block   = get_block_idx()                  // 原始 AIC 域块号
-sub     = get_subblockid()                 // 原始子块号 0..1（AIC 上为 0）
-slot    = domain * AIC_MAX + block * 2 + sub
+// AIC 域
+slot = block                                    // 0 .. AIC_CAP-1
+// AIV 域
+slot = AIC_CAP + block * SUB_CAP + sub           // AIC_CAP .. AIC_CAP*(1+SUB_CAP)-1
+slots = AIC_CAP * (1 + SUB_CAP)
 ```
+`block = get_block_idx()`、`sub = get_subblockid()` 均为**原始值**，不使用 `GetBlockIdx()` 的推导式。
+以 `AIC_CAP=24, SUB_CAP=2` 校验：AIC(12,0)=**12**；AIV(0,0)=**24**；AIV(12,0)=**48** < 72。
+**无别名、无越界**（旧式 `domain*24 + block*2 + sub` 会让 AIC(12) 与 AIV(0) 都落到 24、
+且 AIV(12) 落到 48 越界——该写法**已废弃**）。
 - **为什么用原始值**：`GetBlockIdx()` 在 AIV 是 `get_block_idx()*ratio + sub`，
   ratio 尚未由运行时确认；若用它推槽，一旦 ratio 假设错就会**把两个参与者映射到同一槽**（别名）。
   用 `domain/block/sub` 三元组则槽位唯一，**与 ratio 无关**。
-- **越界处理**：`block` 或 `sub` 超界、或 `slot >= slots` ⇒ **该 block 停止写 trace**
-  并置一个 `oob` 标记（写域内固定位置），**绝不截断或回绕**。
+- **越界处理**：`block`/`sub` 超界或 `slot >= slots` ⇒ **只关闭该 block 的 trace 写**，
+  **保留 `REGIST_MATMUL_OBJ`／析构／屏障的原控制流不动**（trace 不得改变主路径）。
+- **不设共享 `oob` 字**：多个写者写同一位置会竞态。改为**缺槽即证据**——
+  host 事后按 `slots` 全量扫描，**缺哪一槽就报哪一槽未闭合**；若越界者本应占的槽不存在，
+  它自然表现为"未闭合集合"的一员。
+- **host 不能预知 builtin 越界**：`AIC_CAP/SUB_CAP` 只是**声明上界**；
+  真实 builtin 若超出，host 无法先验拦截，**只能靠缺槽诊断暴露**（不假定其不会发生）。
+
+## 2.1 字段表（每参与者 × 每阶段的独占记录）
+
+`fields = 8` 个 `uint32`，每参与者一条，**阶段独占**，不共享：
+
+| idx | 字段 | 写入阶段 | 说明 |
+| --- | --- | --- | --- |
+| 0 | `magic` | K1 | 固定魔数；**未写即表示该参与者未到达 K1** |
+| 1 | `id` | K1 | `(block<<8) | sub`（原始值打包） |
+| 2 | `domain` | K1 | 0 = AIC，1 = AIV |
+| 3 | `claim_start_m` | K4 | 认领起点（非 worker 写 0 并把 bit0 清零） |
+| 4 | `claim_m` | K4 | 认领行数 `curSingleM` |
+| 5 | `stage_bits` | K1..K8 逐位或入 | 位图：bit0=K1、bit1=K2、bit2=K3、bit3=K4、bit4=K5、bit5=K6、bit6=K7、bit7=K8 |
+| 6 | `reserved` | — | 置 0 |
+| 7 | `seal` | 结束处 | `0xC0FFEE00 ^ id`，**写完才置** |
+
+- **dtype/容量**：`uint32`，每条 `8*4 = 32 B`；总字节 `slots * 32`（示例 72 槽 → 2304 B）。
+- **初始化**：host 侧分配后**清零**，故"`magic` 为 0"= 从未到达；`stage_bits` 逐位可判读。
+- **完整记录判读**：`magic == 常量` **且** `seal` 正确 ⇒ 该参与者记录完整；
+  否则按 `stage_bits` 判读到过哪些阶段，**不把不完整记录当成缺失**。
 
 ## 3. 插桩表（分"kernel 可达点"与"SDK 内部点"）
 
@@ -64,8 +96,9 @@ slot    = domain * AIC_MAX + block * 2 + sub
 
 - **认领覆盖（可 host 检查）**：把每个参与者的 `(startM, curSingleM)` 写进 trace，
   host 侧检查 `Σ curSingleM == M` 且区间两两不交 ⇒ **只证明"声称的划分正确"**。
-- **实际写入覆盖（另一件事）**：需要 host 在同步后**全量读 `partial`**，
-  检查每行是否被写过（例如用行级哨兵值/NaN 预填）。⇒ **只证明"最终可读状态"**。
+- **实际写入覆盖（另一件事，本轮保留为缺口）**：`partial` 目前**在 user workspace 内、
+  不是算子输出**，**没有 host 读取路径**。首候选**只判认领覆盖**；
+  实际写入覆盖**保持缺项**，除非另增 `partial` 输出或安全导出方案（属新 ABI，未实现）。
 - **消费点 GM 可见性（第三件事）**：AR/Norm 在设备内读到 `partial` 的时序与可见性，
   **本轮设计无法由 host 侧推断**，单列未观测项。
 - **`partial` 全量诊断与固定数值门分开记录**：前者是覆盖诊断，后者仍是 mixed 容差
@@ -77,7 +110,8 @@ slot    = domain * AIC_MAX + block * 2 + sub
 | 项 | 值 |
 | --- | --- |
 | 超时 | **单次有界**（建议 180 s）；到点即杀进程 |
-| 退出动作 | 记录 `RAW_RC`、trace 已写槽数、是否 OOB；**恢复服务到既有配置**并记录 PID/argv |
+| 退出动作 | 记录 `RAW_RC`、可读到的 trace 槽；**恢复服务到既有配置**并记录 PID/argv |
+| 超时/故障后 trace | 可能**无法 copy** ⇒ 标 **`unavailable`**；**不保证槽数可回收** |
 | 停止条件 | 出现 `507014/0x25`、超时、或 trace `oob` 置位 ⇒ **停，不进入预算 2** |
 
 **判读表**
@@ -85,7 +119,7 @@ slot    = domain * AIC_MAX + block * 2 + sub
 | 观测 | 可判读 | **不可**判读 |
 | --- | --- | --- |
 | trace 出现预期槽数、区间不交且覆盖 M | 认领划分正确、参与者集合符合预期 | 数值正确、GM 可见性 |
-| 槽数少于预期 | 参与者集合不完整（需结合 launch 记录） | 具体原因 |
+| 槽数少于预期 | **只报告"未闭合集合"**（缺槽可能来自插桩未到／丢写／提前失败，三者不可区分） | 具体原因、以及是否 `SyncAll` 所致 |
 | 超时 | **仅"本次窗口未完成"** | **不能单独归因 `SyncAll`**（也可能 server/quit/AR 段） |
 | `partial` 有未写行 | 漏写 | 是哪个环节漏 |
 | `partial` 全写且可读 | 最终可读状态 OK | 消费点可见性 OK |
@@ -96,7 +130,9 @@ slot    = domain * AIC_MAX + block * 2 + sub
 2. 消费点 GM 可见性；
 3. 运行时 `get_subblockdim()` / `get_block_idx()` / `GetBlockNum()` 的真实值；
 4. `__MIX_CORE_AIC_RATION__` 与逐 pass `-D` 宏表；
-5. 预算 2 的一切结论（未设计为已排格）。
+5. 预算 2 的一切结论（未设计为已排格）；
+6. `partial` **实际写入覆盖**（无 host 读取路径）；
+7. 超时/故障后 trace 的可回收性（标 `unavailable`）。
 
 ## 7. 实施前置（未做）
 

@@ -33,14 +33,11 @@ python3 .../ascendc_compile_kernel.py --op-type=ClefMatmulArAddRmsNorm \
   `compiler/tikcpp/ascendc_kernel_cmake/fwk_modules/util/ascendc_compile_kernel.py`
   `:130-146` 生成 `bin-param *.json` 与同名 `*.sh`（`self.compile_sh`），`:175` 起循环执行；
   `:96-98` 的 `clean()` 只有在 `dump_cce` **不在** `op_debug_config` 时才删除 `working_dir`。
-- **本次取证用的是 `--debug-config=""`**，因此生成的 `*.sh`/`bin-param`/工作目录已被清理，
-  **本次没有取得**这些文件，也就**没有取得**真实 pass argv 与逐 pass 预处理。
+- **阶段 A** 用 `--debug-config=""`，生成物被清理；**阶段 B（已完成）**用 `--debug-config=dump_cce`，`*.sh`/`bin-param`/`dynamic`/config 已冻结（见 §6/§9）。**逐 pass 预处理仍未取得**。
 - **明确记缺项**：AIC/AIV 的宏表与预处理输出**本次未取得**。
   §3 的宏结论因此只是**源内条件 × 构建元数据**的交叉，**不能**替代逐 pass 预处理证据；
   也**不把** `taskRation=1:2` 当作宏证据（两者来源不同）。
-- 若将来需要，最小目标是**同一 TU**、`--debug-config` 含 `dump_cce` 的**一次**定向重建，
-  保留生成的 `*.sh` / `bin-param *.json` / `opc` 配置 / 完整 argv 及工作目录产物；
-  这不属于本次交付，也**不**另开无目标重建。
+- 上述定向重建**已完成**（§6）；仍缺的是**逐 pass `ccec` argv 与宏表**，属独立缺口。
 
 ## 2. 生成 JSON 里的真实字段（构建期实证）
 
