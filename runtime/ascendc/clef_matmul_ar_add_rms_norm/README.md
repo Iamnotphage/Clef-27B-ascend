@@ -107,7 +107,30 @@ bash build.sh
 因此 `diag[5..7]`（usedCoreNum / baseM / depthA1）改为**在 cube 阶段之前写出**，
 `mm_mode=1` 崩溃时也能拿到 tiling 数值（也可以用 `mm_enable=0` 直接读）。
 
-### 当前主假设
+### 已由编译证据定性的结构性原因
+
+kernel 被 ASC 编译器**按 pass 编译两次**，`AscendC::Matmul` 的别名在两趟里不同：
+
+| 证据 | 结论 |
+| --- | --- |
+| 首次编译报 `no member named 'SetSubBlockIdx' in 'AscendC::MatmulServiceAux<...>'` | 未加 `CUBE_ONLY` 时（AIC pass）别名是 **MatmulServiceAux**，即 `SPLIT_CORE_CUBE` 已定义 |
+| 加 `-DASCENDC_CUBE_ONLY=1` 后报 `no member named 'SetSubBlockIdx' in 'AscendC::MatmulClient<...>'` | 报错来自 **AIV pass**，别名是 **MatmulClient**；证明两趟各自选类 |
+| `kfc_register_obj.h` 的 `REGIST_CUBE_OBJ` 在非 3510 分支展开为 `KfcServer server; server.Init(workspace); server.InitObj(tpipe, ...); while(server.isRun()) server.Run(...); return;` | 它不是"注册语句"，而是 **cube pass 的主体 + server 循环** |
+| `matmul_client.h:117-146`：非 USE_SSBUF 的 `Init` 立即 `client->AllocUB` / 写 tilingGM / PostMessage | **Init 前必须已有 client 接线** |
+
+**因此单体 `mm_.Init(&cubeTiling, &pipe_)` 的结构在本平台不成立**：AIV pass 上 client 未接线，
+`Init()` 就会踩到 server 拥有的内部缓冲 —— 正是设备上那条
+"The address for the scalar to access the internal buffer of AICore is out of bounds"。
+
+修法：改用官方 `REGIST_MATMUL_OBJ(&pipe_, GetSysWorkSpacePtr(), mm_, &cubeTiling)`。
+它按 pass 自动分流：cube pass 跑 KFC server 循环后 `return`；vector pass 构造
+`KfcCommClient` 并 `SetMatrixKfc` 接线，然后继续执行后续 `SetOrgShape/SetTensorA/B/IterateAll`。
+
+tiling 契约（23 15:44 补）：`__gm__ TCubeTiling*` 的 `Init` 重载只对 `MatmulApiStaticTiling`
+成立（`matmul_utils.h:424-435` 的 `static_assert`），默认/动态配置不可用；本实现传的是
+`GET_TILING_DATA` 复制出的**本地普通对象**的指针，寿命覆盖整个 kernel，未做任何地址空间强转。
+
+### 旧主假设（已否证，保留记录）
 
 `Init()` 里先把归一化段约 120 KB 的 UB 分配掉了，等 `mm_.Init()` 再去取自己的 buffer 时
 池子已经不够 —— 这与"故障发生在 Init、且与核数无关"完全吻合。`norm_ub_late` 默认改为 `1`

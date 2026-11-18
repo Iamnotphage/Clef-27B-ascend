@@ -109,6 +109,27 @@ public:
         PipeBarrier<PIPE_ALL>();
     }
 
+    // Records which cube stage just completed (0 = none) plus the tiling
+    // fields, then the caller returns immediately.  Only block 0 writes, and
+    // every block leaves together so no barrier is left half-entered.
+    __aicore__ inline void WriteStageDiag(uint32_t stageDone) {
+        if (GetBlockIdx() != 0) return;
+        LocalTensor<float> d = diagT_.Get<float>();
+        float marker = 0.0f;
+        if (stageDone == 1u) marker = 1.0f;
+        else if (stageDone == 2u) marker = 2.0f;
+        else if (stageDone == 3u) marker = 3.0f;
+        else if (stageDone == 4u) marker = 4.0f;
+        else if (stageDone == 5u) marker = 5.0f;
+        d.SetValue(0, marker);
+        d.SetValue(5, static_cast<float>(tiling_->cubeTiling.usedCoreNum));
+        d.SetValue(6, static_cast<float>(tiling_->cubeTiling.baseM));
+        d.SetValue(7, static_cast<float>(tiling_->cubeTiling.depthA1));
+        PipeBarrier<PIPE_ALL>();
+        DataCopy(diag_[0], d, 8);
+        PipeBarrier<PIPE_ALL>();
+    }
+
     __aicore__ inline void Process() {
         int32_t mmRc = 0;
         int32_t arRc = 0;
@@ -127,24 +148,46 @@ public:
             aG.SetGlobalBuffer((__gm__ bfloat16_t*)xGm_, static_cast<uint64_t>(m_) * k_);
             bG.SetGlobalBuffer((__gm__ bfloat16_t*)wGm_, static_cast<uint64_t>(k_) * n_);
             cG.SetGlobalBuffer((__gm__ bfloat16_t*)partialGm_, static_cast<uint64_t>(m_) * n_);
-            // mm_step gates the cube calls one at a time so a fault can be
-            // attributed to a single call:
-            //   1 = Init only          2 = + SetOrgShape
-            //   3 = + SetTensorA       4 = + SetTensorB
-            //   5 = + IterateAll (full)
-            // mm_step=0 falls back to the older mm_mode: 1 => 4, 2 => 5.
-            uint32_t step = tiling_->mmStep;
-            if (step == 0u) step = (tiling_->mmMode >= 2u) ? 5u : 4u;
-            mm_.Init(&tiling_->cubeTiling, &pipe_);
-            if (step >= 2u) { mm_.SetOrgShape(m_, n_, k_); }
-            if (step >= 3u) { mm_.SetTensorA(aG, false); }
-            if (step >= 4u) {
+            // mm_stage runs up to a chosen cube call, records it in diag and
+            // returns immediately, so the last diag value written shows which
+            // call completed before the fault:
+            //   1 = Init            2 = + SetOrgShape    3 = + SetTensorA
+            //   4 = + SetTensorB    5 = + IterateAll
+            // mm_stage=0 keeps the normal path (mm_mode still selects whether
+            // IterateAll runs).
+            const uint32_t stage = tiling_->mmStage;
+            // Official wiring.  This kernel is compiled for both the cube and
+            // the vector pass: on the cube pass REGIST_MATMUL_OBJ runs the KFC
+            // server loop and returns, on the vector pass it creates the
+            // KfcCommClient and wires it before the object is initialised.
+            // Without it the client is uninitialised and Init() walks
+            // server-owned internal buffers -- the device fault we saw.
+            REGIST_MATMUL_OBJ(&pipe_, GetSysWorkSpacePtr(), mm_,
+                              &tiling_->cubeTiling);
+            if (stage == 1u) { WriteStageDiag(1u); }  // after wiring/Init
+            if (stage != 1u) {
+                mm_.SetOrgShape(m_, n_, k_);
+                if (stage == 2u) { WriteStageDiag(2u); }
+            }
+            if (stage != 1u && stage != 2u) {
+                mm_.SetTensorA(aG, false);
+                if (stage == 3u) { WriteStageDiag(3u); }
+            }
+            if (stage != 1u && stage != 2u && stage != 3u) {
                 // mm_btrans=1 tells the cube B is stored column-major; host
                 // tiling and kernel are driven by the same attribute.
                 mm_.SetTensorB(bG, tiling_->mmBTrans != 0u);
+                if (stage == 4u) { WriteStageDiag(4u); }
             }
-            if (step >= 5u) { mm_.IterateAll(cG); }
+            if (stage == 0u || stage == 5u) {
+                if (tiling_->mmMode >= 2u) { mm_.IterateAll(cG); }
+                if (stage == 5u) { WriteStageDiag(5u); }
+            }
             mmRc = 0;
+        }
+        if (tiling_->mmStage >= 1u && tiling_->mmStage <= 5u) {
+            // Stage-gated run: leave together, no barrier, no AR, no norm.
+            return;
         }
         AscendC::SyncAll();
         PipeBarrier<PIPE_ALL>();

@@ -118,13 +118,13 @@ static ge::graphStatus TilingFunc(gert::TilingContext* context) {
     const auto* bTransAttr = context->GetAttrs()->GetAttrPointer<int64_t>(10);
     const bool bTrans = (bTransAttr != nullptr) && (*bTransAttr != 0);
     t->mmBTrans = bTrans ? 1u : 0u;
-    // mm_step gates the cube calls one at a time (1 = Init only ... 5 = full);
-    // 0 keeps the mm_mode meaning.  Used only to attribute the init-stage fault
-    // to a single call, never to change behaviour on its own.
-    const auto* mmStepAttr = context->GetAttrs()->GetAttrPointer<int64_t>(11);
-    const int64_t mmStepReq = (mmStepAttr == nullptr) ? 0 : *mmStepAttr;
-    if (mmStepReq < 0 || mmStepReq > 5) { return ge::GRAPH_FAILED; }
-    t->mmStep = static_cast<uint32_t>(mmStepReq);
+    // mm_stage runs the cube sequence up to this call, records it in diag and
+    // returns immediately (1 = Init ... 5 = IterateAll; 0 = normal path).
+    // Instrumentation only: it never changes a shape, transpose or buffer.
+    const auto* mmStageAttr = context->GetAttrs()->GetAttrPointer<int64_t>(11);
+    const int64_t mmStageReq = (mmStageAttr == nullptr) ? 0 : *mmStageAttr;
+    if (mmStageReq < 0 || mmStageReq > 5) { return ge::GRAPH_FAILED; }
+    t->mmStage = static_cast<uint32_t>(mmStageReq);
 
     auto platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     // block_dim: 0 = auto (AIV count, the value that crashed with
@@ -249,7 +249,7 @@ public:
         this->Attr("mm_bufspace").Int(0);
         this->Attr("norm_ub_late").Int(1);
         this->Attr("mm_btrans").Int(0);
-        this->Attr("mm_step").Int(0);
+        this->Attr("mm_stage").Int(0);
         this->SetInferShape(ge::InferShape).SetInferDataType(ge::InferDataType);
         this->AICore().SetTiling(optiling::TilingFunc);
         this->AICore().AddConfig("ascend910_93");
