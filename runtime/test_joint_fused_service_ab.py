@@ -40,6 +40,26 @@ def main() -> int:
           and mod.TEXT_SHA["od-1534"].startswith("568ea158")
           and mod.IMAGE_SHA.startswith("f3229f5c"))
 
+    runner_meta = object.__new__(mod.ServiceAB)
+    runner_meta.args = types.SimpleNamespace(port=18143)
+    choice = json.dumps({"questions": {"answer": {"type": "choice"}}}).encode()
+    score = json.dumps({"questions": {"answer": {"type": "score"}}}).encode()
+    check("expect from frozen schema", 
+          runner_meta.expected_answer_type(choice, "c") == "choice"
+          and runner_meta.expected_answer_type(score, "s") == "score")
+    try:
+        runner_meta.expected_answer_type(b'{"questions": {}}', "bad")
+    except mod.AbError:
+        bad_schema = True
+    else:
+        bad_schema = False
+    check("missing schema type rejected", bad_schema)
+    final = {"cmdline": "python -m vllm.entrypoints.cli.main serve --served-model-name clef "
+                        "--tensor-parallel-size 2 --enforce-eager --port 18143"}
+    stale = {"cmdline": "setsid nohup bash Clef-27B/start.sh --config s1"}
+    check("final vllm argv recognized", runner_meta.is_final_vllm(final)
+          and not runner_meta.is_final_vllm(stale))
+
     with tempfile.TemporaryDirectory(prefix="ab-test-") as tmp:
         tmp = Path(tmp)
         existing = tmp / "exists"

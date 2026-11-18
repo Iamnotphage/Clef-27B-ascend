@@ -237,6 +237,20 @@ class ServiceAB:
         if not target.is_file() or self.win.sha256(target) != PREIMAGE_SHA:
             raise AbError("revert did not restore f8101b98")
 
+    def expected_answer_type(self, body, name):
+        try:
+            doc = json.loads(body)
+        except Exception as exc:
+            raise AbError(f"input {name} is not JSON: {exc}")
+        questions = doc.get("questions")
+        if not isinstance(questions, dict) or len(questions) != 1:
+            raise AbError(f"input {name} is not single-field schema")
+        field = next(iter(questions.values()))
+        answer_type = field.get("type") if isinstance(field, dict) else None
+        if answer_type not in ("choice", "score"):
+            raise AbError(f"input {name} has unsupported answer type: {answer_type}")
+        return answer_type
+
     def input_bodies(self):
         doc = json.loads(Path(self.args.data).read_text())
         bodies = {}
@@ -250,13 +264,15 @@ class ServiceAB:
             if digest != TEXT_SHA[name]:
                 raise AbError(f"input hash mismatch: {name}: {digest}")
             bodies[name] = {"body": body, "sha256": digest, "url": self.args.text_url,
-                            "expect": "score", "kind": "text"}
+                            "expect": self.expected_answer_type(body, name),
+                            "kind": "text"}
         image = Path(self.args.image_source).read_bytes()
         digest = hashlib.sha256(image).hexdigest()
         if digest != IMAGE_SHA:
             raise AbError(f"image input hash mismatch: {digest}")
         bodies["erqa-0000"] = {"body": image, "sha256": digest,
-                               "url": self.args.image_url, "expect": "choice",
+                               "url": self.args.image_url,
+                               "expect": self.expected_answer_type(image, "erqa-0000"),
                                "kind": "image"}
         self.state["inputs"] = {name: {key: value for key, value in item.items()
                                        if key != "body"} for name, item in bodies.items()}
@@ -303,14 +319,55 @@ class ServiceAB:
                           "raw": str(raw_path)}
         return rows
 
+    def same_process(self, saved, live):
+        return bool(saved and live
+                    and saved.get("pid") == live.get("pid")
+                    and saved.get("starttime") == live.get("starttime")
+                    and saved.get("boot_id") == live.get("boot_id")
+                    and saved.get("pgid") == live.get("pgid"))
+
+    def is_final_vllm(self, identity):
+        cmdline = (identity or {}).get("cmdline", "")
+        markers = ("-m vllm.entrypoints.cli.main serve",
+                   "--served-model-name clef",
+                   "--tensor-parallel-size 2",
+                   "--enforce-eager",
+                   f"--port {self.args.port}")
+        return all(marker in cmdline for marker in markers)
+
+    def refresh_arm_identity(self, label):
+        identity = getattr(self, "arm_identity", None)
+        if identity is None:
+            return False
+        saved = identity["root"]
+        live = self.win.proc_identity(saved["pid"])
+        if live is None:
+            self.arm_identity = None
+            return True
+        if not self.same_process(saved, live):
+            self.attribution_unknown = True
+            return False
+        if live.get("cmdline") != saved.get("cmdline") and not self.is_final_vllm(live):
+            self.attribution_unknown = True
+            return False
+        self.arm_identity = {"root": live,
+                             "descendants": self.win.descendants(saved["pid"])}
+        return True
+
     def start_arm(self, flag, label):
         try:
             return self._start_arm(flag, label)
         except Exception as exc:
-            identity = getattr(self, "arm_identity", None)
-            if identity is None or self.attribution_unknown:
+            try:
+                refreshed = self.refresh_arm_identity(label)
+            except Exception as refresh_exc:
+                refreshed = False
                 self.state["start_cleanup_error"] = (
-                    f"{type(exc).__name__}: no label-bound identity; no signal sent")
+                    f"{type(refresh_exc).__name__}: {refresh_exc}")
+            identity = getattr(self, "arm_identity", None)
+            if not refreshed or identity is None or self.attribution_unknown:
+                self.state["start_cleanup_error"] = (
+                    f"{type(exc).__name__}: no proven label-bound identity; no signal sent")
                 self.cleanup_unconfirmed = True
                 raise
             try:
@@ -359,10 +416,16 @@ class ServiceAB:
         if wait.returncode != 0:
             raise AbError(f"wait failed: {label}")
         live = self.win.proc_identity(root_pid)
-        if (live is None or live["starttime"] != identity["starttime"]
-                or live["boot_id"] != identity["boot_id"]):
+        if not self.same_process(identity, live):
             self.attribution_unknown = True
             raise AbError(f"root identity changed during wait: {root_pid}")
+        if not self.is_final_vllm(live):
+            raise AbError(f"root did not exec to the known vllm argv: {live.get('cmdline')}")
+        if self.win.port_open(self.args.port) != "open":
+            raise AbError("service port is not open after wait")
+        self.arm_identity = {"root": live,
+                             "descendants": self.win.descendants(root_pid)}
+        identity = live
         root_env = self.win.parse_environ(
             (self.win.PROC_ROOT / f"{root_pid}/environ").read_bytes())
         source_sha = self.win.sha256(Path(self.args.tree) /
@@ -542,13 +605,32 @@ def main() -> int:
                 label = f"d0-ab-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{index}-{flag}-{uuid.uuid4().hex[:6]}"
                 arm = ab.start_arm(flag, label)
                 provenance = arm
-                samples = ab.run_inputs(label)
-                stop_info = ab.stop_tree(arm, label)
-                arm = None
-                ab.arm_identity = None
-                row["arms"][str(flag)] = {"label": label, "provenance": provenance,
-                                          "samples": samples, "stop": stop_info}
-                ab.flush(f"round-{index}-flag-{flag}")
+                samples = None
+                arm_error = None
+                stop_info = None
+                stop_error = None
+                try:
+                    samples = ab.run_inputs(label)
+                except Exception as exc:
+                    arm_error = f"{type(exc).__name__}: {exc}"
+                finally:
+                    try:
+                        stop_info = ab.stop_tree(arm, label)
+                    except Exception as exc:
+                        stop_error = f"{type(exc).__name__}: {exc}"
+                        ab.cleanup_unconfirmed = True
+                    row["arms"][str(flag)] = {
+                        "label": label, "provenance": provenance,
+                        "samples": samples, "error": arm_error,
+                        "stop": stop_info, "stop_error": stop_error}
+                    ab.flush(f"round-{index}-flag-{flag}")
+                    if stop_error is None:
+                        arm = None
+                        ab.arm_identity = None
+                if arm_error:
+                    raise AbError(arm_error)
+                if stop_error:
+                    raise AbError(stop_error)
     except Exception as exc:
         ab.state["error"] = f"{type(exc).__name__}: {exc}"
     finally:
