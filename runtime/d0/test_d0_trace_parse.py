@@ -43,7 +43,7 @@ def main() -> int:
     # 1 normal: AIC sealed with K1/K2/K8 and no claim; AIV workers claim all M
     raw = blank()
     for b in range(AIC):
-        put(raw, b, b, 0, 0, bits=K1_B, bits2=K8_B2)
+        put(raw, b, b, 0, 0, bits=K1_B | K2_B, bits2=K8_B2)
     for b in range(AIC):
         for s in range(SUB):
             idx = b * SUB + s
@@ -55,7 +55,8 @@ def main() -> int:
     check("normal aiv coverage", r["observed_coverage"] and not r["claim_overlap"]
           and not r["claim_gaps"], r["claim_gaps"])
     aic_obs = [o for o in r["observations"] if o["domain"] == "aic"]
-    check("aic kept as observation", len(aic_obs) == AIC)
+    check("aic kept as observation", len(aic_obs) == AIC and not any(
+        o.get("incomplete") for o in aic_obs), [o.get("incomplete") for o in aic_obs])
     check("aic never in claims", all(c["slot"] >= AIC for c in r["claim_ranges"]))
 
     # 2 tail gap fails the exit condition
@@ -112,6 +113,14 @@ def main() -> int:
     r = run(raw)
     check("no claim -> uncovered", r["observed_coverage"] is False
           and r["unclaimed_span"] == {"from": 0, "to": M})
+
+    # 8b AIV non-worker without K4 keeps identity, is complete and not a claim
+    raw = blank()
+    put(raw, AIC, 0, 0, 1, bits=K1_B, bits2=K8_B2)
+    r = run(raw)
+    aiv0 = [o for o in r["observations"] if o["slot"] == AIC][0]
+    check("aiv non-worker identity kept", not aiv0.get("incomplete")
+          and not r["claim_ranges"])
 
     # 9 coercion refusals
     for bad in (1.5, -1, 0x1_0000_0000):

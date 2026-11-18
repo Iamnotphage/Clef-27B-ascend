@@ -74,7 +74,12 @@ def check_derivation(block: int, sub: int, ratio: int, aiv_blocks: int) -> list:
     return why
 
 
-REQUIRED_FOR_CLAIM = ("K1", "K4", "K8_final")   # prerequisites before a claim counts
+# Reachability differs by domain: AIC returns inside REGIST, so K4 and the
+# later stages are unreachable there, while an AIV worker must show K4 before
+# its range counts as a claim. An AIV record without the worker bit keeps its
+# identity and is simply not a claim.
+REQUIRED_AIC = ("K1", "K8_final")
+REQUIRED_AIV_WORKER = ("K1", "K4", "K8_final")
 STAGE_ORDER = ["K1", "K2", "K3", "K4", "K5_enter", "K5_return",
                "K6_end_before", "K6_end_after", "K7a", "K7b", "K8_final"]
 ENTER_RETURN = ("K5_enter", "K5_return")
@@ -141,7 +146,13 @@ def decode(raw: list, aic_cap: int, sub_cap: int, m: int, magic: int,
         if anomaly:
             rec["contract_anomaly"] = anomaly
 
-        missing = [x for x in REQUIRED_FOR_CLAIM if x not in stages]
+        if rec["domain"] == "aic":
+            need = REQUIRED_AIC               # K4 is unreachable on AIC
+        elif rec["is_worker"]:
+            need = REQUIRED_AIV_WORKER
+        else:
+            need = ()                          # identity kept, never a claim
+        missing = [x for x in need if x not in stages]
         if not rec["sealed"]:
             rec["incomplete"] = ["unsealed"]
         elif missing:
