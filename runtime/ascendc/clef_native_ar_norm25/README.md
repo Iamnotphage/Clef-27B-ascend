@@ -460,3 +460,19 @@ N1 303.83746，setup rank0/1为1435.97522/1660.58330，均单列并排除于正�
 AR+AddRMSNorm，包含adapter分配及diag，GEMM/输入恢复在外；完整服务收益与全量质量未测。
 当前总event/wall无法分辨MC2通信、归一化、adapter分配或diag各阶段耗时，
 后续MC2配平仍需实际tiling及隔离Tcomm/Tcompute。cores48不排，冻结包与原件保持不变。
+
+## ND固定参考与NZ生产参考的边界
+
+N1的固定参考由ND权重的`torch.matmul(x,w)`生成BF16 partial，再执行native AllReduce
+与`npu_add_rms_norm`。input-ready计时复用该partial；当前数值与性能结论限定于这条ND链。
+
+2026-11-19，20转发29对Grouped首格的只读结果：其native ND diagnostic raw与N1 c24
+reference逐字节相等；该格NZ生产baseline与ND有差异。`ND_vs_NZ`按原门的residual
+max_abs=0.03125、22/4951040元素失败；Y max_abs=0.015625；rstd max_abs=5.1856e-6通过。
+本条未提供Y相对误差，保持该项结论边界。Grouped候选当时仍缺raw。此处记录转发来源，
+25本次复核N1源码参考路径，未独立复核该Grouped原件。
+
+这条ND链尚未建立与NZ生产参考的等价性，N1通过不能外推生产采用或完整模型质量。
+v3继续冻结v2的ND参考、输入生成、数值门和计时协议，唯一功能变量为rstd8聚合DMA。
+未来服务接入需另行冻结真实NZ参考、实际布局/输入/原始输出身份，按原固定门独立对照，
+并完成全量质量与服务性能验证；禁止为过门替换参考。

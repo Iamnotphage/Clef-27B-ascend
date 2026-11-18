@@ -4,6 +4,15 @@
 v2正式20对样本没有稳定收益；实测总结见相邻v2 README的“cores24实际闭合”。
 2026-11-19用户授权本独立最小优化。设备、隔离安装、加载和服务只交owner27，20统一排程。
 
+v3固定沿用v2的**ND参考链**：ND原生BF16 GEMM partial→native AllReduce+AddRMSNorm。
+2026-11-19，20转发29的Grouped首格只读结果：native ND diagnostic raw与N1 c24 reference
+逐字节相等；本次NZ生产baseline与ND的原门对照residual max_abs=0.03125，
+22/4951040元素失败，Y max_abs=0.015625，rstd max_abs=5.1856e-6通过；Y相对误差未在
+本条转发中给出。Grouped候选当时仍缺raw。25本次核对N1源码参考路径，未独立复核该Grouped原件。
+当前ND链尚未建立与NZ生产参考的等价性，结论限定于本输入链，生产采用与完整模型质量仍待验证。
+本次rstd8验证保持参考/输入生成/固定门/协议原字节；未来服务接入需另冻结真实NZ参考，
+绑定实际布局及输入/输出身份、按原门独立对照并完成全量质量/性能验证，禁止为过门替换参考。
+
 ## 可证伪来源与唯一功能差异
 
 v2 `Row()` 每行 `DataCopyPad(rs_[row], stat, {1,4,0,0,0})`；967行共967次rstd写出请求。
@@ -92,7 +101,9 @@ wrapper `5c045eb1427e9cb902867bd7147c0d636ce91e1c`、SHA
 `9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5`与六恢复模块复用。
 stop/精确PGID/240s/失败finally/唯一label/四检保持，revert退役vendor保留原件。
 
-下列只读命令已执行并生成上表plan。23核新增身份与diff后，27依20授权加`--execute`串行运行：
+下列只读命令已执行并生成上表plan。23已有限核新增同步、尾边界和全部身份通过，ready排队。
+27依20既定顺序，在前窗真实四检闭合后加`--execute`串行运行，当前优先Grouped→24真f810对照。
+本次核定只覆盖CPU源码/产物/监督接线；设备固定门与计时仍待原件。
 
 ```bash
 /workspace/yangchen/venvs/clef-py312/bin/python \
