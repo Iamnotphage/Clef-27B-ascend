@@ -128,3 +128,58 @@ python3 runtime/analyze_joint_smallq_probe.py \
   --expect-sha 25686c9de1f1f5eb20c9a5be5b16eb1b2688a1aa15519be6ef19870f63dc6cad \
   --output /tmp/smallq-paired-summary.json
 ```
+
+## A/C/B 真实诊断（2026-11-19 03:12–03:14 CST）
+
+27 执行 `13fd807a2349aad36f3cf972dc82dbc118c01f17` 的独立 profile，B 四冻件仍为 `2e8af5d`。完整原件压缩副本、SHA 清单、逐轮重算统计在 `Clef-27B/logs/joint-smallq-20261119/acb-v1/`。probe SHA256 为 `79d115accb3822425db30c40ccd11775213e45ed5e3ffbecbf5d46c09c203caa`。
+
+A 使用同一 head 实例、同一真实 checkpoint 参数存储，绑定 f810 的三处原方法，运行原 MHA。B 绑定冻结 smallQ 方法与 Triton backend。C 明确在 probe 进程内替换 `clef_smallq_kernel.smallq_attention` 模块属性为原 SDPA，保留 B 的 adapter、guard、projection；BSH↔BNSD 由 probe 完成。切臂、hook 和 hash 检查均在稳态计时外。三臂相同输入/权重，A↔C 衡量接入与投影/布局路径的净差异，C↔B 衡量同一 adapter 下的 backend 替换。
+
+### 完整性与数值
+
+独立分析器从原始 samples 重算 9 格×4 轮×3 臂×20 = **2160** 个正式样本，全部有限且为正。顺序固定 `ACB/BCA/CAB/BAC`，每对正反各两轮；记录内每个 median 与 paired_delta 均逐项精确一致。三长度六 core + 三 head + 两 fallback 共 11 组 gate 完整。A 六个 MHA 的 Q 为 `[4,4,1,1,1,1]`，K/V 对象身份为 `[false,false,true,true,true,true]`；B/C 六个替代 backend、零原 cross-MHA。
+
+- core 最大绝对差 `.001953125`；head 最大 `.0009765625`；prob 最大 `.00019699335`，均通过原冻结门。
+- A/C 三个完整 head logits/prob 均逐位一致；B 在 307/967 逐位一致，1595 有上述小差异。
+- 两个 fallback 所有臂逐位一致、零替代 backend。same_weight_storage_verified、frozen_files_unchanged 均为 true。
+- B 第一调用 wall **217.33546 ms**，包含首次编译或缓存查找路径，单列且未混入正式样本；首格原实验首次 JIT 3.714s 的证据保留。
+- 分析器另验证缺样本、错顺序、NaN、改写 delta、fallback 不等、输入 hash 不符、旧双臂 experiment 共 7 类原件变异全部拒绝。
+
+### 同轮配对结果
+
+下表为四个“该轮两臂各20次的中位数之差”的中位数，单位 ms。每轮差值、极值范围、百分比、五类计时字段均保留在 `paired-summary.json`；结论使用同轮配对，未用跨轮 pooled 值。
+
+| scope / L / Q | C−A wall | C−A device | B−C wall | B−C device | B−A wall | B−A device |
+|---|---:|---:|---:|---:|---:|---:|
+| core / 307 / 1 | +.001673 | +.001070 | −.042703 | −.036600 | −.041233 | −.035530 |
+| core / 307 / 4 | −.000578 | −.000760 | −.058655 | −.067270 | −.059185 | −.068030 |
+| core / 967 / 1 | −.001028 | −.000025 | −.046688 | −.046430 | −.047015 | −.047100 |
+| core / 967 / 4 | −.001463 | −.000005 | −.031813 | −.047050 | −.033558 | −.047185 |
+| core / 1595 / 1 | −.000295 | −.002220 | −.031625 | −.041740 | −.030118 | −.044035 |
+| core / 1595 / 4 | −.000360 | +.000965 | −.018013 | −.039945 | −.019058 | −.036665 |
+| head / 307 / 4 | +.153818 | +.158200 | +.015033 | +.014085 | +.168850 | +.172285 |
+| head / 967 / 4 | +.170415 | +.173040 | +.038173 | +.041915 | +.200400 | +.211025 |
+| head / 1595 / 4 | +.151345 | +.161305 | +.056908 | +.050525 | +.208253 | +.211830 |
+
+六个 core 的 B−A、B−C wall/device 全部 4/4 更快；A/C core 同函数控制差异为数微秒、总体方向混合。完整 head 的 C−A 与 B−A wall/device 三长度均 4/4 更慢。完整 head 的 B−C 每长度均 3/4 更慢，wall 差值范围依次为 `[-.074600,+.044465]`、`[-.088780,+.048395]`、`[-.083200,+.059785]`，不足以声称 backend 本身在整头稳定拖慢。
+
+完整 head C−A 的 wall 差值范围为 `[+.131450,+.179860]`、`[+.128315,+.286845]`、`[+.116235,+.322190]`；host_submit 中位差为 `+.155313/+.178628/+.163035 ms`，三长度也均 4/4 更慢，与 wall/device 增量同量级。device event 区间包含 stream gap；host_submit 包含 Python/框架调用与可能的内部同步。这些字段支持“接入/投影路径存在净开销”，无法单独归因纯 Python、某条 guard 或独立的设备 gap。
+
+### 唯一后续假设与否证方式
+
+下一最小变量建议为 **guard 元数据读取去重**：每次调用内复用已读取的 shape/device/stride；decoder 的 K/V 为同一对象时只校验该对象一次。每次调用仍读取训练/grad、flag、参数 dtype/device 与完整原域条件；不做跨调用缓存，不改变算子、投影身份、tile、布局、域或数值门。当前 guard 重复读取 query.device、各 tensor.shape，并对共享 K/V 重复做相同检查，这是可从源码确认的工作量。全部损失能否通过这项改动回收仍待设备实测。
+
+以冻结 B 为对照的新候选 D，只替换 guard 实现；先 CPU 逐条边界/动态切换检查，再由 20 排程、27 运行相同真实权重/输入的独立 B/D 整头微基准。若三长度任一方向不稳定，或完整 head 相对 f810 仍无稳定收益，即否证该项足以支撑服务化的假设；所有原门、fallback 和清理恢复条件继续适用。当前只提出该单变量，未创建或运行新设备窗口。
+
+生产全域 smallQ 默认 off；当前数据继续不支持采用或升级服务 AB。完整 OD/ERQA≤2pp 与 S1/S2 均未对 smallQ 实测。24 的随机权重/aa3e OFF 基线与本轮真实权重/f810 A 的绝对耗时保持分开。
+
+### 生命周期与复算
+
+window `d512383a267104546ec9d50d4cf1f35821ef3cc338d267a0988171ed0246b304` overall_rc=0；probe record cleanup rc0/reaped=true，unknown/residual/killed 均空；revert 回 f810 并移除 smallQ kernel。restore `461e13bd74d7b8372f724879e4d3688708d4c972f829c448b70fc48c54f61f4c`，label `d0-restore-20261118T191302Z-5067eaf0`，root1216295/start394616796，workers1216463/1216464 同恢复树且在卡7两chip；health/workers/text/image 四项 rc0、ok=true。
+
+```bash
+python3 runtime/analyze_joint_smallq_acb.py \
+  Clef-27B/logs/joint-smallq-20261119/acb-v1/head-probe.json.gz \
+  --expect-sha 79d115accb3822425db30c40ccd11775213e45ed5e3ffbecbf5d46c09c203caa \
+  --output /tmp/smallq-acb-paired-summary.json
+```
