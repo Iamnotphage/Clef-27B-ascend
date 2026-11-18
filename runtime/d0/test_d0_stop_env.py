@@ -61,6 +61,32 @@ def main() -> int:
         d0_stop.identity = orig
     check("stop refuses reused pid", not ok and "identity changed" in why, why)
 
+    # 5 a saved identity that disagrees with the live process stops the stop
+    orig = d0_stop.identity
+    d0_stop.identity = lambda pid: {"pid": pid, "ppid": 1, "pgid": 5,
+                                    "starttime": "111", "boot_id": "b", "cmdline": "x"}
+    calls = []
+    try:
+        log = {}
+        rec = d0_stop.stop(424242, log, saved={"pid": 424242, "starttime": "222",
+                                              "boot_id": "b", "pgid": 5},
+                           signaller=lambda p, s: calls.append((p, s)))
+        check("saved identity mismatch refuses", not calls
+              and "does not match" in (rec.get("error") or ""), rec)
+        log = {}
+        rec = d0_stop.stop(424242, log, saved={"pid": 424242, "starttime": "111",
+                                              "boot_id": "b", "pgid": 6},
+                           signaller=lambda p, s: calls.append((p, s)))
+        check("saved pgid mismatch refuses", not calls
+              and "pgid" in (rec.get("error") or ""), rec)
+        log = {}
+        rec = d0_stop.stop(424242, log, saved={"pid": 424242, "starttime": "111",
+                                              "boot_id": "b", "pgid": 5},
+                           signaller=lambda p, s: calls.append((p, s)))
+        check("matching identity proceeds", len(calls) >= 1, rec)
+    finally:
+        d0_stop.identity = orig
+
     print("RESULT:", "ALL PASS" if not fails else f"FAILURES: {fails}")
     return 0 if not fails else 1
 

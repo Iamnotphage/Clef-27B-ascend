@@ -83,13 +83,34 @@ def can_signal(target: dict) -> tuple[bool, str]:
     return True, "ok"
 
 
-def stop(api_pid: int, log: dict, *, term_wait: float = 20.0,
-         kill_wait: float = 10.0, signaller=None) -> dict:
+def load_identity(path: Path) -> dict:
+    """The root identity saved when the service was started."""
+    return json.loads(Path(path).read_text())
+
+
+def stop(api_pid: int, log: dict, *, saved: dict | None = None,
+         term_wait: float = 20.0, kill_wait: float = 10.0, signaller=None) -> dict:
     signaller = signaller or (lambda pid, sig: os.kill(pid, sig))
     api = identity(api_pid)
     if api is None:
         log["stop"] = {"error": "api pid not alive", "api_pid": api_pid}
         return log["stop"]
+    if saved is not None:
+        # The live process must still be the one we recorded; anything else is
+        # refused outright because a recycled pid would be killed by mistake.
+        for field in ("pid", "starttime", "boot_id"):
+            if saved.get(field) is None:
+                log["stop"] = {"error": f"saved identity missing {field}", "api_pid": api_pid}
+                return log["stop"]
+        if saved["pid"] != api["pid"] or saved["starttime"] != api["starttime"] \
+                or saved["boot_id"] != api["boot_id"]:
+            log["stop"] = {"error": "saved identity does not match the live process",
+                           "saved": saved, "live": api}
+            return log["stop"]
+        if saved.get("pgid") is not None and saved["pgid"] != api["pgid"]:
+            log["stop"] = {"error": "saved pgid mismatch", "saved": saved, "live": api}
+            return log["stop"]
+    log["stop_root_identity"] = "verified" if saved is not None else "unbound"
     targets = [api] + [identity(p) for p in descendants(api_pid)]
     targets = [t for t in targets if t]
     record = {"api": api, "targets": [t["pid"] for t in targets],
@@ -143,19 +164,26 @@ def stop(api_pid: int, log: dict, *, term_wait: float = 20.0,
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--api-pid", type=int, required=True)
+    ap.add_argument("--saved-identity", type=Path,
+                    help="root identity captured at start; required for a bound stop")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--dry-run", action="store_true", help="record the plan only")
     a = ap.parse_args()
     log: dict = {}
+    saved = load_identity(a.saved_identity) if a.saved_identity else None
     if a.dry_run:
         api = identity(a.api_pid)
         log["stop"] = {"dry_run": True, "api": api,
-                       "descendants": descendants(a.api_pid)}
+                       "descendants": descendants(a.api_pid),
+                       "saved_identity_bound": saved is not None}
     else:
-        stop(a.api_pid, log)
+        stop(a.api_pid, log, saved=saved)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
-    return 0 if not log["stop"].get("survivors") else 1
+    rec = log["stop"]
+    if rec.get("error") or rec.get("refused"):
+        return 1                      # an error or a refusal is never success
+    return 0 if not rec.get("survivors") else 1
 
 
 if __name__ == "__main__":
