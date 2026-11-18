@@ -202,6 +202,8 @@ def main() -> int:
                     help="first candidate is fixed at 1")
     ap.add_argument("--use-hccl", type=int, default=2, choices=(2,),
                     help="first candidate is fixed at 2 (AR off)")
+    ap.add_argument("--service-label", help="override the generated restore label "
+                    "(tests pass a known label; production leaves it unset)")
     ap.add_argument("--adapter", type=Path, help="prebuilt extension to load")
     ap.add_argument("--adapter-sha", help="expected sha256 of that extension")
     ap.add_argument("--dry-run", action="store_true", help="print the plan only; touches no device")
@@ -254,7 +256,7 @@ def main() -> int:
             from d0_restore import (SERVICE_CONFIG, SERVICE_LAUNCH, SERVICE_WAIT,
                                     build_commands, discover_service_pids,
                                     new_service_label, restore, verify)
-            label = new_service_label()          # unique per restore
+            label = a.service_label or new_service_label()   # unique unless pinned
             launch = ["bash", SERVICE_LAUNCH[1], label]
             rlog = {"test_rc": test_rc, "test_exception": test_exc,
                     "run_id": run_id, "service_label": label,
