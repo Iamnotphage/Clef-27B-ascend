@@ -194,7 +194,14 @@ public:
             // Stage-gated run: leave together, no barrier, no AR, no norm.
             return;
         }
-        AscendC::SyncAll();
+        // No cross-core barrier here.  REGIST_MATMUL_OBJ runs the KFC server
+        // loop on the cube pass and returns from Process(), so the AIC blocks
+        // never reach a barrier placed after it; a SyncAll() on the remaining
+        // AIV blocks waits for cores that have already exited, which is the
+        // "aicore execution times out / timeout or trap error" (507014,
+        // retCode 0x25) seen after the wiring fix.  The client matmul's own
+        // completion handshake orders the cube result; only intra-core
+        // ordering is needed here.
         PipeBarrier<PIPE_ALL>();
 
         if (tiling_->normLate != 0u) {
