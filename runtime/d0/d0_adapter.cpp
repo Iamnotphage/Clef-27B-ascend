@@ -28,6 +28,43 @@
 
 namespace {
 
+// Scope guard for the aclTensor handles: released on any exit path, including a
+// throw from malloc or from OpCommand::Run. The workspace is NOT freed here; it
+// is a per-process static cache reused across calls (see below).
+struct TensorSet {
+    aclTensor* h[9] = {nullptr, nullptr, nullptr, nullptr, nullptr,
+                       nullptr, nullptr, nullptr, nullptr};
+    ~TensorSet() {
+        for (auto* t : h) if (t != nullptr) aclDestroyTensor(t);
+    }
+    void set(int i, aclTensor* t) { h[i] = t; }
+};
+
+struct DevicePrecondition {
+    static void check(const at::Tensor& x, const at::Tensor& w, const at::Tensor& r,
+                      const at::Tensor& g, const at::Tensor& trace) {
+        TORCH_CHECK(x.device().type() == at::kPrivateUse1, "x must be on NPU");
+        for (const auto* t : {&w, &r, &g}) {
+            TORCH_CHECK(t->device() == x.device(),
+                        "tensor on ", t->device(), " but x on ", x.device());
+        }
+        for (const auto* t : {&x, &w, &r, &g}) {
+            TORCH_CHECK(t->scalar_type() == at::kBFloat16, "inputs must be bfloat16");
+        }
+        TORCH_CHECK(x.dim() == 2 && w.dim() == 2 && r.dim() == 2 && g.dim() == 1,
+                    "expected x/w/r 2-D and gamma 1-D");
+        TORCH_CHECK(x.size(1) == w.size(0), "x K ", x.size(1), " != w K ", w.size(0));
+        TORCH_CHECK(r.size(0) == x.size(0), "residual rows ", r.size(0), " != ", x.size(0));
+        TORCH_CHECK(r.size(1) == w.size(1), "residual cols ", r.size(1), " != ", w.size(1));
+        TORCH_CHECK(g.size(0) == w.size(1), "gamma len ", g.size(0), " != N ", w.size(1));
+        TORCH_CHECK(trace.scalar_type() == at::kInt, "trace container must be int32");
+        TORCH_CHECK(trace.dim() == 2 && trace.size(0) == 72 && trace.size(1) == 8,
+                    "trace must be [72,8]");
+        TORCH_CHECK(trace.numel() * trace.element_size() == 2304, "trace must be 2304 B");
+        TORCH_CHECK(trace.device() == x.device(), "trace must live beside the inputs");
+    }
+};
+
 constexpr int64_t kTraceSlots = 72;
 constexpr int64_t kTraceFields = 8;
 
@@ -77,15 +114,23 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
     auto trace = at::empty({kTraceSlots, kTraceFields},
                            x.options().dtype(at::kInt).device(x.device()));
 
-    aclTensor* tx = mk(x, ACL_BF16);
-    aclTensor* tw = mk(w, ACL_BF16, /*require_nz=*/true);
-    aclTensor* tr = mk(residual, ACL_BF16);
-    aclTensor* tg = mk(gamma, ACL_BF16);
-    aclTensor* to = mk(out, ACL_BF16);
-    aclTensor* tro = mk(res_out, ACL_BF16);
-    aclTensor* trs = mk(rstd, ACL_FLOAT);
-    aclTensor* td = mk(diag, ACL_FLOAT);
-    aclTensor* ttr = mk(trace, ACL_UINT32);   // int32 storage seen as uint32
+    // Preconditions run after the output tensors are allocated but before any
+    // storage descriptor is read, so a mismatch cannot reach the cast.
+    DevicePrecondition::check(x, w, residual, gamma, trace);
+
+    TensorSet ts;                       // releases everything on any exit path
+    ts.set(0, mk(x, ACL_BF16));
+    ts.set(1, mk(w, ACL_BF16, /*require_nz=*/true));
+    ts.set(2, mk(residual, ACL_BF16));
+    ts.set(3, mk(gamma, ACL_BF16));
+    ts.set(4, mk(out, ACL_BF16));
+    ts.set(5, mk(res_out, ACL_BF16));
+    ts.set(6, mk(rstd, ACL_FLOAT));
+    ts.set(7, mk(diag, ACL_FLOAT));
+    ts.set(8, mk(trace, ACL_UINT32));   // int32 storage seen as uint32
+    aclTensor* tx = ts.h[0]; aclTensor* tw = ts.h[1]; aclTensor* tr = ts.h[2];
+    aclTensor* tg = ts.h[3]; aclTensor* to = ts.h[4]; aclTensor* tro = ts.h[5];
+    aclTensor* trs = ts.h[6]; aclTensor* td = ts.h[7]; aclTensor* ttr = ts.h[8];
 
     uint64_t ws_size = 0;
     aclOpExecutor* ex = nullptr;
@@ -99,11 +144,8 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
     fprintf(stderr, "[d0] after GetWorkspaceSize st=%d ws=%llu\n", (int)st,
             (unsigned long long)ws_size);
     if (st != 0 || ex == nullptr) {
-        aclDestroyTensor(tx); aclDestroyTensor(tw); aclDestroyTensor(tr);
-        aclDestroyTensor(tg); aclDestroyTensor(to); aclDestroyTensor(tro);
-        aclDestroyTensor(trs); aclDestroyTensor(td); aclDestroyTensor(ttr);
         TORCH_CHECK(false, "d0 GetWorkspaceSize failed status=", (int)st,
-                    " msg=", aclGetRecentErrMsg());
+                    " msg=", aclGetRecentErrMsg());   // handles freed by ts
     }
 
     static void* cached_ws = nullptr;
@@ -134,10 +176,6 @@ std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor, at::Tensor> d0_trace(
         return static_cast<int>(aclnnClefD0Trace(ws, ws_size, ex, stream));
     });
     cmd.Run();
-
-    aclDestroyTensor(tx); aclDestroyTensor(tw); aclDestroyTensor(tr);
-    aclDestroyTensor(tg); aclDestroyTensor(to); aclDestroyTensor(tro);
-    aclDestroyTensor(trs); aclDestroyTensor(td); aclDestroyTensor(ttr);
 
     // Caller synchronizes the stream, then reads trace back as [72, 8] uint32.
     return std::make_tuple(out, res_out, rstd, diag, trace);

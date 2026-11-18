@@ -120,6 +120,12 @@ def run(torch, torch_npu, args, out_dir: Path, dist=None, env=None) -> dict:
     meta["group"] = group_name
     flush(out_dir, meta)                                   # flush #2: real group known
 
+    # Explicit, hash-checked load: the op stays unregistered without this call.
+    loaded_sha = load_adapter(Path(args.adapter), args.adapter_sha)
+    meta["adapter"]["loaded_sha"] = loaded_sha
+    meta["adapter"]["load_stage"] = "loaded after precheck, before op call"
+    flush(out_dir, meta)
+
     torch.npu.config.allow_internal_format = True
     from safetensors import safe_open
 

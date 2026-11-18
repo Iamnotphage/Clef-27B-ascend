@@ -125,6 +125,74 @@ print("BAD" if bad else "OK")
         check("precheck rejects before device", p.returncode == 0 and "OK" in p.stdout,
               p.stdout + p.stderr[-300:])
 
+    # 7 real run(): the illegal-precondition path must never reach the loader,
+    #    and the legal path must pass through load_adapter exactly once.
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        code = f"""
+import sys, hashlib
+sys.path.insert(0, {str(HERE)!r})
+from pathlib import Path
+from types import SimpleNamespace
+import d0_executor
+
+so = Path({str(d)!r}) / "fake.so"
+so.write_bytes(b"not-a-real-library")
+sha = hashlib.sha256(so.read_bytes()).hexdigest()
+
+class Args:
+    mm_dim = 1; use_hccl = 2; rows = 4; seed = 1
+    adapter = so; adapter_sha = sha
+
+class Tripwire:
+    def __getattr__(self, name):
+        raise AssertionError("device touched before loader: " + name)
+
+calls = []
+def spy(path, expect):
+    calls.append(str(path))
+    raise RuntimeError("SENTINEL stop before real load")
+d0_executor.load_adapter = spy
+
+out = Path({str(d)!r})
+
+# legal preconditions -> spy must be reached; device calls are expected here,
+# so torch is a recording stub rather than a tripwire.
+class Rec:
+    def __getattr__(self, name):
+        rec.append(name)
+        return lambda *a, **k: None
+rec = []
+class TorchStub:
+    npu = Rec()
+try:
+    d0_executor.run(TorchStub(), Tripwire(), Args(), out, None,
+                    {{"WORLD_SIZE": "2", "RANK": "0", "LOCAL_RANK": "0"}})
+    legal = "NO_RAISE"
+except AssertionError as e:
+    legal = "DEVICE:" + str(e)
+except RuntimeError as e:
+    legal = "OK" if "SENTINEL" in str(e) else "OTHER:" + str(e)
+
+# illegal mapping -> spy must not be reached
+calls.clear()
+try:
+    d0_executor.run(Tripwire(), Tripwire(), Args(), out, None,
+                    {{"WORLD_SIZE": "2", "RANK": "0", "LOCAL_RANK": "1"}})
+    illegal = "NO_RAISE"
+except RuntimeError:
+    illegal = "REJECTED" if not calls else "SPY_RAN"
+except AssertionError as e:
+    illegal = "DEVICE:" + str(e)
+print(legal, illegal, len(calls))
+"""
+        p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+        out = p.stdout.strip().split()
+        check("run() reaches loader once on legal preconditions",
+              len(out) >= 1 and out[0] == "OK", p.stdout + p.stderr[-300:])
+        check("illegal mapping never reaches loader",
+              len(out) >= 2 and out[1] == "REJECTED", p.stdout + p.stderr[-300:])
+
     print("RESULT:", "ALL PASS" if not failures else f"FAILURES: {failures}")
     return 0 if not failures else 1
 
