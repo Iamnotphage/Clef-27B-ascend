@@ -14,6 +14,7 @@ import socket
 from pathlib import Path
 import time
 import traceback
+from first_trace import FirstCallTrace
 from contract import (OWNER, WEIGHT_KEY, check_owner, cpu_inputs, load_gate,
                       record_tensor, sha256, tensor_bytes, verify, N1_CELL, N1_GROUP, n1_inputs)
 
@@ -66,6 +67,7 @@ def main():
     def flush():
         (out / 'result.json').write_text(json.dumps(meta, indent=2) + '\n')
     flush()
+    trace = None
     try:
         import torch
         import torch_npu
@@ -132,13 +134,17 @@ def main():
 
         def invoke(arm, poison=False):
             if arm == 'candidate':
+                if poison: trace.emit('binding_call_enter')
                 reduced, workspace = torch.ops.clef_grouped29.run(x, w, bias, group, poison)
+                if poison: trace.emit('binding_call_return', workspace_bytes=workspace)
                 meta['workspace_bytes'] = workspace
             else:
                 reduced = (torch.nn.functional.linear(x, service_w) if arm == 'baseline'
                            else torch.matmul(x, w))
                 dist.all_reduce(reduced, op=dist.ReduceOp.SUM)
+            if poison: trace.emit('norm_enter')
             y, rstd, res = torch_npu.npu_add_rms_norm(reduced, residual, gamma, 1e-6)
+            if poison: trace.emit('norm_return')
             return {'y': y, 'residual': res, 'rstd': rstd, 'reduced': reduced}
 
         def save(arm, values, prefix=''):
@@ -159,12 +165,25 @@ def main():
 
         first = {}
         for arm in ('baseline', 'nd_native', 'candidate'):
-            dist.barrier(); torch.npu.synchronize()
+            if arm == 'candidate':
+                trace = FirstCallTrace((out / 'first-call.jsonl').resolve(), rank)
+                meta['first_call_trace'] = str(trace.path); flush()
+                trace.emit('barrier_enter')
+            dist.barrier()
+            if trace: trace.emit('barrier_return'); trace.emit('pre_sync_enter')
+            torch.npu.synchronize()
+            if trace: trace.emit('pre_sync_return')
             begin = time.perf_counter_ns()
             first[arm] = invoke(arm, poison=arm == 'candidate')
+            if trace: trace.emit('final_sync_enter')
             torch.npu.synchronize()
+            if trace: trace.emit('final_sync_return')
             meta.setdefault('first_call_wall_ms', {})[arm] = (time.perf_counter_ns() - begin) / 1e6
             save(arm, first[arm])
+            if trace:
+                trace.emit('first_call_complete')
+                trace.close(); trace = None
+                meta['first_call_trace_sha256'] = sha256(out / 'first-call.jsonl')
         meta['fixed_gate'] = gate(first['candidate'], first['baseline'])
         meta['nd_diagnostic_gate'] = gate(first['nd_native'], first['baseline'])
         cr, rr = first['candidate']['reduced'].float(), first['baseline']['reduced'].float()
@@ -258,7 +277,14 @@ def main():
         meta['stage'] = 'complete'; flush()
         dist.destroy_process_group()
         return 0
-    except BaseException:
+    except BaseException as exc:
+        if trace:
+            try:
+                trace.emit('python_exception', exception_type=type(exc).__name__, message=str(exc)[:512])
+            except Exception as trace_error:
+                meta['trace_error'] = repr(trace_error)
+            finally:
+                trace.close()
         meta['performance_valid'] = False
         meta['error'] = traceback.format_exc(); flush()
         raise

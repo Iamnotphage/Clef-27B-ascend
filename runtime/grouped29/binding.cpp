@@ -1,3 +1,4 @@
+#include "first_trace.h"
 #include <ATen/ATen.h>
 #include <torch/library.h>
 #include <acl/acl.h>
@@ -102,6 +103,11 @@ struct Lists {
 std::tuple<at::Tensor, int64_t> grouped29(
     const at::Tensor& x, const at::Tensor& weight_kn, const at::Tensor& bias,
     const std::string& group, bool poison) {
+    std::shared_ptr<grouped29_trace::FirstCallTrace> trace;
+    if (poison) {
+        trace = std::make_shared<grouped29_trace::FirstCallTrace>();
+        trace->mark("binding_enter");
+    }
     TORCH_CHECK(x.device().type() == at::kPrivateUse1, "grouped29 requires NPU input");
     c10_npu::NPUGuard guard(x.device());
     TORCH_CHECK(x.dim() == 2 && x.size(0) >= 1 && x.size(0) <= 16384 && x.size(1) == 8704,
@@ -119,17 +125,22 @@ std::tuple<at::Tensor, int64_t> grouped29(
     Api& a = api();
     auto y = at::empty({x.size(0), 5120}, x.options());
     if (poison) y.fill_(std::numeric_limits<float>::quiet_NaN());
+    if (trace) trace->mark("descriptors_enter");
     auto lists = std::make_shared<Lists>(a);
     auto* tx = lists->add(x, ACL_BF16);
     auto* tw = lists->add(weight_kn, ACL_BF16);
     auto* tb = lists->add(bias, ACL_FLOAT);
     auto* ty = lists->add(y, ACL_BF16);
+    if (trace) trace->mark("descriptors_ready");
     uint64_t bytes = 0;
     aclOpExecutor* executor = nullptr;
+    if (trace) trace->mark("workspace_enter");
     const auto rc = a.prepare(tx, tw, tb, nullptr, 0, group.c_str(), "sum", 0, 1, ty, &bytes, &executor);
+    if (trace) trace->workspace(rc, bytes, executor != nullptr);
     if (rc != 0 || !executor) {
         const std::string error = aclGetRecentErrMsg() ? aclGetRecentErrMsg() : "";
         const int cleanup = lists->close();
+        if (trace) trace->rc("prepare_cleanup_return", cleanup);
         TORCH_CHECK(false, "grouped29 prepare rc=", rc, " executor=", executor,
                     " cleanup rc=", cleanup, " ", error);
     }
@@ -139,15 +150,22 @@ std::tuple<at::Tensor, int64_t> grouped29(
     auto launch = a.launch;
     at_npu::native::OpCommand cmd;
     cmd.Name("ClefGroupedMmar29");
-    cmd.SetCustomHandler([lists, workspace, x, weight_kn, bias, y, executor, bytes, stream, launch]() -> int {
+    cmd.SetCustomHandler([lists, workspace, x, weight_kn, bias, y, executor, bytes, stream, launch, trace]() -> int {
+        if (trace) trace->mark("handler_enter");
+        if (trace) trace->mark("launch_enter");
         const int launch_rc = launch(bytes ? workspace.data_ptr() : nullptr, bytes, executor, stream);
+        if (trace) trace->rc("launch_return", launch_rc);
         const std::string error = launch_rc && aclGetRecentErrMsg() ? aclGetRecentErrMsg() : "";
         const int cleanup_rc = lists->close();
+        if (trace) trace->rc("launch_cleanup_return", cleanup_rc);
         TORCH_CHECK(launch_rc == 0 && cleanup_rc == 0,
                     "grouped29 launch rc=", launch_rc, " cleanup rc=", cleanup_rc, " ", error);
+        if (trace) trace->rc("handler_return", 0);
         return 0;
     });
+    if (trace) trace->mark("dispatch_enter");
     cmd.Run();
+    if (trace) trace->mark("dispatch_return");
     return {y, static_cast<int64_t>(bytes)};
 }
 

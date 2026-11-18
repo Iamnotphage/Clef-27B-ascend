@@ -16,7 +16,7 @@ PINNED = {
     str(SDK / 'lib64/libnnopbase.so'): '72cd43b4af1c9c451b566ccb7b32071793402949578f838d8345e369b056477c',
     str(SDK / 'include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h'): 'c015a1eb0e28e8137240f34ad2695e77ef720a00509ba495020dbbe6ced91339',
 }
-SOURCE_NAMES = ('binding.cpp', 'compile.sh', 'contract.py', 'run_probe.py',
+SOURCE_NAMES = ('first_trace.py', 'first_trace.h', 'binding.cpp', 'compile.sh', 'contract.py', 'run_probe.py',
                 'timing_contract.py', 'aggregate.py', 'window_common.py',
                 'window_hook.py', 'window_probe.py', 'supervised_window.py')
 N1_CELL = Path('/workspace/yangchen/logs/n1-v2-aron-c24-timing-owner27-20261119T0310/probe/cell')
