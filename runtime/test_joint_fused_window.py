@@ -158,6 +158,7 @@ def main() -> int:
 
         original_popen = mod.subprocess.Popen
         original_killpg = mod.os.killpg
+        original_members = mod.group_members
         mod.subprocess.Popen = FakePopen
         mod.os.killpg = lambda pgid, sig: shutil.rmtree(probe_root / "401", ignore_errors=True)
         try:
@@ -170,9 +171,36 @@ def main() -> int:
             check("real probe timeout keeps raw record", detail["probe_record"]["timed_out"] is True
                   and detail["probe_record"]["cleanup"]["reaped"] is True
                   and (run_dir / "probe/record.json").is_file(), str(detail)[:300])
+            check("clean timeout clears residual flag", window.probe_residual is False)
+
+            run_dir2 = tmp / "run2"
+            run_dir2.mkdir()
+            window2 = object.__new__(mod.Window)
+            window2.args = window.args
+            window2.stage = stage
+            window2.run_dir = run_dir2
+            window2.prod_env = {"PATH": "/bin"}
+            window2.state = {"steps": {}}
+            mod.group_members = lambda pgid: {999: {"pid": 999, "state": "S",
+                                                    "starttime": "1", "boot_id": "BOOT",
+                                                    "pgid": pgid}}
+            try:
+                try:
+                    window2.probe()
+                except mod.StepError as exc:
+                    detail = exc.detail
+                else:
+                    detail = {}
+                check("unknown group keeps residual flag",
+                      window2.probe_residual is True
+                      and detail["probe_record"]["cleanup"]["unknown"],
+                      str(detail)[:300])
+            finally:
+                pass
         finally:
             mod.subprocess.Popen = original_popen
             mod.os.killpg = original_killpg
+            mod.group_members = original_members
             mod.PROC_ROOT = original_proc
 
         # stop verification refuses a live saved root, then accepts gone
@@ -287,7 +315,7 @@ def main() -> int:
             mod.subprocess.run = original_run
         check("source failure raises", source_failed)
 
-    print(json.dumps({"checks": 16, "failed": failures, "ok": not failures}))
+    print(json.dumps({"checks": 18, "failed": failures, "ok": not failures}))
     return 0 if not failures else 1
 
 

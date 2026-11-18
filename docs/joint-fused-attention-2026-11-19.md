@@ -29,6 +29,18 @@ SHA-256 `aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503`。
   head 5 ms 中的 **0.3–0.8 ms/请求**；S1 967 p95 影响约 ≤0.5%。
 - 关闭条件：head probe 三轮交错中 device 或 wall 中位收益 `<0.3 ms`，或方向不一致；关闭后不启服务 A/B。
 
+### 3.1 2026-11-19 源码证据修正
+
+torch_npu `2.10.0.post7`（git `3363ea59…`）对应的 op-plugin
+`79a42714ebf7662b5a3f7361f2b86ebb3dc4a1e3` 中，`ScaledDotProductAttentionKernelNpuOpApi.cpp`
+的 V2R5+ 分支在 BF16/BNSD/head16/D64/无 mask、`force_math=false` 时可能直接调用
+`npu_fusion_attention_v3(inner_precise=0)`。也就是说，当前 `nn.MultiheadAttention(need_weights=False)`
+**可能已经融合**；本文不再预设“原 3 个 launch”或 matmul/softmax/matmul 的 HBM 收益。
+
+因此本候选的收益预算改为 **未知/接近 0，必须由设备 head probe 的稳定 delta 决定**；若 probe 无同向
+≥0.3 ms 收益即关闭。26 的专用小 Q vector tiling/去 BNSD 重排是独立实验，不能用本候选预算外推。
+probe 现在同时记录 `sdpa_flags`（flash/math/mem-efficient）与 `compatible_impl`，供 21 核对底层实现。
+
 ## 4. 安装/回退
 
 ```bash
@@ -102,9 +114,9 @@ $PY runtime/joint_fused_attention_client.py --output "$MAN/client-B.json" --iter
 ## 9. 完整真实执行包装（21 单命令）
 
 文件：`runtime/joint_fused_attention_window.py`
-SHA-256 `4b1ff4e07b07efa399c3cd67456b2a40aad5d7ef660a7e559a377b675b97c3c3`。
-CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `7e6e170abdc9dad261b5bfbd3f4e6f9f93d608b1c9a37826a237c69b8ee82ce0`），
-16/16 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
+SHA-256 `49c1ede62a08b390fde3473ccbc62be62f0f60115c7605e35d8e35b205945423`。
+CPU 故障分支测试：`runtime/test_joint_fused_window.py`（SHA `4b9fe1f4e450fdebdbf9a45742b44758521a0311a91b2c92afba2caa37ec95a3`），
+18/18 通过（含真实 main 旧目录拒绝、source 失败、step RC、apply 后异常、probe 超时/组残留、stop 部分失败）（env 过滤、LISTEN/refused、stop 失败保留既有服务、apply/probe 失败 revert→restore）。
 
 单次命令（21 执行；run-dir 必须不存在）：
 

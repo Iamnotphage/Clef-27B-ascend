@@ -172,9 +172,23 @@ def main() -> int:
     except Exception as exc:
         error = f"{type(exc).__name__}: {exc}"
 
+    sdpa = {}
+    for name in ("flash_sdp_enabled", "math_sdp_enabled", "mem_efficient_sdp_enabled"):
+        try:
+            sdpa[name] = bool(getattr(torch.backends.cuda, name)())
+        except Exception:
+            sdpa[name] = None
+    compatible = None
+    try:
+        version_mod = getattr(torch_npu, "version", None)
+        compatible = getattr(version_mod, "git_version", None) or str(version_mod)
+    except Exception:
+        pass
     report = {
         "schema": "joint-fused-attention-probe/2",
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "sdpa_flags": sdpa,
+        "compatible_impl": compatible,
         "args": vars(args) | {"output": str(args.output)},
         "versions": {"torch": torch.__version__, "torch_npu": torch_npu.__version__},
         "input": {"length": length, "options": options,

@@ -364,7 +364,11 @@ class Window:
         result = subprocess.run(["bash", "-c", script, "bash", self.args.activate],
                                 capture_output=True, timeout=60)
         if result.returncode != 0:
-            raise StepError(f"source activate_env failed: {result.returncode}")
+            raise StepError(f"source activate_env failed: {result.returncode}",
+                            rc=result.returncode,
+                            detail={"cmd": ["bash", "-c", script, self.args.activate],
+                                    "rc": result.returncode,
+                                    "stderr": result.stderr.decode(errors="replace")[-1000:]})
         env = parse_environ(result.stdout)
         for key in ("PYTHON_BIN", "ASCEND_HOME_PATH", "LD_LIBRARY_PATH"):
             if not env.get(key):
@@ -411,7 +415,11 @@ class Window:
         log = self.run_dir / (action[0].lstrip("-") + ".log")
         log.write_text(result.stdout + result.stderr)
         if result.returncode != 0:
-            raise StepError(f"installer {action} failed: {result.returncode}")
+            raise StepError(f"installer {action} failed: {result.returncode}",
+                            rc=result.returncode,
+                            detail={"cmd": cmd, "rc": result.returncode,
+                                    "stdout": result.stdout[-1000:],
+                                    "stderr": result.stderr[-1000:]})
         return json.loads(result.stdout)
 
     # ------------------------------------------------------------------
@@ -500,11 +508,13 @@ class Window:
             reaped = True
         except subprocess.TimeoutExpired:
             pass
+        def gone(pid: int) -> bool:
+            live = proc_identity(pid)
+            return live is None or live.get("state") == "Z"
+
         deadline = time.monotonic() + 10.0
         while time.monotonic() < deadline:
-            if all((proc_identity(item["pid"]) is None
-                    or proc_identity(item["pid"]).get("state") == "Z")
-                   for item in saved):
+            if all(gone(item["pid"]) for item in saved):
                 break
             time.sleep(0.2)
         residual = []
@@ -556,19 +566,32 @@ class Window:
         stdout = (probe_dir / "probe.log").open("wb")
         stderr = (probe_dir / "probe.err").open("wb")
         started = now()
-        proc = subprocess.Popen(cmd, env=env, stdout=stdout, stderr=stderr,
-                                start_new_session=True)
-        saved = [proc_identity(proc.pid)]
-        saved.extend(descendants(proc.pid))
-        saved = [item for item in saved if item]
+        saved = []
+        rc = 1
         timed_out = False
         try:
+            proc = subprocess.Popen(cmd, env=env, stdout=stdout, stderr=stderr,
+                                    start_new_session=True)
+            # Until the bounded cleanup proves otherwise, restore must not run.
+            self.probe_residual = True
+            saved = [proc_identity(proc.pid)]
+            saved.extend(descendants(proc.pid))
+            saved = [item for item in saved if item]
             try:
                 rc = proc.wait(timeout=self.args.probe_timeout)
             except subprocess.TimeoutExpired:
                 timed_out = True
                 rc = None
             cleanup = self._probe_cleanup(proc, saved, timed_out)
+        except Exception as exc:
+            record = {"rc": rc, "timed_out": timed_out, "pid": getattr(locals().get("proc"), "pid", None),
+                      "saved": saved, "cleanup_error": f"{type(exc).__name__}: {exc}",
+                      "started_at": started, "finished_at": now(),
+                      "probe_json": str(output)}
+            (probe_dir / "record.json").write_text(
+                json.dumps(record, ensure_ascii=False, indent=1) + "\n")
+            raise StepError("probe cleanup failed", rc=rc,
+                            detail={"probe_record": record})
         finally:
             stdout.close()
             stderr.close()
@@ -591,6 +614,7 @@ class Window:
             self.probe_residual = True
             raise StepError("probe left unknown/residual processes",
                             rc=record["rc"], detail={"probe_record": record})
+        self.probe_residual = False
         if timed_out:
             raise StepError("probe timed out", rc=record["rc"],
                             detail={"probe_record": record})
@@ -638,12 +662,20 @@ class Window:
                                capture_output=True, text=True, timeout=60)
         (self.run_dir / "restore-launch.log").write_text(launch.stdout + launch.stderr)
         if launch.returncode != 0:
-            raise StepError(f"launch.sh failed: {launch.returncode}")
+            raise StepError(f"launch.sh failed: {launch.returncode}",
+                            rc=launch.returncode,
+                            detail={"cmd": ["bash", self.args.launch, label],
+                                    "rc": launch.returncode,
+                                    "stderr": launch.stderr[-1000:]})
         wait = subprocess.run(["bash", self.args.wait], capture_output=True, text=True,
                               timeout=self.args.wait_timeout)
         (self.run_dir / "restore-wait.log").write_text(wait.stdout + wait.stderr)
         if wait.returncode != 0:
-            raise StepError(f"wait.sh failed: {wait.returncode}")
+            raise StepError(f"wait.sh failed: {wait.returncode}",
+                            rc=wait.returncode,
+                            detail={"cmd": ["bash", self.args.wait],
+                                    "rc": wait.returncode,
+                                    "stderr": wait.stderr[-1000:]})
         disc = d0_restore.discover_service_pids(label, before)
         if disc.get("error") or not disc.get("pids"):
             raise StepError(f"discovery failed: {disc.get('error')}")
