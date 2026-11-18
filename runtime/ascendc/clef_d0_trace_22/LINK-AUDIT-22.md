@@ -74,3 +74,42 @@ SHA-256 `212da0dac0371ea3d1f87cd24b6750b6db12d145280d9b4480cac66b16c3c169`
 3. 运行装载、设备 binary、`-z defs` 之外的一切：**均未取得**。
 
 **本文件只证明链接期解析结论**，不推运行装载与设备行为。
+
+## 6. 一次有限修正链接（20 授权，已执行）
+
+**对象未重编、未覆盖**：链接前后 `d0_adapter.o` 均为
+`8edf909bf8f8475caac39c7570e0bcc764cca8bb3734a82b010b955c91a8978d`。
+
+**只补两项已核定输入**（绝对路径，调用前记录 SHA）：
+
+| 输入 | SHA-256 |
+| --- | --- |
+| `…/site-packages/torch/lib/libtorch_cpu.so` | `d9529119ac18ba154521854dc8da477c25c9a34c3265c95e40086a593d741926` |
+| `/workspace/yangchen/python/cpython-3.12.16+20261110/lib/libpython3.12.so.1.0` | `212da0dac0371ea3d1f87cd24b6750b6db12d145280d9b4480cac66b16c3c169` |
+
+其余依赖按**原已核路径固定**：包内 `libcust_opapi.so` `33149226…48ec`、
+CANN `lib64/libnnopbase.so` `72cd43b4…477c`（**未混用 devlib 版**）。
+
+**逐字命令**（`fixed_link_cmd.txt`）：
+```
+g++ -shared -z defs -o d0_strict_fixed.so d0_adapter.o \
+  -L<venv>/torch_npu/lib -L<venv>/torch/lib -ltorch_npu -ltorch -lc10 \
+  -L<包内 op_api/lib> -lcust_opapi \
+  -L/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64 -lnnopbase -lascendcl \
+  <venv>/torch/lib/libtorch_cpu.so \
+  /workspace/yangchen/python/cpython-3.12.16+20261110/lib/libpython3.12.so.1.0
+```
+
+**结果**：`LINK_RC=0`；`fixed_unresolved.txt` **0 条**；产物
+`d0_strict_fixed.so` SHA-256 **`f80b0e50c50eb2fb0eb25b13a77df11ef65173015b5861903e57315ad821a60a`**。
+旧失败产物 `d0_strict.so` 与 `strict_link.log` **保留未动**。
+
+**DT_NEEDED（12 条）**：`libtorch_npu.so`、`libtorch.so`、`libc10.so`、`libcust_opapi.so`、
+`libnnopbase.so`、`libascendcl.so`、**`libtorch_cpu.so`**、**`libpython3.12.so.1.0`**、
+`libstdc++.so.6`、`libgcc_s.so.1`、`libc.so.6`、`ld-linux-aarch64.so.1`。
+**RPATH / RUNPATH：无**。
+
+## 7. 边界（不变）
+`RC=0` **只限该命令范围的链接期解析**：**不证明运行加载、不证明设备 binary**。
+**无 RPATH/RUNPATH** ⇒ 运行期仍需外部搜索路径，属**未取得**。
+未 `dlopen`、未导入加载、未安装、未执行 NPU。D0 包 `b7190e96` 与旧对象均未改动。
