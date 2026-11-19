@@ -2685,3 +2685,28 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 与 §124/§125 的关系：worker 端路径 → WaitTaskFinish → WaitMainStreamFinish 的**静态边已闭**；运行时同线程序列支持 worker 到达端路径并返回，不再只是“可能停在 CheckAivIsEnd 循环”。但 callsite 非唯一，且**本地排空 ≠ AllReduce/task13 完成**；task13 pending 仍是唯一正证。
 
 **状态**：root cause unresolved；本地排空归属闭合（条件式、非 callsite 唯一）；设备侧结论不变；35 保持 `8f4b843` 冻结；release 已交 27；无新取件/设备/GO。
+
+## 131. release 候选 698ba3d 的 source/static PASS（32 复核；未构建/未部署）
+
+**依据**：32 对 35 候选的只读复核；无构建/设备/部署。候选 commit `698ba3d2…`，base `8f4b8435…`。
+
+### 131.1 范围与 SHA
+
+- diff `runtime/grouped_mmar` 仅 4 文件：`binding_probe.cpp`、`smoke_release_dispatcher.py`、`manifest.json`、`README.md`。
+- binding 唯一代码改动 B722：`m.def("release(int id) -> int", &grouped_mmar_release)`（原为仅 schema）；schema、`grouped_mmar_release` 函数体（含 invalid-id 返回 0）、run/run_mmar/run_mrs、同步、Lists、window 均未动。
+- SHA：binding `d9435b3a…`、smoke `c457b6ef…`、manifest `f7c5ae52…`。
+
+### 131.2 manifest 与 smoke 静态
+
+- manifest：33 项，逐项 SHA-256/bytes 与 commit tree **33/33 匹配**；`release_dispatcher_candidate.status=static_checks_only_not_built_or_deployed`；`base_binding_sha256=101660f8…`；`candidate_adapter_sha256=null`；`valid_state_cleanup_verified`/`sdk_resource_release_verified`/`task13_fix_verified` **均 false**；无虚假 deployed/valid-state 声明。
+- smoke 静态（AST 解析，未执行）：fresh `-I` 子进程、`TORCH_DEVICE_BACKEND_AUTOLOAD=0`；加载前断言 `clef_mmar_probe::` 为空；加载前后按完整 SHA 校验 .so；schema 精确等于 `clef_mmar_probe::release(int id) -> int`；旧 control 只接受调用处的 `NotImplementedError`（消息含 `clef_mmar_probe::release`），其它异常不判 PASS；候选只调 `release(1)`，要求 `type(value) is int` 且 0；分进程 control/candidate、30 s timeout；无 torch_npu import/set_device/synchronize/torchrun/native run/provider/通信。
+- 非阻断静态风险：`torch._C._dispatch_get_all_op_names`/`_dispatch_find_schema_or_throw` 为私有 API，目标 torch 版本需 31 实际运行确认。
+
+### 131.3 边界
+
+- 仅证 **dispatcher 可达 + invalid-id 返回 0**；**不证** valid-state cleanup、SDK 资源释放、task13/H11 修复；未构建、未部署、无 PR/设备 GO。
+- 与当前 sync 挂起（R534）分开：该候选是 **post-sync cleanup**，不是本次挂起原因；不重跑旧 window/50 tests。
+- 待 31 隔离 CPU 构建、旧 control `NotImplementedError`、候选 zero 的实际证据；收到后 32 再独立复核 source/so/rc。
+- 33 不实现/不部署；无新设备/GO。
+
+**状态**：release 候选 source/static PASS，运行/构建/部署未证；root cause unresolved；与 sync 挂起因果分离。
