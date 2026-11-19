@@ -356,6 +356,14 @@
 - **H6 条件 ready**：静态单变量/同 stream/9 行 memset/Async API（31 核 acl_rt.h:2563、libascendcl 导出）均通过；仅待 33 的 workspace 约定——同流顺序足够则不改；若需额外 sync，作为单独变体（不与 H6 控制混）。之后 + 20 排程，31 以 1301295 fresh identity、safe window、A12 臂（--a12-binary H6）执行。
 - **A14** 等 33 的 A3 注册/依赖包结论；A13 停跑；服务 aa3e/s1 在线，无设备动作。
 
+## 8.27 反证核验、H6 ready 与 A14 preflight（2026-11-19）
+
+- **35 措辞修正**：36f8141/manifest `ab2a1855…`；source `4b8e6e2a…`/diff `754e2f24…`/compile `8ef604f1…` 未变；closure.root_cause=“suspected first-cause…unproven”、decision 已去泛化；manifest 无显式 revision 字段（旧 confirmed 文本在 git 历史，可加 revision_trail 作审计，非阻塞）。
+- **33 反证**：依赖 `supported_but_unproven`（Grouped tiling taskType=KFC_TASK_HCC_TASK_DELIVER；A12 日志无 Mc2ServerKernel/HcclLaunchAicpuKernel/libmc2_server 请求/失败行；libccl_kernel 提供 KFC/HCCL 家族）。未解释线索：A12 plog 两 device 启动 TDT 有 `LoadSysOpKernel: cannot find aicpu packages`（06:24:20.367/.807），31 待判正常/相关。**独立核**：31 pack 的 A3 op-info/binary_index **确有 MatmulReduceScatter 与 V2**（A14 注册成立；MatMulAllReduce 确无）。
+- **A12-H6 从 32 侧 READY**：33 约定 GetUserWorkspace 仅 GEMM scratch、MC2 消息区在 `GetHcclContext<0>()->WorkSpace`，memset 清零契约安全；同流顺序足够、**不加额外 sync**；Async 本机可用（acl_rt.h:2563、libascendcl 导出）。待 31 在 Linux stage/编译 H6 binary（AOT、记录 binary/ldd/log SHA）→ 1301295 fresh identity、fresh run/restore、A12 臂（--a12-binary H6）、safe window 出 plan-only → 32 核 binary/plan/identity → 20 排程后执行。判据：launch/sync rc0+无 `[ERROR]`/retcode+≥2 costtime+maps 硬门+memset rc0；507046/stream47→H6 削弱；返回→H6 上升（仍与 mc2_server 依赖分开）。
+- **A14 preflight 待件**：31 提供本机 `aclnn_matmul_reduce_scatter*.h`（pack 缺；33 上游 `6e49c20f…`）、V1 kernel .o 符号与 tiling taskType（对照 KFC_TASK_HCC_TASK_DELIVER）、`opp/built-in/op_impl/aicpu/kernel/` 全量清单、libccl_kernel.so 路径/SHA；35 最小 A14（bias null/零；x1(m,k)、x2(k,n)或(n,k)；output(m/2,n)；sum/commTurn0/streamMode1；m 为 rank_size 整数倍：v4r1-like **M=968**，小格 M=128/K=256/N=512）；判据同 A12；驱动/固件兼容（compatible_fw [7.0.0,9.9.9]）列为待核。
+- **A13 停跑**；不改白名单强载；服务 aa3e/s1 在线；未获 20 排程前无设备动作。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
