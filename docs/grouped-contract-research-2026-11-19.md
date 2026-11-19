@@ -1284,10 +1284,11 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 ### 79.3 采集与归属（本 cell）
 
 - **时间窗**：probe child 启动到 child 退出/被 watchdog 杀（≤240 s）；restore 阶段单独按时间/PID 排除。
-- **对象**：`<fresh>/cann-plog`、`/root/ascend/log/device-*/`（按 probe rank PID/TID 与时间窗筛选）、window/child/result/trace。
+- **对象（完整 raw 保留）**：`<fresh>/cann-plog`、`/root/ascend/log/device-*/`、window/child/result/trace **原件全部保留，不做删除式过滤**。严格按 probe PID 过滤只作**派生视图**：AICPU/device 日志的 PID 可能是 daemon/设备侧 ID，只按 probe PID 过滤会丢关键行。
 - **归属字段**：rank/device（device-0/1 文件）、pid/tid、file:line（`aicpu_kfc_rpc_server.cc:27/226/241/285/360`、`aicpu_kfc_process.cc:1715` 等）、时间；有则记 stream/task/opIdx。
-- **排除**：aa3e 服务 root 五 PID 与 restore 日志（按 PID/时间），不作为本 cell 分支证据。
-- **注意**：240 s watchdog 杀进程时日志可能未完全 flush；只采用 kill 前已落盘行。
+- **关联视图（另存，不替代原件）**：rank/device、pid/tid、file:line、时间、stream/task/opIdx；未知关联保留歧义并标 `unknown`，不强行归属。
+- **restore 排除**：只作派生视图（按时间/PID 标注），**不删除原件**；aa3e 服务 root 五 PID 与 probe PID 可能并存，归属不明确时保留歧义。
+- **注意**：240 s watchdog 杀进程时日志可能未完全 flush；只采用 kill 前已落盘行，但原件全量保留以便复核。
 
 ### 79.4 期望证据与允许判读（正向标记；缺席不排除）
 
