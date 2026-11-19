@@ -1419,3 +1419,19 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - env 白名单合理；restore `env_evidence` 仍比 `ASCEND_CUSTOM_OPP_PATH`/`LD_LIBRARY_PATH`，隔离靠 `env -i`，与观察 env 不冲突。
 - 采集 raw 默认 + candidate + device、关联视图另存，OK。
 - 结论：命令/计划兼容性可闭；仅剩 31 只读 preflight + 3 xref/条件项；当前不运行、不发 GO。
+
+## 84. H11-observe-v1 只读 preflight 核验（31 01e8631）
+
+**包**：`h11-observe-preflight/` 6 文件，SUMS `cf59ed66…` 6/6 OK；plan `c95ae5c3…`、root-identity `de780872…`、env-sidecar `a6a3c4a4…`、stage-identity `76332ae6…`。
+
+**独立核验（只读）**：
+- plan `status=plan_not_executed`；child_argv 与 §83/32 plan-only 一致：`torchrun --nproc_per_node=2 --master_port 29531 <e38b541>/run_probe.py --arm H11 --temp-root/out fresh --k 256 --n 512 --rows 128 --seed 20261119 --arm-timeout 240.0 --comm-timeout 90.0 --adapter d181b15a --execute`；child_timeout 240。
+- probes = A15-large text `a7dd3f64…` / image `f3229f5c…`；`test -f` 与 SHA 均核。
+- root identity：pid 1337814、ppid 1、pgid/sid 1337814、starttime 400405818、boot_id `393ecc15…`、state S；五 PID 1337814/1337961/1337962/1337979/1337980；health ready（clef/local-65e5a3c5ffb6）；info config=s1、TP2、max_model_len 4096、prefix/chunked/schema cache false。
+- 端口：service 18143；master 29531 四次 bind（tcp/udp × 127.0.0.1/0.0.0.0）FREE。
+- fresh dirs：cell/logs 已建；run/probe-temp/probe-out/restore 四路径 ABSENT。
+- 冻结 SHA：window 1f780bf8、run_probe 8e308804、binding 101660f8、adapter d181b15a、test ad257b5f、manifest 8e324bea、stop d6d49d75、source aa3e1758。
+- restore_argv：`env -i PATH=... CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c 'source activate_env.sh && exec start.sh ...'`；restore_output fresh。
+- env-sidecar：candidate `GLOBAL=0`、`PROCESS_LOG_PATH=<cell>/logs-h11-observe-v1`，`applied=false`；scope=child only；restore 不导出；unproven=AICPU 传播/guard 映射/module 与 HCCL_DEBUG_CONFIG bit。
+
+**结论**：preflight 只读项全过；命令/计划兼容性闭环；**无执行、无设备动作、无 GO**。condition 项仍开放；3 xref 待 31 传播式扫描完成后交。
