@@ -384,6 +384,14 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **有限结论**：H4K（调用线程 + 真实 C++ sync）与 H11（OpCommand handler + Python sync）**同样挂 stream47/task_id=13 pending**；H5K 为 launch 前区间阻塞（非 Grouped device 判别）。→ **线程/同步路径不是差异源**；Grouped device path（KFC task/AivAicpuOpParam 响应推进）候选保持，不单格定因；H4K 无 numeric/reduced diff（stub）；`mc2_server` 依赖仍 `supported_but_unproven`。A14 large 的设备事实条件（H4K 同挂+完整恢复）已满足，待 32 核原件与 20 授权 CPU 准备；A15 无设备授权；Grouped large/A13 暂停。
 
+## 28. H4K rank PGID/清理边界核（2026-11-19，20 优先）
+
+**rank-snapshots 原始事实**：`rank0-pid1318300.stat`/`rank1-pid1318301.stat` 是 JSON 元数据（674 B，keys：boot_id/cmdline/pgid/pid/ppid/starttime/state），**不是原始 `/proc/<pid>/stat`，没有 SID/session 字段**。两 rank：`ppid=1318268`、`pgid=1318300/1318301`（self）、`starttime=399358649`（相同）、boot_id `393ecc15…`、state R/S、cmdline=torchrun run_probe --arm H4K。**“双 rank 同 PGID”不成立**（基于快照）；两 rank 是否为独立 session/SID 未采到，不能确认。
+
+**window d7e73514 对照**：`subprocess.Popen(plan['child_argv'], start_new_session=True)`（L518-519）→ torchrun child pid **1318268**、ppid 1318248、pgid 1318268、starttime 399358408。`survivors = {p | row.pgid == child.pid}`（L551）仅枚举 child PGID；`cleanup_child(pid, table, protected)`（L284-303）`os.killpg(pid, SIGTERM/SIGKILL)` 也只作用于 **child.pid 的 PGID**；`maps_evidence(pgid,names)`（L321-351）同样只筛 `row.pgid == pgid`。H4K window 记录 `survivors=[]`、`cleanup.members=[]` 只证明 **torchrun child PGID 1318268 为空**；两 rank 的 PGID=self 不在该集合内，**不能由 window 证明 rank 组已清理**。`start_restore` 也 `start_new_session=True`（L447-448），与本次 probe 清理边界无关。
+
+**安全含义**：外层 `killpg(child.pid)`/survivors 枚举覆盖不到 rank 自己的 PGID；rank 生命周期依赖 torchrun/elastic agent 的 worker 清理，window 未独立验证。若 torchrun 在 SIGTERM/SIGKILL 下未能回收 worker，rank 组可能残留；当前 H4K 无 post-run rank 组枚举，故“无残留”只能确认 child PGID，不能确认两 rank 组。**A14 large fac2d948 尚未启动**（plan_not_executed），按 20 暂缓其核验；若启动，沿用同一 window 时需补独立 rank 组清理/枚举。此报告不进行进程操作。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
