@@ -216,6 +216,16 @@
 - **selected 一致性**：README/metrics.csv/results.csv/optimization.md 当前行全为 aa3e（Cal 82.4113/Int 66.0841/Cap 74.2477/1904/MAE 0.402612；ERQA 216/400；S1 156.4417；S2 17.7047@B16C64），f810 数字仅在明确标注的同窗口对照/历史；图片声明为历史 baseline、用户本人补拍。
 - **结论：总 PASS**。官方 aa3e 入口、Plan B、selected、全 recipe 与最终服务真实闭合；图片为用户自截图项，不阻塞代理收口。
 
+## 8.13 新阶段：Grouped 超时深挖（2026-11-19 起）
+
+- 授权与角色：31 唯一设备/生产 owner；35 本地实现；33 只读契约研究；32 独立证据/有限代码协议审核。**32 不再 SSH 计算实例**，只核 31 的只读证据包/本地工作树与 CPU 临时夹具；旧正式 0db4d21/aa3e 数值与原件冻结；无 PR/无合并。
+- **Snapshot 恢复门**：root/ppid=1/PGID/SID/start/boot/完整 argv；tree=aa3e、old guard=765、fused guard=36（独立路径）、vendor 六 .so、GDN/QKV/chunk128/schema_cache、activate/start.sh、model manifest 98c104a9；OPP9 `7b79c5db…`/LD12 `ca27dbb7…` 逐字节、joint 三键 FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1、health/info s1、双 worker、clients 空。
+- **恢复计划**：禁止旧 Grouped/5c finally 或 restore_prod 自动 revert f810；停后恢复必须走当前官方 start.sh（clean+activate，tree 保持 aa3e、branch=aa3e-noop、guard 36/765 不变）；finally 四检+双 worker+clients 空+exact 身份/env；f810 回退需单独授权。
+- **探针隔离**：仅临时 AOT/child env（ASCEND_RT_VISIBLE_DEVICES=0,1、owner/payload sha）、hook 仅 validation（system_mutations=[]）、不写全局 tree/guard/vendor；fresh run-dir/唯一 manifest；旧失败 raw 保留。
+- **首包判据**：Cell0 无设备 snapshot+bundle SHA+“无全局写”证明；Cell1 小合法形状双 rank、单变量三臂（MM+独立 AR+norm / native MMAR 单独 / MMAR+norm），输入 shape/BF16/seed 固定且 SHA 不变；通过=两 rank 有限+对**生产 NZ 参考**的原冻结门 `041a66aa…`（不弱化）+**API rc0 且观察到 sync 返回**；只 rc0 无 sync=失败；≥3 次 fresh 进程成功；trace/plog 保留。
+- **后续**：restore 桥接+norm → 真实 967 行 shape/权重（生产 NZ 参考、原门、240 s 上限与 clean 恢复）；性能仅正确后同窗 ABBA≥4（最慢 rank、sync 后 wall/event、含分配/host/通信/后置 norm；冷启动单列；局部 native 不外推服务）。若采纳再全量 S1≥3/S2/OD2352/ERQA400，2PP 不变。
+- 证据包：31 提供只读本地副本+SHA256SUMS（snapshot/bundle/plan/trace/result/bins/gate/cleanup/recovery/命令 rc/时间/boot/clock）；32 逐项核原件。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
