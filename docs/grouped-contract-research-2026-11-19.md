@@ -1450,7 +1450,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
    ```
    不把这两个变量写进 argv/plan；`GLOBAL=0` 仍仅候选。
 3. window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → child torchrun → ranks 继承；service/restore 不在同一环境（restore 用 `env -i`）。
-4. **rank env 白名单验证**：从 window `descendants.json`/`window.json` 取 torchrun/rank PID；执行中只读 `/proc/<pid>/environ`，仅记录 `ASCEND_GLOBAL_LOG_LEVEL`、`ASCEND_PROCESS_LOG_PATH`、`CLEF_WINDOW_OWNER` 三个键，不 dump 其他 env。验证失败 → 该次观测按缺测。
+4. **rank env 白名单验证**：从 window `descendants.json`/`window.json` 取 torchrun/rank PID；执行中只读 `/proc/<pid>/environ`，仅记录 `ASCEND_GLOBAL_LOG_LEVEL`、`ASCEND_PROCESS_LOG_PATH`、`CLEF_WINDOW_OWNER` 三个键，不 dump 其他 env。验证失败 → 该次观测按缺测。**空/缺失 `entries` 或空 `rows` = 缺测**（不是“无 rank”/排除）；死 PID `alive=false`+`MISSING(not_alive)`；缺键 `MISSING`。
 
 ### 85.2 采集与归档（raw 全量，不删原件）
 
@@ -1495,7 +1495,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 
 ### 86.1 操作命令来源（31 `h11-observe-execution-v1`）
 
-- **唯一操作命令以 31 的 `h11-observe-execution-v1` 固定包为准**：commit `a31e044`、SUMS `afb741c7…`（11/11）、plan `c95ae5c3`、rank-env-read.py `a4b76676`；32 终审 PASS（§91）。本节不再给第二套 placeholder argv。
+- **唯一操作命令以 31 的 `h11-observe-execution-v1` 最终文本为准**：commit `953eb2d`、SUMS `754859dc…`（11/11）、plan `c95ae5c3`、rank-env-read.py `a4b76676`；`a31e044`/`afb741c7` 是前一审阅闭包（执行字节相同）。32 终审 PASS（§91/§92）。本节不再给第二套 placeholder argv。
 - 该包必须满足：① venv 绝对 python `/workspace/yangchen/venvs/clef-py312/bin/python`；② window 脚本用 **e38b541 stage 绝对路径** `/workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py`（不是 repo 相对）；③ 全部 argparse、plan JSON 非输入、`--execute` 才执行；④ 同命令去 `--execute` 应复现 plan SHA `c95ae5c3…`；⑤ `--python` 显式 venv。
 - env 只有两项 sidecar：启动同一 window 前 `export ASCEND_GLOBAL_LOG_LEVEL=0`、`export ASCEND_PROCESS_LOG_PATH=/workspace/.../logs-h11-observe-v1`；**其他环境变量保持基线，不额外 unset**；fresh dir 预创建；child_env 继承到 torchrun/ranks。
 - 包内需列全：run-dir、root-identity、source-target、official-start、activate、service-root、model-dir、restore-output、text-body/image-body、stop-script 的实路径，以及 plan-only/execute 两条命令。
@@ -1521,7 +1521,7 @@ for pid in <rank_pids>; do
   tr '\0' '\n' < /proc/$pid/environ | grep -E '^(ASCEND_GLOBAL_LOG_LEVEL|ASCEND_PROCESS_LOG_PATH|CLEF_WINDOW_OWNER)='
 done > meta/rank-env.txt
 ```
-- 只读 `/proc/<pid>/environ`，只取三键；缺失/不符 → `env_verify=missing/mismatch`，该次观测按缺测。
+- 只读 `/proc/<pid>/environ`，只取三键；缺失/不符 → `env_verify=missing/mismatch`，该次观测按缺测。**空/缺失 `entries` 或空 `rows` = 缺测**，不得写成“无 rank”或据此排除路径。
 - 不 dump 其他 env、不 attach、不发信号。
 
 ### 86.4 执行前重扫清单
@@ -1617,7 +1617,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 
 ## 91. 最终 readiness：execution-v1 固定包（32 终审 PASS；无 GO）
 
-**固定包**：commit `a31e044`、SHA256SUMS `afb741c7e9d77dc1ffc819995d251f5df2f44920ac483babfdc1d9ee43991803`（**11/11**）、plan `c95ae5c3…`、`rank-env-read.py` `a4b76676…`（与 35 目标同 SHA）；远端 cell `execution-v1/` 11 文件同 SHA（31 报）。操作来源**仅此包**。
+**固定包（最终文本）**：commit `953eb2d`、SHA256SUMS `754859dccd2438a735f028e669263b9c69de3254bb07ffb8384c54431e13134a`（**11/11**）、plan `c95ae5c3…`、`rank-env-read.py` `a4b76676…`；32 已按该版终审 PASS。前一提交 `a31e044`/`afb741c7` 是同一命令包的审阅闭包（执行 argv/探针/窗口/adapter/rank-helper 同字节，953eb2d 仅 doc-only：collect 显式 SRC_*、restore 措辞、planonly 原始命令）。远端 cell `execution-v1/` 11 文件同 SHA（31 报，`sha256sum -c` 11/11 OK）。操作来源**仅此包**。
 
 **32 终审 PASS**：
 - argv 60/61（execute 仅多顶层 `--execute`）、e38b541 stage/venv 绝对、全 argparse、plan 非输入；
@@ -1628,7 +1628,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - restore 唯一 `env -i`、attributed survivors；timeouts 120/240/900。
 
 **条件式闭合（仍开放）**：
-1. 35 的 `rank-env-read.py` 同 SHA CPU 替身验证待并入；并入前该项为条件。
+1. ~~35 的 `rank-env-read.py` 同 SHA CPU 替身验证~~：已并入 §91.1，18/18 PASS，**该项关闭**。
 2. AICPU daemon env 传播、HcclCheckLogLevel/DlogRecord w0/w1 与级别枚举映射、模块级/HCCL_DEBUG_CONFIG bit 仍为观测条件。
 3. 真实执行前必须重跑 `preflight-rescan.sh`（fresh 目录/identity/port/服务未重启）。
 4. 正向标记才计数，缺席不排除；设备 AICPU 内存无可证只读接口。
