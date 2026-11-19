@@ -1,0 +1,66 @@
+{
+ "schema": "owner31-window-result/1",
+ "window": "joint-smallq-ad/1 (direct f810 A vs frozen D)",
+ "executed_at_utc": "2026-11-19T00:17:25Z/00:19:20Z",
+ "outer_rc": 0,
+ "run_dir": "/workspace/yangchen/logs/joint-smallq-ad-27-v1-first",
+ "outer_dir": "/workspace/yangchen/logs/owner31-outer-ad-20261119T001725Z",
+ "evidence_sha256": {
+  "window.json": "b196ba6528ed120311a56c1bfd395a119d4604d85772ad005bb20c28e2ee82e4",
+  "probe/head-probe.json": "a22792810c3bea6128f297da0518e5d15794b3f349fa92d92cb961f2d267f373",
+  "restore.json": "d2880ba96869aca7f83bb5d52f95dd3ebac297b94ecaf98fe34d7106ef8df228",
+  "outer.log": "bc8470f7b2f030e13d0e04fd59bc01bff30adf3ef3a569d77a29d5c551c61fe6"
+ },
+ "frozen": {
+  "profile_sha256": "a7c418af865a3482bec1a60be0173355ddc2bc7c478e68dc65995f8ff2a51a6d",
+  "argv_count": 66,
+  "wrapper_sha256": "9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5",
+  "postimage_sha256": "086357bddbe4fbfbda1630e5ac70503c44f06113d582089c5c54669720d3260a",
+  "installer_sha256": "13dff04404e664b77c61e1eb2dd85df9610224a80fd0899cf3ef0e4d63e084c7",
+  "probe_sha256": "265af902ad3fe39ba51796319035c082fd9dd6c133fc142835a6ec9b295dfbcb",
+  "kernel_sha256": "08ad88f6cebfb148aff8d973097d5bcf234e25d144a824385b18b8b078e82dff",
+  "reference_f810": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+  "frozen_B": "cf02419978ce62f18ca908b8d4c9646531fb00d3b07871b310576f963e5ec612",
+  "inputs_sha256": "189fd36285b762273c0ef7d1dd99cb2a43a7db50f68b5ff7ab0036b320b20429",
+  "orders": [["A", "D"], ["D", "A"], ["D", "A"], ["A", "D"]],
+  "samples": "9 entries x 4 rounds x 2 arms x 20 = 1440"
+ },
+ "steps": {"preflight": 0, "stop": 0, "apply": 0, "probe": 0, "revert": 0, "restore": 0},
+ "gates": {
+  "gate_passed": true,
+  "gates_count": 11,
+  "same_weight_storage_verified": true,
+  "frozen_files_unchanged": true,
+  "single_variable_verified": true,
+  "default_off_bit_equal": true
+ },
+ "timing": {
+  "core_entries": [
+   {"length": 307, "queries": 1, "D_minus_A_wall_median_ms": -0.039, "dir": "4/4 D faster", "device_median_ms": -0.0305},
+   {"length": 307, "queries": 4, "D_minus_A_wall_median_ms": -0.0666, "dir": "4/4 D faster", "device_median_ms": -0.0644},
+   {"length": 967, "queries": 1, "D_minus_A_wall_median_ms": -0.0484, "dir": "4/4 D faster", "device_median_ms": -0.0473},
+   {"length": 967, "queries": 4, "D_minus_A_wall_median_ms": -0.0574, "dir": "4/4 D faster", "device_median_ms": -0.0515},
+   {"length": 1595, "queries": 1, "D_minus_A_wall_median_ms": -0.0433, "dir": "4/4 D faster", "device_median_ms": -0.0605},
+   {"length": 1595, "queries": 4, "D_minus_A_wall_median_ms": -0.0289, "dir": "4/4 D faster", "device_median_ms": -0.0425}
+  ],
+  "head_entries": [
+   {"length": 307, "options": 4, "D_minus_A_wall_median_ms": 0.1281, "dir": "0/4 D faster", "device_median_ms": 0.1245},
+   {"length": 967, "options": 4, "D_minus_A_wall_median_ms": 0.1245, "dir": "0/4 D faster", "device_median_ms": 0.1299},
+   {"length": 1595, "options": 4, "D_minus_A_wall_median_ms": 0.1518, "dir": "0/4 D faster", "device_median_ms": 0.1573}
+  ],
+  "conclusion": "core path D faster 4/4, complete head D slower 4/4 (+0.125..+0.152 ms wall). Keep smallQ default off; no new D candidates; not a basis for service adoption."
+ },
+ "restore": {
+  "label": "d0-restore-20261119T001747Z-f1796dbe",
+  "api_pid": 1250992,
+  "pids": [1250992, 1251284, 1251285, 1251341, 1251342],
+  "root_identity_stable": true,
+  "health": "ready",
+  "workers": ["VLLM::Worker_TP0", "VLLM::Worker_TP1"],
+  "guard_preimage": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+  "source_head": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+  "env_actual": {"ASCEND_CUSTOM_OPP_PATH_entries": 23, "LD_LIBRARY_PATH_entries": 28},
+  "env_note": "cumulative 5c restore inheritance (+7 OPP / +8 LD per layer); candidate keys absent; final acceptance requires phase first-mode clean switch with strict env gate"
+ },
+ "conclusion": "AD window lifecycle clean and restore verified. smallQ D not adopted (head negative); awaiting independent audit of raw originals. Next: Grouped first-call diagnostic only after 33 tuple freeze and 32/20 scheduling; otherwise proceed with f810 full S1 composition."
+}
