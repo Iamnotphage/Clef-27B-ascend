@@ -1,0 +1,1480 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000761380 <RunAicpuRpcSrvLaunch@@Base>:
+  761380:	a9ba7bfd 	stp	x29, x30, [sp, #-96]!
+  761384:	d290200d 	mov	x13, #0x8100                	// #33024
+  761388:	d2900206 	mov	x6, #0x8010                	// #32784
+  76138c:	910003fd 	mov	x29, sp
+  761390:	d0008dc1 	adrp	x1, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  761394:	f9444421 	ldr	x1, [x1, #2184]
+  761398:	a90153f3 	stp	x19, x20, [sp, #16]
+  76139c:	aa0003f3 	mov	x19, x0
+  7613a0:	a9025bf5 	stp	x21, x22, [sp, #32]
+  7613a4:	a90363f7 	stp	x23, x24, [sp, #48]
+  7613a8:	a9046bf9 	stp	x25, x26, [sp, #64]
+  7613ac:	a90573fb 	stp	x27, x28, [sp, #80]
+  7613b0:	cb2d63ff 	sub	sp, sp, x13
+  7613b4:	8b2663e2 	add	x2, sp, x6
+  7613b8:	9101a3f6 	add	x22, sp, #0x68
+  7613bc:	f9400020 	ldr	x0, [x1]
+  7613c0:	f9007440 	str	x0, [x2, #232]
+  7613c4:	d2800000 	mov	x0, #0x0                   	// #0
+  7613c8:	9101c3f4 	add	x20, sp, #0x70
+  7613cc:	aa1603e1 	mov	x1, x22
+  7613d0:	aa1403e0 	mov	x0, x20
+  7613d4:	b9006bff 	str	wzr, [sp, #104]
+  7613d8:	f9003bff 	str	xzr, [sp, #112]
+  7613dc:	97ece451 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  7613e0:	b9406be1 	ldr	w1, [sp, #104]
+  7613e4:	d2866200 	mov	x0, #0x3310                	// #13072
+  7613e8:	f2a001e0 	movk	x0, #0xf, lsl #16
+  7613ec:	d2800003 	mov	x3, #0x0                   	// #0
+  7613f0:	52800002 	mov	w2, #0x0                   	// #0
+  7613f4:	52800024 	mov	w4, #0x1                   	// #1
+  7613f8:	34000161 	cbz	w1, 761424 <RunAicpuRpcSrvLaunch@@Base+0xa4>
+  7613fc:	d503201f 	nop
+  761400:	f9403be1 	ldr	x1, [sp, #112]
+  761404:	11000442 	add	w2, w2, #0x1
+  761408:	8b030021 	add	x1, x1, x3
+  76140c:	8b000063 	add	x3, x3, x0
+  761410:	9143cc21 	add	x1, x1, #0xf3, lsl #12
+  761414:	3909c024 	strb	w4, [x1, #624]
+  761418:	b9406be1 	ldr	w1, [sp, #104]
+  76141c:	6b01005f 	cmp	w2, w1
+  761420:	54ffff03 	b.cc	761400 <RunAicpuRpcSrvLaunch@@Base+0x80>  // b.lo, b.ul, b.last
+  761424:	97ecdfcb 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  761428:	360008c0 	tbz	w0, #0, 761540 <RunAicpuRpcSrvLaunch@@Base+0x1c0>
+  76142c:	d53be057 	mrs	x23, cntvct_el0
+  761430:	52800061 	mov	w1, #0x3                   	// #3
+  761434:	b4000993 	cbz	x19, 761564 <RunAicpuRpcSrvLaunch@@Base+0x1e4>
+  761438:	52800020 	mov	w0, #0x1                   	// #1
+  76143c:	97ecaca5 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761440:	370034e0 	tbnz	w0, #0, 761adc <RunAicpuRpcSrvLaunch@@Base+0x75c>
+  761444:	f9401678 	ldr	x24, [x19, #40]
+  761448:	f9400e75 	ldr	x21, [x19, #24]
+  76144c:	f100031f 	cmp	x24, #0x0
+  761450:	fa401aa4 	ccmp	x21, #0x0, #0x4, ne  // ne = any
+  761454:	54000ac1 	b.ne	7615ac <RunAicpuRpcSrvLaunch@@Base+0x22c>  // b.any
+  761458:	52800061 	mov	w1, #0x3                   	// #3
+  76145c:	2a0103e0 	mov	w0, w1
+  761460:	97ecac9c 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761464:	360001e0 	tbz	w0, #0, 7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761468:	97ecb442 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  76146c:	36000d40 	tbz	w0, #0, 761614 <RunAicpuRpcSrvLaunch@@Base+0x294>
+  761470:	d2801640 	mov	x0, #0xb2                  	// #178
+  761474:	97eca963 	bl	28ba00 <syscall@plt>
+  761478:	aa0003e5 	mov	x5, x0
+  76147c:	52800060 	mov	w0, #0x3                   	// #3
+  761480:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761484:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761488:	913ba063 	add	x3, x3, #0xee8
+  76148c:	910fe042 	add	x2, x2, #0x3f8
+  761490:	72a02000 	movk	w0, #0x100, lsl #16
+  761494:	52803784 	mov	w4, #0x1bc                 	// #444
+  761498:	52800041 	mov	w1, #0x2                   	// #2
+  76149c:	97ece315 	bl	29a0f0 <DlogRecord@plt>
+  7614a0:	52800035 	mov	w21, #0x1                   	// #1
+  7614a4:	aa1403e0 	mov	x0, x20
+  7614a8:	910173e1 	add	x1, sp, #0x5c
+  7614ac:	b9005fff 	str	wzr, [sp, #92]
+  7614b0:	f9003bff 	str	xzr, [sp, #112]
+  7614b4:	97ece41b 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  7614b8:	b9405fe0 	ldr	w0, [sp, #92]
+  7614bc:	d2866203 	mov	x3, #0x3310                	// #13072
+  7614c0:	d2800002 	mov	x2, #0x0                   	// #0
+  7614c4:	52800001 	mov	w1, #0x0                   	// #0
+  7614c8:	f2a001e3 	movk	x3, #0xf, lsl #16
+  7614cc:	34000140 	cbz	w0, 7614f4 <RunAicpuRpcSrvLaunch@@Base+0x174>
+  7614d0:	f9403be0 	ldr	x0, [sp, #112]
+  7614d4:	11000421 	add	w1, w1, #0x1
+  7614d8:	8b020000 	add	x0, x0, x2
+  7614dc:	8b030042 	add	x2, x2, x3
+  7614e0:	9143cc00 	add	x0, x0, #0xf3, lsl #12
+  7614e4:	3909c01f 	strb	wzr, [x0, #624]
+  7614e8:	b9405fe0 	ldr	w0, [sp, #92]
+  7614ec:	6b00003f 	cmp	w1, w0
+  7614f0:	54ffff03 	b.cc	7614d0 <RunAicpuRpcSrvLaunch@@Base+0x150>  // b.lo, b.ul, b.last
+  7614f4:	d0008dc0 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7614f8:	f9444400 	ldr	x0, [x0, #2184]
+  7614fc:	d2900201 	mov	x1, #0x8010                	// #32784
+  761500:	8b2163e2 	add	x2, sp, x1
+  761504:	f9407443 	ldr	x3, [x2, #232]
+  761508:	f9400001 	ldr	x1, [x0]
+  76150c:	eb010063 	subs	x3, x3, x1
+  761510:	d2800001 	mov	x1, #0x0                   	// #0
+  761514:	5400a3c1 	b.ne	76298c <RunAicpuRpcSrvLaunch@@Base+0x160c>  // b.any
+  761518:	d290200d 	mov	x13, #0x8100                	// #33024
+  76151c:	8b2d63ff 	add	sp, sp, x13
+  761520:	2a1503e0 	mov	w0, w21
+  761524:	a94153f3 	ldp	x19, x20, [sp, #16]
+  761528:	a9425bf5 	ldp	x21, x22, [sp, #32]
+  76152c:	a94363f7 	ldp	x23, x24, [sp, #48]
+  761530:	a9446bf9 	ldp	x25, x26, [sp, #64]
+  761534:	a94573fb 	ldp	x27, x28, [sp, #80]
+  761538:	a8c67bfd 	ldp	x29, x30, [sp], #96
+  76153c:	d65f03c0 	ret
+  761540:	aa1403e1 	mov	x1, x20
+  761544:	52800080 	mov	w0, #0x4                   	// #4
+  761548:	97ecaca6 	bl	28c7e0 <clock_gettime@plt>
+  76154c:	a94703f7 	ldp	x23, x0, [sp, #112]
+  761550:	d2994001 	mov	x1, #0xca00                	// #51712
+  761554:	f2a77341 	movk	x1, #0x3b9a, lsl #16
+  761558:	9b0102f7 	madd	x23, x23, x1, x0
+  76155c:	52800061 	mov	w1, #0x3                   	// #3
+  761560:	b5fff6d3 	cbnz	x19, 761438 <RunAicpuRpcSrvLaunch@@Base+0xb8>
+  761564:	2a0103e0 	mov	w0, w1
+  761568:	97ecac5a 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  76156c:	3607f9a0 	tbz	w0, #0, 7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761570:	97ecb400 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  761574:	36002820 	tbz	w0, #0, 761a78 <RunAicpuRpcSrvLaunch@@Base+0x6f8>
+  761578:	d2801640 	mov	x0, #0xb2                  	// #178
+  76157c:	97eca921 	bl	28ba00 <syscall@plt>
+  761580:	aa0003e5 	mov	x5, x0
+  761584:	52800060 	mov	w0, #0x3                   	// #3
+  761588:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  76158c:	d0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  761590:	913ba063 	add	x3, x3, #0xee8
+  761594:	9106c042 	add	x2, x2, #0x1b0
+  761598:	72a02000 	movk	w0, #0x100, lsl #16
+  76159c:	52803624 	mov	w4, #0x1b1                 	// #433
+  7615a0:	52800041 	mov	w1, #0x2                   	// #2
+  7615a4:	97ece2d3 	bl	29a0f0 <DlogRecord@plt>
+  7615a8:	17ffffbe 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  7615ac:	97ec8f15 	bl	285200 <_Z18AicpuGetComContextv@plt>
+  7615b0:	aa0003fc 	mov	x28, x0
+  7615b4:	b4000080 	cbz	x0, 7615c4 <RunAicpuRpcSrvLaunch@@Base+0x244>
+  7615b8:	9143cc19 	add	x25, x0, #0xf3, lsl #12
+  7615bc:	3946cb21 	ldrb	w1, [x25, #434]
+  7615c0:	37000421 	tbnz	w1, #0, 761644 <RunAicpuRpcSrvLaunch@@Base+0x2c4>
+  7615c4:	52800061 	mov	w1, #0x3                   	// #3
+  7615c8:	2a0103e0 	mov	w0, w1
+  7615cc:	97ecac41 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7615d0:	3607f680 	tbz	w0, #0, 7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  7615d4:	97ecb3e7 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7615d8:	36002680 	tbz	w0, #0, 761aa8 <RunAicpuRpcSrvLaunch@@Base+0x728>
+  7615dc:	d2801640 	mov	x0, #0xb2                  	// #178
+  7615e0:	97eca908 	bl	28ba00 <syscall@plt>
+  7615e4:	aa0003e5 	mov	x5, x0
+  7615e8:	52800060 	mov	w0, #0x3                   	// #3
+  7615ec:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7615f0:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7615f4:	910882a6 	add	x6, x21, #0x220
+  7615f8:	913ba063 	add	x3, x3, #0xee8
+  7615fc:	91022042 	add	x2, x2, #0x88
+  761600:	72a02000 	movk	w0, #0x100, lsl #16
+  761604:	52803844 	mov	w4, #0x1c2                 	// #450
+  761608:	52800041 	mov	w1, #0x2                   	// #2
+  76160c:	97ece2b9 	bl	29a0f0 <DlogRecord@plt>
+  761610:	17ffffa4 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761614:	d2801640 	mov	x0, #0xb2                  	// #178
+  761618:	97eca8fa 	bl	28ba00 <syscall@plt>
+  76161c:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761620:	aa0003e5 	mov	x5, x0
+  761624:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761628:	52800061 	mov	w1, #0x3                   	// #3
+  76162c:	913ba063 	add	x3, x3, #0xee8
+  761630:	9110e042 	add	x2, x2, #0x438
+  761634:	2a0103e0 	mov	w0, w1
+  761638:	52803784 	mov	w4, #0x1bc                 	// #444
+  76163c:	97ece2ad 	bl	29a0f0 <DlogRecord@plt>
+  761640:	17ffff98 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761644:	910882bb 	add	x27, x21, #0x220
+  761648:	aa1b03e1 	mov	x1, x27
+  76164c:	97eccd61 	bl	294bd0 <strcmp@plt>
+  761650:	35fffba0 	cbnz	w0, 7615c4 <RunAicpuRpcSrvLaunch@@Base+0x244>
+  761654:	9143c39a 	add	x26, x28, #0xf0, lsl #12
+  761658:	f958f741 	ldr	x1, [x26, #12776]
+  76165c:	b5002621 	cbnz	x1, 761b20 <RunAicpuRpcSrvLaunch@@Base+0x7a0>
+  761660:	f958fb41 	ldr	x1, [x26, #12784]
+  761664:	f100043f 	cmp	x1, #0x1
+  761668:	540025c0 	b.eq	761b20 <RunAicpuRpcSrvLaunch@@Base+0x7a0>  // b.none
+  76166c:	3941d701 	ldrb	w1, [x24, #117]
+  761670:	39070321 	strb	w1, [x25, #448]
+  761674:	7100043f 	cmp	w1, #0x1
+  761678:	54002c80 	b.eq	761c08 <RunAicpuRpcSrvLaunch@@Base+0x888>  // b.none
+  76167c:	a9408e62 	ldp	x2, x3, [x19, #8]
+  761680:	52800061 	mov	w1, #0x3                   	// #3
+  761684:	3941a304 	ldrb	w4, [x24, #104]
+  761688:	7100009f 	cmp	w4, #0x0
+  76168c:	9a831042 	csel	x2, x2, x3, ne  // ne = any
+  761690:	f9197342 	str	x2, [x26, #13024]
+  761694:	97ecac0f 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761698:	37003ea0 	tbnz	w0, #0, 761e6c <RunAicpuRpcSrvLaunch@@Base+0xaec>
+  76169c:	9143cf9b 	add	x27, x28, #0xf3, lsl #12
+  7616a0:	f90033ff 	str	xzr, [sp, #96]
+  7616a4:	9108037b 	add	x27, x27, #0x200
+  7616a8:	3cc7837f 	ldur	q31, [x27, #120]
+  7616ac:	4e183fe0 	mov	x0, v31.d[1]
+  7616b0:	3d801fff 	str	q31, [sp, #112]
+  7616b4:	b4000100 	cbz	x0, 7616d4 <RunAicpuRpcSrvLaunch@@Base+0x354>
+  7616b8:	f0008dc1 	adrp	x1, 191c000 <_ZZN4Hccl29ConvertReduceOpToHcclReduceOpENS_8ReduceOpEE13reduceTypeMap@@Base-0xcf4010>
+  7616bc:	f946b021 	ldr	x1, [x1, #3424]
+  7616c0:	39400021 	ldrb	w1, [x1]
+  7616c4:	34002f01 	cbz	w1, 761ca4 <RunAicpuRpcSrvLaunch@@Base+0x924>
+  7616c8:	b9400801 	ldr	w1, [x0, #8]
+  7616cc:	11000421 	add	w1, w1, #0x1
+  7616d0:	b9000801 	str	w1, [x0, #8]
+  7616d4:	910183e1 	add	x1, sp, #0x60
+  7616d8:	aa1403e0 	mov	x0, x20
+  7616dc:	97ece8f9 	bl	29bac0 <_ZN13AicpuHdcUtils19GetSuspendingStatusESt10shared_ptrIN4hccl13HDCommunicateEER21HcclComSuspendingFlag@plt>
+  7616e0:	f9403fe4 	ldr	x4, [sp, #120]
+  7616e4:	2a0003f5 	mov	w21, w0
+  7616e8:	b40001e4 	cbz	x4, 761724 <RunAicpuRpcSrvLaunch@@Base+0x3a4>
+  7616ec:	91002081 	add	x1, x4, #0x8
+  7616f0:	c8dffc22 	ldar	x2, [x1]
+  7616f4:	b20003e0 	mov	x0, #0x100000001           	// #4294967297
+  7616f8:	eb00005f 	cmp	x2, x0
+  7616fc:	54003380 	b.eq	761d6c <RunAicpuRpcSrvLaunch@@Base+0x9ec>  // b.none
+  761700:	f0008dc0 	adrp	x0, 191c000 <_ZZN4Hccl29ConvertReduceOpToHcclReduceOpENS_8ReduceOpEE13reduceTypeMap@@Base-0xcf4010>
+  761704:	f946b000 	ldr	x0, [x0, #3424]
+  761708:	39400000 	ldrb	w0, [x0]
+  76170c:	34003260 	cbz	w0, 761d58 <RunAicpuRpcSrvLaunch@@Base+0x9d8>
+  761710:	b9400880 	ldr	w0, [x4, #8]
+  761714:	51000401 	sub	w1, w0, #0x1
+  761718:	b9000881 	str	w1, [x4, #8]
+  76171c:	7100041f 	cmp	w0, #0x1
+  761720:	540022e0 	b.eq	761b7c <RunAicpuRpcSrvLaunch@@Base+0x7fc>  // b.none
+  761724:	35003755 	cbnz	w21, 761e0c <RunAicpuRpcSrvLaunch@@Base+0xa8c>
+  761728:	f94033e0 	ldr	x0, [sp, #96]
+  76172c:	f100081f 	cmp	x0, #0x2
+  761730:	540024c0 	b.eq	761bc8 <RunAicpuRpcSrvLaunch@@Base+0x848>  // b.none
+  761734:	aa1603e1 	mov	x1, x22
+  761738:	aa1403e0 	mov	x0, x20
+  76173c:	b9006bff 	str	wzr, [sp, #104]
+  761740:	f9003bff 	str	xzr, [sp, #112]
+  761744:	97ece377 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  761748:	b9406be0 	ldr	w0, [sp, #104]
+  76174c:	d2866203 	mov	x3, #0x3310                	// #13072
+  761750:	52800002 	mov	w2, #0x0                   	// #0
+  761754:	d2800001 	mov	x1, #0x0                   	// #0
+  761758:	f2a001e3 	movk	x3, #0xf, lsl #16
+  76175c:	34000140 	cbz	w0, 761784 <RunAicpuRpcSrvLaunch@@Base+0x404>
+  761760:	f9403be0 	ldr	x0, [sp, #112]
+  761764:	11000442 	add	w2, w2, #0x1
+  761768:	8b010000 	add	x0, x0, x1
+  76176c:	8b030021 	add	x1, x1, x3
+  761770:	9143cc00 	add	x0, x0, #0xf3, lsl #12
+  761774:	3909b81f 	strb	wzr, [x0, #622]
+  761778:	b9406be0 	ldr	w0, [sp, #104]
+  76177c:	6b00005f 	cmp	w2, w0
+  761780:	54ffff03 	b.cc	761760 <RunAicpuRpcSrvLaunch@@Base+0x3e0>  // b.lo, b.ul, b.last
+  761784:	aa1603e1 	mov	x1, x22
+  761788:	aa1403e0 	mov	x0, x20
+  76178c:	b9006bff 	str	wzr, [sp, #104]
+  761790:	f9003bff 	str	xzr, [sp, #112]
+  761794:	97ece363 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  761798:	b9406be0 	ldr	w0, [sp, #104]
+  76179c:	d2866202 	mov	x2, #0x3310                	// #13072
+  7617a0:	d2800001 	mov	x1, #0x0                   	// #0
+  7617a4:	f2a001e2 	movk	x2, #0xf, lsl #16
+  7617a8:	34000140 	cbz	w0, 7617d0 <RunAicpuRpcSrvLaunch@@Base+0x450>
+  7617ac:	f9403be0 	ldr	x0, [sp, #112]
+  7617b0:	110006b5 	add	w21, w21, #0x1
+  7617b4:	8b010000 	add	x0, x0, x1
+  7617b8:	8b020021 	add	x1, x1, x2
+  7617bc:	9143cc00 	add	x0, x0, #0xf3, lsl #12
+  7617c0:	3909b41f 	strb	wzr, [x0, #621]
+  7617c4:	b9406be0 	ldr	w0, [sp, #104]
+  7617c8:	6b0002bf 	cmp	w21, w0
+  7617cc:	54ffff03 	b.cc	7617ac <RunAicpuRpcSrvLaunch@@Base+0x42c>  // b.lo, b.ul, b.last
+  7617d0:	97ec8878 	bl	2839b0 <_ZN15AicpuSqeContext12SyncVariableEv@plt>
+  7617d4:	aa1c03e0 	mov	x0, x28
+  7617d8:	97ecc236 	bl	2920b0 <_ZN12AicpuKfcProf10GetProInstER15AicpuComContext@plt>
+  7617dc:	910223e1 	add	x1, sp, #0x88
+  7617e0:	aa0103e2 	mov	x2, x1
+  7617e4:	aa0003e1 	mov	x1, x0
+  7617e8:	aa0203e0 	mov	x0, x2
+  7617ec:	f90023e2 	str	x2, [sp, #64]
+  7617f0:	d2900e02 	mov	x2, #0x8070                	// #32880
+  7617f4:	97ec7c2f 	bl	2808b0 <memcpy@plt>
+  7617f8:	aa1c03e0 	mov	x0, x28
+  7617fc:	97ec8521 	bl	282c80 <_ZN13AicpuKfcUtils19NeedRecordTimeTakenERK15AicpuComContext@plt>
+  761800:	370025e0 	tbnz	w0, #0, 761cbc <RunAicpuRpcSrvLaunch@@Base+0x93c>
+  761804:	52800061 	mov	w1, #0x3                   	// #3
+  761808:	52800020 	mov	w0, #0x1                   	// #1
+  76180c:	97ecabb1 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761810:	37004f20 	tbnz	w0, #0, 7621f4 <RunAicpuRpcSrvLaunch@@Base+0xe74>
+  761814:	b9400300 	ldr	w0, [x24]
+  761818:	7100041f 	cmp	w0, #0x1
+  76181c:	540021c8 	b.hi	761c54 <RunAicpuRpcSrvLaunch@@Base+0x8d4>  // b.pmore
+  761820:	b931d340 	str	w0, [x26, #12752]
+  761824:	35002620 	cbnz	w0, 761ce8 <RunAicpuRpcSrvLaunch@@Base+0x968>
+  761828:	b9406300 	ldr	w0, [x24, #96]
+  76182c:	b900c380 	str	w0, [x28, #192]
+  761830:	7940cb00 	ldrh	w0, [x24, #100]
+  761834:	79018b80 	strh	w0, [x28, #196]
+  761838:	7940cf00 	ldrh	w0, [x24, #102]
+  76183c:	79018f80 	strh	w0, [x28, #198]
+  761840:	f9402700 	ldr	x0, [x24, #72]
+  761844:	f9005780 	str	x0, [x28, #168]
+  761848:	b971bf40 	ldr	w0, [x26, #12732]
+  76184c:	52800021 	mov	w1, #0x1                   	// #1
+  761850:	7100081f 	cmp	w0, #0x2
+  761854:	54000040 	b.eq	76185c <RunAicpuRpcSrvLaunch@@Base+0x4dc>  // b.none
+  761858:	3941cf01 	ldrb	w1, [x24, #115]
+  76185c:	3901cf01 	strb	w1, [x24, #115]
+  761860:	aa1c03e0 	mov	x0, x28
+  761864:	3906c321 	strb	w1, [x25, #432]
+  761868:	b900bbff 	str	wzr, [sp, #184]
+  76186c:	3941eb01 	ldrb	w1, [x24, #122]
+  761870:	7100003f 	cmp	w1, #0x0
+  761874:	1a9f17e1 	cset	w1, eq  // eq = none
+  761878:	390b6721 	strb	w1, [x25, #729]
+  76187c:	b901639f 	str	wzr, [x28, #352]
+  761880:	b931d75f 	str	wzr, [x26, #12756]
+  761884:	3907633f 	strb	wzr, [x25, #472]
+  761888:	97ecb69a 	bl	28f2f0 <_ZN13AicpuKfcUtils10GetSendCntEP15AicpuComContext@plt>
+  76188c:	b9324340 	str	w0, [x26, #12864]
+  761890:	aa1c03e0 	mov	x0, x28
+  761894:	97ecc68f 	bl	2932d0 <_ZN13AicpuKfcUtils10GetRecvCntEP15AicpuComContext@plt>
+  761898:	b9325340 	str	w0, [x26, #12880]
+  76189c:	52800001 	mov	w1, #0x0                   	// #0
+  7618a0:	390b633f 	strb	wzr, [x25, #728]
+  7618a4:	aa1803e0 	mov	x0, x24
+  7618a8:	97ecdad6 	bl	298400 <_ZN13AicpuKfcUtils15PrintTilingDataERK17HcclKFCTilingDatab@plt>
+  7618ac:	aa1c03e0 	mov	x0, x28
+  7618b0:	52800001 	mov	w1, #0x0                   	// #0
+  7618b4:	97ecb06b 	bl	28da60 <_ZN13AicpuKfcUtils20PrintMC2AicpuContextERK15AicpuComContextb@plt>
+  7618b8:	aa1803e1 	mov	x1, x24
+  7618bc:	aa1303e0 	mov	x0, x19
+  7618c0:	97ece824 	bl	29b950 <_ZN13MC2TraceUtils6SubmitEPK7KFCTaskPK17HcclKFCTilingData@plt>
+  7618c4:	2a0003f5 	mov	w21, w0
+  7618c8:	35005b60 	cbnz	w0, 762434 <RunAicpuRpcSrvLaunch@@Base+0x10b4>
+  7618cc:	aa1c03e0 	mov	x0, x28
+  7618d0:	97ecabdc 	bl	28c840 <_ZN13MC2TraceUtils6SubmitEP15AicpuComContext@plt>
+  7618d4:	2a0003f5 	mov	w21, w0
+  7618d8:	35005560 	cbnz	w0, 762384 <RunAicpuRpcSrvLaunch@@Base+0x1004>
+  7618dc:	d0008df7 	adrp	x23, 191f000 <_ZN4hccl13HcclCommAicpu17errMessageReport_E@@Base+0xf7c>
+  7618e0:	913402e2 	add	x2, x23, #0xd00
+  7618e4:	39470320 	ldrb	w0, [x25, #448]
+  7618e8:	b9400441 	ldr	w1, [x2, #4]
+  7618ec:	51000800 	sub	w0, w0, #0x2
+  7618f0:	12001c00 	and	w0, w0, #0xff
+  7618f4:	11000421 	add	w1, w1, #0x1
+  7618f8:	b9000441 	str	w1, [x2, #4]
+  7618fc:	7100041f 	cmp	w0, #0x1
+  761900:	540025e9 	b.ls	761dbc <RunAicpuRpcSrvLaunch@@Base+0xa3c>  // b.plast
+  761904:	913402f9 	add	x25, x23, #0xd00
+  761908:	91002324 	add	x4, x25, #0x8
+  76190c:	c8dffc80 	ldar	x0, [x4]
+  761910:	36002e00 	tbz	w0, #0, 761ed0 <RunAicpuRpcSrvLaunch@@Base+0xb50>
+  761914:	f9405f81 	ldr	x1, [x28, #184]
+  761918:	913402e0 	add	x0, x23, #0xd00
+  76191c:	79418b83 	ldrh	w3, [x28, #196]
+  761920:	aa1303e4 	mov	x4, x19
+  761924:	b940c382 	ldr	w2, [x28, #192]
+  761928:	91004000 	add	x0, x0, #0x10
+  76192c:	97ecbfed 	bl	2918e0 <_ZN17AicpuKfcRpcServer4InitEyjtP7KFCTask@plt>
+  761930:	97ecde88 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  761934:	36002340 	tbz	w0, #0, 761d9c <RunAicpuRpcSrvLaunch@@Base+0xa1c>
+  761938:	d53be053 	mrs	x19, cntvct_el0
+  76193c:	aa1c03e0 	mov	x0, x28
+  761940:	97ecc1dc 	bl	2920b0 <_ZN12AicpuKfcProf10GetProInstER15AicpuComContext@plt>
+  761944:	aa0003e1 	mov	x1, x0
+  761948:	913402e0 	add	x0, x23, #0xd00
+  76194c:	91004000 	add	x0, x0, #0x10
+  761950:	f9000433 	str	x19, [x1, #8]
+  761954:	97ec9a77 	bl	288330 <_ZNK17AicpuKfcRpcServer18GetPreparePositionEv@plt>
+  761958:	7100041f 	cmp	w0, #0x1
+  76195c:	540030a0 	b.eq	761f70 <RunAicpuRpcSrvLaunch@@Base+0xbf0>  // b.none
+  761960:	913402e0 	add	x0, x23, #0xd00
+  761964:	91004000 	add	x0, x0, #0x10
+  761968:	97ec9b5a 	bl	2886d0 <_ZNK17AicpuKfcRpcServer11GetTaskTypeEv@plt>
+  76196c:	12001c00 	and	w0, w0, #0xff
+  761970:	7100181f 	cmp	w0, #0x6
+  761974:	54004b20 	b.eq	7622d8 <RunAicpuRpcSrvLaunch@@Base+0xf58>  // b.none
+  761978:	b971bf40 	ldr	w0, [x26, #12732]
+  76197c:	913402e1 	add	x1, x23, #0xd00
+  761980:	91004021 	add	x1, x1, #0x10
+  761984:	121e7800 	and	w0, w0, #0xfffffffd
+  761988:	7100041f 	cmp	w0, #0x1
+  76198c:	aa1c03e0 	mov	x0, x28
+  761990:	540044c1 	b.ne	762228 <RunAicpuRpcSrvLaunch@@Base+0xea8>  // b.any
+  761994:	97ecae0b 	bl	28d1c0 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@plt>
+  761998:	7100001f 	cmp	w0, #0x0
+  76199c:	7a561804 	ccmp	w0, #0x16, #0x4, ne  // ne = any
+  7619a0:	54003241 	b.ne	761fe8 <RunAicpuRpcSrvLaunch@@Base+0xc68>  // b.any
+  7619a4:	7100581f 	cmp	w0, #0x16
+  7619a8:	54006f60 	b.eq	762794 <RunAicpuRpcSrvLaunch@@Base+0x1414>  // b.none
+  7619ac:	aa1c03e0 	mov	x0, x28
+  7619b0:	97ecb650 	bl	28f2f0 <_ZN13AicpuKfcUtils10GetSendCntEP15AicpuComContext@plt>
+  7619b4:	b9324f40 	str	w0, [x26, #12876]
+  7619b8:	aa1c03e0 	mov	x0, x28
+  7619bc:	97ecc645 	bl	2932d0 <_ZN13AicpuKfcUtils10GetRecvCntEP15AicpuComContext@plt>
+  7619c0:	b9325f40 	str	w0, [x26, #12892]
+  7619c4:	710002bf 	cmp	w21, #0x0
+  7619c8:	7a561aa4 	ccmp	w21, #0x16, #0x4, ne  // ne = any
+  7619cc:	54003121 	b.ne	761ff0 <RunAicpuRpcSrvLaunch@@Base+0xc70>  // b.any
+  7619d0:	71005abf 	cmp	w21, #0x16
+  7619d4:	54004040 	b.eq	7621dc <RunAicpuRpcSrvLaunch@@Base+0xe5c>  // b.none
+  7619d8:	aa1c03e0 	mov	x0, x28
+  7619dc:	97ec84a9 	bl	282c80 <_ZN13AicpuKfcUtils19NeedRecordTimeTakenERK15AicpuComContext@plt>
+  7619e0:	360000e0 	tbz	w0, #0, 7619fc <RunAicpuRpcSrvLaunch@@Base+0x67c>
+  7619e4:	97ecde5b 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  7619e8:	36005560 	tbz	w0, #0, 762494 <RunAicpuRpcSrvLaunch@@Base+0x1114>
+  7619ec:	d53be040 	mrs	x0, cntvct_el0
+  7619f0:	d2900204 	mov	x4, #0x8010                	// #32784
+  7619f4:	8b2463e1 	add	x1, sp, x4
+  7619f8:	f9007020 	str	x0, [x1, #224]
+  7619fc:	f94023e0 	ldr	x0, [sp, #64]
+  761a00:	52800001 	mov	w1, #0x0                   	// #0
+  761a04:	97ecbc1f 	bl	290a80 <_ZN3dfx21AicpuProfilingManager22ReportTaskExecTimeLineEP12AicpuComProfj@plt>
+  761a08:	2a0003f5 	mov	w21, w0
+  761a0c:	350058e0 	cbnz	w0, 762528 <RunAicpuRpcSrvLaunch@@Base+0x11a8>
+  761a10:	aa1603e0 	mov	x0, x22
+  761a14:	910163e1 	add	x1, sp, #0x58
+  761a18:	b9005bff 	str	wzr, [sp, #88]
+  761a1c:	f90037ff 	str	xzr, [sp, #104]
+  761a20:	97ece2c0 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  761a24:	aa1c03e0 	mov	x0, x28
+  761a28:	52800081 	mov	w1, #0x4                   	// #4
+  761a2c:	97ec8955 	bl	283f80 <_ZN13AicpuKfcUtils17IsDebugModeEqualsERK15AicpuComContexth@plt>
+  761a30:	f94037e1 	ldr	x1, [sp, #104]
+  761a34:	d2822d03 	mov	x3, #0x1168                	// #4456
+  761a38:	9143d022 	add	x2, x1, #0xf4, lsl #12
+  761a3c:	8b030021 	add	x1, x1, x3
+  761a40:	9111e042 	add	x2, x2, #0x478
+  761a44:	97ec9aab 	bl	2884f0 <_ZN12AicpuKfcProf13OutputProfLogEbP12AicpuComProfS1_@plt>
+  761a48:	52800020 	mov	w0, #0x1                   	// #1
+  761a4c:	97ec9f79 	bl	289830 <_ZN12AicpuKfcProf14AddProfLoopCntEj@plt>
+  761a50:	97ec9938 	bl	287f30 <_ZN15AicpuSqeContext12SaveVariableEv@plt>
+  761a54:	97ece19b 	bl	29a0c0 <_ZN15AicpuSqeContext14ClearLocalBuffEv@plt>
+  761a58:	2a0003f5 	mov	w21, w0
+  761a5c:	52800061 	mov	w1, #0x3                   	// #3
+  761a60:	350066c0 	cbnz	w0, 762738 <RunAicpuRpcSrvLaunch@@Base+0x13b8>
+  761a64:	52800020 	mov	w0, #0x1                   	// #1
+  761a68:	97ecab1a 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761a6c:	370064c0 	tbnz	w0, #0, 762704 <RunAicpuRpcSrvLaunch@@Base+0x1384>
+  761a70:	52800015 	mov	w21, #0x0                   	// #0
+  761a74:	17fffe8c 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761a78:	d2801640 	mov	x0, #0xb2                  	// #178
+  761a7c:	97eca7e1 	bl	28ba00 <syscall@plt>
+  761a80:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761a84:	aa0003e5 	mov	x5, x0
+  761a88:	d0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  761a8c:	52800061 	mov	w1, #0x3                   	// #3
+  761a90:	913ba063 	add	x3, x3, #0xee8
+  761a94:	91076042 	add	x2, x2, #0x1d8
+  761a98:	2a0103e0 	mov	w0, w1
+  761a9c:	52803624 	mov	w4, #0x1b1                 	// #433
+  761aa0:	97ece194 	bl	29a0f0 <DlogRecord@plt>
+  761aa4:	17fffe7f 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761aa8:	d2801640 	mov	x0, #0xb2                  	// #178
+  761aac:	97eca7d5 	bl	28ba00 <syscall@plt>
+  761ab0:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761ab4:	aa0003e5 	mov	x5, x0
+  761ab8:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761abc:	52800061 	mov	w1, #0x3                   	// #3
+  761ac0:	910882a6 	add	x6, x21, #0x220
+  761ac4:	913ba063 	add	x3, x3, #0xee8
+  761ac8:	91032042 	add	x2, x2, #0xc8
+  761acc:	2a0103e0 	mov	w0, w1
+  761ad0:	52803844 	mov	w4, #0x1c2                 	// #450
+  761ad4:	97ece187 	bl	29a0f0 <DlogRecord@plt>
+  761ad8:	17fffe72 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761adc:	d2801640 	mov	x0, #0xb2                  	// #178
+  761ae0:	97eca7c8 	bl	28ba00 <syscall@plt>
+  761ae4:	aa0003e5 	mov	x5, x0
+  761ae8:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761aec:	a9410660 	ldp	x0, x1, [x19, #16]
+  761af0:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761af4:	a9401e66 	ldp	x6, x7, [x19]
+  761af8:	a90007e0 	stp	x0, x1, [sp]
+  761afc:	913ba063 	add	x3, x3, #0xee8
+  761b00:	a9420660 	ldp	x0, x1, [x19, #32]
+  761b04:	a90107e0 	stp	x0, x1, [sp, #16]
+  761b08:	910e6042 	add	x2, x2, #0x398
+  761b0c:	528036c4 	mov	w4, #0x1b6                 	// #438
+  761b10:	52800021 	mov	w1, #0x1                   	// #1
+  761b14:	52800060 	mov	w0, #0x3                   	// #3
+  761b18:	97ece176 	bl	29a0f0 <DlogRecord@plt>
+  761b1c:	17fffe4a 	b	761444 <RunAicpuRpcSrvLaunch@@Base+0xc4>
+  761b20:	52800061 	mov	w1, #0x3                   	// #3
+  761b24:	2a0103e0 	mov	w0, w1
+  761b28:	97ecaaea 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761b2c:	36000240 	tbz	w0, #0, 761b74 <RunAicpuRpcSrvLaunch@@Base+0x7f4>
+  761b30:	97ecb290 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  761b34:	360002a0 	tbz	w0, #0, 761b88 <RunAicpuRpcSrvLaunch@@Base+0x808>
+  761b38:	d2801640 	mov	x0, #0xb2                  	// #178
+  761b3c:	97eca7b1 	bl	28ba00 <syscall@plt>
+  761b40:	f958f746 	ldr	x6, [x26, #12776]
+  761b44:	aa0003e5 	mov	x5, x0
+  761b48:	f958fb47 	ldr	x7, [x26, #12784]
+  761b4c:	f90003fb 	str	x27, [sp]
+  761b50:	52800060 	mov	w0, #0x3                   	// #3
+  761b54:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761b58:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761b5c:	913ba063 	add	x3, x3, #0xee8
+  761b60:	9104c042 	add	x2, x2, #0x130
+  761b64:	72a02000 	movk	w0, #0x100, lsl #16
+  761b68:	528038e4 	mov	w4, #0x1c7                 	// #455
+  761b6c:	52800041 	mov	w1, #0x2                   	// #2
+  761b70:	97ece160 	bl	29a0f0 <DlogRecord@plt>
+  761b74:	52800095 	mov	w21, #0x4                   	// #4
+  761b78:	17fffe4b 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761b7c:	aa0403e0 	mov	x0, x4
+  761b80:	97ec7d68 	bl	281120 <_ZNSt16_Sp_counted_baseILN9__gnu_cxx12_Lock_policyE2EE24_M_release_last_use_coldEv@plt>
+  761b84:	17fffee8 	b	761724 <RunAicpuRpcSrvLaunch@@Base+0x3a4>
+  761b88:	d2801640 	mov	x0, #0xb2                  	// #178
+  761b8c:	97eca79d 	bl	28ba00 <syscall@plt>
+  761b90:	f958f746 	ldr	x6, [x26, #12776]
+  761b94:	aa0003e5 	mov	x5, x0
+  761b98:	f958fb47 	ldr	x7, [x26, #12784]
+  761b9c:	f90003fb 	str	x27, [sp]
+  761ba0:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761ba4:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761ba8:	52800061 	mov	w1, #0x3                   	// #3
+  761bac:	913ba063 	add	x3, x3, #0xee8
+  761bb0:	91062042 	add	x2, x2, #0x188
+  761bb4:	2a0103e0 	mov	w0, w1
+  761bb8:	528038e4 	mov	w4, #0x1c7                 	// #455
+  761bbc:	97ece14d 	bl	29a0f0 <DlogRecord@plt>
+  761bc0:	52800095 	mov	w21, #0x4                   	// #4
+  761bc4:	17fffe38 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761bc8:	52800061 	mov	w1, #0x3                   	// #3
+  761bcc:	97ecaac1 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761bd0:	3607f500 	tbz	w0, #0, 761a70 <RunAicpuRpcSrvLaunch@@Base+0x6f0>
+  761bd4:	d2801640 	mov	x0, #0xb2                  	// #178
+  761bd8:	97eca78a 	bl	28ba00 <syscall@plt>
+  761bdc:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761be0:	aa0003e5 	mov	x5, x0
+  761be4:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761be8:	913ba063 	add	x3, x3, #0xee8
+  761bec:	9108e042 	add	x2, x2, #0x238
+  761bf0:	52803b64 	mov	w4, #0x1db                 	// #475
+  761bf4:	52800041 	mov	w1, #0x2                   	// #2
+  761bf8:	52800060 	mov	w0, #0x3                   	// #3
+  761bfc:	97ece13d 	bl	29a0f0 <DlogRecord@plt>
+  761c00:	52800015 	mov	w21, #0x0                   	// #0
+  761c04:	17fffe28 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761c08:	2a0103e0 	mov	w0, w1
+  761c0c:	52800061 	mov	w1, #0x3                   	// #3
+  761c10:	97ecaab0 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761c14:	3607f2e0 	tbz	w0, #0, 761a70 <RunAicpuRpcSrvLaunch@@Base+0x6f0>
+  761c18:	d2801640 	mov	x0, #0xb2                  	// #178
+  761c1c:	97eca779 	bl	28ba00 <syscall@plt>
+  761c20:	b0006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761c24:	aa0003e5 	mov	x5, x0
+  761c28:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761c2c:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761c30:	911ec0c6 	add	x6, x6, #0x7b0
+  761c34:	913ba063 	add	x3, x3, #0xee8
+  761c38:	9107c042 	add	x2, x2, #0x1f0
+  761c3c:	528039c4 	mov	w4, #0x1ce                 	// #462
+  761c40:	52800021 	mov	w1, #0x1                   	// #1
+  761c44:	52800060 	mov	w0, #0x3                   	// #3
+  761c48:	97ece12a 	bl	29a0f0 <DlogRecord@plt>
+  761c4c:	52800015 	mov	w21, #0x0                   	// #0
+  761c50:	17fffe15 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761c54:	52800061 	mov	w1, #0x3                   	// #3
+  761c58:	2a0103e0 	mov	w0, w1
+  761c5c:	97ecaa9d 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761c60:	3607c200 	tbz	w0, #0, 7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761c64:	97ecb243 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  761c68:	360011a0 	tbz	w0, #0, 761e9c <RunAicpuRpcSrvLaunch@@Base+0xb1c>
+  761c6c:	d2801640 	mov	x0, #0xb2                  	// #178
+  761c70:	97eca764 	bl	28ba00 <syscall@plt>
+  761c74:	b9400306 	ldr	w6, [x24]
+  761c78:	aa0003e5 	mov	x5, x0
+  761c7c:	52800060 	mov	w0, #0x3                   	// #3
+  761c80:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761c84:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761c88:	913ba063 	add	x3, x3, #0xee8
+  761c8c:	91136042 	add	x2, x2, #0x4d8
+  761c90:	72a02000 	movk	w0, #0x100, lsl #16
+  761c94:	52803d44 	mov	w4, #0x1ea                 	// #490
+  761c98:	52800041 	mov	w1, #0x2                   	// #2
+  761c9c:	97ece115 	bl	29a0f0 <DlogRecord@plt>
+  761ca0:	17fffe00 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761ca4:	91002000 	add	x0, x0, #0x8
+  761ca8:	885ffc02 	ldaxr	w2, [x0]
+  761cac:	11000442 	add	w2, w2, #0x1
+  761cb0:	8801fc02 	stlxr	w1, w2, [x0]
+  761cb4:	35ffffa1 	cbnz	w1, 761ca8 <RunAicpuRpcSrvLaunch@@Base+0x928>
+  761cb8:	17fffe87 	b	7616d4 <RunAicpuRpcSrvLaunch@@Base+0x354>
+  761cbc:	d2801640 	mov	x0, #0xb2                  	// #178
+  761cc0:	97eca750 	bl	28ba00 <syscall@plt>
+  761cc4:	d2900205 	mov	x5, #0x8010                	// #32784
+  761cc8:	8b2563e2 	add	x2, sp, x5
+  761ccc:	b971bb41 	ldr	w1, [x26, #12728]
+  761cd0:	f90047f7 	str	x23, [sp, #136]
+  761cd4:	f9005840 	str	x0, [x2, #176]
+  761cd8:	b900b841 	str	w1, [x2, #184]
+  761cdc:	b9408b80 	ldr	w0, [x28, #136]
+  761ce0:	b900bc40 	str	w0, [x2, #188]
+  761ce4:	17fffec8 	b	761804 <RunAicpuRpcSrvLaunch@@Base+0x484>
+  761ce8:	f9405f95 	ldr	x21, [x28, #184]
+  761cec:	f900579f 	str	xzr, [x28, #168]
+  761cf0:	f900639f 	str	xzr, [x28, #192]
+  761cf4:	f24022bf 	tst	x21, #0x1ff
+  761cf8:	54000061 	b.ne	761d04 <RunAicpuRpcSrvLaunch@@Base+0x984>  // b.any
+  761cfc:	f9005f95 	str	x21, [x28, #184]
+  761d00:	17fffed2 	b	761848 <RunAicpuRpcSrvLaunch@@Base+0x4c8>
+  761d04:	9277dab5 	and	x21, x21, #0xfffffffffffffe00
+  761d08:	52800061 	mov	w1, #0x3                   	// #3
+  761d0c:	910802b5 	add	x21, x21, #0x200
+  761d10:	52800020 	mov	w0, #0x1                   	// #1
+  761d14:	97ecaa6f 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761d18:	3607ff20 	tbz	w0, #0, 761cfc <RunAicpuRpcSrvLaunch@@Base+0x97c>
+  761d1c:	d2801640 	mov	x0, #0xb2                  	// #178
+  761d20:	97eca738 	bl	28ba00 <syscall@plt>
+  761d24:	f9405f86 	ldr	x6, [x28, #184]
+  761d28:	aa0003e5 	mov	x5, x0
+  761d2c:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761d30:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761d34:	aa1503e7 	mov	x7, x21
+  761d38:	913ba063 	add	x3, x3, #0xee8
+  761d3c:	910a2042 	add	x2, x2, #0x288
+  761d40:	52803f64 	mov	w4, #0x1fb                 	// #507
+  761d44:	52800021 	mov	w1, #0x1                   	// #1
+  761d48:	52800060 	mov	w0, #0x3                   	// #3
+  761d4c:	97ece0e9 	bl	29a0f0 <DlogRecord@plt>
+  761d50:	f9005f95 	str	x21, [x28, #184]
+  761d54:	17fffebd 	b	761848 <RunAicpuRpcSrvLaunch@@Base+0x4c8>
+  761d58:	885ffc20 	ldaxr	w0, [x1]
+  761d5c:	51000402 	sub	w2, w0, #0x1
+  761d60:	8803fc22 	stlxr	w3, w2, [x1]
+  761d64:	35ffffa3 	cbnz	w3, 761d58 <RunAicpuRpcSrvLaunch@@Base+0x9d8>
+  761d68:	17fffe6d 	b	76171c <RunAicpuRpcSrvLaunch@@Base+0x39c>
+  761d6c:	f9400081 	ldr	x1, [x4]
+  761d70:	f900049f 	str	xzr, [x4, #8]
+  761d74:	f90023e4 	str	x4, [sp, #64]
+  761d78:	aa0403e0 	mov	x0, x4
+  761d7c:	f9400821 	ldr	x1, [x1, #16]
+  761d80:	d63f0020 	blr	x1
+  761d84:	f94023e4 	ldr	x4, [sp, #64]
+  761d88:	aa0403e0 	mov	x0, x4
+  761d8c:	f9400081 	ldr	x1, [x4]
+  761d90:	f9400c21 	ldr	x1, [x1, #24]
+  761d94:	d63f0020 	blr	x1
+  761d98:	17fffe63 	b	761724 <RunAicpuRpcSrvLaunch@@Base+0x3a4>
+  761d9c:	aa1403e1 	mov	x1, x20
+  761da0:	52800080 	mov	w0, #0x4                   	// #4
+  761da4:	97ecaa8f 	bl	28c7e0 <clock_gettime@plt>
+  761da8:	a94703f3 	ldp	x19, x0, [sp, #112]
+  761dac:	d2994001 	mov	x1, #0xca00                	// #51712
+  761db0:	f2a77341 	movk	x1, #0x3b9a, lsl #16
+  761db4:	9b010273 	madd	x19, x19, x1, x0
+  761db8:	17fffee1 	b	76193c <RunAicpuRpcSrvLaunch@@Base+0x5bc>
+  761dbc:	52800061 	mov	w1, #0x3                   	// #3
+  761dc0:	52800020 	mov	w0, #0x1                   	// #1
+  761dc4:	72a02001 	movk	w1, #0x100, lsl #16
+  761dc8:	97ecaa42 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761dcc:	3607d9c0 	tbz	w0, #0, 761904 <RunAicpuRpcSrvLaunch@@Base+0x584>
+  761dd0:	d2801640 	mov	x0, #0xb2                  	// #178
+  761dd4:	97eca70b 	bl	28ba00 <syscall@plt>
+  761dd8:	913402e1 	add	x1, x23, #0xd00
+  761ddc:	aa0003e5 	mov	x5, x0
+  761de0:	52800060 	mov	w0, #0x3                   	// #3
+  761de4:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761de8:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761dec:	913ba063 	add	x3, x3, #0xee8
+  761df0:	b9400426 	ldr	w6, [x1, #4]
+  761df4:	910ae042 	add	x2, x2, #0x2b8
+  761df8:	72a02000 	movk	w0, #0x100, lsl #16
+  761dfc:	52804244 	mov	w4, #0x212                 	// #530
+  761e00:	52800021 	mov	w1, #0x1                   	// #1
+  761e04:	97ece0bb 	bl	29a0f0 <DlogRecord@plt>
+  761e08:	17fffebf 	b	761904 <RunAicpuRpcSrvLaunch@@Base+0x584>
+  761e0c:	52800061 	mov	w1, #0x3                   	// #3
+  761e10:	710052bf 	cmp	w21, #0x14
+  761e14:	54003060 	b.eq	762420 <RunAicpuRpcSrvLaunch@@Base+0x10a0>  // b.none
+  761e18:	2a0103e0 	mov	w0, w1
+  761e1c:	97ecaa2d 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  761e20:	3607b420 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761e24:	97ecb1d3 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  761e28:	36002de0 	tbz	w0, #0, 7623e4 <RunAicpuRpcSrvLaunch@@Base+0x1064>
+  761e2c:	d2801640 	mov	x0, #0xb2                  	// #178
+  761e30:	97eca6f4 	bl	28ba00 <syscall@plt>
+  761e34:	aa0003e5 	mov	x5, x0
+  761e38:	52800060 	mov	w0, #0x3                   	// #3
+  761e3c:	b0006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761e40:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761e44:	d0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  761e48:	2a1503e7 	mov	w7, w21
+  761e4c:	911ec0c6 	add	x6, x6, #0x7b0
+  761e50:	913ba063 	add	x3, x3, #0xee8
+  761e54:	910a0042 	add	x2, x2, #0x280
+  761e58:	72a02000 	movk	w0, #0x100, lsl #16
+  761e5c:	52803b24 	mov	w4, #0x1d9                 	// #473
+  761e60:	52800041 	mov	w1, #0x2                   	// #2
+  761e64:	97ece0a3 	bl	29a0f0 <DlogRecord@plt>
+  761e68:	17fffd8f 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  761e6c:	d2801640 	mov	x0, #0xb2                  	// #178
+  761e70:	97eca6e4 	bl	28ba00 <syscall@plt>
+  761e74:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761e78:	aa0003e5 	mov	x5, x0
+  761e7c:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761e80:	913ba063 	add	x3, x3, #0xee8
+  761e84:	9111a042 	add	x2, x2, #0x468
+  761e88:	52803ae4 	mov	w4, #0x1d7                 	// #471
+  761e8c:	52800001 	mov	w1, #0x0                   	// #0
+  761e90:	52800060 	mov	w0, #0x3                   	// #3
+  761e94:	97ece097 	bl	29a0f0 <DlogRecord@plt>
+  761e98:	17fffe01 	b	76169c <RunAicpuRpcSrvLaunch@@Base+0x31c>
+  761e9c:	d2801640 	mov	x0, #0xb2                  	// #178
+  761ea0:	97eca6d8 	bl	28ba00 <syscall@plt>
+  761ea4:	b9400306 	ldr	w6, [x24]
+  761ea8:	aa0003e5 	mov	x5, x0
+  761eac:	90006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  761eb0:	b0006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  761eb4:	52800061 	mov	w1, #0x3                   	// #3
+  761eb8:	913ba063 	add	x3, x3, #0xee8
+  761ebc:	91144042 	add	x2, x2, #0x510
+  761ec0:	2a0103e0 	mov	w0, w1
+  761ec4:	52803d44 	mov	w4, #0x1ea                 	// #490
+  761ec8:	97ece08a 	bl	29a0f0 <DlogRecord@plt>
+  761ecc:	17fffd75 	b	7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+  761ed0:	aa0403e0 	mov	x0, x4
+  761ed4:	f90027e4 	str	x4, [sp, #72]
+  761ed8:	97ecdf3e 	bl	299bd0 <__cxa_guard_acquire@plt>
+  761edc:	f94027e4 	ldr	x4, [sp, #72]
+  761ee0:	34ffd1a0 	cbz	w0, 761914 <RunAicpuRpcSrvLaunch@@Base+0x594>
+  761ee4:	4f00041f 	movi	v31.4s, #0x0
+  761ee8:	9100c323 	add	x3, x25, #0x30
+  761eec:	4f00041e 	movi	v30.4s, #0x0
+  761ef0:	9104c321 	add	x1, x25, #0x130
+  761ef4:	9108c322 	add	x2, x25, #0x230
+  761ef8:	aa0403e0 	mov	x0, x4
+  761efc:	3d80533f 	str	q31, [x25, #320]
+  761f00:	ad00fb3e 	stp	q30, q30, [x25, #16]
+  761f04:	ad007c7f 	stp	q31, q31, [x3]
+  761f08:	ad017c7f 	stp	q31, q31, [x3, #32]
+  761f0c:	ad017c3f 	stp	q31, q31, [x1, #32]
+  761f10:	ad027c7f 	stp	q31, q31, [x3, #64]
+  761f14:	ad027c3f 	stp	q31, q31, [x1, #64]
+  761f18:	ad037c7f 	stp	q31, q31, [x3, #96]
+  761f1c:	ad037c3f 	stp	q31, q31, [x1, #96]
+  761f20:	ad047c7f 	stp	q31, q31, [x3, #128]
+  761f24:	ad047c3f 	stp	q31, q31, [x1, #128]
+  761f28:	ad057c7f 	stp	q31, q31, [x3, #160]
+  761f2c:	ad057c3f 	stp	q31, q31, [x1, #160]
+  761f30:	ad067c7f 	stp	q31, q31, [x3, #192]
+  761f34:	ad067c3f 	stp	q31, q31, [x1, #192]
+  761f38:	ad077c7f 	stp	q31, q31, [x3, #224]
+  761f3c:	3d804f3f 	str	q31, [x25, #304]
+  761f40:	3d80873f 	str	q31, [x25, #528]
+  761f44:	ad00fc5f 	stp	q31, q31, [x2, #16]
+  761f48:	ad01fc5f 	stp	q31, q31, [x2, #48]
+  761f4c:	ad02fc5f 	stp	q31, q31, [x2, #80]
+  761f50:	ad03fc5f 	stp	q31, q31, [x2, #112]
+  761f54:	ad04fc5f 	stp	q31, q31, [x2, #144]
+  761f58:	ad05fc5f 	stp	q31, q31, [x2, #176]
+  761f5c:	ad06fc5f 	stp	q31, q31, [x2, #208]
+  761f60:	3d80cb3f 	str	q31, [x25, #800]
+  761f64:	ad07fc3f 	stp	q31, q31, [x1, #240]
+  761f68:	97ec9aae 	bl	288a20 <__cxa_guard_release@plt>
+  761f6c:	17fffe6a 	b	761914 <RunAicpuRpcSrvLaunch@@Base+0x594>
+  761f70:	913402e1 	add	x1, x23, #0xd00
+  761f74:	aa1c03e0 	mov	x0, x28
+  761f78:	91004021 	add	x1, x1, #0x10
+  761f7c:	d2800002 	mov	x2, #0x0                   	// #0
+  761f80:	97eca600 	bl	28b780 <_ZN15AicpuKfcProcess15RunRpcServerApiEP15AicpuComContextR17AicpuKfcRpcServery@plt>
+  761f84:	2a0003f3 	mov	w19, w0
+  761f88:	aa1603e1 	mov	x1, x22
+  761f8c:	aa1403e0 	mov	x0, x20
+  761f90:	b9006bff 	str	wzr, [sp, #104]
+  761f94:	f9003bff 	str	xzr, [sp, #112]
+  761f98:	97ece162 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  761f9c:	b9406be0 	ldr	w0, [sp, #104]
+  761fa0:	d2866203 	mov	x3, #0x3310                	// #13072
+  761fa4:	52800002 	mov	w2, #0x0                   	// #0
+  761fa8:	d2800001 	mov	x1, #0x0                   	// #0
+  761fac:	f2a001e3 	movk	x3, #0xf, lsl #16
+  761fb0:	34000140 	cbz	w0, 761fd8 <RunAicpuRpcSrvLaunch@@Base+0xc58>
+  761fb4:	f9403be0 	ldr	x0, [sp, #112]
+  761fb8:	11000442 	add	w2, w2, #0x1
+  761fbc:	8b010000 	add	x0, x0, x1
+  761fc0:	8b030021 	add	x1, x1, x3
+  761fc4:	9143cc00 	add	x0, x0, #0xf3, lsl #12
+  761fc8:	3909b01f 	strb	wzr, [x0, #620]
+  761fcc:	b9406be0 	ldr	w0, [sp, #104]
+  761fd0:	6b00005f 	cmp	w2, w0
+  761fd4:	54ffff03 	b.cc	761fb4 <RunAicpuRpcSrvLaunch@@Base+0xc34>  // b.lo, b.ul, b.last
+  761fd8:	340008d3 	cbz	w19, 7620f0 <RunAicpuRpcSrvLaunch@@Base+0xd70>
+  761fdc:	2a1303e1 	mov	w1, w19
+  761fe0:	aa1c03e0 	mov	x0, x28
+  761fe4:	97ec7e2b 	bl	281890 <_ZN15AicpuKfcProcess15DealReturnValueEPK15AicpuComContext10HcclResult@plt>
+  761fe8:	2a0003f5 	mov	w21, w0
+  761fec:	17fffe70 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  761ff0:	aa1803e0 	mov	x0, x24
+  761ff4:	52800021 	mov	w1, #0x1                   	// #1
+  761ff8:	97ecd902 	bl	298400 <_ZN13AicpuKfcUtils15PrintTilingDataERK17HcclKFCTilingDatab@plt>
+  761ffc:	aa1c03e0 	mov	x0, x28
+  762000:	52800021 	mov	w1, #0x1                   	// #1
+  762004:	97ecae97 	bl	28da60 <_ZN13AicpuKfcUtils20PrintMC2AicpuContextERK15AicpuComContextb@plt>
+  762008:	b971d340 	ldr	w0, [x26, #12752]
+  76200c:	35000480 	cbnz	w0, 76209c <RunAicpuRpcSrvLaunch@@Base+0xd1c>
+  762010:	52800061 	mov	w1, #0x3                   	// #3
+  762014:	2a0103e0 	mov	w0, w1
+  762018:	97eca9ae 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  76201c:	36000400 	tbz	w0, #0, 76209c <RunAicpuRpcSrvLaunch@@Base+0xd1c>
+  762020:	97ecb154 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  762024:	36001340 	tbz	w0, #0, 76228c <RunAicpuRpcSrvLaunch@@Base+0xf0c>
+  762028:	d2801640 	mov	x0, #0xb2                  	// #178
+  76202c:	97eca675 	bl	28ba00 <syscall@plt>
+  762030:	aa0003e5 	mov	x5, x0
+  762034:	b9725f40 	ldr	w0, [x26, #12892]
+  762038:	b90033e0 	str	w0, [sp, #48]
+  76203c:	913402e1 	add	x1, x23, #0xd00
+  762040:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762044:	52800060 	mov	w0, #0x3                   	// #3
+  762048:	b9725b42 	ldr	w2, [x26, #12888]
+  76204c:	913ba063 	add	x3, x3, #0xee8
+  762050:	b9002be2 	str	w2, [sp, #40]
+  762054:	52804364 	mov	w4, #0x21b                 	// #539
+  762058:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76205c:	911a0042 	add	x2, x2, #0x680
+  762060:	b9400426 	ldr	w6, [x1, #4]
+  762064:	72a02000 	movk	w0, #0x100, lsl #16
+  762068:	b9725741 	ldr	w1, [x26, #12884]
+  76206c:	b90023e1 	str	w1, [sp, #32]
+  762070:	52800041 	mov	w1, #0x2                   	// #2
+  762074:	b9725347 	ldr	w7, [x26, #12880]
+  762078:	b9001be7 	str	w7, [sp, #24]
+  76207c:	b9724f47 	ldr	w7, [x26, #12876]
+  762080:	b90013e7 	str	w7, [sp, #16]
+  762084:	b9724b47 	ldr	w7, [x26, #12872]
+  762088:	b9000be7 	str	w7, [sp, #8]
+  76208c:	b9724747 	ldr	w7, [x26, #12868]
+  762090:	b90003e7 	str	w7, [sp]
+  762094:	b9724347 	ldr	w7, [x26, #12864]
+  762098:	97ece016 	bl	29a0f0 <DlogRecord@plt>
+  76209c:	52800061 	mov	w1, #0x3                   	// #3
+  7620a0:	2a0103e0 	mov	w0, w1
+  7620a4:	97eca98b 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7620a8:	36079fe0 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7620ac:	97ecb131 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7620b0:	360014e0 	tbz	w0, #0, 76234c <RunAicpuRpcSrvLaunch@@Base+0xfcc>
+  7620b4:	913402f7 	add	x23, x23, #0xd00
+  7620b8:	d2801640 	mov	x0, #0xb2                  	// #178
+  7620bc:	97eca651 	bl	28ba00 <syscall@plt>
+  7620c0:	aa0003e5 	mov	x5, x0
+  7620c4:	52800060 	mov	w0, #0x3                   	// #3
+  7620c8:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7620cc:	b94006e6 	ldr	w6, [x23, #4]
+  7620d0:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7620d4:	913ba063 	add	x3, x3, #0xee8
+  7620d8:	911ca042 	add	x2, x2, #0x728
+  7620dc:	72a02000 	movk	w0, #0x100, lsl #16
+  7620e0:	52804404 	mov	w4, #0x220                 	// #544
+  7620e4:	52800041 	mov	w1, #0x2                   	// #2
+  7620e8:	97ece002 	bl	29a0f0 <DlogRecord@plt>
+  7620ec:	17fffcee 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7620f0:	3cc8837e 	ldur	q30, [x27, #136]
+  7620f4:	4e183fc0 	mov	x0, v30.d[1]
+  7620f8:	3d801ffe 	str	q30, [sp, #112]
+  7620fc:	b4000100 	cbz	x0, 76211c <RunAicpuRpcSrvLaunch@@Base+0xd9c>
+  762100:	d0008dc1 	adrp	x1, 191c000 <_ZZN4Hccl29ConvertReduceOpToHcclReduceOpENS_8ReduceOpEE13reduceTypeMap@@Base-0xcf4010>
+  762104:	f946b021 	ldr	x1, [x1, #3424]
+  762108:	39400021 	ldrb	w1, [x1]
+  76210c:	34002cc1 	cbz	w1, 7626a4 <RunAicpuRpcSrvLaunch@@Base+0x1324>
+  762110:	b9400801 	ldr	w1, [x0, #8]
+  762114:	11000421 	add	w1, w1, #0x1
+  762118:	b9000801 	str	w1, [x0, #8]
+  76211c:	aa1403e0 	mov	x0, x20
+  762120:	52800003 	mov	w3, #0x0                   	// #0
+  762124:	d2800002 	mov	x2, #0x0                   	// #0
+  762128:	d2800041 	mov	x1, #0x2                   	// #2
+  76212c:	97ec9145 	bl	286640 <_ZN13AicpuHdcUtils15SetOpExecStatusESt10shared_ptrIN4hccl13HDCommunicateEE9KfcStatus8KfcErrorj@plt>
+  762130:	f9403ff3 	ldr	x19, [sp, #120]
+  762134:	2a0003f9 	mov	w25, w0
+  762138:	b40001f3 	cbz	x19, 762174 <RunAicpuRpcSrvLaunch@@Base+0xdf4>
+  76213c:	91002261 	add	x1, x19, #0x8
+  762140:	c8dffc22 	ldar	x2, [x1]
+  762144:	b20003e0 	mov	x0, #0x100000001           	// #4294967297
+  762148:	eb00005f 	cmp	x2, x0
+  76214c:	54002c80 	b.eq	7626dc <RunAicpuRpcSrvLaunch@@Base+0x135c>  // b.none
+  762150:	d0008dc0 	adrp	x0, 191c000 <_ZZN4Hccl29ConvertReduceOpToHcclReduceOpENS_8ReduceOpEE13reduceTypeMap@@Base-0xcf4010>
+  762154:	f946b000 	ldr	x0, [x0, #3424]
+  762158:	39400000 	ldrb	w0, [x0]
+  76215c:	34002b60 	cbz	w0, 7626c8 <RunAicpuRpcSrvLaunch@@Base+0x1348>
+  762160:	b9400a60 	ldr	w0, [x19, #8]
+  762164:	51000401 	sub	w1, w0, #0x1
+  762168:	b9000a61 	str	w1, [x19, #8]
+  76216c:	7100041f 	cmp	w0, #0x1
+  762170:	54002a60 	b.eq	7626bc <RunAicpuRpcSrvLaunch@@Base+0x133c>  // b.none
+  762174:	34ffc1d9 	cbz	w25, 7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  762178:	52800061 	mov	w1, #0x3                   	// #3
+  76217c:	7100533f 	cmp	w25, #0x14
+  762180:	54002240 	b.eq	7625c8 <RunAicpuRpcSrvLaunch@@Base+0x1248>  // b.none
+  762184:	2a0103e0 	mov	w0, w1
+  762188:	97eca952 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  76218c:	36000240 	tbz	w0, #0, 7621d4 <RunAicpuRpcSrvLaunch@@Base+0xe54>
+  762190:	97ecb0f8 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  762194:	36001fa0 	tbz	w0, #0, 762588 <RunAicpuRpcSrvLaunch@@Base+0x1208>
+  762198:	d2801640 	mov	x0, #0xb2                  	// #178
+  76219c:	97eca619 	bl	28ba00 <syscall@plt>
+  7621a0:	aa0003e5 	mov	x5, x0
+  7621a4:	52800060 	mov	w0, #0x3                   	// #3
+  7621a8:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7621ac:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7621b0:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7621b4:	2a1903e7 	mov	w7, w25
+  7621b8:	9114e0c6 	add	x6, x6, #0x538
+  7621bc:	913ba063 	add	x3, x3, #0xee8
+  7621c0:	910a0042 	add	x2, x2, #0x280
+  7621c4:	72a02000 	movk	w0, #0x100, lsl #16
+  7621c8:	52800844 	mov	w4, #0x42                  	// #66
+  7621cc:	52800041 	mov	w1, #0x2                   	// #2
+  7621d0:	97ecdfc8 	bl	29a0f0 <DlogRecord@plt>
+  7621d4:	2a1903f5 	mov	w21, w25
+  7621d8:	17fffdf5 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7621dc:	52800061 	mov	w1, #0x3                   	// #3
+  7621e0:	52800020 	mov	w0, #0x1                   	// #1
+  7621e4:	97eca93b 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7621e8:	37001860 	tbnz	w0, #0, 7624f4 <RunAicpuRpcSrvLaunch@@Base+0x1174>
+  7621ec:	528025b5 	mov	w21, #0x12d                 	// #301
+  7621f0:	17fffcad 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7621f4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7621f8:	97eca602 	bl	28ba00 <syscall@plt>
+  7621fc:	b9400306 	ldr	w6, [x24]
+  762200:	aa0003e5 	mov	x5, x0
+  762204:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762208:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76220c:	913ba063 	add	x3, x3, #0xee8
+  762210:	91128042 	add	x2, x2, #0x4a0
+  762214:	52803d04 	mov	w4, #0x1e8                 	// #488
+  762218:	52800021 	mov	w1, #0x1                   	// #1
+  76221c:	52800060 	mov	w0, #0x3                   	// #3
+  762220:	97ecdfb4 	bl	29a0f0 <DlogRecord@plt>
+  762224:	17fffd7c 	b	761814 <RunAicpuRpcSrvLaunch@@Base+0x494>
+  762228:	97ece786 	bl	29c040 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@plt>
+  76222c:	7100001f 	cmp	w0, #0x0
+  762230:	7a561804 	ccmp	w0, #0x16, #0x4, ne  // ne = any
+  762234:	54ffeda1 	b.ne	761fe8 <RunAicpuRpcSrvLaunch@@Base+0xc68>  // b.any
+  762238:	7100581f 	cmp	w0, #0x16
+  76223c:	54ffbb81 	b.ne	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>  // b.any
+  762240:	52800061 	mov	w1, #0x3                   	// #3
+  762244:	52800020 	mov	w0, #0x1                   	// #1
+  762248:	72a02001 	movk	w1, #0x100, lsl #16
+  76224c:	97eca921 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762250:	360001a0 	tbz	w0, #0, 762284 <RunAicpuRpcSrvLaunch@@Base+0xf04>
+  762254:	d2801640 	mov	x0, #0xb2                  	// #178
+  762258:	97eca5ea 	bl	28ba00 <syscall@plt>
+  76225c:	aa0003e5 	mov	x5, x0
+  762260:	52800060 	mov	w0, #0x3                   	// #3
+  762264:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762268:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76226c:	913ba063 	add	x3, x3, #0xee8
+  762270:	91194042 	add	x2, x2, #0x650
+  762274:	72a02000 	movk	w0, #0x100, lsl #16
+  762278:	52800c44 	mov	w4, #0x62                  	// #98
+  76227c:	52800021 	mov	w1, #0x1                   	// #1
+  762280:	97ecdf9c 	bl	29a0f0 <DlogRecord@plt>
+  762284:	528002d5 	mov	w21, #0x16                  	// #22
+  762288:	17fffdc9 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  76228c:	d2801640 	mov	x0, #0xb2                  	// #178
+  762290:	97eca5dc 	bl	28ba00 <syscall@plt>
+  762294:	b9725f41 	ldr	w1, [x26, #12892]
+  762298:	aa0003e5 	mov	x5, x0
+  76229c:	b90033e1 	str	w1, [sp, #48]
+  7622a0:	913402e1 	add	x1, x23, #0xd00
+  7622a4:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7622a8:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7622ac:	b9725b40 	ldr	w0, [x26, #12888]
+  7622b0:	913ba063 	add	x3, x3, #0xee8
+  7622b4:	b9002be0 	str	w0, [sp, #40]
+  7622b8:	911b6042 	add	x2, x2, #0x6d8
+  7622bc:	52804364 	mov	w4, #0x21b                 	// #539
+  7622c0:	b9725740 	ldr	w0, [x26, #12884]
+  7622c4:	b9400426 	ldr	w6, [x1, #4]
+  7622c8:	52800061 	mov	w1, #0x3                   	// #3
+  7622cc:	b90023e0 	str	w0, [sp, #32]
+  7622d0:	2a0103e0 	mov	w0, w1
+  7622d4:	17ffff68 	b	762074 <RunAicpuRpcSrvLaunch@@Base+0xcf4>
+  7622d8:	913402e1 	add	x1, x23, #0xd00
+  7622dc:	aa1c03e0 	mov	x0, x28
+  7622e0:	91004021 	add	x1, x1, #0x10
+  7622e4:	97ecd153 	bl	296830 <_ZN25AicpuKfcDeprecatedProcess30AICPU_RpcServerUnfoldStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@plt>
+  7622e8:	7100001f 	cmp	w0, #0x0
+  7622ec:	2a0003f3 	mov	w19, w0
+  7622f0:	7a561804 	ccmp	w0, #0x16, #0x4, ne  // ne = any
+  7622f4:	54002ba1 	b.ne	762868 <RunAicpuRpcSrvLaunch@@Base+0x14e8>  // b.any
+  7622f8:	7100581f 	cmp	w0, #0x16
+  7622fc:	54ffb581 	b.ne	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>  // b.any
+  762300:	52800061 	mov	w1, #0x3                   	// #3
+  762304:	52800020 	mov	w0, #0x1                   	// #1
+  762308:	72a02001 	movk	w1, #0x100, lsl #16
+  76230c:	97eca8f1 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762310:	3607fba0 	tbz	w0, #0, 762284 <RunAicpuRpcSrvLaunch@@Base+0xf04>
+  762314:	d2801640 	mov	x0, #0xb2                  	// #178
+  762318:	97eca5ba 	bl	28ba00 <syscall@plt>
+  76231c:	aa0003e5 	mov	x5, x0
+  762320:	52800060 	mov	w0, #0x3                   	// #3
+  762324:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762328:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76232c:	913ba063 	add	x3, x3, #0xee8
+  762330:	91188042 	add	x2, x2, #0x620
+  762334:	72a02000 	movk	w0, #0x100, lsl #16
+  762338:	52800a04 	mov	w4, #0x50                  	// #80
+  76233c:	52800021 	mov	w1, #0x1                   	// #1
+  762340:	97ecdf6c 	bl	29a0f0 <DlogRecord@plt>
+  762344:	528002d5 	mov	w21, #0x16                  	// #22
+  762348:	17fffd99 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  76234c:	913402f7 	add	x23, x23, #0xd00
+  762350:	d2801640 	mov	x0, #0xb2                  	// #178
+  762354:	97eca5ab 	bl	28ba00 <syscall@plt>
+  762358:	aa0003e5 	mov	x5, x0
+  76235c:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762360:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762364:	b94006e6 	ldr	w6, [x23, #4]
+  762368:	52800061 	mov	w1, #0x3                   	// #3
+  76236c:	913ba063 	add	x3, x3, #0xee8
+  762370:	911da042 	add	x2, x2, #0x768
+  762374:	2a0103e0 	mov	w0, w1
+  762378:	52804404 	mov	w4, #0x220                 	// #544
+  76237c:	97ecdf5d 	bl	29a0f0 <DlogRecord@plt>
+  762380:	17fffc49 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762384:	52800061 	mov	w1, #0x3                   	// #3
+  762388:	7100501f 	cmp	w0, #0x14
+  76238c:	54002be0 	b.eq	762908 <RunAicpuRpcSrvLaunch@@Base+0x1588>  // b.none
+  762390:	2a0103e0 	mov	w0, w1
+  762394:	97eca8cf 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762398:	36078860 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  76239c:	97ecb075 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7623a0:	36002960 	tbz	w0, #0, 7628cc <RunAicpuRpcSrvLaunch@@Base+0x154c>
+  7623a4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7623a8:	97eca596 	bl	28ba00 <syscall@plt>
+  7623ac:	aa0003e5 	mov	x5, x0
+  7623b0:	52800060 	mov	w0, #0x3                   	// #3
+  7623b4:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7623b8:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7623bc:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7623c0:	2a1503e7 	mov	w7, w21
+  7623c4:	911ec0c6 	add	x6, x6, #0x7b0
+  7623c8:	913ba063 	add	x3, x3, #0xee8
+  7623cc:	910a0042 	add	x2, x2, #0x280
+  7623d0:	72a02000 	movk	w0, #0x100, lsl #16
+  7623d4:	528041c4 	mov	w4, #0x20e                 	// #526
+  7623d8:	52800041 	mov	w1, #0x2                   	// #2
+  7623dc:	97ecdf45 	bl	29a0f0 <DlogRecord@plt>
+  7623e0:	17fffc31 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7623e4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7623e8:	97eca586 	bl	28ba00 <syscall@plt>
+  7623ec:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7623f0:	aa0003e5 	mov	x5, x0
+  7623f4:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7623f8:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7623fc:	52800061 	mov	w1, #0x3                   	// #3
+  762400:	2a1503e7 	mov	w7, w21
+  762404:	911ec0c6 	add	x6, x6, #0x7b0
+  762408:	913ba063 	add	x3, x3, #0xee8
+  76240c:	91094042 	add	x2, x2, #0x250
+  762410:	2a0103e0 	mov	w0, w1
+  762414:	52803b24 	mov	w4, #0x1d9                 	// #473
+  762418:	97ecdf36 	bl	29a0f0 <DlogRecord@plt>
+  76241c:	17fffc22 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762420:	52800040 	mov	w0, #0x2                   	// #2
+  762424:	97eca8ab 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762428:	37000460 	tbnz	w0, #0, 7624b4 <RunAicpuRpcSrvLaunch@@Base+0x1134>
+  76242c:	52800295 	mov	w21, #0x14                  	// #20
+  762430:	17fffc1d 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762434:	52800061 	mov	w1, #0x3                   	// #3
+  762438:	7100501f 	cmp	w0, #0x14
+  76243c:	54002c80 	b.eq	7629cc <RunAicpuRpcSrvLaunch@@Base+0x164c>  // b.none
+  762440:	2a0103e0 	mov	w0, w1
+  762444:	97eca8a3 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762448:	360782e0 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  76244c:	97ecb049 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  762450:	36002a00 	tbz	w0, #0, 762990 <RunAicpuRpcSrvLaunch@@Base+0x1610>
+  762454:	d2801640 	mov	x0, #0xb2                  	// #178
+  762458:	97eca56a 	bl	28ba00 <syscall@plt>
+  76245c:	aa0003e5 	mov	x5, x0
+  762460:	52800060 	mov	w0, #0x3                   	// #3
+  762464:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762468:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  76246c:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  762470:	2a1503e7 	mov	w7, w21
+  762474:	911ec0c6 	add	x6, x6, #0x7b0
+  762478:	913ba063 	add	x3, x3, #0xee8
+  76247c:	910a0042 	add	x2, x2, #0x280
+  762480:	72a02000 	movk	w0, #0x100, lsl #16
+  762484:	528041a4 	mov	w4, #0x20d                 	// #525
+  762488:	52800041 	mov	w1, #0x2                   	// #2
+  76248c:	97ecdf19 	bl	29a0f0 <DlogRecord@plt>
+  762490:	17fffc05 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762494:	aa1403e1 	mov	x1, x20
+  762498:	52800080 	mov	w0, #0x4                   	// #4
+  76249c:	97eca8d1 	bl	28c7e0 <clock_gettime@plt>
+  7624a0:	a94707e0 	ldp	x0, x1, [sp, #112]
+  7624a4:	d2994002 	mov	x2, #0xca00                	// #51712
+  7624a8:	f2a77342 	movk	x2, #0x3b9a, lsl #16
+  7624ac:	9b020400 	madd	x0, x0, x2, x1
+  7624b0:	17fffd50 	b	7619f0 <RunAicpuRpcSrvLaunch@@Base+0x670>
+  7624b4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7624b8:	97eca552 	bl	28ba00 <syscall@plt>
+  7624bc:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7624c0:	aa0003e5 	mov	x5, x0
+  7624c4:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7624c8:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7624cc:	911ec0c6 	add	x6, x6, #0x7b0
+  7624d0:	913ba063 	add	x3, x3, #0xee8
+  7624d4:	91094042 	add	x2, x2, #0x250
+  7624d8:	52800287 	mov	w7, #0x14                  	// #20
+  7624dc:	52803b24 	mov	w4, #0x1d9                 	// #473
+  7624e0:	52800041 	mov	w1, #0x2                   	// #2
+  7624e4:	52800060 	mov	w0, #0x3                   	// #3
+  7624e8:	97ecdf02 	bl	29a0f0 <DlogRecord@plt>
+  7624ec:	52800295 	mov	w21, #0x14                  	// #20
+  7624f0:	17fffbed 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7624f4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7624f8:	97eca542 	bl	28ba00 <syscall@plt>
+  7624fc:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762500:	aa0003e5 	mov	x5, x0
+  762504:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762508:	913ba063 	add	x3, x3, #0xee8
+  76250c:	910b8042 	add	x2, x2, #0x2e0
+  762510:	52804464 	mov	w4, #0x223                 	// #547
+  762514:	52800021 	mov	w1, #0x1                   	// #1
+  762518:	52800060 	mov	w0, #0x3                   	// #3
+  76251c:	97ecdef5 	bl	29a0f0 <DlogRecord@plt>
+  762520:	528025b5 	mov	w21, #0x12d                 	// #301
+  762524:	17fffbe0 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762528:	52800061 	mov	w1, #0x3                   	// #3
+  76252c:	7100501f 	cmp	w0, #0x14
+  762530:	54000740 	b.eq	762618 <RunAicpuRpcSrvLaunch@@Base+0x1298>  // b.none
+  762534:	2a0103e0 	mov	w0, w1
+  762538:	97eca866 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  76253c:	36077b40 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762540:	97ecb00c 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  762544:	360004c0 	tbz	w0, #0, 7625dc <RunAicpuRpcSrvLaunch@@Base+0x125c>
+  762548:	d2801640 	mov	x0, #0xb2                  	// #178
+  76254c:	97eca52d 	bl	28ba00 <syscall@plt>
+  762550:	aa0003e5 	mov	x5, x0
+  762554:	52800060 	mov	w0, #0x3                   	// #3
+  762558:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76255c:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762560:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  762564:	2a1503e7 	mov	w7, w21
+  762568:	911ec0c6 	add	x6, x6, #0x7b0
+  76256c:	913ba063 	add	x3, x3, #0xee8
+  762570:	910a0042 	add	x2, x2, #0x280
+  762574:	72a02000 	movk	w0, #0x100, lsl #16
+  762578:	52804524 	mov	w4, #0x229                 	// #553
+  76257c:	52800041 	mov	w1, #0x2                   	// #2
+  762580:	97ecdedc 	bl	29a0f0 <DlogRecord@plt>
+  762584:	17fffbc8 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762588:	d2801640 	mov	x0, #0xb2                  	// #178
+  76258c:	97eca51d 	bl	28ba00 <syscall@plt>
+  762590:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762594:	aa0003e5 	mov	x5, x0
+  762598:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  76259c:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7625a0:	52800061 	mov	w1, #0x3                   	// #3
+  7625a4:	2a1903e7 	mov	w7, w25
+  7625a8:	9114e0c6 	add	x6, x6, #0x538
+  7625ac:	913ba063 	add	x3, x3, #0xee8
+  7625b0:	91094042 	add	x2, x2, #0x250
+  7625b4:	2a0103e0 	mov	w0, w1
+  7625b8:	52800844 	mov	w4, #0x42                  	// #66
+  7625bc:	97ecdecd 	bl	29a0f0 <DlogRecord@plt>
+  7625c0:	2a1903f5 	mov	w21, w25
+  7625c4:	17fffcfa 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7625c8:	52800040 	mov	w0, #0x2                   	// #2
+  7625cc:	97eca841 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7625d0:	370004a0 	tbnz	w0, #0, 762664 <RunAicpuRpcSrvLaunch@@Base+0x12e4>
+  7625d4:	52800295 	mov	w21, #0x14                  	// #20
+  7625d8:	17fffcf5 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7625dc:	d2801640 	mov	x0, #0xb2                  	// #178
+  7625e0:	97eca508 	bl	28ba00 <syscall@plt>
+  7625e4:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7625e8:	aa0003e5 	mov	x5, x0
+  7625ec:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7625f0:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7625f4:	52800061 	mov	w1, #0x3                   	// #3
+  7625f8:	2a1503e7 	mov	w7, w21
+  7625fc:	911ec0c6 	add	x6, x6, #0x7b0
+  762600:	913ba063 	add	x3, x3, #0xee8
+  762604:	91094042 	add	x2, x2, #0x250
+  762608:	2a0103e0 	mov	w0, w1
+  76260c:	52804524 	mov	w4, #0x229                 	// #553
+  762610:	97ecdeb8 	bl	29a0f0 <DlogRecord@plt>
+  762614:	17fffba4 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762618:	52800040 	mov	w0, #0x2                   	// #2
+  76261c:	97eca82d 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762620:	3607f060 	tbz	w0, #0, 76242c <RunAicpuRpcSrvLaunch@@Base+0x10ac>
+  762624:	d2801640 	mov	x0, #0xb2                  	// #178
+  762628:	97eca4f6 	bl	28ba00 <syscall@plt>
+  76262c:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762630:	aa0003e5 	mov	x5, x0
+  762634:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762638:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  76263c:	911ec0c6 	add	x6, x6, #0x7b0
+  762640:	913ba063 	add	x3, x3, #0xee8
+  762644:	91094042 	add	x2, x2, #0x250
+  762648:	52800287 	mov	w7, #0x14                  	// #20
+  76264c:	52804524 	mov	w4, #0x229                 	// #553
+  762650:	52800041 	mov	w1, #0x2                   	// #2
+  762654:	52800060 	mov	w0, #0x3                   	// #3
+  762658:	97ecdea6 	bl	29a0f0 <DlogRecord@plt>
+  76265c:	52800295 	mov	w21, #0x14                  	// #20
+  762660:	17fffb91 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762664:	d2801640 	mov	x0, #0xb2                  	// #178
+  762668:	97eca4e6 	bl	28ba00 <syscall@plt>
+  76266c:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762670:	aa0003e5 	mov	x5, x0
+  762674:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762678:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  76267c:	9114e0c6 	add	x6, x6, #0x538
+  762680:	913ba063 	add	x3, x3, #0xee8
+  762684:	91094042 	add	x2, x2, #0x250
+  762688:	52800287 	mov	w7, #0x14                  	// #20
+  76268c:	52800844 	mov	w4, #0x42                  	// #66
+  762690:	52800041 	mov	w1, #0x2                   	// #2
+  762694:	52800060 	mov	w0, #0x3                   	// #3
+  762698:	97ecde96 	bl	29a0f0 <DlogRecord@plt>
+  76269c:	52800295 	mov	w21, #0x14                  	// #20
+  7626a0:	17fffcc3 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7626a4:	91002000 	add	x0, x0, #0x8
+  7626a8:	885ffc02 	ldaxr	w2, [x0]
+  7626ac:	11000442 	add	w2, w2, #0x1
+  7626b0:	8801fc02 	stlxr	w1, w2, [x0]
+  7626b4:	35ffffa1 	cbnz	w1, 7626a8 <RunAicpuRpcSrvLaunch@@Base+0x1328>
+  7626b8:	17fffe99 	b	76211c <RunAicpuRpcSrvLaunch@@Base+0xd9c>
+  7626bc:	aa1303e0 	mov	x0, x19
+  7626c0:	97ec7a98 	bl	281120 <_ZNSt16_Sp_counted_baseILN9__gnu_cxx12_Lock_policyE2EE24_M_release_last_use_coldEv@plt>
+  7626c4:	17fffeac 	b	762174 <RunAicpuRpcSrvLaunch@@Base+0xdf4>
+  7626c8:	885ffc20 	ldaxr	w0, [x1]
+  7626cc:	51000402 	sub	w2, w0, #0x1
+  7626d0:	8803fc22 	stlxr	w3, w2, [x1]
+  7626d4:	35ffffa3 	cbnz	w3, 7626c8 <RunAicpuRpcSrvLaunch@@Base+0x1348>
+  7626d8:	17fffea5 	b	76216c <RunAicpuRpcSrvLaunch@@Base+0xdec>
+  7626dc:	f9400261 	ldr	x1, [x19]
+  7626e0:	f900067f 	str	xzr, [x19, #8]
+  7626e4:	aa1303e0 	mov	x0, x19
+  7626e8:	f9400821 	ldr	x1, [x1, #16]
+  7626ec:	d63f0020 	blr	x1
+  7626f0:	f9400261 	ldr	x1, [x19]
+  7626f4:	aa1303e0 	mov	x0, x19
+  7626f8:	f9400c21 	ldr	x1, [x1, #24]
+  7626fc:	d63f0020 	blr	x1
+  762700:	17fffe9d 	b	762174 <RunAicpuRpcSrvLaunch@@Base+0xdf4>
+  762704:	d2801640 	mov	x0, #0xb2                  	// #178
+  762708:	97eca4be 	bl	28ba00 <syscall@plt>
+  76270c:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762710:	aa0003e5 	mov	x5, x0
+  762714:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762718:	913ba063 	add	x3, x3, #0xee8
+  76271c:	911e8042 	add	x2, x2, #0x7a0
+  762720:	52804644 	mov	w4, #0x232                 	// #562
+  762724:	52800021 	mov	w1, #0x1                   	// #1
+  762728:	52800060 	mov	w0, #0x3                   	// #3
+  76272c:	97ecde71 	bl	29a0f0 <DlogRecord@plt>
+  762730:	52800015 	mov	w21, #0x0                   	// #0
+  762734:	17fffb5c 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762738:	7100501f 	cmp	w0, #0x14
+  76273c:	54000700 	b.eq	76281c <RunAicpuRpcSrvLaunch@@Base+0x149c>  // b.none
+  762740:	2a0103e0 	mov	w0, w1
+  762744:	97eca7e3 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762748:	36076ae0 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  76274c:	97ecaf89 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  762750:	36000480 	tbz	w0, #0, 7627e0 <RunAicpuRpcSrvLaunch@@Base+0x1460>
+  762754:	d2801640 	mov	x0, #0xb2                  	// #178
+  762758:	97eca4aa 	bl	28ba00 <syscall@plt>
+  76275c:	aa0003e5 	mov	x5, x0
+  762760:	52800060 	mov	w0, #0x3                   	// #3
+  762764:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762768:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  76276c:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  762770:	2a1503e7 	mov	w7, w21
+  762774:	911ec0c6 	add	x6, x6, #0x7b0
+  762778:	913ba063 	add	x3, x3, #0xee8
+  76277c:	910a0042 	add	x2, x2, #0x280
+  762780:	72a02000 	movk	w0, #0x100, lsl #16
+  762784:	52804624 	mov	w4, #0x231                 	// #561
+  762788:	52800041 	mov	w1, #0x2                   	// #2
+  76278c:	97ecde59 	bl	29a0f0 <DlogRecord@plt>
+  762790:	17fffb45 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762794:	52800061 	mov	w1, #0x3                   	// #3
+  762798:	52800020 	mov	w0, #0x1                   	// #1
+  76279c:	72a02001 	movk	w1, #0x100, lsl #16
+  7627a0:	97eca7cc 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7627a4:	3607d700 	tbz	w0, #0, 762284 <RunAicpuRpcSrvLaunch@@Base+0xf04>
+  7627a8:	d2801640 	mov	x0, #0xb2                  	// #178
+  7627ac:	97eca495 	bl	28ba00 <syscall@plt>
+  7627b0:	aa0003e5 	mov	x5, x0
+  7627b4:	52800060 	mov	w0, #0x3                   	// #3
+  7627b8:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7627bc:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7627c0:	913ba063 	add	x3, x3, #0xee8
+  7627c4:	91194042 	add	x2, x2, #0x650
+  7627c8:	72a02000 	movk	w0, #0x100, lsl #16
+  7627cc:	52800b24 	mov	w4, #0x59                  	// #89
+  7627d0:	52800021 	mov	w1, #0x1                   	// #1
+  7627d4:	97ecde47 	bl	29a0f0 <DlogRecord@plt>
+  7627d8:	528002d5 	mov	w21, #0x16                  	// #22
+  7627dc:	17fffc74 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7627e0:	d2801640 	mov	x0, #0xb2                  	// #178
+  7627e4:	97eca487 	bl	28ba00 <syscall@plt>
+  7627e8:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7627ec:	aa0003e5 	mov	x5, x0
+  7627f0:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7627f4:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7627f8:	52800061 	mov	w1, #0x3                   	// #3
+  7627fc:	2a1503e7 	mov	w7, w21
+  762800:	911ec0c6 	add	x6, x6, #0x7b0
+  762804:	913ba063 	add	x3, x3, #0xee8
+  762808:	91094042 	add	x2, x2, #0x250
+  76280c:	2a0103e0 	mov	w0, w1
+  762810:	52804624 	mov	w4, #0x231                 	// #561
+  762814:	97ecde37 	bl	29a0f0 <DlogRecord@plt>
+  762818:	17fffb23 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  76281c:	52800040 	mov	w0, #0x2                   	// #2
+  762820:	97eca7ac 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762824:	3607e040 	tbz	w0, #0, 76242c <RunAicpuRpcSrvLaunch@@Base+0x10ac>
+  762828:	d2801640 	mov	x0, #0xb2                  	// #178
+  76282c:	97eca475 	bl	28ba00 <syscall@plt>
+  762830:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762834:	aa0003e5 	mov	x5, x0
+  762838:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  76283c:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  762840:	911ec0c6 	add	x6, x6, #0x7b0
+  762844:	913ba063 	add	x3, x3, #0xee8
+  762848:	91094042 	add	x2, x2, #0x250
+  76284c:	52800287 	mov	w7, #0x14                  	// #20
+  762850:	52804624 	mov	w4, #0x231                 	// #561
+  762854:	52800041 	mov	w1, #0x2                   	// #2
+  762858:	52800060 	mov	w0, #0x3                   	// #3
+  76285c:	97ecde25 	bl	29a0f0 <DlogRecord@plt>
+  762860:	52800295 	mov	w21, #0x14                  	// #20
+  762864:	17fffb10 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762868:	52800061 	mov	w1, #0x3                   	// #3
+  76286c:	2a0103e0 	mov	w0, w1
+  762870:	97eca798 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762874:	36000280 	tbz	w0, #0, 7628c4 <RunAicpuRpcSrvLaunch@@Base+0x1544>
+  762878:	97ecaf3e 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  76287c:	36000ce0 	tbz	w0, #0, 762a18 <RunAicpuRpcSrvLaunch@@Base+0x1698>
+  762880:	d2801640 	mov	x0, #0xb2                  	// #178
+  762884:	97eca45f 	bl	28ba00 <syscall@plt>
+  762888:	aa0003e5 	mov	x5, x0
+  76288c:	b9516780 	ldr	w0, [x28, #4452]
+  762890:	b9000be0 	str	w0, [sp, #8]
+  762894:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762898:	52800060 	mov	w0, #0x3                   	// #3
+  76289c:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7628a0:	f9405781 	ldr	x1, [x28, #168]
+  7628a4:	f90003e1 	str	x1, [sp]
+  7628a8:	913ba063 	add	x3, x3, #0xee8
+  7628ac:	91154042 	add	x2, x2, #0x550
+  7628b0:	29521f86 	ldp	w6, w7, [x28, #144]
+  7628b4:	52800944 	mov	w4, #0x4a                  	// #74
+  7628b8:	72a02000 	movk	w0, #0x100, lsl #16
+  7628bc:	52800041 	mov	w1, #0x2                   	// #2
+  7628c0:	97ecde0c 	bl	29a0f0 <DlogRecord@plt>
+  7628c4:	2a1303f5 	mov	w21, w19
+  7628c8:	17fffc39 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  7628cc:	d2801640 	mov	x0, #0xb2                  	// #178
+  7628d0:	97eca44c 	bl	28ba00 <syscall@plt>
+  7628d4:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7628d8:	aa0003e5 	mov	x5, x0
+  7628dc:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7628e0:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7628e4:	52800061 	mov	w1, #0x3                   	// #3
+  7628e8:	2a1503e7 	mov	w7, w21
+  7628ec:	911ec0c6 	add	x6, x6, #0x7b0
+  7628f0:	913ba063 	add	x3, x3, #0xee8
+  7628f4:	91094042 	add	x2, x2, #0x250
+  7628f8:	2a0103e0 	mov	w0, w1
+  7628fc:	528041c4 	mov	w4, #0x20e                 	// #526
+  762900:	97ecddfc 	bl	29a0f0 <DlogRecord@plt>
+  762904:	17fffae8 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762908:	52800040 	mov	w0, #0x2                   	// #2
+  76290c:	97eca771 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  762910:	3607d8e0 	tbz	w0, #0, 76242c <RunAicpuRpcSrvLaunch@@Base+0x10ac>
+  762914:	d2801640 	mov	x0, #0xb2                  	// #178
+  762918:	97eca43a 	bl	28ba00 <syscall@plt>
+  76291c:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762920:	aa0003e5 	mov	x5, x0
+  762924:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762928:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  76292c:	911ec0c6 	add	x6, x6, #0x7b0
+  762930:	913ba063 	add	x3, x3, #0xee8
+  762934:	91094042 	add	x2, x2, #0x250
+  762938:	52800287 	mov	w7, #0x14                  	// #20
+  76293c:	528041c4 	mov	w4, #0x20e                 	// #526
+  762940:	52800041 	mov	w1, #0x2                   	// #2
+  762944:	52800060 	mov	w0, #0x3                   	// #3
+  762948:	97ecddea 	bl	29a0f0 <DlogRecord@plt>
+  76294c:	52800295 	mov	w21, #0x14                  	// #20
+  762950:	17fffad5 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762954:	aa0003f3 	mov	x19, x0
+  762958:	d2864e00 	mov	x0, #0x3270                	// #12912
+  76295c:	52800001 	mov	w1, #0x0                   	// #0
+  762960:	f2a001e0 	movk	x0, #0xf, lsl #16
+  762964:	97ecd3a7 	bl	297800 <_Z26AicpuUpdatComContextMumberIbEvyT_@plt>
+  762968:	b0008dc0 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  76296c:	f9444400 	ldr	x0, [x0, #2184]
+  762970:	d2900202 	mov	x2, #0x8010                	// #32784
+  762974:	8b2263e2 	add	x2, sp, x2
+  762978:	f9407443 	ldr	x3, [x2, #232]
+  76297c:	f9400001 	ldr	x1, [x0]
+  762980:	eb010063 	subs	x3, x3, x1
+  762984:	d2800001 	mov	x1, #0x0                   	// #0
+  762988:	540007a0 	b.eq	762a7c <RunAicpuRpcSrvLaunch@@Base+0x16fc>  // b.none
+  76298c:	97ec8561 	bl	283f10 <__stack_chk_fail@plt>
+  762990:	d2801640 	mov	x0, #0xb2                  	// #178
+  762994:	97eca41b 	bl	28ba00 <syscall@plt>
+  762998:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  76299c:	aa0003e5 	mov	x5, x0
+  7629a0:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7629a4:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7629a8:	52800061 	mov	w1, #0x3                   	// #3
+  7629ac:	2a1503e7 	mov	w7, w21
+  7629b0:	911ec0c6 	add	x6, x6, #0x7b0
+  7629b4:	913ba063 	add	x3, x3, #0xee8
+  7629b8:	91094042 	add	x2, x2, #0x250
+  7629bc:	2a0103e0 	mov	w0, w1
+  7629c0:	528041a4 	mov	w4, #0x20d                 	// #525
+  7629c4:	97ecddcb 	bl	29a0f0 <DlogRecord@plt>
+  7629c8:	17fffab7 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7629cc:	52800040 	mov	w0, #0x2                   	// #2
+  7629d0:	97eca740 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7629d4:	3607d2c0 	tbz	w0, #0, 76242c <RunAicpuRpcSrvLaunch@@Base+0x10ac>
+  7629d8:	d2801640 	mov	x0, #0xb2                  	// #178
+  7629dc:	97eca409 	bl	28ba00 <syscall@plt>
+  7629e0:	90006c66 	adrp	x6, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  7629e4:	aa0003e5 	mov	x5, x0
+  7629e8:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7629ec:	b0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7629f0:	911ec0c6 	add	x6, x6, #0x7b0
+  7629f4:	913ba063 	add	x3, x3, #0xee8
+  7629f8:	91094042 	add	x2, x2, #0x250
+  7629fc:	52800287 	mov	w7, #0x14                  	// #20
+  762a00:	528041a4 	mov	w4, #0x20d                 	// #525
+  762a04:	52800041 	mov	w1, #0x2                   	// #2
+  762a08:	52800060 	mov	w0, #0x3                   	// #3
+  762a0c:	97ecddb9 	bl	29a0f0 <DlogRecord@plt>
+  762a10:	52800295 	mov	w21, #0x14                  	// #20
+  762a14:	17fffaa4 	b	7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  762a18:	d2801640 	mov	x0, #0xb2                  	// #178
+  762a1c:	97eca3f9 	bl	28ba00 <syscall@plt>
+  762a20:	b9516781 	ldr	w1, [x28, #4452]
+  762a24:	aa0003e5 	mov	x5, x0
+  762a28:	b9000be1 	str	w1, [sp, #8]
+  762a2c:	f0006c43 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  762a30:	90006c62 	adrp	x2, 14ee000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x3094>
+  762a34:	52800061 	mov	w1, #0x3                   	// #3
+  762a38:	f9405780 	ldr	x0, [x28, #168]
+  762a3c:	f90003e0 	str	x0, [sp]
+  762a40:	913ba063 	add	x3, x3, #0xee8
+  762a44:	91170042 	add	x2, x2, #0x5c0
+  762a48:	29521f86 	ldp	w6, w7, [x28, #144]
+  762a4c:	2a0103e0 	mov	w0, w1
+  762a50:	52800944 	mov	w4, #0x4a                  	// #74
+  762a54:	97ecdda7 	bl	29a0f0 <DlogRecord@plt>
+  762a58:	2a1303f5 	mov	w21, w19
+  762a5c:	17fffbd4 	b	7619ac <RunAicpuRpcSrvLaunch@@Base+0x62c>
+  762a60:	f9403fe1 	ldr	x1, [sp, #120]
+  762a64:	aa0003f3 	mov	x19, x0
+  762a68:	b4fff781 	cbz	x1, 762958 <RunAicpuRpcSrvLaunch@@Base+0x15d8>
+  762a6c:	aa0103e0 	mov	x0, x1
+  762a70:	97eca13c 	bl	28af60 <_ZNSt16_Sp_counted_baseILN9__gnu_cxx12_Lock_policyE2EE10_M_releaseEv@plt>
+  762a74:	17ffffb9 	b	762958 <RunAicpuRpcSrvLaunch@@Base+0x15d8>
+  762a78:	17fffffa 	b	762a60 <RunAicpuRpcSrvLaunch@@Base+0x16e0>
+  762a7c:	aa1303e0 	mov	x0, x19
+  762a80:	97ecda28 	bl	299320 <_Unwind_Resume@plt>
