@@ -584,3 +584,11 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 ## 54. A15-small-v3 preflight 元数据核（2026-11-19）
 
 `a15-preflight/SHA256SUMS` `68c1660f…` **13/13**；plan `2fcd101b…`：A15、rows127/k256/n512、fresh `run/temp/out/restore-a15-small-v3`、240/90、plan_not_executed；child argv 指向 `grouped-deepdive-35-cdc8324` 的 run_probe（103b9775）/adapter（d181b15a）；root identity **1330921/400000296**（78b95dc0，实扫 /proc）。stage-v7 `0e65c9e4…`：commit cdc8324、manifest eedd36c9（Linux **29/29** exact）、run_probe 103b9775、window 1f780bf8、binding 101660f8、adapter d181b15a；test_probe f6fe2c99、Linux **24/24 OK**（log 0b71b25a）；port 29531 FREE；v2 a9ea5fe2 numeric-incomplete、v1 99db4369 invalid。元数据一致；v3 可跑，但 §53 shape validation 仍未修，record 完整性最终必须补；GO 由 32，设备暂停。
+
+## 55. A15 shape guard 候选 8807597 复核（2026-11-19）
+
+候选冻：commit `8807597`、manifest `d65f0408…`、run_probe **`f7c5f860…`（29,346 B）**、test_probe `d7b6d0c4…`（25）、window 1f780bf8/test_window 228150e4 未变、adapter d181b15a；CPU 74/74（7 Linux-only skip）。**不用于当前 v3**（v3 锁 cdc8324/103b9775/plan 2fcd101b）。
+
+- `a15_record` 现返回 `(record,error)`：reference None→`missing_equivalence_record`；`_shape_of(output)` 与 `_shape_of(reference)` 均须 `(rows,n)` 且互相一致，否则 `invalid_equivalence_shape`；正常才生成 reduced/equivalence/diagnostic_gate。execute L528-535 解包 error，写 `numeric_error`；record_ok 缺三键→numeric_pass=false。
+- 测试：`[1,512]` 可广播错 shape 被拒（invalid_equivalence_shape）；正常 `[127,512]` 生成 equivalence/gate；None→missing；三态覆盖。代码级 PASS。
+- 该候选只供 v3 后复用/最终记录完整性闭合；v3 结果产出后需评估是否用 shape-guard 重跑或仅 CPU 记录校验。A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
