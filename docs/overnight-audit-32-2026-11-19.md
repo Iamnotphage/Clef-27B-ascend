@@ -954,10 +954,23 @@
 - **设计符合项**：settle 每轮单一 `table_reader()` 快照（survivor 与 state 同表）、连续两空才 clean、默认 30 s 上限、逐 pid state/starttime（无 state=unknown）、超期 fail-closed、gate 复用同一 settle table、唯一 `begin_restore`、child timeout `ok=False` 保持；`_signal_targets`/`_attributed_targets`/`cleanup_attributed`/protected/unknown/drift/PID 复用规则未改。
 - **阻断发现（fail-open 回退）**：`recovery_gate` L822-823 把 gate 的 `table`（无 settle 时来自 `scan()`）与 `reader=table.get` 传给 `attributed_survivors`（L836）；base 1f780bf8 是 `attributed_survivors(registry, child_pid)`，内部走 `_scan_direct()` 真实 `/proc`。Linux test `test_orphan_after_immediate_parent_exit_is_registered_and_cleaned` 将 `scan()` mock 为 `{}`，candidate 因此 `attributed=[]、residual=[]、gate allow=True`，与 31 Linux 48 rc1 的 `orphan-after-immediate-parent-exit (gate allow=True)` 完全对应。生产含义：无 settle 的 gate 失去第二次独立 `/proc` 读取，对 scan 竞态/缺失不再 fail-closed，属相对 base 的回退，不只测试问题。
 - **最小修复**：仅当调用方显式传 `table`（settle 路径）时把 table/reader 传给 `attributed_survivors`；`table is None` 时保持 base（`table=scan()` 后 `attributed_survivors(registry, child_pid)` 内部 `_scan_direct`）；settle 路径不变。
-- **其它审查项**：①默认 30 s 对 attempt2 退出延迟（gate 时 >1.4 s，最长可能约 174 s，精确未知）不保证覆盖，若 >30 s 仍 fail-closed，不能声称已修复该格；②manifest `files` 的 window/test SHA 已改为候选 5bbda3cc/8336a663，而 README/manifest 又称 frozen 1f780bf8/228150e4 不动——manifest-driven 校验会与 v2 包不一致，建议 files 保持 frozen 或明确候选分支；③31 另有 2 个 CPU 测试残留待精确身份清理。
+- **其它审查项**：①默认 30 s 对 attempt2 退出延迟（gate 时 >1.4 s，最长可能约 174 s，精确未知）不保证覆盖，若 >30 s 仍 fail-closed，不能声称已修复该格；②manifest 口径（20 裁定）：候选分支 `files` 记该分支实际新字节 SHA（5bbda3cc/8336a663）是正确的；frozen 1f780bf8/228150e4 另明确标注为**远端当前 v2/stage 历史冻结基线**，not adopted = 候选未部署；不得为口径改 80c/bce/8ec 原件。此前“files 应保持 frozen”建议撤回；③31 另有 2 个 CPU 测试残留待精确身份清理（已按身份 TERM→KILL，当前无残留）。
 - **31 Linux 复核（commit e72b967，SUMS e6a36fe3…，4/4 OK）**：Python 3.10.12 / Linux aarch64，`Ran 48 tests → 47 pass / 1 fail / 0 skip`；失败 `test_orphan_after_immediate_parent_exit_is_registered_and_cleaned` 第 840 行 `assertFalse(allow)` → `AssertionError: True is not false`，单测复跑 **3/3 同失败**；与 8.124 的 gate fail-open 定位一致。测试仅 fake d0_stop/npu-smi/HTTP，无 torch/torchrun/NPU、未访问 18143；遗留 daemon 1361942/1361945 已按身份 TERM→KILL，当前无 `os.fork|time.sleep` 残留。
 - **服务状态（31 独占）**：health ready；root 1355077 / 401718579 / pgid=sid self / boot 393ecc15；**ppid=1355076 仍非 1（restore 包装 bash 仍存活，未 reparent）**；五 PID 不变；后台本地包装到 25 min 时限被停，但远端包装存活、未启动第二棵 restore/window。→ 人工 restore 的 ppid 偏差是持续状态，不是瞬态；恢复仍只能按“人工口径”记录。
 - **结论**：7d371a1 **NOT READY**；等 35 修复后的新固定 commit + 31 macOS/Linux 48 复跑。无设备、无新 GO、不改 v2 包。
+
+## 8.125 b009f73 marker 上下文：task13 三分钟超时、无 TaskFinished（2026-11-19，无 GO）
+
+- **固定件**：31 commit **b009f73**，包 `marker-context-20261119/`；SHA256SUMS **9/9 OK**、自哈希 **4c1601a23f6728de7a64b60804827ff2ab96561088be0d58a74c13e606d8198a**；来源 archive 92 文件 SUMS 52d145ee，未重跑/未访问服务/未改原件。
+- **Init/launch**：`AicpuKfcRpcServer::Init addr:2613051392`（=0x9BC00000）2/2，device-0 22:49:06.259.404 [7543]、device-1 22:49:06.258.674 [7533]（plog UTC 14:49:06）；`RunAicpuKfcSrvLaunch` 的 apiName=`GroupedMatMulAllReduceMc2AicpuKernel`、aicpuKernelName=`RunAicpuKfcSrvLaunch`，`Start ... with tiling version 0` 于 14:49:06.255/256；run 日志有 `Get api RunAicpuKfcSrvLaunch from so libccl_kernel.so success`。
+- **stream47 完成面**：task0–12 均有 `TaskFinished`；task12=`NOTIFY_RECORD`（14:49:06.286.823 / 287.776）；**task13（ConstructFftsMixSqe, stream47）无 TaskFinished**（“recycle task13?” 查询为空）。
+- **三分钟超时原文（两 rank）**：14:52:06.286.359 rank1、14:52:06.287.354 rank0：
+  `SynchronizeExecutedTask: report three minutes timeout! stream_id=47, sq_id=2, task_id=13, sqHead=13, flip_num=0, pendingNum=1`。
+  活动起点 14:49:05.110 → 超时 14:52:06.286 ≈ **181.18 s**，与此前“3 min + 1.18 s”时间巧合一致；SIGTERM 在 14:52:59.6，**超时后 python sync 仍持续约 53 s 未返回**。
+- **notify**：id 2381/2382/2383/2384 与 2431/2432/2433/2434 在 stream 10/12/45 的 record/wait 表；task12 为 2387/2437（stream12 wait、stream47 record）。
+- **静态边界**：Launch/V2/KfcLaunch 与 Init4/Init 的 `.text` 直接 BL/B 绝对目标均 0；方法未覆盖 `.plt`（0x27fdf0+0x1c520）、函数指针、dlsym/按名解析，而 device 日志明确有 `Get api ... from so` 与按名取 kernelname。**0 直接命中不能外推 MC2/MC2V2 不调用 Launch，也不能外推 Init4 归属**；归属判断交 33。
+- **32 判读**：可确证“Grouped 进入 MC2 AICPU KFC 路径；stream47 task13 从未完成；runtime 在 14:52:06 报三分钟超时 pendingNum=1；python sync 在超时后仍卡约 53 s 直至外部 SIGTERM”。这**定位了挂起点**，但**不能证明**超时后 sync 为何不返回、也不能单独给出 root cause；不新增因果断言。
+- 服务与包保持原样（root 1355077 / ppid 1355076 / health ready）；无新 window、无设备、无 GO。
 
 ## 9. 本地核对副本
 
