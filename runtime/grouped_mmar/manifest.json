@@ -70,6 +70,11 @@
       "sha256": "0fcdf991f9a162aa89a6af1ee10a9540df7a5c62d354512883d04cbeefe32eb0",
       "bytes": 21047
     },
+    "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
+      "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented)",
+      "sha256": "8cb94e2f542c7370fd9215863d6085255b5fbf2bc7b4305525eada05a893ebac",
+      "bytes": 7531
+    },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
       "sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
@@ -405,6 +410,20 @@
       "sums_sha256": "e88d9d23",
       "commit": "f176183"
     }
+  },
+  "mrs_allgather_alternative": {
+    "status": "CPU design for 32/20 review; not implemented, no device cell",
+    "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
+    "design_sha256": "8cb94e2f542c7370fd9215863d6085255b5fbf2bc7b4305525eada05a893ebac",
+    "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
+    "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
+    "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
+    "comm_cost": "ring R=2 total volume parity with all-reduce (0.5S reduce-scatter + 0.5S all-gather = S); two collectives and no matmul overlap, so performance is not expected to beat AllReduce",
+    "memory": "x_pad ~16.85 MB, MRS partial ~4.96 MB, all-gather full ~9.91 MB, optional ND down weight ~89.1 MB/rank; large-shape MRS workspace untested",
+    "gates": "A14 large M968/K8704/N5120 support first; probe A15 max_abs<=0.03125/mean_abs<=1e-4 vs all-reduce reference; frozen fixed_gate; full OD 2352 + ERQA 400 within 2PP of the BF16 NZ baseline",
+    "unknowns": "MRS large support/performance, workspace, executor lifetime, NZ weight acceptance, mlp_bias config, vLLM TP group name/stream ordering",
+    "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
+    "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
   },
   "matched_grouped_control": {
     "status": "executed_hang_at_device_sync; exact cause unresolved; Grouped-specific candidates prioritized; H5K/H4K discriminators implemented",
