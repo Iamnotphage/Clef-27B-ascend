@@ -1,0 +1,11 @@
+abi-preflight9 summary (read-only; raw deliverable summary)
+1) ctx+352 writer: no ctx-relative store to #352 found in libccl_kernel disassembly; every store matching [..,#352] targets [sp,#352] (stack). The clear 0x76187c noted by 33 is not reproduced as a literal store here (could be register-offset form or another DSO). -> writer unresolved in this binary.
+2) getters and Init mapping:
+   - GetPreparePosition 0x7d7b60: ptr = [server+816]; return ldr w [ptr] (offset +0).
+   - GetTaskType 0x7d7b30: ptr = [server+816]; return ldrb [ptr+116].
+   - GetRspPolicy 0x7d7b40: ptr = [server+816]; return ldrb [ptr+113].
+   - GetGenTaskNum 0x7d7b4c: return ldrb [server+800].
+   - Init(y,j,t,KFCTask*) 0x7d66f0: x1=y, w2=j, w3=t, x4=task; [server+816] = *(u64*)(task+40); zero branch ([ptr]==0): [server+0]=y (8B), [server+0x10]=y+j, [server+0x18]=y+j+64t, y+772=0, memset(server+0x20,0,0x300), server+800=0, server+808=task; non-zero branch: [server+8]=y, server+800=0, server+808=task.
+3) ctx+0xf31dc: no literal 0xf31dc nor #0x1dc found. All #0xf3,lsl#12 sites write HcclMsgArea slots (strb [x,#624] -> 0xf3270). Source/取值 unresolved.
+4) TwoStageWait-only semantics (conditional): GetRspPolicy = ldrb [ptr+113]; CheckAivIsEnd(idx) 0x7d7ac0: ldr w0,[server + (idx+0x88)*4]; return w0==1 (server array base +0x220, stride 4). Whether Grouped reaches TwoStageWait is not established statically.
+No code/device actions; service untouched.
