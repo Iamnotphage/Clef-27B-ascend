@@ -792,17 +792,18 @@ class AttributedProcessTest(unittest.TestCase):
                 'restore_output': str(restore_output)}
         result = {}
         calls = []
-        original_start = win.start_restore
+        original_start_restore = win.start_restore
 
         def counted(*args, **kwargs):
             calls.append(1)
-            return original_start(*args, **kwargs)
+            return original_start_restore(*args, **kwargs)
 
         pid = None
+        original_subreaper = None
         try:
             self.assertTrue(win.set_subreaper(True))
-            original_flag = win.get_subreaper()
-            self.assertEqual(original_flag, 1)
+            original_subreaper = win.get_subreaper()
+            self.assertEqual(original_subreaper, 1)
             with mock.patch.object(win, 'start_restore', side_effect=counted):
                 self.assertTrue(win.begin_restore(plan, run_dir, result))
             self.assertTrue(result['subreaper_cleared_for_restore'])
@@ -817,15 +818,23 @@ class AttributedProcessTest(unittest.TestCase):
             self.assertIsNotNone(live)
             self.assertEqual(live['ppid'], 1)
             self.assertEqual(live['pgid'], pid)
-            self.assertTrue(win.restore_subreaper(original_flag))
+            self.assertTrue(win.restore_subreaper(original_subreaper))
             self.assertEqual(win.get_subreaper(), 1)
         finally:
+            if pid is None and manifest.is_file():
+                try:
+                    pid = int(json.loads(manifest.read_text())['pid'])
+                except (OSError, ValueError, KeyError):
+                    pid = None
             if pid is not None:
                 try:
                     os.killpg(pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-            win.enable_subreaper()
+            if original_subreaper is not None:
+                win.restore_subreaper(original_subreaper)
+            else:
+                win.enable_subreaper()
 
     def test_protected_identity_is_not_signaled(self):
         sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],

@@ -67,8 +67,8 @@
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
       "role": "CPU window control-flow tests (40; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle/original-restore, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures)",
-      "sha256": "2cfea8e2a06d40be50582c74efc8129eeca43d073c65bbb189422027cbce83ad",
-      "bytes": 40942
+      "sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
+      "bytes": 41364
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,7 +82,7 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "4ce476b55f1ebcbd38f2f19ce9fa148f3dbd0f04211c2dc93bbafcba2fb59819",
+      "sha256": "eacb056361da2ee141679223da9a1ef869983d7c3a7871488b74729a12225e17",
       "bytes": 32549
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "2cfea8e2", "test_probe_cpu.py": "01fd2f54", "cpu": "67/67 (18+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "01fd2f54", "cpu": "67/67 (18+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
