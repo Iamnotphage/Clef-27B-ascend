@@ -203,3 +203,13 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 **A14 small v2 plan（plan-only，未执行）**：`a14-preflight/SHA256SUMS` `2e1086eb…`，13 项 0 FAILED；`plan-a14-small-v2.json` SHA `18fdf185…`，绑定 root **1305145**（starttime `398845277`，identity `4ace4a79…`），child argv 为 `torchrun --nproc_per_node=2 --master_port 29531 run_probe.py --arm A14 --k 256 --n 512 --rows 128 --seed 20261119 --arm-timeout 240 --comm-timeout 90 --adapter probe_adapter.so --execute`，status `plan_not_executed`；stage-identity-v3（`50b659a6…`）记录 commit `e0b06df`、manifest `1c8d2682…`、binding `101660f8…`、run_probe `6ae866b1…`、window `2202165e…`、adapter `d181b15a…`、compile log `7ce25dad…`；旧 1301295 的 small/large plan 已标 superseded，large 等 small 结果与 32 复核。待 32 GO 后由 31 在小臂执行。
 
 **32 A14 small GO（2026-11-19）**：语义确认——window 以 `start_new_session=True` 启动 child=torchrun（session/PGID leader），`--nproc_per_node=2` 两 rank 同 PGID，身份校验 `pgid==child.pid`，cleanup 精确 `killpg`，240s watchdog + 240s child timeout，child rc0 需两 rank pass，maps 门含 adapter+libhccl/ascendcl，恢复 aa3e-noop 不变。**唯一新增前置**：固定 `--master_port 29531` 执行前须预检无监听（`ss -ltn`/lsof）；若被占用则停报/记录，未经批准不得改 plan 参数或换端口。证据要求：两 rank result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）、trace、child 日志、window.json/per-PID maps、plog、完整恢复（五 PID/双 worker/四检/env/joint/clients/branch aa3e-noop）；成功/失败均保留。解释：A14 通过 → KFC 路径可用、被拒包非普遍阻断；同挂 → 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。large 等 small 结果并重建新 root plan；A13 不执行；服务 aa3e root 1305145。
+
+## 15. A14 small 首格无效：harness mkdir 竞争（2026-11-19）
+
+首格（plan `18fdf185`）实际执行后失败，33 只读核 `a14-small-cell`（10 文件，SUMS 10/10）：
+
+- `child.stderr`：rank1 `run_probe.py:243 out.mkdir(parents=True, exist_ok=False)` → `FileExistsError: probe-out-a14-small-v2`（rank0 先创建）；torchrun 对 rank0 发 SIGTERM（exit -15）。
+- `child.stdout` 仅 `ERR99999 UNKNOWN application exception`；rank0 result 仅 stub、trace 空；**无 507046/无 stream_id=47、未进入 MC2 调用**。
+- window `ok=false`；restore `branch=aa3e-noop`、root 1306695、config s1。该格**不作为 A14 判据**，证据保留为 invalid。
+
+**最小修复（35）**：`run_probe.py` 共享父目录改为 `out.mkdir(parents=True, exist_ok=True)`；每 rank `rank_dir = out/f'rank{rank}'; rank_dir.mkdir(exist_ok=False)` 保持不变作 fresh 门。33 评估：并发 `exist_ok=True` 建父目录安全（EEXIST 被吸收），无需 rank0/rank1 marker/barrier；per-rank `exist_ok=False` 仍能拒绝陈旧 rank 目录。重跑须用新 probe-out 路径（不复用 v2 目录）、新 run_probe SHA、重冻 stage identity/manifest、以恢复后新 root identity 重出 small plan；adapter binding 未变可复用；执行前预检 master_port 29531 空闲。H6 结论与依赖 `supported_but_unproven` 不变。
