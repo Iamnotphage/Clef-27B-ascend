@@ -77,8 +77,8 @@
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "34cb13889ac66b2f0d580d57c53961dc8eb5380a46fe4f824f860979d340850a",
-      "bytes": 10772
+      "sha256": "b83171ba79c9037c0c4b9d5d0431cc8b48ede0866ae1ed86ea53fbb0167febff",
+      "bytes": 12244
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -92,8 +92,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "efd97818ba6f8991611f85ba4f7890fc71af58bf05f149c7301a6baa3401828e",
-      "bytes": 42411
+      "sha256": "e9dbe51bfc479892dbf9b1be24de00afbb417cf19612eeebd63cf81e06134c7b",
+      "bytes": 42853
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -488,9 +488,9 @@
   },
   "abi_turn_analysis": {
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
-    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), libccl 2281deca, abi4 GetSendRecvCnt",
+    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer 0x7d6838-50), libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "34cb13889ac66b2f0d580d57c53961dc8eb5380a46fe4f824f860979d340850a",
+    "design_sha256": "b83171ba79c9037c0c4b9d5d0431cc8b48ede0866ae1ed86ea53fbb0167febff",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
@@ -502,7 +502,8 @@
       "abi6 call sites: Init(y,j,t,KFCTask*) at 0x76192c gets y=[ctx+184], j=[ctx+192], T=ldrh[ctx+196], server r23+0xd10; Init(y) at 0x7b67c4 gets y=[ctx+184], server x20+0xcf0; its zero branch stores C at server+0 (not +8) and computes C+j / C+j+64T, while Init(y) writes C to server+8",
       "exact alias sets (S==C): 8-byte words at S+0x4008+64t and S+0x5008+64t; send hits iff j in union [0x3FD6+64t,0x3FDE+64t) (+0x1000 for the second array); recv iff j+64T in union [0x3FD5+64t,0x3FDD+64t) (+0x1000); T is a fixed u16 and only adds multiples of 64",
       "byte-width correction: ReadApiValidMsg gate/consume are 4-byte words at [slot+48,slot+52), physically covering +50/+51 (gate 0x5CDF123A LE 3A 12 DF 5C; consume 0xA320EDC5 LE C5 ED 20 A3); no independent byte counter store is observed",
-      "GenMsgByTaskParam writes struct+44 valid 0x5CDF123A, +48/+49 bytes, and a u16 0x1234 at +50 covering +50/+51; CopyAndCheckApiMsg copies 64 bytes as a bulk operation, also covering those bytes"
+      "GenMsgByTaskParam writes struct+44 valid 0x5CDF123A, +48/+49 bytes, and a u16 0x1234 at +50 covering +50/+51; CopyAndCheckApiMsg copies 64 bytes as a bulk operation, also covering those bytes",
+      "abi7: installed headers lack CommKfcParamDesc/KFCTask (no compile offsetof); 0x5CDF123A has no data-word hit and is an instruction immediate at 0x797978/0x7980f0/0x7d53f0/0x7d6f44/0x7d71dc/0x7d7344/0x7d7f0c/0x7db884/0x7dbc30; the only writer found is 0x7d6850 str w4,[x0,#44] in an unexported function between Init(y) and WriteFinish; Grouped op-info/kernel json and .o strings contain no rac_server/TurnWait/TurnNotify"
     ],
     "unproven": [
       "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
@@ -511,9 +512,10 @@
       "semantic intent of the WriteFinish constant vs the incremented counter at the same address",
       "ctx+0xf31d turn: no reference in abi5, so it cannot be equated with rcvCnt",
       "AivAicpuOpParam population (33 consumer chain)",
-      "whether the ReadAddrMsg slot pointer equals the AivAicpuOpParam base or base-4 (GenMsg valid at +44 vs ReadApiValidMsg gate at +48); no full-library store/alias/wide-write survey exists, so a unique +50/+51 writer claim is retracted"
+      "whether the ReadAddrMsg slot pointer equals the AivAicpuOpParam base or base-4 (GenMsg and the abi7 writer put valid at +44 vs ReadApiValidMsg gate at +48); no full-library store/alias/wide-write survey exists, so a unique +50/+51 writer claim is retracted",
+      "the identity/caller of the unexported writer 0x7d6838-0x7d6850; compiled layouts because the installed headers lack CommKfcParamDesc/KFCTask"
     ],
-    "request": "abi6 resolved Init call sites and ctx 184/192/196; remaining are the compiled AivAicpuOpParam layout/size, the slot-vs-struct base relation, which server object/branch the Grouped path uses (the two Init sites target +0xd10/+0xcf0), and a full store survey only if a unique-writer claim is needed; 33 merges and 31 remains the sole remote fetcher"
+    "request": "abi6 resolved Init call sites and ctx 184/192/196; abi7 shows the headers are absent and the only 0x5CDF123A writer is 0x7d6850 (+44). Remaining: binary-derived AivAicpuOpParam layout, the slot-vs-struct base relation, identity/caller of the local writer 0x7d6838-50, which server object/branch the Grouped path uses (the two Init sites target +0xd10/+0xcf0), and a full store survey only if a unique-writer claim is needed; 33 merges and 31 remains the sole remote fetcher"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",

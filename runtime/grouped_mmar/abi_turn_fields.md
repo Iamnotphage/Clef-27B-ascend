@@ -78,8 +78,11 @@ target different server offsets +0xd10/+0xcf0, so the same object is unproven);
 whether `C+j+50/51` intersects the exact 8-byte sets for the actual j/T (byte-range
 alias not established or excluded); which Init overload and branch Grouped uses; the
 meaning of the WriteFinish constant and whether it is meant to overwrite the counter;
-`ctx+0xf31d`; the AivAicpuOpParam population path (33's consumer chain). The Init
-call sites and ctx 184/192/196 writers are now resolved by abi-preflight6.
+`ctx+0xf31d`; the AivAicpuOpParam population path (33's consumer chain); the identity
+and caller of the abi7 local writer 0x7d6838-0x7d6850 (unexported function between
+Init(y) and WriteFinish); and the compiled layout because the installed headers lack
+CommKfcParamDesc/KFCTask. The Init call sites and ctx 184/192/196 writers are resolved
+by abi-preflight6.
 
 ## abi-preflight6 call sites and exact alias sets
 
@@ -113,13 +116,26 @@ a word at `[slot+48, slot+52)` physically covers +50 and +51.
 | GenMsgByTaskParam 0x7d7f30 | same | +50 | **2 B store** | 50,51 | `0x1234`; source layout means sendCnt=0x34, rcvCnt=0x12 |
 | CopyAndCheckApiMsg 0x7d6b24 | destination message | 0 | 64 B `memcpy_s` | 0-63 incl 50/51 | bulk copy, not an independent counter op |
 | GetSendCnt/GetRecvCnt | `[ctx+184]+...` | +50/+51 | 1 B load each | 50 / 51 | dedicated counter reads |
+| abi7 local writer 0x7d6838/44/50 | `x0` (caller-provided; unexported function between Init(y) and WriteFinish) | +44 | 4 B store | 44-47 | builds and writes `0x5CDF123A`; same valid magic as GenMsg, but at +44 |
 
 Provable statement: the gate/consume use an **integer valid word** and no
 **independent byte counter store** was observed in that function; the 4-byte range
 still physically covers +50/+51. Whether `slot` equals the `AivAicpuOpParam` base or
-base-4 is unproven: GenMsg writes the same `0x5CDF123A` at struct+44, which is
-consistent with a 4-byte shift between the two pointers, but the layout relation is
-not established.
+base-4 is unproven: GenMsg and the abi7 local writer both put `0x5CDF123A` at +44,
+which is consistent with a 4-byte shift between the slot pointer and the struct, but
+the layout relation is not established.
+
+abi7 adds: the installed headers do not contain `CommKfcParamDesc` or `struct
+KFCTask`, so no compile-time `offsetof` is possible and binary sites are the only
+evidence. A byte scan for `0x5CDF123A` finds **no data word** (it is an instruction
+immediate); the immediate sites are 0x797978, 0x7980f0, 0x7d53f0, 0x7d6f44, 0x7d71dc,
+0x7d7344, 0x7d7f0c, 0x7db884, 0x7dbc30, and the only writer found is 0x7d6850
+(`str w4,[x0,#44]`) in an unexported local function between Init(y) 0x7d67e0 and
+WriteFinish 0x7d68ec. Other sites are mostly compares at HcclMsg+48,
+HcclMsgExt+8240, RetryProcess+44, ReadApiValidMsg slot+48, CheckRcvWorkMsg and
+GenMsgByTaskParam. Grouped op-info/kernel json and .o strings contain no
+rac_server/TurnWait/TurnNotify, which is a linkage fact only and does not resolve the
+runtime object relation.
 
 `GenMsgByTaskParam` writes a u16 `0x1234` at +50, covering both bytes; the
 `CopyAndCheckApiMsg` 64-byte copy also covers them as a bulk operation. The **"libccl
@@ -145,12 +161,15 @@ only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
 ## Minimal merged request (33 to merge; 31 sole remote fetch)
 
 1. Compiled `AivAicpuOpParam` layout/size at `[ctx+184]+u32[ctx+192]`, confirming
-   +50/+51 and the u16 slot index at ctx+196 (source rac_server.h is not enough).
+   +50/+51 and the u16 slot index at ctx+196. abi7 shows the installed headers lack
+   `CommKfcParamDesc`/`KFCTask`, so this must come from binary layout evidence, not
+   source or `offsetof`.
 2. Which server object/branch the Grouped path uses (the two Init call sites target
    different offsets; S=C needs the same object plus `Init(y)`).
 3. `CheckDebugMode` body only if a blocking/sleep question remains;
    `CopyAndCheckApiMsg` is confirmed as a 64-byte copy/GenXor/memcmp by 31/33.
 4. Whether the ReadAddrMsg `slot` pointer equals the `AivAicpuOpParam` base or
-   base-4 (GenMsg valid at +44 vs ReadApiValidMsg gate at +48), and a full store/
-   alias/wide-write survey only if a "unique writer" claim is ever needed.
+   base-4 (GenMsg and the abi7 writer put valid at +44 vs the ReadApiValidMsg gate at
+   +48), the identity/caller of the unexported writer 0x7d6838-0x7d6850, and a full
+   store/alias/wide-write survey only if a "unique writer" claim is ever needed.
 Do not fetch these outside 31; 33 merges and 31 executes the single remote read.
