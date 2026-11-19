@@ -2922,3 +2922,33 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 若后续再有代码或记录变更，需重新审；本结论不外推。
 
 **状态**：release doc-only 终审 PASS（窄范围）；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
+## 139. 下一观测设计收紧（§135 修订）与 31/35 材料判定树
+
+**口径**：仅设计；不实现/取件/设备/新 GO；不重复 §133–138/release/SDK 阴性记录；服务与候选冻结。
+
+### 139.1 §135 措辞收紧（有来源的条件）
+
+- **“独立 stream/context”**：同进程、同 context 内的**独立 stream** 只解决“在另一队列发起”的问题；`torch.npu.synchronize()` 是设备级/调用线程阻塞，不保证另一线程的 stream 可前进。条件化为：**独立线程 + 自有 stream + 异步拷贝 + 有限超时**；该拷贝是否会被 pending 的 stream47/task13 阻塞，需 9.2.1 `acl_rt` 语义/实测边界（31），不得先假定独立。
+- **“user workspace 不含 response”**：这是**源级映射推断**——kernel `workspaceMsg=context->WorkSpace+notifyOff`（`rac_server.h` `f6b286d7…`；`mc2_common_def.h` `9c045a97…`/`a8969b7f…`），而 `keep_workspace` 是 aclnn user workspace（binding L162/L311–325），两者不同分配；不是运行时 alias 测试。fullbase/jT 仍未绑定。
+- **“不改 vendor 核的 AICORE 等待证据”**：现有日志只有 `StreamLaunchKernelV2`/FFTS 提交与 3 min pending，**不含 AICORE start/end 或 TurnWait**。不改 vendor 核时，只有 9.2.1 **profiling/exception/dump** 一类受支持接口可能给出 AICORE 时间线；kernel `printf`/PRINTF 需重建/安装 vendor 核，不在本设计范围。若 31 未找到 profiling 接口，AICORE 侧即精确缺口。
+
+### 139.2 要判别的两个假设（二选一，不混）
+
+- **H-A vs H-B**：task13/AICORE **从未启动**（提交/FFTS/队列问题）vs **已启动并停在 `TurnWait(rcvCnt)`**。可由 AICORE start/end 时间线判别。
+- **H-C vs H-D**：`rcvCnt` **未被写** vs **已写但 AICORE 未观察到/未推进**。可由 response 区（`context->WorkSpace+notifyOff+64`，rcvCnt@+51）只读快照判别。
+- 单一方案只选其中一对；不把 user workspace 读当 H-C/H-D 证据。
+
+### 139.3 判定树（待 31/35 材料后落唯一方案）
+
+1. 若 31 找到 **9.2.1 公开 HCCL context workspace getter** 且 35 绑定 **fullbase/jT/notifyOff**：推荐 **response 区 64 B 只读**（独立线程/stream、1–5 s 超时），判别 **H-C vs H-D**；若同时 AICORE pending，可支持 H-B。
+2. 否则若 31 找到 **受支持 profiling/exception** 可覆盖 AICORE task13 start/end：推荐 **profiling**，判别 **H-A vs H-B**；response 值仍未知。
+3. 两者皆无：**精确缺口**（9.2.1 HCCL getter 或 profiling 接口；fullbase/jT/notifyOff）；**不为无法回答 ack 的 user workspace 盲读安排设备实验**。
+
+### 139.4 任一方案的 harness 改动/边界（最小）
+
+- 只读 op 或 profiling hook；**新观测线程**在 launch 后、Python sync 前启动，有限超时（1–5 s）后落盘；不得用默认 30 s 当覆盖历史退出延迟。
+- 读取边界：仅 harness **自有分配**或经公开 getter 合法映射的 HCCL context workspace；**禁止盲读候选 `0x...0073`/其它进程地址**。
+- fullbase/offset 依据：`workSpace`（候选 `0x12c09bc00000`，仅低 32）、`notifyOff/j/T`（35 数据流）、response=`+notifyOff+64`、rcvCnt@+51；未绑定则不读。
+- 只读、不取得所有权；g_states 保活不变；清理/唯一 restore 预算不变；新观测线程需 join/stop；既有 `-2` GO 已消耗，必须新包/plan/32 复审/20 有限 GO；不写第二套运行命令。
+
+**状态**：§135 措辞已收紧；唯一方案待 31/35 材料；未具备接口则列精确缺口；无设备/新 GO/取件。
