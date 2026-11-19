@@ -65,6 +65,15 @@ class PlanTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_probe.build_plan(a)
 
+    def test_a13_plan_is_native_mmar_control(self):
+        a = run_probe.parse_args(plan_args(self.root, 'A13'))
+        plan = run_probe.build_plan(a)
+        self.assertTrue(plan['native'])
+        self.assertEqual(plan['rows'], 967)
+        self.assertEqual(plan['k'], 8704)
+        self.assertEqual(plan['n'], 5120)
+        self.assertEqual(plan['flags'], 0)
+
     def test_weight_requires_sha(self):
         weight = self.root / 'w.bin'
         weight.write_bytes(b'x')

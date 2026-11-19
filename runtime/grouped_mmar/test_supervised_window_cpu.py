@@ -87,6 +87,19 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(win.main(self.args()), 0)
         self.assertFalse(self.run_dir.exists())
 
+    def test_a13_arm_builds_torchrun_child(self):
+        import contextlib
+        import io
+        argv = self.args(extra=('--arm', 'A13'))
+        index = argv.index('--child-argv')
+        del argv[index:index + 2]
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            self.assertEqual(win.main(argv), 0)
+        plan = json.loads(output.getvalue())
+        self.assertIn('A13', plan['child_argv'])
+        self.assertIn('--adapter', plan['child_argv'])
+
     def test_missing_stop_script_rejected(self):
         argv = self.args()
         argv[argv.index('--stop-script') + 1] = str(self.root / 'missing.py')

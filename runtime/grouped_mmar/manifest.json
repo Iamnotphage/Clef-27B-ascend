@@ -7,8 +7,8 @@
   "files": {
     "runtime/grouped_mmar/binding_probe.cpp": {
       "role": "native MMAR binding with single-variable lifetime/thread/stream flags",
-      "sha256": "11baa2c68cfd1f16165cbacd6b41956e2ca955c8faac6745ed2596dfc545fee2",
-      "bytes": 18166
+      "sha256": "52287e3af43ab3d01a3290b58a5a51893f2fbd56e4b3e0b32633a2f1f8f71c49",
+      "bytes": 25679
     },
     "runtime/grouped_mmar/probe_trace.h": {
       "role": "C++ CLOCK_MONOTONIC trace header",
@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "c7e0410e744c1f971f7dc2c02b870ebb90f6e5183e93db41615af1ff1682d4b6",
-      "bytes": 18966
+      "sha256": "94f3b9a1940fdea00b9a655adbf47dfdab7507c87e35d27aa68c56860931f208",
+      "bytes": 19267
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
-      "sha256": "a8426375560ca63e4d5fef92e298cd8115c1eb6f9219aee26ff9654bf84808b3",
-      "bytes": 6400
+      "sha256": "8e4d274193154d3dd512e57df929fcc9ee137f5e303d4c5b924893584b2ee8ef",
+      "bytes": 6765
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -62,18 +62,18 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
-      "sha256": "51d6bc0c3b9e307ae9cab51d338d8c73e67f8b06f3da25414694bbefcf0895d3",
-      "bytes": 31585
+      "sha256": "706d802b14d9c83d787dbe5ffdd6209ce9992eff3bb361184be14a056fdde6c6",
+      "bytes": 31629
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
       "role": "CPU window control-flow tests (12)",
-      "sha256": "a4f5d29d286ca090bd7c01368fbb49d07ab9f45a56f41e0a41a55c5163750fc6",
-      "bytes": 19482
+      "sha256": "8d5ead78560061b9411fb2e8705bd963a493aa686aef2ed67fc8750373abd0d9",
+      "bytes": 19980
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "dfe1aee87c9690e226e83beda7cff0e362cfd43a5da72264f8b62d31fd6b0fb0",
-      "bytes": 14869
+      "sha256": "35d4895249c9db1ef3fce5f6a3c8c612a99f8b32107d8514bf138e8b4f31b0a4",
+      "bytes": 15781
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -210,9 +210,9 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "11/11",
+      "test_probe_cpu.py": "12/12",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "20/20"
+      "test_supervised_window_cpu.py": "21/21"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -242,7 +242,7 @@
     "default_arm_timeout_seconds": 240,
     "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
   },
-  "priority_note": "A12 official sample failed with the same stream47/AICORE hang and mc2_server chip:5 unsupported; H1/H2/H3/H11/H12/H6/H7 binding-side arms paused until 33/31 confirm the mc2_server support matrix; Grouped path is environment-blocked if no supported package/config exists",
+  "priority_note": "A12 official sample failed with the same stream47/AICORE hang and mc2_server chip:5 unsupported; A13 MatMulAllReduce control is the next decisive arm; A8/H6 are cheap confirmations; H1/H2/H3/H11/H4/H5/H7 are confirmation/low priority; platform mc2_server support pending 33/31",
   "a12_result": {
     "status": "failed_official_sample_same_hang",
     "window_sha256": "77528fdf076d6600",
@@ -271,5 +271,20 @@
     "root_cause_clue": "mc2_server.tar.gz not loaded: current device chip:5 does not support package:mc2_server.tar.gz",
     "recovery": "branch=aa3e-noop, tree=aa3e, root=1301295, five PIDs, health/info/text/image/env/joint/source/clients all true",
     "conclusion": "official sample fails identically; lifecycle/comm-creation binding hypotheses cannot explain the hang; platform MC2 server support is the leading blocker"
+  },
+  "a13_control": {
+    "arm": "A13",
+    "op": "aclnnMatmulAllReduce v1",
+    "dtype": "BF16 x/w/bias/output",
+    "shapes": {
+      "M": 967,
+      "K": 8704,
+      "N": 5120
+    },
+    "comm": "torch_npu multi-process group",
+    "purpose": "distinguish MC2 common-path/platform failure from grouped-op-specific failure",
+    "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
+    "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
+    "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119"
   }
 }

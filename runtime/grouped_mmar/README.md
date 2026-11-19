@@ -81,6 +81,14 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 - 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
 - **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
 
+## A13 MatMulAllReduce 控制（下一格）
+
+- `binding_probe.cpp` 新增 `run_mmar`：`aclnnMatmulAllReduce` v1（x1/x2/`bias` BF16、group、`"sum"`、commTurn 0、streamMode 1、output），无 groupList；torch 多进程 comm，与 v4r1 相同的窗口/清理/保活语义。
+- 形状 `M=967/K=8704/N=5120` BF16，bias 按 v1 头为 BF16（Grouped 要求 FP32 bias，这是 op 差异，记录不改门）。
+- 判定：A13 返回 → MC2 公共路径在 torch comm 下可用，问题更可能在 grouped op/tiling；A13 同 stream47/KERNEL_AICORE pending 且 plog 仍 `mc2_server chip:5` → MC2 公共/平台路径阻塞，Grouped 不再单因归因。
+- 窗口 `--arm` choices 已加入 A13/H3/H6/H7/H4/H5/H11；A8 仍无 adapter；A13/H6 都需 adapter。
+- CLI：`... --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119`（先 plan 后 --execute）；A8 用 `--arm A8` 无 adapter。
+
 ## 5. 31 执行 CLI（先 plan-only，再 execute；每臂 fresh）
 
 ```bash

@@ -55,6 +55,8 @@ ARMS = {
            'title': 'aclrtMemsetAsync workspace before launch (stage 2)'},
     'H7': {'flags': 0, 'native': True, 'rows': None,
            'title': 'M sweep 128/256/1024/967 (stage 2)'},
+    'A13': {'flags': 0, 'native': True, 'rows': 967,
+            'title': 'MatMulAllReduce (non-grouped MC2) control with torch multi-process comm'},
 }
 A12 = {
     'title': 'official A3 sample positive control (separate binary, fixed source from 33)',
@@ -284,7 +286,8 @@ def execute(a, plan):
         else:
             gen_r = torch.Generator(device='cpu').manual_seed(a.seed + rank)
             weight = torch.randn(a.k, a.n, generator=gen_r).to(torch.bfloat16)
-        bias = torch.zeros(a.n, dtype=torch.float32)
+        bias_dtype = torch.bfloat16 if a.arm == 'A13' else torch.float32
+        bias = torch.zeros(a.n, dtype=bias_dtype)
         meta['inputs'] = {
             'x': {'shape': list(x.shape), 'dtype': str(x.dtype),
                   'sha256': hashlib.sha256(x.contiguous().view(torch.uint8).numpy().tobytes()).hexdigest()},
@@ -318,8 +321,9 @@ def execute(a, plan):
             run_id = 0
         else:
             trace.emit('arm_enter', flags=plan['flags'])
-            y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run(
-                x_n, w_n, bias_n, group, plan['flags'])
+            op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
+                  else torch.ops.clef_mmar_probe.run)
+            y, workspace_bytes, run_id = op(x_n, w_n, bias_n, group, plan['flags'])
             trace.emit('api_return', workspace_bytes=workspace_bytes, run_id=run_id)
             meta['api_returned'] = True
             meta['workspace_bytes'] = workspace_bytes

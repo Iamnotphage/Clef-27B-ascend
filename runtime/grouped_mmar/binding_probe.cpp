@@ -6,6 +6,7 @@
 #include <torch/library.h>
 #include <acl/acl.h>
 #include <aclnnop/aclnn_grouped_mat_mul_all_reduce.h>
+#include <aclnnop/aclnn_matmul_all_reduce.h>
 #include <torch_npu/csrc/core/NPUStorageImpl.h>
 #include <torch_npu/csrc/core/npu/NPUGuard.h>
 #include <torch_npu/csrc/core/npu/NPUStream.h>
@@ -55,6 +56,8 @@ struct Api {
     void* meta = nullptr;
     decltype(&aclnnGroupedMatMulAllReduceGetWorkspaceSize) prepare = nullptr;
     decltype(&aclnnGroupedMatMulAllReduce) launch = nullptr;
+    decltype(&aclnnMatmulAllReduceGetWorkspaceSize) prepare_mmar = nullptr;
+    decltype(&aclnnMatmulAllReduce) launch_mmar = nullptr;
     decltype(&aclCreateTensor) create_tensor = nullptr;
     decltype(&aclCreateTensorList) create_list = nullptr;
     decltype(&aclDestroyTensor) destroy_tensor = nullptr;
@@ -66,6 +69,8 @@ struct Api {
         TORCH_CHECK(meta, "grouped-mmar metadata dlopen: ", dlerror());
         prepare = symbol<decltype(prepare)>(lib, "aclnnGroupedMatMulAllReduceGetWorkspaceSize", OPAPI);
         launch = symbol<decltype(launch)>(lib, "aclnnGroupedMatMulAllReduce", OPAPI);
+        prepare_mmar = symbol<decltype(prepare_mmar)>(lib, "aclnnMatmulAllReduceGetWorkspaceSize", OPAPI);
+        launch_mmar = symbol<decltype(launch_mmar)>(lib, "aclnnMatmulAllReduce", OPAPI);
         create_tensor = symbol<decltype(create_tensor)>(meta, "aclCreateTensor", META);
         create_list = symbol<decltype(create_list)>(meta, "aclCreateTensorList", META);
         destroy_tensor = symbol<decltype(destroy_tensor)>(meta, "aclDestroyTensor", META);
@@ -367,6 +372,146 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
     return {y, static_cast<int64_t>(state->bytes), static_cast<int64_t>(id)};
 }
 
+std::tuple<at::Tensor, int64_t, int64_t> matmul_all_reduce_run(
+    const at::Tensor& x, const at::Tensor& weight_kn, const at::Tensor& bias,
+    const std::string& group, int64_t flags_value) {
+    const int flags = static_cast<int>(flags_value);
+    TORCH_CHECK(flags >= 0 && flags <= 127, "mmar invalid flags: ", flags);
+    TORCH_CHECK(x.device().type() == at::kPrivateUse1, "mmar requires NPU input");
+    c10_npu::NPUGuard guard(x.device());
+    TORCH_CHECK(x.dim() == 2 && x.size(0) >= 1 && x.size(0) <= 16384, "mmar x must be [M,K]");
+    const auto rows = x.size(0), k = x.size(1), n = weight_kn.size(1);
+    TORCH_CHECK(weight_kn.dim() == 2 && weight_kn.size(0) == k && n > 0,
+                "mmar weight must be [K,N]");
+    for (const auto* t : {&x, &weight_kn, &bias}) {
+        TORCH_CHECK(t->device() == x.device() && t->scalar_type() == at::kBFloat16 &&
+                    t->is_contiguous() && t->storage_offset() == 0,
+                    "mmar BF16/input layout mismatch");
+    }
+    TORCH_CHECK(bias.dim() == 1 && bias.size(0) == n, "mmar bias must be [N]");
+    TORCH_CHECK(!group.empty() && group.find('\0') == std::string::npos, "mmar invalid HCCL group");
+    Api& a = api();
+    auto state = std::make_shared<RunState>();
+    state->flags = flags;
+    state->trace = make_trace();
+    auto y = at::empty({rows, n}, x.options());
+    std::string group_local(group);
+    const void* group_object = nullptr;
+    const char* group_pointer = nullptr;
+    size_t group_capacity = 0;
+    if (keep_group(flags)) {
+        state->group_keep = std::make_shared<std::string>(group);
+        group_object = state->group_keep.get();
+        group_pointer = state->group_keep->c_str();
+        group_capacity = state->group_keep->capacity();
+    } else {
+        group_object = &group_local;
+        group_pointer = group_local.c_str();
+        group_capacity = group_local.capacity();
+    }
+    state->group_ptr = group_pointer;
+    auto lists = std::make_shared<Lists>(a);
+    state->lists_ptr = lists.get();
+    if (keep_descriptors(flags)) state->keep_lists = lists;
+    auto* tx = lists->add(x, ACL_BF16);
+    auto* tw = lists->add(weight_kn, ACL_BF16);
+    auto* tb = lists->add(bias, ACL_BF16);
+    auto* ty = lists->add(y, ACL_BF16);
+    if (state->trace)
+        state->trace->mark("descriptors_ready",
+                           fields(*state, "descriptors", group_object, group_pointer,
+                                  group.size(), group_capacity, nullptr).c_str());
+    aclOpExecutor* executor = nullptr;
+    uint64_t bytes = 0;
+    const auto prepare_rc = a.prepare_mmar(tx, tw, tb, group_pointer, "sum", 0, 1, ty,
+                                           &bytes, &executor);
+    state->executor = executor;
+    state->bytes = bytes;
+    state->stream = c10_npu::getCurrentNPUStream().stream();
+    if (state->trace) {
+        char extra[160];
+        std::snprintf(extra, sizeof(extra), ",\"prepare_rc\":%d,\"executor_nonnull\":%s",
+                      prepare_rc, executor ? "true" : "false");
+        state->trace->mark("prepare_return",
+                           (fields(*state, "prepare", group_object, group_pointer, group.size(),
+                                   group_capacity, state->stream) + extra).c_str());
+    }
+    if (prepare_rc != 0 || !executor) {
+        const std::string error = aclGetRecentErrMsg() ? aclGetRecentErrMsg() : "";
+        const int cleanup = lists->close();
+        TORCH_CHECK(false, "mmar prepare rc=", prepare_rc, " executor=", executor,
+                    " cleanup rc=", cleanup, " ", error);
+    }
+    TORCH_CHECK(bytes <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
+                "mmar workspace overflow");
+    auto workspace = at::empty({static_cast<int64_t>(bytes)}, x.options().dtype(at::kByte));
+    state->workspace_ptr = workspace.data_ptr();
+    if (keep_workspace(flags)) state->keep_workspace = workspace;
+    if (flags & KEEP_ALL) {
+        state->keep_x = x; state->keep_w = weight_kn; state->keep_bias = bias;
+        state->keep_y = y; state->keep_workspace = workspace; state->keep_lists = lists;
+    }
+    int id = 0;
+    if (keep_group(flags) || keep_workspace(flags) || keep_descriptors(flags)) {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        id = g_next_id++;
+        state->id = id;
+        g_states[id] = state;
+    }
+    auto body = [state, a, workspace, lists, y, prepare_rc, group_object, group_pointer,
+                 group_capacity, rows, k, n]() -> int {
+        char extra[96];
+        std::snprintf(extra, sizeof(extra), ",\"rows\":%lld,\"k\":%lld,\"n\":%lld",
+                      static_cast<long long>(rows), static_cast<long long>(k),
+                      static_cast<long long>(n));
+        if (state->trace)
+            state->trace->mark("handler_enter",
+                               (fields(*state, "handler", group_object, group_pointer, 0,
+                                       group_capacity, state->stream) + extra).c_str());
+        aclrtStream use_stream = state->stream;
+        if (state->flags & REFETCH_STREAM) use_stream = c10_npu::getCurrentNPUStream().stream();
+        int memset_rc = 0;
+        if (state->flags & MEMSET_WORKSPACE) {
+            memset_rc = aclrtMemsetAsync(workspace.data_ptr(), state->bytes, 0,
+                                         state->bytes, use_stream);
+        }
+        const int launch_rc = a.launch_mmar(state->bytes ? workspace.data_ptr() : nullptr,
+                                            state->bytes, state->executor, use_stream);
+        if (state->trace) {
+            char s[80];
+            std::snprintf(s, sizeof(s), ",\"launch_rc\":%d", launch_rc);
+            state->trace->mark("launch_return", s);
+        }
+        int sync_rc = 0;
+        if (state->flags & DIRECT_LAUNCH) {
+            sync_rc = aclrtSynchronizeStream(use_stream);
+        }
+        int cleanup_rc = 0;
+        if (!keep_descriptors(state->flags)) cleanup_rc = lists->close();
+        if (state->trace) {
+            char s[96];
+            std::snprintf(s, sizeof(s), ",\"cleanup_rc\":%d,\"sync_rc\":%d", cleanup_rc, sync_rc);
+            state->trace->mark("handler_return", s);
+        }
+        const std::string error = (launch_rc || sync_rc || memset_rc || cleanup_rc)
+                                      ? (aclGetRecentErrMsg() ? aclGetRecentErrMsg() : "")
+                                      : "";
+        TORCH_CHECK(launch_rc == 0 && sync_rc == 0 && memset_rc == 0 && cleanup_rc == 0,
+                    "mmar handler launch=", launch_rc, " sync=", sync_rc,
+                    " memset=", memset_rc, " cleanup=", cleanup_rc, " ", error);
+        return 0;
+    };
+    if (flags & DIRECT_LAUNCH) {
+        body();
+    } else {
+        at_npu::native::OpCommand cmd;
+        cmd.Name("ClefMmarProbe");
+        cmd.SetCustomHandler([body]() -> int { return body(); });
+        cmd.Run();
+    }
+    return {y, static_cast<int64_t>(state->bytes), static_cast<int64_t>(id)};
+}
+
 int64_t grouped_mmar_release(int64_t id_value) {
     const int id = static_cast<int>(id_value);
     std::shared_ptr<RunState> state;
@@ -406,7 +551,11 @@ std::string grouped_mmar_provider() {
 
 TORCH_LIBRARY(clef_mmar_probe, m) {
     m.def("run(Tensor x, Tensor weight_kn, Tensor bias, str group, int flags) -> (Tensor, int, int)");
+    m.def("run_mmar(Tensor x, Tensor weight_kn, Tensor bias, str group, int flags) -> (Tensor, int, int)");
     m.def("release(int id) -> int");
     m.def("provider() -> str", &grouped_mmar_provider);
 }
-TORCH_LIBRARY_IMPL(clef_mmar_probe, PrivateUse1, m) { m.impl("run", &grouped_mmar_run); }
+TORCH_LIBRARY_IMPL(clef_mmar_probe, PrivateUse1, m) {
+    m.impl("run", &grouped_mmar_run);
+    m.impl("run_mmar", &matmul_all_reduce_run);
+}
