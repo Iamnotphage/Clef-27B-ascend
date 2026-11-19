@@ -21,9 +21,9 @@
       "bytes": 1781
     },
     "runtime/grouped_mmar/run_probe.py": {
-      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "508e2931f0d8207fbe12361191f603fe47d89a3a29bddb695de9a14089169b1b",
-      "bytes": 22275
+      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
+      "sha256": "071d38a24b5f84e682fea5ca01c65f372c03023929fc9cba36773bc7fbd592ac",
+      "bytes": 25598
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot tests (16)",
-      "sha256": "89acbb638a9aa6592862a902b1c7f68c09e805339dee76bdd8784b2efc406aa9",
-      "bytes": 9677
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15 tests (17)",
+      "sha256": "5fa5856338cce1a59e9ce54a746c1457c3e16483ce285fcb770460291bb34e87",
+      "bytes": 10808
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "a69d4b61f95dbcebbe5f53442b29a4741ab8880d80b70f27a4304253229c8dfd",
-      "bytes": 26760
+      "sha256": "33a101fd509d70d0dc8e7d15e6d73603a597d8d45e606107dbbaf02645b1ac43",
+      "bytes": 26905
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -240,7 +240,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "16/16",
+      "test_probe_cpu.py": "17/17",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "23/23"
     },
@@ -412,7 +412,7 @@
     }
   },
   "mrs_allgather_alternative": {
-    "status": "CPU design supplemented for 32/20 review (six items + full-layer HBM budget); A15 implementation pending static PASS; no device cell",
+    "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
     "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
     "design_sha256": "e5638d62e86961469308f35c59351e66067ecf03e8f0028820c42e244cd32161",
     "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
@@ -422,6 +422,14 @@
     "memory": "x_pad ~16.85 MB, MRS partial ~4.96 MB, all-gather full ~9.91 MB; a full ND down copy is 89.1 MB/rank/layer = 5.31 GiB/rank over 64 layers, so the preferred plan is load-time format replacement for down only (ND, skip NZ) with zero extra bytes and a measured rollback cost; large-shape MRS workspace untested",
     "gates": "A14 large M968/K8704/N5120 support first; probe A15 max_abs<=0.03125/mean_abs<=1e-4 vs all-reduce reference; frozen fixed_gate; full OD 2352 + ERQA 400 within 2PP of the BF16 NZ baseline",
     "unknowns": "MRS large support/performance, workspace, executor lifetime, NZ weight acceptance, mlp_bias config, vLLM TP group name/stream ordering",
+    "a15": {
+      "status": "implemented CPU-only; no device GO",
+      "arm": "A15 flags=0, bias=nullptr, rows default 967, K=8704, N=5120 reproducible",
+      "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
+      "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
+      "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=0/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
+      "freeze": {"run_probe.py": "071d38a2", "test_probe_cpu.py": "5fa58563", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"}
+    },
     "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
     "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
   },
@@ -461,7 +469,7 @@
       "restore": "branch aa3e-noop, root 1316176, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue",
       "evidence": "h5k-small-v1-cell SUMS 15/15 (b89b8fa7, 31 commit 93eac05); window 2c056ce1, rank0 trace 00ca7852/result 1e678933, rank1 trace e58f0ff8/result 468177f6, restore d04d2289/55ea795e",
       "interpretation": "H5K still hangs; its log signature differs from H11, but missing logs are not proof of no dispatch, and REFETCH causality is not established; no stream/context attribution; numeric absent",
-      "timeline": "33 commit 4766771: rank0 handler_enter @2.557746s, Python api_return @2.557772s, sync_enter @2.557821s; no stream_compare/launch_enter/launch_return/handler_return. The handler blocks inside getCurrentNPUStream() at binding L339 before launch; H5K is therefore not a valid Grouped device-path discriminator, and H11 remains the matched Grouped hang cell"
+      "timeline": "33 commit 4766771: rank0 handler_enter @2.557746s, Python api_return @2.557772s, sync_enter @2.557821s; no stream_compare/launch_enter/launch_return/handler_return. Code fact: fields() for handler_enter calls aclrtGetDevice/aclrtGetCurrentContext before the mark; between the handler_enter mark (binding L335) and the stream_compare mark (L344) the only runtime query is L339 getCurrentNPUStream(); the L341-344 block uses only hex/snprintf and the trace mark, and probe_trace emit is POSIX clock_gettime/getpid/getpgrp/gettid/write with no ACL calls. The block is in the handler_enter->stream_compare interval, with getCurrentNPUStream internals or the trace write as candidates and no proof which; H5K is not a valid Grouped device-path discriminator and H11 remains the matched Grouped hang cell"
     },
     "h4k_preflight": "planned: flags 24 (KEEP_ALL|DIRECT_LAUNCH), H5K-recovery root 1316176 fresh identity, h4k-small-v1 fresh out/run/restore, window d7e73514, adapter d181b15a, port 29531 preflight; 32 GO after plan increment review; H4K is a thread+sync combination and never proves context alone",
     "next_discriminators": {

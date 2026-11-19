@@ -63,6 +63,8 @@ ARMS = {
             'title': 'MatMulAllReduce (non-grouped MC2) control with torch multi-process comm'},
     'A14': {'flags': KEEP_ALL, 'native': True, 'rows': 128,
             'title': 'MatmulReduceScatter V1 AICPU MC2 control (A3-registered; full state kept until sync)'},
+    'A15': {'flags': 0, 'native': True, 'rows': 967,
+            'title': 'MRS V1 + all_gather reconstruction (bias-free, tail pad/crop, real local shape)'},
 }
 A12 = {
     'title': 'official A3 sample positive control (separate binary, fixed source from 33)',
@@ -133,7 +135,10 @@ def arm_plan(a):
                     ('direct_launch', DIRECT_LAUNCH), ('refetch_stream', REFETCH_STREAM),
                     ('memset_workspace', MEMSET_WORKSPACE)) if spec['flags'] & bit],
                 native=spec['native'], rows=rows, k=a.k, n=a.n, seed=a.seed,
-                norm=a.norm, external=False)
+                norm=a.norm,
+                bias=('nullptr' if a.arm in ('A14', 'A15')
+                      else ('bf16_zero' if a.arm == 'A13' else 'fp32_zero')),
+                external=False)
 
 
 def build_plan(a):
@@ -254,6 +259,22 @@ def prepare_out(path):
     return path
 
 
+def padded_rows(rows, world):
+    """Tail-pad M to a multiple of world for MatmulReduceScatter."""
+    if rows < 1 or world < 2:
+        raise ValueError('padded_rows requires rows >= 1 and world >= 2')
+    rem = rows % world
+    return rows if rem == 0 else rows + (world - rem)
+
+
+def row_block(rank, rows, world):
+    """Row block [start, end) that rank owns after the reduce-scatter."""
+    if rank < 0 or rank >= world:
+        raise ValueError('row_block rank out of range')
+    per = padded_rows(rows, world) // world
+    return rank * per, (rank + 1) * per
+
+
 def execute(a, plan):
     rank = int(os.environ.get('RANK', '-1'))
     world = int(os.environ.get('WORLD_SIZE', '-1'))
@@ -309,7 +330,7 @@ def execute(a, plan):
             gen_r = torch.Generator(device='cpu').manual_seed(a.seed + rank)
             weight = torch.randn(a.k, a.n, generator=gen_r).to(torch.bfloat16)
         bias = None
-        if a.arm != 'A14':
+        if a.arm not in ('A14', 'A15'):
             bias_dtype = torch.bfloat16 if a.arm == 'A13' else torch.float32
             bias = torch.zeros(a.n, dtype=bias_dtype)
         meta['inputs'] = {
@@ -351,6 +372,22 @@ def execute(a, plan):
             if a.arm == 'A14':
                 y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
                     x_n, w_n, group, world, plan['flags'])
+            elif a.arm == 'A15':
+                m_pad = padded_rows(rows, world)
+                if m_pad != rows:
+                    # Non-zero tail pad rows prove that a pad row cannot change a real row.
+                    x_mrs = torch.ones((m_pad, k), dtype=x_n.dtype, device=x_n.device)
+                    x_mrs[:rows] = x_n
+                else:
+                    x_mrs = x_n
+                start, end = row_block(rank, rows, world)
+                meta['pad'] = {'rows': rows, 'padded_rows': m_pad,
+                               'pad_value': 1.0 if m_pad != rows else None}
+                meta['row_block'] = {'rank': rank, 'start': start, 'end': end,
+                                     'padded_end': m_pad}
+                trace.emit('pad_ready', rows=rows, padded_rows=m_pad)
+                y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
+                    x_mrs, w_n, group, world, plan['flags'])
             else:
                 op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
                       else torch.ops.clef_mmar_probe.run)
@@ -369,11 +406,24 @@ def execute(a, plan):
                 reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
                                         device=reduced.device)
                 dist.reduce_scatter_tensor(reference, reduced, op=dist.ReduceOp.SUM)
+            elif a.arm == 'A15':
+                gather_begin = time.monotonic_ns()
+                trace.emit('gather_enter')
+                full = torch.empty((padded_rows(rows, world), a.n),
+                                   dtype=y.dtype, device=y.device)
+                dist.all_gather_into_tensor(full, y)
+                torch.npu.synchronize()
+                meta['gather_ms'] = (time.monotonic_ns() - gather_begin) / 1e6
+                trace.emit('gather_return', gather_ms=meta['gather_ms'])
+                output = full[:rows]
+                reference = reduced
+                dist.all_reduce(reference, op=dist.ReduceOp.SUM)
             else:
                 reference = reduced
                 dist.all_reduce(reference, op=dist.ReduceOp.SUM)
             torch.npu.synchronize()
-            output = y
+            if a.arm not in ('A14', 'A15'):
+                output = y
         if a.norm:
             from fixed_gate import evaluate
             cand = dict(zip(('y', 'residual', 'rstd'),
@@ -387,8 +437,20 @@ def execute(a, plan):
             finite = bool(torch.isfinite(output.float()).all())
             if reference is not None:
                 diff = (output.float() - reference.float()).abs()
-                meta['reduced'] = {'max_abs': float(diff.max()),
-                                   'bit_equal': bool(torch.equal(output, reference))}
+                item = {'max_abs': float(diff.max()), 'mean_abs': float(diff.mean()),
+                        'bit_equal': bool(torch.equal(output, reference))}
+                meta['reduced'] = item
+                if a.arm == 'A15':
+                    meta['equivalence'] = {'reference': 'matmul+all_reduce full rows',
+                                           'shape': [rows, a.n], **item}
+                    meta['diagnostic_gate'] = {
+                        'name': 'mrs_allgather_equivalence',
+                        'max_abs_le': 0.03125, 'mean_abs_le': 1e-4,
+                        'within_bounds': bool(item['max_abs'] <= 0.03125 and
+                                              item['mean_abs'] <= 1e-4),
+                        'provenance': ('MC2 RS probe 0.03125; Dense SP probe '
+                                       '0.015625 / 2e-5; not the fixed_gate'),
+                        'status': 'diagnostic_only_not_an_official_gate'}
         meta['finite'] = finite
         meta['wall_ms'] = (time.monotonic_ns() - begin) / 1e6
         trace.emit('result', finite=finite)

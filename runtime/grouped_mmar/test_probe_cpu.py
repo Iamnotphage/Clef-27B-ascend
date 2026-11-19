@@ -92,6 +92,28 @@ class PlanTest(unittest.TestCase):
             self.assertEqual(plan['flag_names'], names)
             self.assertNotIn('memset_workspace', plan['flag_names'])
 
+    def test_a15_padding_row_blocks_and_bias_free_plan(self):
+        self.assertEqual(run_probe.padded_rows(967, 2), 968)
+        self.assertEqual(run_probe.padded_rows(1595, 2), 1596)
+        self.assertEqual(run_probe.padded_rows(307, 2), 308)
+        self.assertEqual(run_probe.padded_rows(968, 2), 968)
+        self.assertEqual(run_probe.row_block(0, 967, 2), (0, 484))
+        self.assertEqual(run_probe.row_block(1, 967, 2), (484, 968))
+        with self.assertRaises(ValueError):
+            run_probe.padded_rows(0, 2)
+        with self.assertRaises(ValueError):
+            run_probe.row_block(2, 967, 2)
+        a = run_probe.parse_args(plan_args(self.root, 'A15'))
+        plan = run_probe.build_plan(a)
+        self.assertTrue(plan['native'])
+        self.assertEqual(plan['flags'], 0)
+        self.assertEqual(plan['rows'], 967)
+        self.assertEqual(plan['bias'], 'nullptr')
+        source = Path(run_probe.__file__).read_text()
+        self.assertIn('all_gather_into_tensor', source)
+        self.assertIn('torch.ones((m_pad, k)', source)
+        self.assertIn("'diagnostic_only_not_an_official_gate'", source)
+
     def test_out_dir_shared_by_two_ranks(self):
         import threading
         out = self.root / 'shared-out'
