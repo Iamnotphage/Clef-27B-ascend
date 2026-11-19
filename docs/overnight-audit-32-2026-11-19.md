@@ -52,7 +52,11 @@
 - 正式参数不变：80 raw/rank（AB/BA/AB/BA×10、warmup 2/臂）、固定门、NZ 参考、240 s probe、同 supervised probe PGID；hook 为 validation-only、无 vendor/系统变更、无 OPP/LD prepend。
 - 唯一命令（31 执行、240 s 不扩不重试）：
   `/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped29-20261119-v4r1-cc33/supervised_window.py --owner clef-27b-ascend-27 --expect-payload-sha 64d5a81657a60f32c9fa700efb4035a3c653fcb3075381eb960e78691dd3812c --run-dir /workspace/yangchen/logs/grouped29-first967-owner27-20261119-v4r1 --execute`
-- 设备执行（20 排程、S1 退出后）：outer `/workspace/yangchen/logs/owner31-outer-grouped-20261119T003655Z`；结果原件待核（见第 8 节）。
+- 设备执行（20 排程、S1 退出后，**失败、不重试**）：outer `/workspace/yangchen/logs/owner31-outer-grouped-20261119T003655Z`；run `/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v4r1`，window `e785336e…`、overall_rc=1。
+  - preflight/stop/apply ok；probe rc=−9、timed_out=true（00:37:00→00:41:00Z，240 s 上限）；cleanup killed leader 1255353、unknown 1255354/1255361/1255362（unattributed group member）、residual []、reaped=true；revert ok；restore rc=1、action=blocked_probe_residual，无 restore.json。
+  - 两 rank first-call trace（rank0 `b2360475…`、rank1 `3fdfe026…`）均止于 `final_sync_enter`，无 `final_sync_return`/`first_call_complete`；prepare/workspace（16 MiB，274/283 ms）、launch、handler 均 rc0；candidate 无落盘、error=null、performance_valid=false；首调用墙钟 baseline 84.8/84.1 ms、nd_native 13.86/13.85 ms。
+  - 归因（33 plog，引用）：RUNTIME `SynchronizeExecutedTask` 3 分钟看门狗在 stream 47/task 36 pending（入队后 +180 s），无 AICore trap、无 HCCL 错误 → 设备侧完成等待（kernel/MC2 通信）未返回；host 侧无失败。
+  - 恢复前置（我独立 fresh 复核）：4+1 PID 全 gone、18143 connect_ex=111、无 probe/vllm/torchrun、source f810、guard 76595657、卡7 无进程。`fresh-inventory.json` `101df87c…` 的 `no_probe_like=false` 为采集 shell（1256404，含 run 路径）自匹配，该 PID 已 gone。
 
 ## 5. 最终验收：phase first clean 切换 + f810 正式 S1 三轮
 
@@ -73,6 +77,9 @@
 - 独立复跑 CPU：25 tests OK（1 skip）+ 真实 base FrozenManifestTest OK；真实路径 plan-only deploy rc0。
 - 执行注意：`--ab-code` 必须为 `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime`；真实 deploy 用 f810 S1 最后 supervision（clients_exited=true）作 `--prior-client-record`；candidate restore 用候选 S1 自己最后 supervision；远端部署仓库 HEAD 3e83ae1 不含 640ac23，stage 按文件 SHA 冻结执行。
 - 结论：ready，无阻断修复；待 31 设备执行后核实际 raw。
+- 31 外层组合脚本（本机 `/tmp/owner31_candidate_s1.sh`，SHA `78be7737…`）已有限核：只顺序调用两条冻结入口（deploy → v5 → restore），无 kill/pgrep/signal/source 写；deploy 失败不 restore、v5 非 0 仍 restore、restore 的 unknown/blocked 由 entry 记录。GO 条件：OUT 全新；`--current-restore` 用本次恢复 restore.json+fresh SHA；deploy prior=f810 supervision `1da03a19…`；v5 后 restore 前确认候选 supervision `clients_exited=true`；外层 rc0 仅代表 deploy+restore，S1 看 v5.rc/acceptance.json。
+- 恢复驱动（`/tmp/owner31_clean_restore.py`，SHA `ffd75bd6…`）已有限核：只 import ebca source-control（a1c502）调用未改 `restore_prod()`（clean 两键、原 launch/wait、d0 discover+四检、OPP/LD 对 12933 B/`fcbdcbf1…` 逐字节），无 stop/signal/source/guard 写；run-dir 必须不存在。驱动自身无端口/进程/source 前置门，故执行前紧邻 fresh 四查并保留 `fresh-inventory`/原 window/原 record 绑定。
+- **已发生的具体 finding（调用参数，非代码缺陷）**：31 首次候选 deploy（OUT `owner31-candidate-s1-20261119T0048Z`）0.5 s 内 rc1，`stage_candidate()` 报 `FileNotFoundError: .../joint-fused-5c045eb/runtime/apply_joint_service_check.py`。原因：`--repo` 用了 5c045eb，而 stage 需要 ebca bundle 根的 `runtime/{apply_joint_fused_attention.py, apply_joint_service_check.py, joint_fused_attention/, joint_service_check/}`。正确 `--repo=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`；该处四件与 d0 六件 SHA 全部命中 pin（b09cd602/1ed35f0a/aa3e1758/36eaff44）。失败发生在停服前：未发信号、source/guard 未动，服务五 PID 仍存活，prior/current-restore 仍有效；重跑用全新 OUT 即可。
 
 ## 7. 环境事实（最终验收清单）
 
@@ -81,9 +88,10 @@
 
 ## 8. 未闭合项
 
-- Grouped29 v4r1 设备首格 raw（80/rank、门、NZ、240 s、同 PGID、恢复四检）——执行中，待只读核。
+- Grouped29 v4r1：已按 240 s 单次执行并超时，无 candidate raw；结论为设备侧 final_sync 等待（见第 4 节），不重试、不采用。
+- Grouped 后一次 clean 恢复（8 节续）：`/workspace/yangchen/logs/owner31-grouped-recover-20261119T0044Z/restore-run`，driver rc0、complete ok=true、label `d0-restore-20261119T004611Z-cec60d1c`、五 PID；restore.json 四检全 ok（SHA `4e022bce…`）；envcompare match=true（OPP 9 `7b79c5db…`/LD 12 `ca27dbb7…`，expected 12933 B/`fcbdcbf1…`）；live 服务 clean env、source f810、guard 76595657、卡7 双 worker。
 - S2 b8/b16 完整扫描、ERQA 400 与最终最佳服务恢复——待 31 执行。
-- cc34 candidate 正式 S1 三轮与 finally restore——待 20 排程、31 执行。
+- cc34 candidate 正式 S1 三轮与 finally restore——已 GO（绑定 `4e022bce…` restore + `1da03a19…` prior），待 31 执行后核 3×2352 raw/质量/P95 对新基线 156.4051。
 
 ## 9. 本地核对副本
 
