@@ -937,6 +937,16 @@
 - **32 结论不变**：window restore 未发起；人工唯一 restore 按人工口径闭合但带 ppid 偏差与引用型证据缺口；archive rc1 不完整；H11 为 sync 挂起复现；`result.json api_returned=false` 仍按初始快照解释（8.121）。
 - F1–F6 CPU 修复方案属 20 决策项；当前无产品/包改动、无设备、无新 GO。
 
+## 8.123 bce9ce2 增量：9-check 当前复核、outer argv 语义、marker 12/12（2026-11-19，无 GO）
+
+- **固定件**：31 commit **bce9ce2**，证据 SUMS **1aae8f57e27b4dc363279d889856cb438577483ffda5bc57e70a591bdbefba9e（38/38 OK、自哈希一致）**；相对 80c73d9 仅 README/SUMS 修改，21 个原 attempt2 原件未改写。
+- **9-check/五 PID 缺口（增量关闭，性质=当前复核）**：`recheck-9checks-current-20261119T151015Z.json`（schema `h11-restore-recheck/1`，`sampled_at_utc=2026-11-19T15:09:22.210186+00:00`，note 明示 CURRENT-MOMENT、非恢复瞬间）含 `checks` **9/9 true**、`pids=[1355077,1355208,1355209,1355231,1355232]`、health/info/text/image 原始返回、root 身份（ppid 1355076、pgid/sid 1355077、starttime 401718579、boot）与 wrapper 1355076 cmdline。**不再仅有记录引用**；但仍非首次恢复瞬间历史原件。
+- **outer restore argv（缺口收窄）**：wrapper `/proc/1355076/cmdline`（15:09:22Z 采样）为 `bash -c C=…; env -i PATH=… CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c "cd … && source activate_env.sh && exec bash start.sh --model-dir … --output-dir …" > … 2>&1; echo restore_exec_rc=$? >> …`；剥离 shell 包装/重定向并重拼 inner -c 后 `head[0:7]` 与 `[7]` 均等于 plan `restore_argv`，**semantic match=true**。无独立历史启动脚本，不补造；ppid≠1 偏差保持。
+- **marker 12 原件（已本地复核）**：MANIFEST 12 条；6 个 debug plog `.gz` 逐条 gunzip 后 SHA256/大小与 MANIFEST 全部一致，**12/12 OK**。重算命中行数/文件数与报告完全一致：`AicpuKfcRpcServer::Init addr` 2/2、`KFCtaskAndTiling` 4/4、`AivAicpuOpParam` 4/4、`RunAicpuKfcSrvLaunch` 8/6、`stream_id=47` 451/8、`task_id=` 761/8；`ReadValidMsg[`/`ReadValidMsg timeout 6s`/`Check msg equal failed`/`ReadAddrMsg`/`TwoStage`/`PostMsg`/`507046` 等均 0。
+- **marker 解释边界**：可证两设备均出现 AICPU KFC RPC server init 与 KFC task/AivAicpuOpParam/RunAicpuKfcSrvLaunch 标记；**不能**据此证明完整 KFC message/read 路径或挂起根因（多个关键标记 0 命中，0 命中≠路径排除）。stream/task 活动跨度 14:49:05.110→14:52:06.287，**结束于 SIGTERM（14:52:59.6）前约 53 s**，最后约 53 s 无 marker 活动。
+- **结论不变**：window restore 未发起；人工唯一 restore 按人工口径闭合（9/9 现有当前复核原件，ppid 偏差保留）；archive 仍 92 文件、SUMS 52d145ee、probe-temp 缺失、end rc1 **不完整**；H11 为 sync 挂起复现（API 已返回/handler rc0/sync 未返回），无数值、无 A/B；包 8ecf8f9/bed3a6e6 未改；无新 GO、无设备。
+- 35 已获 CPU 候选实现授权（默认总 settle 30 s，不动远端/设备）；待其固定 commit 后我只读增量审代码/fixture。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
