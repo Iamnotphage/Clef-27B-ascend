@@ -275,6 +275,7 @@
 - **仍未满足**：plan success 不含 A12 `[ERROR]`/retcode/线程完成日志门（P0-3），无实际 maps 要求（P0-4）；window `e55fcc00` 的 restore 仍 `subprocess.run`、stop 失败绕过 finally、restore_output 非 fresh（P0-1/2/5）——代码级，plan-only 不能证明修复。
 - **P1 新增**：clean_expect 仅比 OPP/LD 并记录路径；需 gate 其 service_environment == 冻结 `7b79c5db…`/`ca27dbb7…`（或提供该 launch-manifest 本地副本/SHA），否则可换文件放宽。
 - **GO=否**；等 35 修复版新 commit → 31 重 stage+plan-only → 32 核 diff/SHA、CPU 复跑、restore/A12 日志门/maps 后重给 GO。服务在线未动。
+- 本地 a12-preflight 目录核验：5 文件、SHA256SUMS **5/5 OK**（clean-env `fcbdcbf1…` 12,933 B）；但本地只有旧 plan `97ae37df…`，**plan-v2 `0482225e…` 无本地副本**——已请 31 在最终窗冻结后把最终 plan/window/manifest/stage 写入本地目录并更新 SUMS，再核。
 
 ## 8.19 监督窗 P0/E 复审（d619501 + 7e1cf51）
 
