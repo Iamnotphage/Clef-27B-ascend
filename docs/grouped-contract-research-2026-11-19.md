@@ -1695,3 +1695,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - `preflight-rescan.sh` 覆盖 stop/source/body/frozen SHA，但**未检查 torchrun 可解析性**——清单缺口。
 
 **后续候选（不改包/不重跑）**：启动 shell PATH 前置 venv bin，或 child_argv 用绝对 `torchrun`；preflight 增加 `command -v torchrun`/绝对路径可执行检查。本次无算子/分派证据，不排除任何支路；静态 ABI（§78/§80/§91）与 §15 结论保持；无新增 GO/设备动作；root cause 仍 unresolved。
+
+## 95. attempt-1 原件归档与包身份 pin 缺口（3d54f70 / 953eb2d）
+
+**证据归档（31）**：commit `3d54f70`，`h11-observe-v1-cell-attempt1/` 14 文件，SUMS `f3733350…`（本地 `shasum -c` **14/14 OK**）；新增 `original-artifacts-manifest.txt`。远端 cell `run-h11-observe-v1`：window.json `6060e263…`、stop.json `0bbc14bd…`、child.stdout/stderr/stop.log/restore.log 均空（`e3b0c442…`）；`descendants.json`、`probe-temp/probe-out` **ABSENT**（无 rank/probe 直接证据）；restore 证据 joint-patch-record `a31ad8ce…`、launch-manifest `431d6105…`、service.log `cba4f8b5…`；archive `archive-h11-observe-v1` 51 文件 SUMS `4fbf9653…`。仓库 window/stop 副本与远端逐字节一致。
+
+**35 发现的身份 pin 过期（就绪缺口）**：
+- 953eb2d 的 `preflight-rescan.sh` 仍 pin 旧基线：pid `1337814`、starttime `400405818`、pgid/sid `1337814`、PID set `1337814/1337961/1337962/1337979/1337980`；
+- `README.txt` 第 10/67 行、`planonly-rerun-output.json` 第 5/7/8/17 行同样写旧 root `1337814/400405818`。
+- 当前实际 restore root **1347086 / starttime 401212026**、五 PID `[1347086,1347229,1347230,1347258,1347259]`。
+- 后果：**即使 torchrun PATH 修好，preflight 也会在 identity/starttime/PID-set fail-closed**，包按现状不能对当前服务通过预扫。
+- 处理（下次授权前，二选一）：①重新生成 plan/preflight（新 identity）；或 ②doc-only 把 identity 块、README、planonly 输出一起更新到 `1347086/401212026`（或对新的 restore 基线重生成）。本次不改包/不重跑。
+
+**预扫缺口（与 §94 一致）**：仅 `pgrep` 残留检查，未做 `command -v torchrun`/绝对路径可执行校验；后续候选加该项 + 启动 shell PATH 前置 venv bin 或绝对 `torchrun`。
+
+**状态**：本格无算子/分派证据，不排除支路；静态 ABI（§78/§80/§91）与 §15 保持；无新增 GO/设备动作；root cause unresolved。下次执行前必须先修复 PATH 与 identity pin 两处，再 fresh preflight。
