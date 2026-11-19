@@ -77,8 +77,8 @@
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "b83171ba79c9037c0c4b9d5d0431cc8b48ede0866ae1ed86ea53fbb0167febff",
-      "bytes": 12244
+      "sha256": "249926169660d78be61789a8de4a9ca9e5cefcde39b501ab64abc74d516c34f5",
+      "bytes": 21667
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -92,8 +92,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "e9dbe51bfc479892dbf9b1be24de00afbb417cf19612eeebd63cf81e06134c7b",
-      "bytes": 42853
+      "sha256": "6f750027e9423f1ab6fae1882127772a0ebbe568d03122c3d9960ed18495c12c",
+      "bytes": 46046
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -488,9 +488,9 @@
   },
   "abi_turn_analysis": {
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
-    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer 0x7d6838-50), libccl 2281deca, abi4 GetSendRecvCnt",
+    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer candidate 0x7d6838-50), abi-preflight8 SUMS d2a4043ba4d3b13e4e7254fe5c31d2f93c7e229dbd6b260fe3e790aba290fa79 (PostMsg windows), abi-preflight9 SUMS 809265364caa52ce0114bcce089d5bdd7f7c33278cb0f384f4fd741a0c99a7a9 (correction plus getters/Init4/ctx windows), abi-preflight3 disasm-RpcSrvLaunch.txt SHA d92fee9d517c178fc7b9513cfff3249334df29bd173df429d6c66134e25c95dc, libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "b83171ba79c9037c0c4b9d5d0431cc8b48ede0866ae1ed86ea53fbb0167febff",
+    "design_sha256": "249926169660d78be61789a8de4a9ca9e5cefcde39b501ab64abc74d516c34f5",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
@@ -503,19 +503,25 @@
       "exact alias sets (S==C): 8-byte words at S+0x4008+64t and S+0x5008+64t; send hits iff j in union [0x3FD6+64t,0x3FDE+64t) (+0x1000 for the second array); recv iff j+64T in union [0x3FD5+64t,0x3FDD+64t) (+0x1000); T is a fixed u16 and only adds multiples of 64",
       "byte-width correction: ReadApiValidMsg gate/consume are 4-byte words at [slot+48,slot+52), physically covering +50/+51 (gate 0x5CDF123A LE 3A 12 DF 5C; consume 0xA320EDC5 LE C5 ED 20 A3); no independent byte counter store is observed",
       "GenMsgByTaskParam writes struct+44 valid 0x5CDF123A, +48/+49 bytes, and a u16 0x1234 at +50 covering +50/+51; CopyAndCheckApiMsg copies 64 bytes as a bulk operation, also covering those bytes",
-      "abi7: installed headers lack CommKfcParamDesc/KFCTask (no compile offsetof); 0x5CDF123A has no data-word hit and is an instruction immediate at 0x797978/0x7980f0/0x7d53f0/0x7d6f44/0x7d71dc/0x7d7344/0x7d7f0c/0x7db884/0x7dbc30; the only writer found is 0x7d6850 str w4,[x0,#44] in an unexported function between Init(y) and WriteFinish; Grouped op-info/kernel json and .o strings contain no rac_server/TurnWait/TurnNotify"
+      "abi7: installed headers lack CommKfcParamDesc/KFCTask (no compile offsetof); 0x5CDF123A has no data-word hit and is an instruction immediate at 0x797978/0x7980f0/0x7d53f0/0x7d6f44/0x7d71dc/0x7d7344/0x7d7f0c/0x7db884/0x7dbc30; 0x7d6850 was a local +44 writer candidate, NOT a uniqueness result (GenMsgByTaskParam also writes the same magic at +44); Grouped op-info/kernel json and .o strings contain no rac_server/TurnWait/TurnNotify",
+      "abi8: 0x7d67f4-0x7d67fc are nops; the +44/+51 writer is AicpuKfcRpcServer::PostMsg(uint) 0x7d6800 (_ZNK17AicpuKfcRpcServer7PostMsgEj). Entry x0=this; 0x7d6828 ldr x0,[x0,#24] makes dest=*(void**)(this+0x18); the body stores only dest+44 (4B 0x5CDF123A=valid) and dest+51 (1B strb w1=rcvCnt); no +48/+49/+50 store. w1 is not modified inside PostMsg; callers 0x7c7f44 (w1=[ctx+352]-1) and 0x7c7f90 (w1=[ctx+352]) in RunRpcServerTwoStageWait; strb truncates to the low 8 bits (mod 256, 0-1 -> 0xFF). Order is +44 then +51 with no barrier between; the only dsb st is at 0x7d6884 after PrintMsg/dispose; no stlr. PrintMsg body is not fetched, so a write to dest there is not excluded",
+      "abi8 source semantics: rac_server.h AivAicpuOpParam offsets valid+44 (u32), isLast+48, funID+49, sendCnt+50, rcvCnt+51, everyTurnRsp+52, everyTurnWait+53, totalTurnCnt+54, res[9]+55..63; AC_MSG_VALID_MASK=0x5CDF123A and ~mask=0xA320EDC5; TurnNotifyRunSetMsg sets sendCnt=curTurn and valid=mask; TurnWait polls rcvCnt>=totalTurn then clears rcvCnt=0 and sets valid=~mask. PostMsg therefore writes the AICPU response: valid mask at +44, rcvCnt=(u8)turn at +51",
+      "abi8 conditional same-byte: Init4 zero branch ([server+816]=*(u64*)(KFCTask+40)==0) writes server+0x18=C+j+64T (C=[ctx+184], j=u32[ctx+192], T=u16[ctx+196]); GetRecvCnt reads C+j+64T+51, so dest+51 and the rcvCnt byte are the same byte iff P1 PostMsg this == the Init4 server object, P2 zero branch, P3 no later writer of server+0x18, P4 same ctx. Non-zero branch writes only server+8, so no relation. The gate's slot+48 equals the valid word at dest+44 iff j+64T=64turn+4 (slot=dest-4), unproven",
+      "abi8 widths in CheckRcvWorkMsg: 0x7d73b8 ldrb [x19,#50] (u8 zero-extended) vs 0x7d73bc ldr w1,[sp,#36] (u32; [sp,#36]=w3 saved at 0x7d7298, call passes w3=[ctx+352] at 0x7c7f10); cmp at 0x7d73c0, b.cs at 0x7d73c4. ctx+352>255 never satisfies the unsigned >=; the loop runs to the 6 s budget (x24=0x1_65a0_bc00 ns) and the timeout path reaches the same continuation 0x7d7450 (0x7d7414 tbz w0,0x7d7450) -> a 6 s delay, not a deadlock",
+      "address arithmetic: 0x7618dc adrp x23,0x191f000; 0x761918 add x0,x23,#0xd00; 0x761928 add x0,x0,#0x10; 0x76192c bl Init4 -> server_A=0x191fd10. 0x191fd00 is the enclosing struct base (counter [x2,#4], x25). 0x7620b4 add x23,x23,#0xd00 is a post-Init error/log block; local CFG over disasm-RpcSrvLaunch.txt (SHA d92fee9d) shows its exit 0x7620ec b 0x7614a4 and 0x7614a4 -> 0x76153c ret without reaching 0x761904/0x76192c, so 0x1920a10 is not used (direct branches plus blr fallthrough; no br)",
+      "abi9 correction: 0x76187c str wzr,[x28,#352] is a real ctx+352 clear (x28=AicpuGetComContext() at 0x7615ac/0x7615b0); the first abi9 summary negative was a grep truncation artifact; 0x7608c8 is another clear; the incrementing writer is still unlocated. The field labeled ctx+0xf31dc is actually ctx+0xF31BC: x26=x28+0xF0000 at 0x761654 (x28 written once), ldr w0,[x26,#12732] at 0x761848/0x761978, and 12732=0x31BC; 0x31DC=12764 appears in no instruction (scope negative). TwoStageWait is taken iff (v&~2)==1 (0x761978/984/988/990) with x1=0x191fd10. ReadAddrMsg's [x27,#12784] is ctx+0xF31F0 (x27=x23+0xF0000, x23=ctx). Cross-function ctx identity is unproven (CopyCtxInfo shows multiple contexts)"
     ],
     "unproven": [
       "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
       "whether C+j+50/51 intersects S+0x5008+64*t for the actual j/t (dynamic byte-range alias not established or excluded)",
       "which Init overload/branch the Grouped path uses (call sites absent)",
       "semantic intent of the WriteFinish constant vs the incremented counter at the same address",
-      "ctx+0xf31d turn: no reference in abi5, so it cannot be equated with rcvCnt",
+      "ctx+0xf31dc has no instruction in abi3-abi9; the closest real field is ctx+0xF31BC (u32, from 12732=0x31BC), whose value/copy-source semantics are unlocated; ctx+352 has literal clears but no incrementing writer",
       "AivAicpuOpParam population (33 consumer chain)",
-      "whether the ReadAddrMsg slot pointer equals the AivAicpuOpParam base or base-4 (GenMsg and the abi7 writer put valid at +44 vs ReadApiValidMsg gate at +48); no full-library store/alias/wide-write survey exists, so a unique +50/+51 writer claim is retracted",
-      "the identity/caller of the unexported writer 0x7d6838-0x7d6850; compiled layouts because the installed headers lack CommKfcParamDesc/KFCTask"
+      "whether the ReadAddrMsg slot pointer equals the AivAicpuOpParam base or base-4 (GenMsg and PostMsg put valid at +44 vs ReadApiValidMsg gate at +48); equality requires slot=dest-4, i.e. j+64T=64turn+4, unproven; no full-library store/alias/wide-write survey exists, so a unique +50/+51 writer claim is retracted",
+      "PostMsg premises: whether its this (TwoStageWait's second arg; 0x761994 passes x1=0x191fd10) is the same server_A object (callee prologue and callers not in windows), who else writes server+0x18, and whether AivAicpuOpParam::PrintMsg writes dest; compiled layouts because the installed headers lack CommKfcParamDesc/KFCTask"
     ],
-    "request": "abi6 resolved Init call sites and ctx 184/192/196; abi7 shows the headers are absent and the only 0x5CDF123A writer is 0x7d6850 (+44). Remaining: binary-derived AivAicpuOpParam layout, the slot-vs-struct base relation, identity/caller of the local writer 0x7d6838-50, which server object/branch the Grouped path uses (the two Init sites target +0xd10/+0xcf0), and a full store survey only if a unique-writer claim is needed; 33 merges and 31 remains the sole remote fetcher"
+    "request": "abi6 resolved Init call sites and ctx 184/192/196; abi7 gave a local +44 writer candidate (superseded, not uniqueness); abi8 identified PostMsg 0x7d6800 and proved dest=*(this+0x18), the +44/+51 stores, w1 truncation and the write order; abi3/CFG prove server_A=0x191fd10 and exclude 0x1920a10; abi9 corrected the ctx+352 clear and gave the ctx+0xF31BC expression. Remaining: the TwoStageWait callee prologue (is x19=arg2?), its callers and which server they pass, other writers of server+0x18, the AivAicpuOpParam::PrintMsg body, which server object/branch the Grouped path uses, and the ctx+0xF31BC semantics; 33 merges and 31 remains the sole remote fetcher. No new full-library store survey, no cross-DSO search, no device action"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
