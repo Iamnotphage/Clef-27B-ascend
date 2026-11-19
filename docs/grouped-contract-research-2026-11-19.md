@@ -660,7 +660,7 @@ return *(u8*)(base + 51);
 ```
 - **已证**：`+50` 是 **sendCnt**，`+51`（槽位索引 = `ctx[196]`，即 rank 数）是 **rcvCnt**；两者都位于 `ctx[184]`（工作区指针）+`ctx[192]`（偏移）指向的共享区；`ctx[196]`（u16）是 rank 数/64 字节槽位跨度。
 - **纠正**：ReadWorkMsg/CheckRcvWorkMsg 比较的 **`opParam[50]` 是 sendCnt，不是 rcvCnt**；`ctx+0xf31d4` **不是接收计数**，而是 **turn 计数器（0..63 环形）**——RunRpcServerApi 入口清零、每处理一条消息 `(turn+1)&0x3f` 写回，AddTask 传给 `CheckRcvAddrMsg` 的是 `turn+1`。
-- **仍缺写者**：已交付函数中没有任何 `+50/+51` 的写指令（仅 getter 读）；写者只可能在 `ReadAddrMsg 0x7d8b6c`、`WriteTurnCnt 0x7d69a0`、`WriteFinishWhenAllFinalize 0x7d68ec`、`RcvMsg 0x7d8000`、`Init 0x7d66f0`、`CopyAndCheckApiMsg 0x7d6ae4`、`CheckRcvAddrMsg 0x7d7624`，或 host/runtime/TS 侧写共享工作区（后者不能由 libccl 反汇编证否）。
+- **仍缺写者**：abi5 时已交付函数没有**独立** `+50/+51` 写指令；abi6 的 `GenMsgByTaskParam` 以 `u16 0x1234` 覆盖 `+50..+51`（常量初始化），整字/整块拷贝也覆盖这些字节。普通递增写者仍可能在未交付函数或 host/runtime/TS 侧写共享工作区（后者不能由 libccl 反汇编证否）；**不能以字面 store 偏移搜索断言全 libccl 唯一写者**。
 
 **`RunRpcServerApi` 0x7b3704（API 路径主循环）**：
 - 入口要求 **`ctx+0xf31dc == 2`**，否则返回 1；清零 `ctx+0xf31d4`；`w=ctx+0xf31f8+1` 写入所有 context 的 `+0xf31f8`（epoch）；置 `ctx+0xf31d1=1`、`ctx+0xf326c=1`。
@@ -717,8 +717,8 @@ return *(u8*)(base + 51);
   - 另有 10001 次迭代检查 `0x7d8c8c mov w0,#0x2711` / `0x7d8c90 cmp w20,w0` / `0x7d8c94 b.eq 7d8ef8`，到期只重置计数并继续，不构成返回上界。
   - 180 s runtime 超时落在 160 s 与 320 s 两个阈值之间，**仅作假设兼容性**，保留“无本格路径证明”。
 - **CheckRcvAddrMsg(HcclMsg*, turn)** 0x7d7624：仅 `ReadApiValidMsg(server, msg, server[8]+turn*64, false)`，无计数器逻辑。
-- **CopyAndCheckApiMsg** 0x7d6ae4：`memcpy_s 64 B` → `GenXor` 校验 `+60` → `dsb` → `memcmp(dst,src,64)`；只做撕裂读保护/校验，**不读写 +50/+51**。
-- **RcvMsg(opParam, idx, bool)** 0x7d8000：槽位 `server[0] + 776*turn + 49664*idx`（776=0x308，AivAicpuOpParam 大小），`NeedAutoGenMsg` 为真时 `GenMsgByTaskParam` 生成并 `server+800++`；`opParam[48]!=0` 时置 `server[0x220+idx*4]=1`；`turn=(turn+1)&0x3f` 回写 `server[8+idx*4]`。无 +50/+51 直接访问。
+- **CopyAndCheckApiMsg** 0x7d6ae4：`memcpy_s 64 B` → `GenXor` 校验 `+60` → `dsb` → `memcmp(dst,src,64)`；只做撕裂读保护/校验。**按覆盖字节计**：64 B 拷贝覆盖 `+48..+51`（含 +50/+51），但无独立 counter 字节逻辑；不能表述为“不访问 +50/+51”。
+- **RcvMsg(opParam, idx, bool)** 0x7d8000：槽位 `server[0] + 776*turn + 49664*idx`（776=0x308，AivAicpuOpParam 大小），`NeedAutoGenMsg` 为真时 `GenMsgByTaskParam` 生成并 `server+800++`；`opParam[48]!=0` 时置 `server[0x220+idx*4]=1`；`turn=(turn+1)&0x3f` 回写 `server[8+idx*4]`。没有**独立** +50/+51 字节操作；生成的 776 B 槽与整块拷贝会覆盖这些字节。
 - **WriteTurnCnt(turn)** 0x7d69a0：`[server+8]+0x4008+64*turn` 写 8 B 零；`[server+8]+0x5008+64*turn` 读 u64、+1、写回、`dsb`。
 - **WriteFinishWhenAllFinalize(turn)** 0x7d68ec：`[server+8]+0x5008+64*turn` 写 8 B 常量 `0x112210f6ca9997ff`、`dsb`。
 - **ReadApiValidMsg 0x7d6f20（0x2ac）未交付**——它是 ReadAddrMsg/CheckRcvAddrMsg 的唯一实际判定函数，也是目前最可能的 `sendCnt` 读/比较与 `rcvCnt` 写回点。
@@ -779,7 +779,9 @@ return *(u8*)(base + 51);
 - **唯一 gate**：`u32[slot+48] == 0x5CDF123A`（0x7d6f3c-0x7d6f50）；不匹配 → `TraceProfSubmit` 并返回 `rc != 0`（通常 0）。
 - 匹配 → `CopyAndCheckApiMsg(server,out,slot)`（0x7d70e4；64 B 拷贝 + GenXor(+60) + memcmp）；失败 → 0。
 - consume=true → **`u32[slot+48] = 0xA320EDC5`**（0x7d7118-0x7d7124，消费标记）；随后 `CheckDebugMode(out)`、`dsb st`、返回 1。consume=false 不写消费标记。
-- 本函数无 +50/+51 访问；本层无 sleep/显式等待（4 处 syscall 均为 gettid 178）；深层 `CopyAndCheckApiMsg`/`DlogRecord`/`TraceProfSubmit`/`CheckDebugMode` 耗时未知。
+- 本函数按 **valid 整字**操作：`0x7d6f40 ldr w1,[slot+48]`（4 B，覆盖 48–51），consume 时 `0x7d7118-0x7d7124 str w1,[slot+48]`（4 B，同覆盖）；**没有独立 +50/+51 字节操作**，但这两个字节被整字覆盖。35 字节表（`abi_turn_fields.md` 34cb1388）与本节一致：GenMsg `+44 str 4B`、`+48/+49 strb`、`+50 strh 2B`；`CopyAndCheckApiMsg` 是 64 B bulk；getter 是 1 B。
+- `slot`（gate +48）与 `AivAicpuOpParam`（GenMsg valid +44）的基址是否同一对象、是否恰好相差 4 B **未证**；仅可记“4 B 位移的外观”，不推断布局冲突或同一 buffer。
+- 本层无 sleep/显式等待（4 处 syscall 均为 gettid 178）；深层 `CopyAndCheckApiMsg`/`DlogRecord`/`TraceProfSubmit`/`CheckDebugMode` 耗时未知。
 
 ### 63.2 GenMsgByTaskParam（0x7d7e20，AivAicpuOpParam 生成）
 
@@ -795,15 +797,15 @@ return *(u8*)(base + 51);
 ### 63.4 Init/ctx 构造链（31 交付）
 
 - 4 参 `Init` 调用点 **0x76192c**（RunAicpuRpcSrvLaunch）：`x0=server r23+0xd10`、`x1=[ctx+184]`、`w2=[ctx+192]`、`w3=ldrh[ctx+196]`、`x4=KFCTask*`。
-- `Init(y)` 调用点 **0x7b67c4**（`AicpuKfcProcess::AicpuRunRpcServerForApi`）：`x0=server x20+0xcf0`、`x1=[ctx+184]` → **不同 server 对象**。
+- `Init(y)` 调用点 **0x7b67c4**（`AicpuKfcProcess::AicpuRunRpcServerForApi`）：`x0=x20+0xcf0`、`x1=[ctx+184]`。**两个调用点的 this 构造式不同（r23+0xd10 vs x20+0xcf0）；r23/x20 的基址来源尚未追，不能仅凭偏移差断言是不同对象**——对象身份未证。
 - `ctx+184` 写者 **0x7b9f50**（AicpuRpcResInit 区）；`ctx+192` 写者 **0x76182c**（`*(u32*)(KFCTask+96)`）；`ctx+196` 写者 **0x761834**（`*(u16*)(KFCTask+100)`）；`ctx+198=KFCTask+102`；`ctx+168=KFCTask+72`。
 - ResInit 0x760468 仅 `*(HcclCombinOpParam**)arg → AicpuRpcResInit`；ResInitV2 0x754568 走 `AicpuRpcResInitV2(HcclOpResParam*,byte)` 或 `hrtSetWorkModeAicpu(1)`。
-- 4 参零分支把 C 存 `server+0`、`y+j` 存 `+0x10`、`y+j+64T` 存 `+0x18`；只有 `Init(y)` 或非零分支写 `server+8`。两个 Init 调用点对象不同（0xd10 vs 0xcf0），故 **S=C 需同一对象 + Init(y)（或非零分支），未证**。
+- 4 参零分支把 C 存 `server+0`、`y+j` 存 `+0x10`、`y+j+64T` 存 `+0x18`；只有 `Init(y)` 或非零分支写 `server+8`。两个调用点 this 构造式不同（0xd10 vs 0xcf0）但**对象身份未证**，故 **S=C 需同一对象 + Init(y)（或非零分支），未证**。
 
 ### 63.5 模型修正
 
 - API 路径等待条件 = **slot+48 的 valid 魔数**，不是 sendCnt/rcvCnt；因此“rcvCnt 永不递增导致 Grouped 挂起”这一具体机制**不成立于 API 路径**。
-- rcvCnt 的普通递增不在已交付 libccl；`rac_server.h` 显示 AIV 侧只在 TurnWait 归零；+50/+51 的 libccl 写者仅 GenMsgByTaskParam 常量初始化。
+- rcvCnt 的**普通递增**未在已交付函数中出现；`rac_server.h` 显示 AIV 侧只在 TurnWait 归零。已交付函数中对 `+50..+51` 的覆盖来自 `GenMsgByTaskParam` 的 `u16 0x1234` 常量以及整字/整块拷贝；**字面 store 偏移搜索不能证明全 libccl 唯一写者**。
 - 若 Grouped 走 AIV `rac_server` 协议，则需 AIV 侧证据（未交付）；若走 API 路径，则需 HcclMsg 生产者证据（未交付）。Grouped 实际 server 对象/Init 分支/协议路径仍未证；180 s 仅相容。
 
 ## 64. 最小路径判别方案（CPU/只读设计，不执行设备）
@@ -812,17 +814,58 @@ return *(u8*)(base + 51);
 
 | # | 观测点 | 现有证据 | 尚缺字段 | 可区分假设 | 最低成本取证 |
 | --- | --- | --- | --- | --- | --- |
-| OP1 | Grouped launch 描述符 | SrvLaunch 0x763108 的 desc nibble/sub 分支；A12 样例入口 `aclnnGroupedMatMulAllReduce` | `CommKfcParamDesc` 位域；Grouped 实际 desc/sub；`KFCTask+96/+100` 来源 | CommKfcDispatcher / RpcSrvLaunch / MC2 V1/V2 | CANN 头文件 + host 侧 aclnn 实现的静态符号/源码 |
-| OP2 | server 对象 | 两 Init 调用点 0x76192c(0xd10) / 0x7b67c4(0xcf0)；RunRpcServerApi 只用 0xd10 | `AicpuRunRpcServerForApi` 的调用者与选择条件 | Grouped 走 0xd10 还是 0xcf0 | nm start/size + 直接 callers（grep bl），不整段反汇编 |
-| OP3 | Init 分支与 j/T | 零/非零分支读 `u32[*(task+40)]`；j/T 写者 0x76182c/0x761834 | KFCTask 偏移 40/96/100 的类型/语义；host 填充值 | zero 分支（S 未设）/nonzero（S=y）；j 大小；T=rank 数？ | 头文件 + host tiling 代码；offsetof 仅作假设，需与指令对齐 |
-| OP4 | HcclMsg valid 生产者 | ReadApiValidMsg gate +48=0x5CDF123A、consume 0xA320EDC5；GenMsg 只写 AivAicpuOpParam +44 | 谁写 64 B HcclMsg +48；Grouped 是否使用该 API 区 | host 发布 API 消息 / 不发布（ReadAddrMsg 空转） | 在 host 库静态搜索 0x5CDF123A 的 mov/movk 或数据；读 aclnn Grouped 实现 |
+| OP1 | Grouped launch 描述符 | SrvLaunch 0x763108 的 desc nibble/sub 分支；A12 样例入口 `aclnnGroupedMatMulAllReduce` | `CommKfcParamDesc` 位域；Grouped 实际 desc/sub；`KFCTask+96/+100` 来源 | CommKfcDispatcher / RpcSrvLaunch / MC2 V1/V2 | host 侧 aclnn 实现静态符号/源码（安装头文件已检索阴性） |
+| OP2 | server 对象 | 两 Init 调用点 this 构造式 0x76192c(r23+0xd10) / 0x7b67c4(x20+0xcf0)；RunRpcServerApi 只用前者；ForApi 0x7b6770/0x430，真正 @plt caller **0x760930**（未导出）；MC2V2/MC2 callers 0x763880/0x7639dc | r23/x20 基址来源与对象身份；0x760930 所属函数及其上游分支 | 同一对象 / 不同对象；Grouped 走 ForApi 还是 RpcSrvLaunch/MC2 | 追 r23/x20 基址来源；0x760930 边界/上游调用点（小窗口） |
+| OP3 | Init 分支与 j/T | 零/非零分支读 `u32[*(task+40)]`；j/T 写者 0x76182c/0x761834 | KFCTask 偏移 40/96/100 的类型/语义；host 填充值 | zero 分支（S 未设）/nonzero（S=y）；j 大小；T=rank 数？ | host tiling 代码/二进制站点；**安装头文件无 KFCTask/CommKfcParamDesc，offsetof 不可得** |
+| OP4 | HcclMsg valid 生产者 | gate +48=0x5CDF123A、consume 0xA320EDC5；GenMsg 写 AivParam +44；**新候选 0x7d6850 `str w4,[x0,#44]`**（未导出局部函数 0x7d67f4-0x7d68ec） | 0x7d6850 的函数体、x0 对象/调用点；HcclMsg +48 写者；Grouped 是否用 API 区 | AivParam 初始化 / HcclMsg 转码 / API valid 发布；host 是否发布 API 消息 | 0x7d67f4-0x7d68ec 反汇编 + 直接 callers + 各 caller 的 x0 来源（abi8） |
 | OP5 | 轮询期望/实值 | turn=ctx+0xf31d4（0..63）；slot=server[8]+64*turn；~1280 s 条件上界 | 运行期 turn/slot/+48 | 无消息 / 错 turn / callee 阻塞 | 先 OP4；仅当仍不可判，未来授权窗口做一次 workspace 只读快照或入口日志 |
-| OP6 | AIV rcvCnt 路径 | rac_server.h 的 TurnNotify/TurnWait；libccl 无普通递增 | Grouped op 是否使用 rac_server（AIV） | AICPU API 路径 / AIV rac_server / MC2 | 读 Grouped op-info/kernel 配置与 device 库符号（静态） |
+| OP6 | AIV rcvCnt 路径 | rac_server.h 的 TurnNotify/TurnWait；libccl 无普通递增；op-config/.o strings 检索阴性 | Grouped op 是否使用 rac_server（AIV） | AICPU API 路径 / AIV rac_server / MC2 | 扩大到 device kernel 二进制符号（静态）；阴性只记检索范围 |
 
 **当前合并请求（交 31，全部静态、不重复已交付）**：
-1. CANN 9.2.1 头文件中 `CommKfcParamDesc`、`KFCTask`（或等价 tiling 结构）定义与 offsetof：40、72、96、100、102；注明头文件路径/版本。
-2. `AicpuKfcProcess::AicpuRunRpcServerForApi` 的 nm start/size 与直接 callers；`AicpuRunRpcServerForMC2/V2` 的直接 callers（只 grep，不整段）。
-3. host 侧库（libopapi/libhccl/libmc2_server 及 libccl 自身）中 `0x5CDF123A` 常量的静态引用：文件/偏移/函数；用于定位 HcclMsg 生产者。
-4. Grouped op-info/kernel 配置中是否含 `rac_server`/`TurnWait`/`TurnNotify` 符号（静态 grep）。
-- **证据层级**：header/offsetof 是源码布局假设，不等于已加载二进制；已加载布局仅以指令 offset 为准（AivAicpuOpParam +44/+48/+49/+50/+51 有 GenMsg 指令证据；HcclMsg +48 只有 ReadApiValidMsg 指令证据；774/776 大小说明不得直接套 header `sizeof`）。
+1. `0x7d67f4-0x7d68ec`（0xf8 B）完整反汇编（若入口非 0x7d67f4，补入口/序言）。
+2. 该局部函数的直接 `bl` 调用点与 caller 函数名/边界；每个调用点的 **x0 来源**（server/slot/base+offset）。
+3. 与 35 字节覆盖表合并：该函数是否还写 `+48/+50/+51` 及宽度。
+4. 追 **r23/x20 基址来源**与 0x760930 所属函数/上游分支（OP2）。
+- 说明：头文件检索已阴性（无 `KFCTask`/`CommKfcParamDesc`）；0x5CDF123A 站点、ForApi/MC2 callers、op-info 阴性均已交付，不重复。
+- **证据层级**：已加载布局仅以指令 offset/宽度为准（AivAicpuOpParam +44/+48/+49/+50/+51 有 GenMsg/ReadApiValidMsg 指令证据；HcclMsg +48 只有 gate 指令证据；774/776 大小说明不得套 `rac_server.h` 的 `sizeof`；安装头文件无对应结构，offsetof 无来源）。
 - **运行期值（turn/slot/+48/j/T）无证据**；“Grouped 走/不走 API 路径”保持未证；不新增 GO/SSH/设备动作，31 仍为唯一远端 owner，A15/benchmark 范围不变。
+
+### 63.6 与 35 的 timing/fields 收口（df1b7a6）
+
+35 最终文档：`readaddrm_msg_timing.md` **2bba59c0**、`abi_turn_fields.md` **9a245cbe**，commit **df1b7a6**、manifest **c0421638**（doc-only）。双方接受以下合并措辞：
+- 时间：仅 ReadAddrMsg/ReadApiValidMsg 两层未见显式 sleep/nanosleep/usleep/select/poll（syscall 178=gettid）；CopyAndCheckApiMsg/Dlog/Trace/CheckDebugMode 深层耗时未知；1280 s + 一次轮询是“helper 返回、控制回循环”前提下的推导，**不是本格实际上界**；180 s 仅为 160–320 s 日志区间。
+- CFG：1280 s 分支 w24 64→128、cmp、`b.hi 0x7d9240`、`SetErrToWarnSwitch(0)`→`0x7d91c8(w19=0)`→`0x7d8fcc`→ret；`0x7d9240` 无回到 `0x7d8d60` 的边 → **2560 s 阈值状态不可达**；callee 长耗时只抬高墙钟。
+- ABI：gate/consume 事实入档；`+50..+51` 的已交付覆盖来自 GenMsgByTaskParam 的 0x1234 常量与整字/整块拷贝，**不称全 libccl 唯一写者**；`rac_server` 的 sendCnt=curTurn、TurnWait 清 rcvCnt；S/C/j/T 未证，离散别名集合未建立/未排除。
+- 后续以 §64 的最小实际路径观测设计为主；无新冻结轮/运行代码/设备任务。
+
+**§64 状态**：abi-preflight7 已交付（95e1ddc/SUMS 09178185）：头文件检索阴性、ForApi caller 0x760930、0x5CDF123A 写者候选 0x7d6850、op-info 阴性，已并入 §64/§65；下一最小请求为 `0x7d67f4-0x7d68ec` 函数体 + 调用点 + x0 来源 + r23/x20 基址来源。未执行任何设备/SSH 动作。
+
+## 65. abi-preflight7（95e1ddc，SUMS 09178185）：OP4 producer 候选 0x7d6850
+
+### 65.1 头文件与符号
+
+- 安装的 `include/opp` 中**未找到** `CommKfcParamDesc` 或 `struct KFCTask`（toolkit 9.2.1 `V100R001C12SPC002B201`）→ **无编译 offsetof 可用，只能以二进制站点为准**；这也说明 header 布局与已加载实现的对应关系不能靠该安装头文件建立。
+- `AicpuKfcProcess::AicpuRunRpcServerForApi` nm `0x7b6770` size `0x430`；真正 `@plt` 调用者为 **0x760930**（dynsym 无归属的局部函数）；`RunAicpuKfcSrvLaunch` 内 0x763880/0x7639dc 分别是 `AicpuRunRpcServerForMC2V2`/`ForMC2` 的调用。其余列出的 `ForApi+offset` 行是最近符号命名伪影，不是 ForApi 的调用者。
+
+### 65.2 0x5CDF123A 站点
+
+- 字节扫描 libccl/opapi/hccl **0 命中**（常量用 movz/movk 立即数构造，不是数据字）。
+- 比较站点：`ReadMsgFromMemory(HcclMsg)` `[x19+48]`、`ReadMsgFromMemory(HcclMsgExt)` `[x19+8240]`、`RetryProcess` `[x1+44]`、`ReadApiValidMsg` `slot+48`、`CheckRcvWorkMsg`、`AicpuKfcRpcServerV2::ReadValidMsgExtArea` `[x19+48]`、`V2::ReadValidMsg` `[x2+48]`。
+- 写站点：`GenMsgByTaskParam` `+44`（0x7d7f2c）；以及 **0x7d6850 `str w4,[x0,#44]`**，位于 `Init(y)` 0x7d67e0（止于 0x7d67f4）与 `WriteFinishWhenAllFinalize` 0x7d68ec 之间的**未导出局部函数**（候选边界 `0x7d67f4-0x7d68ec`，0xf8 B）。
+- 站点上下文：`ldrh w3,[x2,#704]`、`ldrb w2,[x2,#706]`、`strh w3,[sp,#24]`、`str w4,[x0,#44]`；x0 为目的指针，x2 为带 +704/+706 字段的 task/tiling 源。**函数体未交付**，尚不能判定 x0 指向 `AivAicpuOpParam`、64 B `HcclMsg` 的 base-4，还是别的对象。
+- 分类假设：①AivAicpuOpParam 初始化器（+44 valid 且可能写 +48..+55）；②HcclMsg→AivParam 转码（只写部分字段）；③API valid 发布到不同对象。字面 +44 与 gate +48 的关系取决于真实指针差，**暂不认定同一或冲突**。
+
+### 65.3 op-config 阴性
+
+Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`TurnWait`/`TurnNotify`；这只是检索范围内的阴性，不证明 kernel 二进制不含该协议。
+
+### 65.4 最小后续请求（abi-preflight8，不回到全库扫段）
+
+1. `0x7d67f4-0x7d68ec`（0xf8 B）完整反汇编；若入口不是 0x7d67f4，补 0x7d67f4-0x7d6838 的入口/序言。
+2. 该局部函数的**直接调用点**（`bl` 目标）与各 caller 的函数名/边界；每个调用点的 x0 来源（server/slot/base+offset）。
+3. 与 35 字节覆盖表合并：确认该函数是否还写 `+48/+50/+51`，以及写入宽度。
+- 不重复已交付的 ReadApiValidMsg/GenMsg/ReadAddrMsg/Init/Write*/ctx 偏移/常量站点；不做全库扫段。
+
+### 65.5 OP4 状态
+
+生产者候选现为：`0x7d6850`（AivParam +44 写者，函数体未证）、`GenMsgByTaskParam`（+44/+50..51 常量）、host 侧未知写者。**HcclMsg +48 的写者仍未找到**；0x7d6850 是否写 +48 待其函数体。
