@@ -1,0 +1,57 @@
+{
+ "schema": "owner31-window-result/1",
+ "window": "n1-v3-rstd8-c24-timing",
+ "executed_at_utc": "2026-11-19T00:14:27Z/00:16:27Z",
+ "outer_rc": 0,
+ "run_dir": "/workspace/yangchen/logs/n1-v3-rstd8-c24-timing-owner27-20261119T0340",
+ "outer_dir": "/workspace/yangchen/logs/owner31-outer-rstd8-20261119T001427Z",
+ "frozen": {
+  "payload_sha256": "70e6390eeedafce61cff1569ba7ac263b55fcf0213dff6148ce20576a68698fe",
+  "plan_sha256": "10b2dd3fc6834b2250a49e804c7af3e0d22046c4794abfd73641fb9a9814a3ef",
+  "wrapper_sha256": "9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5",
+  "package_sha256": "6d5a371073102b8de096e5227ea36aac630cc32f897655ff65327fee1a1db9f1",
+  "adapter_sha256": "7c17b601d5b1998f180437c4eab9840e865d294503ceeb783d45c1565782dfff",
+  "candidate_source_commit": "8d266267cd308a62d5b235072fb4f9dd2443baeb",
+  "cell": {"rows": 967, "seed": 20261118, "cores": 24, "use_hccl": 1}
+ },
+ "steps": {"preflight": 0, "stop": 0, "apply": 0, "probe": 0, "revert": 0, "restore": 0},
+ "probe": {
+  "schema": "n1-probe/1",
+  "gate_passed": true,
+  "correctness_gate_passed": true,
+  "child_rc": 0,
+  "timing_child_rc": 0,
+  "cleanup": {"rc": 0, "reaped": true, "unknown": [], "residual": []},
+  "started_at": "2026-11-19T00:14:31Z",
+  "finished_at": "2026-11-19T00:14:59Z"
+ },
+ "timing": {
+  "summary_path": "/workspace/yangchen/logs/n1-v3-rstd8-c24-timing-owner27-20261119T0340/probe/timing/summary.json",
+  "summary_sha256": "d01385dae9f475800520fa81b5a68370eb3af7bbc72bab9b8c4a86a042b4b356",
+  "protocol": {"round_orders": [["baseline", "candidate"], ["candidate", "baseline"], ["candidate", "baseline"], ["baseline", "candidate"]], "reps": 5, "warmup": 3, "samples_per_rank": 48, "same_probe_process_group": true},
+  "overall_medians_ms": {
+   "critical_path_wall": {"baseline": 0.49369, "candidate": 0.532265, "delta": 0.038575},
+   "slow_rank_wall": {"baseline": 0.478305, "candidate": 0.532265, "delta": 0.05396},
+   "slow_rank_event": {"baseline": 0.3756299912929535, "candidate": 0.4288100004196167, "delta": 0.05318000912666321}
+  },
+  "paired_speedups": {"critical_path_wall_ms": {"count": 20, "median": 0.8606470347539027, "p95": 1.0438478660545434}, "slow_rank_event_ms": {"count": 20, "median": 0.8150674706607054, "p95": 1.0439953253852243}},
+  "per_round_critical_delta_ms": [[0, 0.0744], [1, 0.0598], [2, 0.078], [3, 0.0185]],
+  "per_round_slow_event_delta_ms": [[0, 0.0713], [1, 0.0629], [2, 0.0961], [3, 0.0303]],
+  "direction": "4/4 rounds candidate slower on both metrics",
+  "first_call_ms": {"baseline": [6.602, 5.015], "candidate": [281.687, 281.727]}
+ },
+ "restore": {
+  "label": "d0-restore-20261119T001459Z-82196650",
+  "api_pid": 1249248,
+  "pids": [1249248, 1249407, 1249408, 1249454, 1249455],
+  "root_identity_stable": true,
+  "descendant_count": 4,
+  "health": "ready",
+  "workers": ["VLLM::Worker_TP0", "VLLM::Worker_TP1"],
+  "guard_preimage": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+  "source_head": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+  "env_note": "5c restore inherits prod_env; OPP entries 16 / LD entries 20 (duplicate chain). Known behavior; final evaluation must use phase first-mode clean switch with strict env gate.",
+  "env_actual": {"ASCEND_CUSTOM_OPP_PATH_entries": 16, "LD_LIBRARY_PATH_entries": 20}
+ },
+ "conclusion": "rstd8 C24 timing shows no benefit (4/4 slower); keep not adopted. Window lifecycle and restore closed; proceeding to smallq AD window."
+}
