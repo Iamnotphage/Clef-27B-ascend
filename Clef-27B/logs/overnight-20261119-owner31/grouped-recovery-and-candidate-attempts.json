@@ -1,0 +1,72 @@
+{
+ "schema": "owner31-window-result/1",
+ "window": "grouped29 v4r1 recovery + candidate deploy attempts",
+ "executed_at_utc": "2026-11-19T00:44Z/00:52Z",
+ "grouped_recovery": {
+  "recovery_dir": "/workspace/yangchen/logs/owner31-grouped-recover-20261119T0044Z",
+  "driver_sha256": "ffd75bd6f416da7f0d435b99c4959448a195986b9e1ebd68b4a22c4ff1e9eeb1",
+  "driver_reuses": "audited ebca SourceControl.restore_prod (a1c502a3…, window 700cf10c…, d0 modules pinned)",
+  "pre_restore_fresh": {"tracked_gone": [1255353, 1255354, 1255361, 1255362], "no_probe_like": true, "port_connect_ex": 111, "card7_empty": true, "source": "f8101b98…", "guard": "76595657…"},
+  "restore": {
+   "label": "d0-restore-20261119T004611Z-cec60d1c",
+   "pids": [1256840, 1256968, 1256969, 1256998, 1256999],
+   "root_identity_stable": true,
+   "verify_ok": true,
+   "env_match": true,
+   "opp_entries": 9,
+   "ld_entries": 12,
+   "expected_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230",
+   "restore_json_sha256": "4e022bcefef8d3f58924b34aee88c340af9556255fd0dd549265b06a2b201e09",
+   "complete_json_sha256": "035a4b710b0c76fc3983039c4f58e3de9d179b8d3ccebee4639cb1d0b209037a",
+   "env_compare_sha256": "cdf6c8572534192b278c0d4bd396df435b0daa1aff1d1477e0905b844b752c5b"
+  },
+  "independent_checks": "33 verified 6 items; 32 verified restore and env; no signals sent"
+ },
+ "candidate_attempts": [
+  {
+   "attempt": "v1",
+   "out": "/workspace/yangchen/logs/owner31-candidate-s1-20261119T0048Z",
+   "runner_sha256": "78be7737ae2687fceda5e6a51a6e78004ecd97f4427d39216bde05e191e261c2",
+   "deploy_rc": 1,
+   "failure": "stage_candidate FileNotFoundError: --repo 5c045eb lacks apply_joint_service_check.py",
+   "service_impact": "none; failed before stop",
+   "v5_rc": "skipped",
+   "restore_rc": "skipped"
+  },
+  {
+   "attempt": "v2",
+   "out": "/workspace/yangchen/logs/owner31-candidate-s1-20261119T0051Z",
+   "runner_sha256": "66fe4b2e61e1a43b2794bfb37e73297bdf5498a9b5032ee251090753d4cc85bf",
+   "repo_fix": "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769 (bundle root with pinned staging files b09cd602/1ed35f0a/aa3e1758/36eaff44)",
+   "helper_pin": "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py (9245e1a6…)",
+   "deploy_rc": 1,
+   "failure": "entry code defect: candidate_service_phase.py:306 deps.ab.switch_source -> joint_fused_source_control.py:100 AttributeError 'SourceControl' object has no attribute 'state' (ab.state never initialized)",
+   "entry_sha256": "1f98dba90c4cb466fd3ae3804ab1dacbaee8bd9799b8ef2110e22bc5489164d7",
+   "entry_recovery": {"port_closed": true, "clients_clear": true, "known": true, "adapter_reverted": true, "action": "restore_failed", "source": "f8101b98…", "installed_guard": "76595657…"},
+   "service_impact": "service stopped by exact stop; entry recovery returned source/guard to preimage; port 111, card 7 empty, no clients",
+   "v5_rc": "skipped",
+   "restore_rc": "skipped",
+   "evidence_sha256": {
+    "deploy.log": "acdea26f28a31ed8fb437b6f915f21a05fdcd3ef3eec796723dec7d51294706a",
+    "recovery.json": "fb43f44722a9f65d71494b6fd4921bd97c53f4d5d6f93aefe4b0adfce0cc94ef",
+    "fresh-inventory.json": "ea47954e2c4e143a2a0c0f8563f2d93ff1fc9ddd2f60030b8433133798fa95e1"
+   }
+  }
+ ],
+ "recovery_after_v2": {
+  "recovery_dir": "/workspace/yangchen/logs/owner31-candidate-recover-20261119T0052Z",
+  "driver_sha256": "ffd75bd6f416da7f0d435b99c4959448a195986b9e1ebd68b4a22c4ff1e9eeb1",
+  "label": "d0-restore-20261119T005148Z-c4a4a6af",
+  "pids": [1258713, 1258853, 1258854, 1258880, 1258881],
+  "root_identity_stable": true,
+  "env_match": true,
+  "opp_entries": 9,
+  "ld_entries": 12,
+  "expected_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230",
+  "restore_json_sha256": "be55b18c2581c77ef2261a502294f8396fea4ddf1cd20cd6b00d67733f7308d3",
+  "complete_json_sha256": "67b9511a1aaa560de9098161e941cae47629515a0e911c332d2237c3701f7c75",
+  "env_compare_sha256": "c9a73e7745aa240c9a80d1f28d0f5fd29599db43a0a3fd325277c9f8beca867e",
+  "binding_note": "old 4e022bce service no longer exists; be55b18c is the sole current_restore for the next candidate attempt"
+ },
+ "conclusion": "Grouped diagnostic closed (timeout, no candidate raw, restore closed). Candidate S1 v1 (parameter) and v2 (entry code defect) failed without corrupting source/guard; service restored clean and healthy. Awaiting 34 fixed entry (ab.state initialization) + 32 review, then rerun with fresh OUT and be55b18c."
+}
