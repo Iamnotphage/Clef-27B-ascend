@@ -1,0 +1,10 @@
+abi-preflight11 summary (read-only; counts kept)
+1) RunRpcServerTwoStageWait nm 0x7c7dac size 0x1028; prologue: 0x7c7dc8 mov x19,x1 (server argument), 0x7c7dd0 mov x20,x0 (ctx). So PostMsg this (x19) = arg2 = server_A; ctx = x20. (a) confirmed.
+2) AivAicpuOpParam::PrintMsg nm 0x7c24e0 size 0x654; full body delivered (412 lines). Store scan in body for dest offsets #24/#44/#51: only strh w3,[sp,#24]; no store to object +24/+44/+51. PrintMsg does not rewrite PostMsg dest (P3 unaffected). (d) answered.
+3) server+0x18 writers within 0x7d66f0-0x7da9bc: grep count=15 for stores to [x?,#24]; classification:
+   - Init4 zero branch: stp x0,x3,[x19,#16] at 0x7d6758 writes server+0x10 and server+0x18 (x19=server) -> the only server+0x18 writer in this region.
+   - 0x7d77f4 str x1,[x19,#24] inside HcclMsg2AicAicpuOpParam: x19 is the AivAicpuOpParam output parameter (param+24), not server.
+   - 0x7d7ef0 str x0,[x19,#24] in GenMsgByTaskParam region: x19 is the AivAicpuOpParam input parameter (param+24), not server.
+   - Remaining 12 are [sp,#24] stack slots.
+   => no additional server+0x18 writer found; param-object +0x18 writes are separate objects. (c) answered within this scope.
+No code/device actions; service untouched.
