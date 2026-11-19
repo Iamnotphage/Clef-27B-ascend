@@ -315,6 +315,15 @@
 - **结案**：Grouped MMAR 在本机 A3/CANN 9.2.1 不可运行（平台包支持限制）；暂停 H6/H7/H12/A8/A13 及所有 Grouped 设备臂；官方 aa3e/f810 默认、入口、指标不变；服务 aa3e root 1301295 健康。33 的支持矩阵/chip 映射确认留作文档收尾（loader 实测拒绝已足够操作结论）。35 记录 commit d4b600c 存在，无代码/参数改动。
 - **A12 监督/恢复链 PASS**：rc0 假成功被日志门拦、gate allow、官方 start.sh aa3e-noop、root 1301295/五 PID/四检全过；服务当前健康在线。
 
+## 8.23 A13（MatMulAllReduce 控制臂）审查与处置
+
+- **交付**：35 commit 365cb95（binding 52287e3a、run_probe 94f3b9a1、window 706d802b、manifest 460757b1）；CPU 独立 **42/42**。设计：`aclnnMatmulAllReduce` v1（x1/x2/bias BF16、group、sum、commTurn0、streamMode1、output），torch 多进程 comm，M=967/K=8704/N=5120。
+- **契约审查**：v1 头明确 x1/x2/bias 支持 float16/bf16 → bias BF16 合规；Grouped 的 FP32 bias 是 op 差异（记录即可）。v1 未标 bias optional，零 bias 张量是安全形态；null-bias 只可作单独诊断。v1 为最小控制，v2/v3 引入 x3/commMode 变量，不作为控制臂。
+- **关键 preflight 缺口**：打包的 A3 ops-info/binary_index 中**无精确 MatMulAllReduce 条目**（只有 GroupedMatMulAllReduce 索引；精确名 grep 0 命中）；若未先确认本机 CANN 的 A3 注册/kernel，A13 的失败可能是 op-not-found 而非 MC2 路径。
+- **处置（与 35 一致）**：**不做设备执行**；mc2_server 在 TDT 启动阶段因 chip:5 被拒且与 op 无关，MatMulAllReduce 同属 MC2，A13 极可能同拒；为 A13 停掉健康 aa3e 无新根因信息。仅保留代码（未来平台/CANN 支持 A3 mc2_server 时首个控制臂）；CPU-only stage/plan 可选、不触设备。
+- **解释边界**：A13 仅 MC2 公共路径控制；返回→MatMulAllReduce 无 mc2_server 可用（隔离 Grouped）；同挂/同拒→平台 MC2 阻塞泛化；不外推精度、不单因。
+- **结案记录**：31 conclusion `d95a2d52…`（confirmed_environment_blocked，commit cb90bc3）；35 `98fc132`；32 `34ccde7`；服务 aa3e/s1 root 1301295 在线；入口/指标/默认/CSV 不变；无新设备臂。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
