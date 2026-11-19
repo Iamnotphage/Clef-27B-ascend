@@ -306,6 +306,14 @@
 - **下一步**：A8 纯 torch all_reduce+sync（基座 comm/stream）→ H6 workspace 零初始化（单变量）→ **A13 MatMulAllReduce（非 grouped MC2）控制臂**（API pack 有 v1/v2/v3 头；同 HCCL/AICPU 路径）区分“MC2 路径坏”vs“grouped op 坏”；AICPU/KFC 日志升 debug；H1–H3/H7 降为确认/低优先。
 - **新身份**：下一格必须基于恢复后的 root 1301295 重新出 fresh root-identity/snapshot（旧 1287336 已终止）；所有 plan/stop identity 需更新。
 
+## 8.22 Grouped 深挖收口：mc2_server 环境阻塞（决定性）
+
+- **独立实测 plog-run-1301080.log**：06:24:20.366 `insert package:mc2_server.tar.gz config`；device0 06:24:20.502 与 device1 06:24:20.927 均 `current device chip:5 does not support package:mc2_server.tar.gz`、`does not need to load to device:0/1`；同段 `cann-tsch-compat.tar.gz` 亦不支持。发生在进程启动 TDT 阶段、op launch 之前。
+- **因果链**：MC2 AICPU server 包未加载 → AICORE kernel 等待 AICPU/KFC → stream47 KERNEL_AICORE pending → RUNTIME 10 s 507046 / v4r1 无超时挂起 → DestroyAicpuComm 50 s×2。官方样例（生命周期全保活、显式 context/stream、单进程 HcclCommInitAll）与 v4r1 同因；**H1–H12 对“挂起”不再有解释力**。
+- **结论**：GroupedMatMulAllReduce 在本机 A3/CANN 9.2.1 **环境阻塞**（mc2_server 不支持 chip:5）；不改变官方 aa3e/f810 默认、不影响提交；不新建 PR/不改指标。H6/H7/H12/A8/A13 暂停（A8 基座 comm 此前 baseline/nd_native 已通过；A13 若同需 mc2_server 会同样被拒）。
+- **收口证据请求**：31 提供 `mc2_server.tar.gz`（或包内 config/ini 支持列表）本地副本+SHA；33 核支持矩阵与官方文档 chip 映射（chip:5 ↔ 本机 A3），确认是否所有 MC2 包均排除；确认后 Grouped 记环境阻塞并关闭深挖。
+- **A12 监督/恢复链 PASS**：rc0 假成功被日志门拦、gate allow、官方 start.sh aa3e-noop、root 1301295/五 PID/四检全过；服务当前健康在线。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
