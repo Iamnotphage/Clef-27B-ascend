@@ -1710,3 +1710,19 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **预扫缺口（与 §94 一致）**：仅 `pgrep` 残留检查，未做 `command -v torchrun`/绝对路径可执行校验；后续候选加该项 + 启动 shell PATH 前置 venv bin 或绝对 `torchrun`。
 
 **状态**：本格无算子/分派证据，不排除支路；静态 ABI（§78/§80/§91）与 §15 保持；无新增 GO/设备动作；root cause unresolved。下次执行前必须先修复 PATH 与 identity pin 两处，再 fresh preflight。
+
+## 96. v1 收口与 v2 CPU 准备口径
+
+**v1 收口（事实）**：
+- 服务唯一恢复 root **1347086 / starttime 401212026**；9/9 checks + source 三段 + subreaper 0→0 PASS；无第二 restore/残留。
+- v1 归档 `3d54f70` / SUMS `f3733350…`（14 文件）；无 probe/分派证据；child 在 spawn 前 `FileNotFoundError torchrun`。
+- 旧 plan 身份 `1337814/400405818` 因恢复变为历史，是**正常恢复结果**；v1 **不得复用**（preflight/README/planonly 均为旧身份）。
+
+**v2 CPU 准备（20 按既有 seq3882 授权，31 执行；仅 CPU，无设备）**：
+1. 真实启动 shell 使用 `activate_env.sh`（只含 CANN/ATB）+ **venv bin PATH**；确认 `command -v torchrun`。
+2. 裸 `torchrun` 解析验证 + `torchrun --help` 实际可用；若失败，v2 包用绝对路径或显式 PATH 前置（产品 window/runner/adapter 不改）。
+3. fresh root/dirs、新 identity、新 plan 与新 execution 包；旧 v1 plan/identity 不复用。
+4. 预扫清单补 `command -v torchrun`/绝对路径可执行检查，并存 identity 新 pin；其余采集/白名单/restore 口径沿用 v1 经验。
+- 操作命令仍只引用 31 的最终 v2 包；本记录不写第二套命令。
+- **下一单次 v2 设备步骤待 20 明确授权**；当前无 GO/不执行/无设备动作。
+- 静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 仍 unresolved。
