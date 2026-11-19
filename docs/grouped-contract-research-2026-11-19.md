@@ -688,6 +688,54 @@ return *(u8*)(base + 51);
 
 **结论**：sendCnt/rcvCnt 字段与 getter 已由指令证实；turn 计数与 rcvCnt 已区分；**rcvCnt 的写者仍未定位**，Grouped 运行期实际分支未证；root cause 仍 **unresolved**，不回到 `confirmed_environment_blocked`；`mc2_server` 依赖仍 `supported_but_unproven`。设备暂停。
 
+## 62. abi-preflight5（SUMS ae91a530）consumer 等待链与槽位方程
+
+**材料**：ReadAddrMsg 0x7d8b6c 516 行、CopyAndCheckApiMsg 0x7d6ae4 277 行、RcvMsg 0x7d8000 193 行、CheckRcvAddrMsg(HcclMsg) 0x7d7624 88 行、Init 0x7d66f0/0x7d67e0 74 行、WriteFinish/WriteTurn 0x7d68ec/0x7d69a0 104 行；libccl 2281deca。35 独立表 `abi_turn_fields.md`（ae728984/commit 2d7f1e1）与本节一致。
+
+### 62.1 Init 建立的对象关系（已证）
+
+`Init(y,j,t,KFCTask*)` 0x7d66f0（`y=u64 arg1, j=u32 arg2, t=u16 arg3`）：
+- 读 `KFCTask+0x28` 指针及其 `u32[0]`，写 `server+0x330`。
+- **零分支**（该 u32==0）：`server+0=y`、`server+0x10=y+j`、`server+0x18=y+j+64*t`；`*(u8*)(y+772)=0`；`server+0x20..0x31f` 清零 768 B；`server+0x320=0`、`server+0x328=KFCTask*`。
+- **非零分支**：`server+8=y`、`server+0x320=0`、`server+0x328=KFCTask*`（不写 +0x10/+0x18）。
+- `Init(y)` 0x7d67e0：`server+8=y`、`server+0x320=0`、`server+0x328/0x330` 16 B 清零。
+
+与 getter/RpcSrvLaunch 对齐：`C = ctx[184] = y`、`j = ctx[192]`、`t = u16(ctx[196])`；**`server+0x10 = y+j` 正是 ReadWorkMsg 的 `[this+16]`（774 B 拷贝源）**，其 `+50` 即 sendCnt；**`server+0x18 = y+j+64*t` 是 rcvCnt 槽**，其 `+51` 即 rcvCnt；`server+8=y` 是 turn 区基址。若 4 参 Init 前已调用 `Init(y)`（或走非零分支），则 **S(server+8)=C=y**；若只调用 4 参零分支，`server+8` 由其它调用设置（未证）。35 的“S/C 关系未证、别名不能仅凭偏移排除”成立。
+
+### 62.2 等待链（已证静态）
+
+- **ReadAddrMsg(HcclMsg*, turn)** 0x7d8b6c：`slot = server[8] + turn*64`（`turn<<6`）；循环调用 `ReadApiValidMsg(server, out, slot, true)`（0x7d8d78）。返回 true → 打印并返回 1。返回 false → 累计迭代、`GetOpExecCtrlCmd` 检查控制命令。
+- **超时/退避**：每次失败后若 `elapsed > w24 * 20 s`（常量 0x4A817C800 = 20,000,000,000 ns）则 `PrintAllHcclMsgArea` + `PrintTimeOutSqInfo(ctx,20)`，`w24 = (w24 & 0x7f) << 1`（1→2→…→128→0）；仅当 `elapsed > 0xDF84758000`（**960 s**）时经 7d9240 返回 0；否则继续读。**w24=128 时下一次截止 2560 s，故无消息时最长可阻塞约 43 分钟**，不是“立即返回 9”。这与 H11/H4K 的 3 分钟 runtime 超时（180 s，落在 160 s 与 320 s 两个截止之间）**时序相容**，但无运行期证据证明 Grouped 走此函数。
+- **CheckRcvAddrMsg(HcclMsg*, turn)** 0x7d7624：仅 `ReadApiValidMsg(server, msg, server[8]+turn*64, false)`，无计数器逻辑。
+- **CopyAndCheckApiMsg** 0x7d6ae4：`memcpy_s 64 B` → `GenXor` 校验 `+60` → `dsb` → `memcmp(dst,src,64)`；只做撕裂读保护/校验，**不读写 +50/+51**。
+- **RcvMsg(opParam, idx, bool)** 0x7d8000：槽位 `server[0] + 776*turn + 49664*idx`（776=0x308，AivAicpuOpParam 大小），`NeedAutoGenMsg` 为真时 `GenMsgByTaskParam` 生成并 `server+800++`；`opParam[48]!=0` 时置 `server[0x220+idx*4]=1`；`turn=(turn+1)&0x3f` 回写 `server[8+idx*4]`。无 +50/+51 直接访问。
+- **WriteTurnCnt(turn)** 0x7d69a0：`[server+8]+0x4008+64*turn` 写 8 B 零；`[server+8]+0x5008+64*turn` 读 u64、+1、写回、`dsb`。
+- **WriteFinishWhenAllFinalize(turn)** 0x7d68ec：`[server+8]+0x5008+64*turn` 写 8 B 常量 `0x112210f6ca9997ff`、`dsb`。
+- **ReadApiValidMsg 0x7d6f20（0x2ac）未交付**——它是 ReadAddrMsg/CheckRcvAddrMsg 的唯一实际判定函数，也是目前最可能的 `sendCnt` 读/比较与 `rcvCnt` 写回点。
+
+### 62.3 同址/别名判定（地址方程）
+
+- sendCnt 读：`[C + j + 50]`（1 B）；rcvCnt 读：`[C + j + 64*t + 51]`（1 B）。
+- turn 区写：`[S + 0x4008 + 64*τ]`（8 B 零）与 `[S + 0x5008 + 64*τ]`（8 B u64，τ∈[0,63]）。
+- 若 **S==C**：turn 区并集为 `[C+0x4008, C+0x5FD0)`（8 B@0x4008+64τ 与 8 B@0x5008+64τ，τ∈[0,63]）；sendCnt 字节 `j+50` 落入其中 ⇔ `j ∈ [0x3FD6, 0x5F9E)`；rcvCnt 字节 `j+64t+51` 落入 ⇔ `j+64t ∈ [0x3FD5, 0x5F9D)`。**j 未定**，因此既不能建立也不能排除别名；若 `j+776 ≤ 0x4008`（如 j=0 或页对齐的小偏移）则 param/slot 区与 turn 区不重叠。
+- 35 的“字面偏移/宽度不同≠不同址”正确；本节把它落成上述方程，待 `ctx[192]`（j）构造链确认后才能判定。
+
+### 62.4 静态路径与本格实际支路（分开）
+
+- **静态已证**：API 路径 = `RpcSrvLaunch → RunRpcServerApi → ReadAddrMsg(turn)/AddTaskForHcclMsg → WriteTurnCnt`；等待门槛 = `ReadApiValidMsg(slot[turn])`；无消息时按 20 s×w24 退避、最长约 43 min。
+- **本格实际**：无任何运行期证据表明 Grouped 走 RunRpcServerApi（kernelType 未落盘、无 Init 重载调用点、无 turn/slot 日志）；180 s plog 超时与 ReadAddrMsg 退避**相容但非证明**。若 Grouped 走 `AicpuRunRpcServerForMC2/V2` 或 stage-wait 路径，等待条件不同。
+- **仍缺写者**：+50/+51 在已交付的全部函数中无写指令；可能在 `ReadApiValidMsg`、`GenMsgByTaskParam`，或 host/runtime/TS 侧写共享工作区。
+
+### 62.5 合并后的最小请求（含 35 的三项，不重复已交付）
+
+1. **`ReadApiValidMsg(HcclMsg*,HcclMsg*,bool)` 0x7d6f20（0x2ac）**——第一优先，唯一未交付的判定函数。
+2. `GenMsgByTaskParam(AivAicpuOpParam*)` 0x7d7e20（0x1b8）——自动生成消息时是否写 sendCnt/rcvCnt。
+3. `ResInit` 0x760468（0x98）+ `ResInitV2` 0x754568（0x238）——`ctx+184/192/196`（y/j/t）的构造链；若不足，再对 `AicpuKfcProcess::AicpuRpcResInit` 0x7b9dc8（0x3074）只做**定向 grep**：`str .*\[x?, #(18[4-9]|19[0-9])\]` 附近的写入，不要求整段反汇编。
+4. Init 两重载的调用点与实参（35 项）；`AivAicpuOpParam` 布局（+50/+51 与 u16 slot 索引）确认。
+- **不重复**：ReadAddrMsg、CopyAndCheckApiMsg、RcvMsg、CheckRcvAddrMsg、Init、WriteTurnCnt/WriteFinish、RunRpcServerApi、GetSendCnt/GetRecvCnt、ReadWorkMsg/CheckRcvWorkMsg/AddTask/AicpuCcOpExe/SrvLaunch/RpcSrvLaunch/V2。
+
+**结论**：等待链已从“轮询 sendCnt”细化到“ReadAddrMsg 按 turn 槽调用 ReadApiValidMsg”，退避与超时已量化；**rcvCnt 写者仍缺、j 的范围未证、Grouped 实际支路未证**；root cause 仍 **unresolved**，不回 `confirmed_environment_blocked`；`mc2_server` 仍 `supported_but_unproven`。设备暂停。
+
 ## 60. A15-large-v1 原件独立复核（有限统计联审）
 
 复核 31 归档 `grouped-deepdive/a15-large-v1-cell/`（commit 0d8cc1a）：`SHA256SUMS` 自身 `2adc7ef64b035b01d820a3523026dc8c4e043e4946b216e4a44a2fb17c0becf3`，`shasum -c` **17/17 OK**。两 rank result 逐字段一致：`pad{967→968,1.0}`、`row_block 0(0,484)/1(484,968)`、`equivalence.shape [967,5120]`、`workspace_bytes 115,818,496`、`gather_ms 1.13913/1.21021`、`sync_returned=true`、`wall_ms 423.578`。统计：`max_abs=2.0`、`mean_abs=5.1305116357980296e-5`、`ref_abs_max=out_abs_max=744.0`、`diff_nonzero=510/4,951,040`、`max_error_index=1040755`、`position=[203,1395]`、`ref=400.0/out=402.0`、`max_rel_abs=1.0`、`relative_l2=4.9197991043609655e-5`（denom 293,496.6875、zero_reference=false）、`bit_equal=false`。**算术自洽**：`203*5120+1395=1040755`；`mean_abs*diff_total=254.0137`，与 510 个非零元素均值 0.498 一致；`max_rel_abs=1.0` 不可能来自 max_error 的 ref=400 点（该点 2/400=0.005）；其样本位置与对应 ref/output **未落盘**，近零参考 `clamp_min(1e-12)` 只是可能解释之一，具体成因**未证**；不得与 max_error 位置混用、不得作门。35 的 `run_probe 8e308804` 第 379-380 行确为 **AND**：`within_bounds = max_abs<=0.03125 and mean_abs<=1e-4`；两 rank 原件均 **`within_bounds=false`**（max 2.0 超限、mean 5.13e-5 在限内），31 此前“true”为转述笔误，原件/SUMS 未回填。plog 两 rank `[ERROR]` 0 条；device 日志 3 条匹配均为 INFO（`Not set aicpu model timeout`、`halGrpAttach timeout:0ms`、`Get enable op execute timeout config ... timeout[547]s`），无 507046/507015。**判读**：仅 large 形状功能/尺度诊断；`max_abs=2.0` 在 ref≈400 处约 1 个 BF16 ulp（7 fraction bits，ulp=2），仅该 max 样本，不代表其余 509 个差异；逐元素分布/ULP、max_rel 位置、其它形状/生产/性能均未证；不称精度通过；A16/benchmark 未授权；official/CSV 未动。
