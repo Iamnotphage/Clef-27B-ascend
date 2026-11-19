@@ -52,6 +52,10 @@ for p in [root]+sel:
 PY
 n=$(($(wc -l < /tmp/h11-rescan-pids.txt) - 1))
 [ "$n" -eq 5 ] && ok "five PIDs ($n)" || bad "five PIDs (got $n)"
+pidset=$(awk 'NR>1{print $1}' /tmp/h11-rescan-pids.txt | sort -n | tr '\n' ' ')
+[ "$pidset" = "1337814 1337961 1337962 1337979 1337980 " ] \
+  && ok "PID set exact 1337814/1337961/1337962/1337979/1337980" \
+  || bad "PID set mismatch ($pidset)"
 grep -q 'resource_tracker' /tmp/h11-rescan-pids.txt && ok "resource_tracker present" || bad "resource_tracker"
 grep -q 'EngineCore' /tmp/h11-rescan-pids.txt && ok "EngineCore present" || bad "EngineCore"
 grep -q 'Worker_TP0' /tmp/h11-rescan-pids.txt && ok "Worker_TP0 present" || bad "Worker_TP0"

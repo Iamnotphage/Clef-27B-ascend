@@ -21,8 +21,8 @@ h11-observe-execution-v1 — H11 观测执行命令包（doc-only；无 GO，不
 - window-planonly-argv.json / window-execute-argv.json：完整绝对路径 argv 数组（60 项；
   execute 版本仅多顶层 `--execute`）。由实际生成 c95ae5c3 的同一条 argv 派生。
 - window-launch-template.txt：可直接复制的 shell 模板（plan-only 与授权后 execute 两段）。
-- planonly-rerun.txt：同模板去执行 flag 的复核结果（重跑输出与 plan 逐字节相同，
-  SHA `c95ae5c3…`）。
+- planonly-rerun.txt + planonly-rerun-output.json：同模板去执行 flag 的复核结果与原始输出
+  （输出与 plan 逐字节相同，SHA `c95ae5c3…`；附 sha256sum/diff 证据）。
 - collect-raw.sh：raw 采集（fresh LOGDIR + 默认 plog + device-0/1 + vllm_ascend + cell +
   meta；START/END marker 时间窗；完整文件、不按 PID 过滤；SUMS；派生 correlation.txt）。
 - rank-env-read.py：rank 存活期读取三 env 白名单（GLOBAL_LOG_LEVEL / PROCESS_LOG_PATH /
@@ -31,6 +31,7 @@ h11-observe-execution-v1 — H11 观测执行命令包（doc-only；无 GO，不
 - preflight-rescan.sh：执行前完整重扫（identity/boot/五 PID/health/info/clients、端口、
   四路径 absent、logdir 可写、全部冻结 SHA、无其他格）。
 - restore-and-failure.txt：唯一 restore argv 与失败留现场条件。
+- validation-readonly.txt：本轮只读验证输出（preflight-rescan ALL PASS；rank-env-read 空结果）。
 
 33 问题的直接回答
 -----------------

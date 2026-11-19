@@ -6,10 +6,12 @@
 #
 # 约定：raw 目录只放原始副本；派生视图写 meta/correlation.txt；SUMS 覆盖全部 raw。
 #       不按 PID 过滤：默认 plog/device 源目录按时间窗整文件复制。
+#       必需输入缺失会显式报错并置 FAIL（不再用 || true 静默）；来源映射写入 meta/sources.txt。
 set -u
 
 CELL=${CELL:-/workspace/yangchen/work/grouped-deepdive-cell-h11-observe}
 ARCH=${ARCH:-$CELL/archive-h11-observe-v1}
+BODIES=/workspace/yangchen/work/grouped-deepdive-cell-a15-large
 SRC_DEV0=/root/ascend/log/run/device-0
 SRC_DEV1=/root/ascend/log/run/device-1
 SRC_PLOG=/root/ascend/log/run/plog
@@ -20,6 +22,21 @@ OUT=$CELL/probe-out-h11-observe-v1
 RESTORE=$CELL/restore-h11-observe-v1
 LOGDIR=$CELL/logs-h11-observe-v1
 
+FAIL=0
+need_file() {  # path label
+  if [ -f "$1" ]; then return 0; fi
+  echo "MISSING REQUIRED FILE: $2 ($1)" >&2
+  FAIL=1
+  return 1
+}
+need_dir() {
+  if [ -d "$1" ]; then return 0; fi
+  echo "MISSING REQUIRED DIR: $2 ($1)" >&2
+  FAIL=1
+  return 1
+}
+record_src() { printf '%s -> %s\n' "$1" "$2" >> "$ARCH/meta/sources.txt"; }
+
 phase=${1:-}
 
 case "$phase" in
@@ -27,6 +44,7 @@ begin)
   mkdir -p "$ARCH"/{cann-plog,device,cell,meta}
   mkdir -p "$ARCH"/cann-plog/{plog,vllm_ascend} "$ARCH"/device/{device-0,device-1}
   mkdir -p "$ARCH"/cell/{run,probe-temp,probe-out,restore} "$ARCH"/fresh-logs
+  : > "$ARCH/meta/sources.txt"
   date -u +%Y-%m-%dT%H:%M:%SZ > "$ARCH/meta/start-utc.txt"
   date +%s.%N > "$ARCH/meta/start-epoch.txt"
   python3 -I - > "$ARCH/meta/identity.json" <<'PY'
@@ -54,13 +72,23 @@ for proto,name in ((socket.SOCK_STREAM,"tcp"),(socket.SOCK_DGRAM,"udp")):
         finally:
             s.close()
 PY
-  cp -p "$CELL/root-identity-h11-observe-v1.json" "$ARCH/meta/" 2>/dev/null || true
-  cp -p "$CELL/env-sidecar-h11-observe-v1.json" "$ARCH/meta/" 2>/dev/null || true
+  # 必需元数据：实际来源 -> meta（sidecar/plan/root-identity 在 CELL；body 在 A15-large cell）
+  for pair in \
+      "$CELL/root-identity-h11-observe-v1.json" \
+      "$CELL/env-sidecar-h11-observe-v1.json" \
+      "$CELL/plan-h11-observe-v1.json" \
+      "$BODIES/text-body.json" "$BODIES/image-body.json"; do
+    name=$(basename "$pair")
+    if need_file "$pair" "meta $name"; then
+      cp -p "$pair" "$ARCH/meta/" && record_src "$pair" "meta/$name"
+    fi
+  done
   touch "$ARCH/meta/START"
   start_epoch=$(cut -d. -f1 "$ARCH/meta/start-epoch.txt")
   touch -d "@$((start_epoch - 300))" "$ARCH/meta/START_SLACK" 2>/dev/null || touch "$ARCH/meta/START_SLACK"
   echo "archive=$ARCH"
   echo "markers: $ARCH/meta/START $ARCH/meta/START_SLACK"
+  [ "$FAIL" -eq 0 ] || { echo "begin: REQUIRED INPUTS MISSING" >&2; exit 1; }
   ;;
 end)
   [ -d "$ARCH" ] || { echo "missing archive: $ARCH (run begin first)" >&2; exit 2; }
@@ -70,28 +98,56 @@ end)
   end_epoch=$(cut -d. -f1 "$ARCH/meta/end-epoch.txt")
   touch -d "@$((end_epoch + 300))" "$ARCH/meta/END_SLACK" 2>/dev/null || touch "$ARCH/meta/END_SLACK"
 
-  copy_window() {  # $1 src dir, $2 dst dir
-    src=$1; dst=$2
-    mkdir -p "$dst"
-    find "$src" -maxdepth 1 -type f \
-      -newer "$ARCH/meta/START_SLACK" ! -newer "$ARCH/meta/END_SLACK" \
-      -exec cp -p {} "$dst"/ \; 2>/dev/null || true
+  copy_window() {  # $1 src dir, $2 dst dir, $3 label
+    src=$1; dst=$2; label=$3
+    if need_dir "$src" "$label source"; then
+      mkdir -p "$dst"
+      find "$src" -maxdepth 1 -type f \
+        -newer "$ARCH/meta/START_SLACK" ! -newer "$ARCH/meta/END_SLACK" \
+        -exec cp -p {} "$dst"/ \; 2>/dev/null || true
+      record_src "$src" "$dst"
+    fi
   }
-  copy_window "$SRC_DEV0" "$ARCH/device/device-0"
-  copy_window "$SRC_DEV1" "$ARCH/device/device-1"
-  copy_window "$SRC_PLOG" "$ARCH/cann-plog/plog"
-  copy_window "$SRC_VLLM" "$ARCH/cann-plog/vllm_ascend"
+  copy_window "$SRC_DEV0" "$ARCH/device/device-0" "device-0"
+  copy_window "$SRC_DEV1" "$ARCH/device/device-1" "device-1"
+  copy_window "$SRC_PLOG" "$ARCH/cann-plog/plog" "run/plog"
+  copy_window "$SRC_VLLM" "$ARCH/cann-plog/vllm_ascend" "vllm_ascend"
 
   # fresh LOGDIR 整目录（PROCESS_LOG_PATH 候选）
-  [ -d "$LOGDIR" ] && cp -a "$LOGDIR/." "$ARCH/fresh-logs"/ 2>/dev/null || true
+  if need_dir "$LOGDIR" "fresh logdir"; then
+    cp -a "$LOGDIR/." "$ARCH/fresh-logs"/ 2>/dev/null || true
+    record_src "$LOGDIR" "fresh-logs"
+  fi
   # cell 产物（window/child/descendants/stop/restore + rank traces/results）
-  [ -d "$RUN" ] && cp -a "$RUN/." "$ARCH/cell/run"/ 2>/dev/null || true
-  [ -d "$TEMP" ] && cp -a "$TEMP/." "$ARCH/cell/probe-temp"/ 2>/dev/null || true
-  [ -d "$OUT" ] && cp -a "$OUT/." "$ARCH/cell/probe-out"/ 2>/dev/null || true
-  [ -d "$RESTORE" ] && cp -a "$RESTORE/." "$ARCH/cell/restore"/ 2>/dev/null || true
-  cp -p "$CELL"/exec-*.log "$ARCH/cell/" 2>/dev/null || true
-  cp -p "$CELL/plan-h11-observe-v1.json" "$ARCH/cell/" 2>/dev/null || true
-  cp -p "$CELL/text-body.json" "$CELL/image-body.json" "$ARCH/cell/" 2>/dev/null || true
+  if need_dir "$RUN" "run dir"; then
+    cp -a "$RUN/." "$ARCH/cell/run"/ 2>/dev/null || true
+    record_src "$RUN" "cell/run"
+  fi
+  if need_dir "$TEMP" "probe temp"; then
+    cp -a "$TEMP/." "$ARCH/cell/probe-temp"/ 2>/dev/null || true
+    record_src "$TEMP" "cell/probe-temp"
+  fi
+  if need_dir "$OUT" "probe out"; then
+    cp -a "$OUT/." "$ARCH/cell/probe-out"/ 2>/dev/null || true
+    record_src "$OUT" "cell/probe-out"
+  fi
+  if need_dir "$RESTORE" "restore output"; then
+    cp -a "$RESTORE/." "$ARCH/cell/restore"/ 2>/dev/null || true
+    record_src "$RESTORE" "cell/restore"
+  fi
+  # 可选：执行包装日志
+  for f in "$CELL"/exec-*.log; do
+    [ -f "$f" ] && cp -p "$f" "$ARCH/cell/" && record_src "$f" "cell/$(basename "$f")"
+  done
+  # plan 与 body：以实际来源为准（CELL plan；A15-large body）
+  if need_file "$CELL/plan-h11-observe-v1.json" "plan"; then
+    cp -p "$CELL/plan-h11-observe-v1.json" "$ARCH/cell/" && record_src "$CELL/plan-h11-observe-v1.json" "cell/plan-h11-observe-v1.json"
+  fi
+  for f in "$BODIES/text-body.json" "$BODIES/image-body.json"; do
+    if need_file "$f" "body $(basename "$f")"; then
+      cp -p "$f" "$ARCH/cell/" && record_src "$f" "cell/$(basename "$f")"
+    fi
+  done
 
   # 派生视图（单独文件，不改 raw）
   find "$ARCH" -type f ! -name SHA256SUMS ! -name correlation.txt \
@@ -102,6 +158,7 @@ end)
       | sort -z | xargs -0 sha256sum > SHA256SUMS )
   echo "SUMS=$ARCH/SHA256SUMS"
   echo "raw files: $(find "$ARCH" -type f ! -name SHA256SUMS | wc -l)"
+  [ "$FAIL" -eq 0 ] || { echo "end: REQUIRED ARTIFACTS MISSING (see above)" >&2; exit 1; }
   ;;
 *)
   echo "usage: $0 begin|end" >&2
