@@ -1897,4 +1897,6 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 
 **一致性**：包内唯一 `a4b76676` 是 README 第 11 行历史对照“非 v1”，stage-identity 已是 68dc9e2c；C/D 已闭（collect 注释 84c9edb2/2474b487/9c2936c2；README 索引含 wrapper/validation/stage/helper fixture）。
 
-**状态**：v2 CPU 准备/包/回归**闭合**；仍无 v2 GO/未执行 cell；下一单次 v2 设备步骤待 20 在既有 scope 内明确授权。执行前仍需 fresh `preflight-rescan`；AICPU env/guard/正向标记为观测条件；静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 待 v2 实测。
+**32 最终 readiness PASS**：包 `991c21c`/SUMS `6075c4c0`（22/22）、plan `9c2936c2`、helper `68dc9e2c`；A/D/C 闭、B 闭（默认 v2 + `--run`）；35 artifact `d3a0787a` 显式/默认/`--run` 均 v2、旧负控保留；SUMS 独立复核 22/22。
+**计数口径（35 澄清）**：旧 18/18 = helper A 11 + registry B 7；新 SHA A 11 项逻辑全过 + 2 项 cell/run 绑定 = **13/13**；B 7/7 与 helper 无关，合计 **20/20**。
+**状态**：v2 CPU 准备/包/回归/32 最终 readiness **闭合**；仍无 v2 GO/未执行 cell；下一单次 v2 设备步骤待 20 在既有 scope 内明确授权。执行前仍需 fresh `preflight-rescan`；AICPU env/guard/正向标记为观测条件；静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 待 v2 实测。
