@@ -2459,3 +2459,44 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 无新设备/GO；只现有归档 + 有限 CPU 静态读取。
 
 **状态**：root cause unresolved；selector 边闭合，站点判别仍待 abi16。
+
+## 124. abi16 完整 worker CFG：条件式站点判别与 ack 在 callee 的边界
+
+**包核**：`56b1681`，SUMS `f49172ce…`、4/4 OK；源 ELF `2281deca…`；`RunRpcServerOneStageWait` @0x7c97c0、size 0xa60（end 0x7ca220）。仅并原件，无新取件/设备。20 已交 35 细读、32 独审；本节为**条件式**整合，非最终结论。
+
+### 124.1 worker 结构（原件）
+
+- 序言：x20=arg0(ctx)、x19=arg1(RpcServer)；`AicpuGetAllComContext` 后逐 ctx 写 `[ctx+0xF31E0]=1`；`CallMC2MaintenanceThread`。
+- **Check#1 @0x7c98b4 (+0xf4)**：x0=x19、x1=sp+0x20、w2=0；紧随 `CheckAivIsEnd(0)`，`tbz→0x7c9c5c`；true 分支 hash 查找后 `tbnz→0x7c9b9c`（`[ctx+0x3268]=旧值+1`），否则继续 0x7c98dc。
+- **Check#2 @0x7c9a14 (+0x254) 在循环内**：0x7c99d4 置 `[ctx+0xF31B1]=1`；0x7c99e8 `AicpuCcOpExe(sp+0x20)`；0x7c9a00 `CheckAivIsEnd(0)`；0x7c9a04 `tbnz→0x7c9a70`（结束路径）；否则 0x7c9a0c x1=sp+0x328、0x7c9a14 Check#2；0x7c9a20 `CheckAivIsEnd(0)`，`tbz→0x7c9b10`（ReadAddrMsg+重试 AicpuCcOpExe）；否则 AicpuCcOpExe(sp+0x328)/ActiveRecordMain/交换缓冲；0x7c9a68 `CheckAivIsEnd(0)`，`tbz→0x7c9a08` 回循环。
+- **结束路径 0x7c9a70**：ActiveRecordMain → 清 `[ctx+0xF31B1]` → **`WaitTaskFinish(ctx,1)`** → 逐 ctx 置 `[ctx+0xF31E0]=2` → PrintBuffer → 0x7c9c20 返回。**`WaitMainStreamFinish` 在本函数 0 次**（它出现在 callee AicpuCcOpExe/TaskOrchestrator 内）。
+- `CheckAivIsEnd` 共 4 处（0x7c98c4/0x7c9a00/0x7c9a20/0x7c9a68），**w1 全 0**；无 isLast 操作数或 w1=1 变体。
+- 直接 store 仅 ctx 派生标志/计数（F31E0=1/2、F326C=1、F31B1=1/0、F3268=旧+1）与 shared_ptr 引用计数；**无任何 `[x19]`（RpcServer/response/turn/ack）直接 store**。
+
+### 124.2 条件式站点判别（不用“1 条日志”单独判）
+
+**条件 1（CFG 顺序）**：Check#2 位于 AicpuCcOpExe **之后**；运行 298 在 AicpuCcOpExe（`.259.533/.258.805`）**之前**（`.259.477/.258.746`）。⇒ 该 298 只能是 **Check#1**（0x7c98b4）。这是 CFG 顺序 + 时间序，不是日志计数。
+
+**条件 2（flag）**：Check#1 后处理在 `isLast!=0` 时置 `server[0x220+idx*4]=1`（abi15 已证）；运行 AddrMsg `isLast=1`、idx=0、305/genTaskNum=1 证明后处理确实执行。⇒ `server+0x220=1`，且 worker 的直接 store 不触碰该字段。
+
+**条件 3（跳过而非未进入循环）**：循环内 AicpuCcOpExe 已执行（运行日志）；随后 `CheckAivIsEnd(0)` 读同一 flag，条件 2 使其为真 ⇒ `0x7c9a04 tbnz→0x7c9a70` 结束路径，**跳过 Check#2**（Check#2 在 false 分支）。⇒ Check#2 未执行的原因是 true 分支绕过，**不是循环未进入**。
+
+**条件 4（退出）**：结束路径 `WaitTaskFinish(ctx,1)` → `[ctx+0xF31E0]=2` → PrintBuffer → 返回；与运行 `end RunAicpuRpcSrvLaunch`、launch rc0 一致。
+
+**保留边界**：同一 server 对象/flag 持久性；WaitTaskFinish 内部未覆盖；298/AicpuCcOpExe 的先后来自跨域时间（30.53 ms 偏移，±1 ms）；35/32 复核未完成前不写“最终”。
+
+### 124.3 对缺失 ack 的影响
+
+- worker 自身**没有** response/turn/ack 的直接 store；相关写只能在 callee：`CheckRcvAddrMsg/ReadAddrMsg/AicpuCcOpExe/WaitTaskFinish`。
+- 结束路径的 **`WaitTaskFinish(ctx,1)`** 是 completion/ack 的首要 callee 候选；`AicpuCcOpExe`（内部调 `WaitMainStreamFinish`）是另一候选。缺失 `rcvCnt` 回写仍未证，但搜索面从 worker 收窄到这两个 callee。
+- 本地排空/`WaitMainStreamFinish` 仍**不称** AllReduce 完成或 task13 完成；task13 3 min pending 仍是唯一正证。
+- 候选地址 `0x12c09bc20040..007f`/jT/TurnWait 与 task13 绑定分开；27 的宿主 binding/adapter/run_probe 资源 owner/释放时机审计与本线互补，不重复。
+
+### 124.4 下一最小证明问题
+
+1. **`WaitTaskFinish(ctx,1)` 完整函数/callee 表**：是否写 response+51、调用 `PostMsg/WriteTurnCnt/WriteFinish`、或发 notify/写 op-param；这是 ack 能否升级的关键（当前不请求，交 20 决定）。
+2. `AicpuCcOpExe` 的完成写点（已在包内仅符号，不在本包）：是否写 response 区。
+3. 35/32 对 124.2 条件链的复核；通过后再把站点判别升级为“已证（条件满足）”。
+4. 实际 tiling `notifyOff/j/T`、`kfcNotifyId`、`workspaceOff`；运行 `ctx+0xF3200/F3208/F31BC`（设备侧）。
+
+**状态**：root cause unresolved；worker CFG 已闭，站点判别为条件式（待 35/32），ack 收窄到 WaitTaskFinish/AicpuCcOpExe；无新设备/取件/GO。
