@@ -705,7 +705,14 @@ return *(u8*)(base + 51);
 ### 62.2 等待链（已证静态）
 
 - **ReadAddrMsg(HcclMsg*, turn)** 0x7d8b6c：`slot = server[8] + turn*64`（`turn<<6`）；循环调用 `ReadApiValidMsg(server, out, slot, true)`（0x7d8d78）。返回 true → 打印并返回 1。返回 false → 累计迭代、`GetOpExecCtrlCmd` 检查控制命令。
-- **超时/退避**：每次失败后若 `elapsed > w24 * 20 s`（常量 0x4A817C800 = 20,000,000,000 ns）则 `PrintAllHcclMsgArea` + `PrintTimeOutSqInfo(ctx,20)`，`w24 = (w24 & 0x7f) << 1`（1→2→…→128→0）；仅当 `elapsed > 0xDF84758000`（**960 s**）时经 7d9240 返回 0；否则继续读。**w24=128 时下一次截止 2560 s，故无消息时最长可阻塞约 43 分钟**，不是“立即返回 9”。这与 H11/H4K 的 3 分钟 runtime 超时（180 s，落在 160 s 与 320 s 两个截止之间）**时序相容**，但无运行期证据证明 Grouped 走此函数。
+- **超时/退避（给 35 复核的指令地址）**：
+  - 时间单位：`0x7d8bd0 mov x1,#0xca00` + `0x7d8bd8 movk x1,#0x3b9a,lsl#16` = `0x3B9ACA00`（1e9 ns/s）；`0x7d8bf0 madd x0,x2,x1,x0`（start）与 `0x7d8ca8/0x7d8cac/0x7d8cc0 madd x19,x19,x2,x1`（now），`clock_gettime(4=CLOCK_MONOTONIC)` 在 0x7d8bbc/0x7d8ca0。
+  - 20 s：`0x7d8cb0 mov x3,#0xc800` + `0x7d8cb8 movk x3,#0xa817,lsl#16` + `0x7d8cbc movk x3,#0x4,lsl#32` = `0x4A817C800` = 20,000,000,000 ns；`0x7d8cc8 mul x0,w24,x3`、`0x7d8ccc sub x19`、`0x7d8cd0 cmp x0,x19`、`0x7d8cd4 b.cs 7d8d60`（未到期继续读）。
+  - 退避更新：`0x7d8bc4 mov w24,#1`；`0x7d8d44 ubfiz w24,w24,#1,#7`（取低 7 位左移 1，1→2→…→64→128→0）。
+  - 960 s：`0x7d8d40 mov x0,#0x8000` + `0x7d8d48 movk x0,#0x8475,lsl#16` + `0x7d8d4c movk x0,#0xdf,lsl#32` = `0xDF84758000` = 960,000,000,000 ns；`0x7d8d50 cmp x19,x0`、`0x7d8d58 b.hi 7d9240`（→ `SetErrToWarnSwitch(0)` → 0x7d91c8 → 返回 0）。
+  - **单次 vs 累计**：`w24*20 s` 是**自 start 起的绝对 elapsed 阈值**，不是每次新增等待；到期序列为 20、40、80、160、320、640 s，640 s 到期时 `w24→128`，下一次阈值 2560 s；2560 s 到期时 `w24→0`、阈值 0 立即到期，此时 `elapsed>960 s` 才返回 0。故按该静态路径**总上界约 2560 s（≈42.7 min）**，前提是 `ReadApiValidMsg` 内部无更早返回；若 w24 上限/`ubfiz` 语义不同则上界随之变化（**条件式，待 35 复核**）。
+  - 另有 10001 次迭代检查 `0x7d8c8c mov w0,#0x2711` / `0x7d8c90 cmp w20,w0` / `0x7d8c94 b.eq 7d8ef8`，到期只重置计数并继续，不构成返回上界。
+  - 180 s runtime 超时落在 160 s 与 320 s 两个阈值之间，**仅作假设兼容性**，保留“无本格路径证明”。
 - **CheckRcvAddrMsg(HcclMsg*, turn)** 0x7d7624：仅 `ReadApiValidMsg(server, msg, server[8]+turn*64, false)`，无计数器逻辑。
 - **CopyAndCheckApiMsg** 0x7d6ae4：`memcpy_s 64 B` → `GenXor` 校验 `+60` → `dsb` → `memcmp(dst,src,64)`；只做撕裂读保护/校验，**不读写 +50/+51**。
 - **RcvMsg(opParam, idx, bool)** 0x7d8000：槽位 `server[0] + 776*turn + 49664*idx`（776=0x308，AivAicpuOpParam 大小），`NeedAutoGenMsg` 为真时 `GenMsgByTaskParam` 生成并 `server+800++`；`opParam[48]!=0` 时置 `server[0x220+idx*4]=1`；`turn=(turn+1)&0x3f` 回写 `server[8+idx*4]`。无 +50/+51 直接访问。
@@ -713,16 +720,25 @@ return *(u8*)(base + 51);
 - **WriteFinishWhenAllFinalize(turn)** 0x7d68ec：`[server+8]+0x5008+64*turn` 写 8 B 常量 `0x112210f6ca9997ff`、`dsb`。
 - **ReadApiValidMsg 0x7d6f20（0x2ac）未交付**——它是 ReadAddrMsg/CheckRcvAddrMsg 的唯一实际判定函数，也是目前最可能的 `sendCnt` 读/比较与 `rcvCnt` 写回点。
 
-### 62.3 同址/别名判定（地址方程）
+### 62.3 同址/别名判定（地址方程；宽泛可达区间 vs 精确可重叠集合）
 
-- sendCnt 读：`[C + j + 50]`（1 B）；rcvCnt 读：`[C + j + 64*t + 51]`（1 B）。
-- turn 区写：`[S + 0x4008 + 64*τ]`（8 B 零）与 `[S + 0x5008 + 64*τ]`（8 B u64，τ∈[0,63]）。
-- 若 **S==C**：turn 区并集为 `[C+0x4008, C+0x5FD0)`（8 B@0x4008+64τ 与 8 B@0x5008+64τ，τ∈[0,63]）；sendCnt 字节 `j+50` 落入其中 ⇔ `j ∈ [0x3FD6, 0x5F9E)`；rcvCnt 字节 `j+64t+51` 落入 ⇔ `j+64t ∈ [0x3FD5, 0x5F9D)`。**j 未定**，因此既不能建立也不能排除别名；若 `j+776 ≤ 0x4008`（如 j=0 或页对齐的小偏移）则 param/slot 区与 turn 区不重叠。
-- 35 的“字面偏移/宽度不同≠不同址”正确；本节把它落成上述方程，待 `ctx[192]`（j）构造链确认后才能判定。
+- 读：sendCnt 字节 `C + j + 50`（1 B）；rcvCnt 字节 `C + j + 64*T + 51`（1 B，**T = u16[ctx+196]，固定槽索引**，不是任意 t）。
+- 写：`S + 0x4008 + 64*τ`（8 B 零）与 `S + 0x5008 + 64*τ`（8 B u64/常量，`τ∈[0,63]`，由 `RunRpcServerApi` 的 `and w0,w0,#0x3f`（0x7b39e4）与 turn 清零/递增证明）。
+- 两个 8 B 数组的**精确并集**（不是一整段）：
+  - A = `[S+0x4008, S+0x4008+64*63+8)` = `[S+0x4008, S+0x4FD0)`；
+  - B = `[S+0x5008, S+0x5008+64*63+8)` = `[S+0x5008, S+0x5FD0)`；
+  - 二者之间有 `[0x4FD0, 0x5008)` 空洞。
+- 若 **S==C**：
+  - **精确 send 重叠集合**：`j+50 ∈ A∪B` ⇔ `j ∈ [0x3FD6,0x4F9E) ∪ [0x4FD6,0x5F9E)`。
+  - **精确 recv 重叠集合**：`j+64T+51 ∈ A∪B` ⇔ `j+64T ∈ [0x3FD5,0x4F9D) ∪ [0x4FD5,0x5F9D)`；对给定 j，只有满足该式的**离散 T 值**（64T 为 64 的倍数）才重叠，不是整个区间都可达。
+  - **宽泛可达区间**（T 未知、T∈[0,0xFFFF]）：`64T` 覆盖 0..0x3FFFC0，任何 j 都可能找到某个 T 落入上述区间——因此“宽泛可达”不能用于排除别名，必须用实际 T。
+- 若 **S≠C**：无论 j/T 如何都不别名；但 S/C 关系依赖 Init 调用顺序（4 参零分支不写 `server+8`），未证。
+- 若 `S==C` 且 `j+776 ≤ 0x4008` 且实际 T 满足 `j+64T+52 ≤ 0x4008`，则 param/slot 区整体低于 turn 区 → 不重叠；该条件依赖 j 与 T，当前均未证。
+- 结论：**别名未建立、也未排除**；35 的“字面偏移/宽度不同≠不同址”正确。待 `ctx[192]`（j）与 `ctx[196]`（T）构造链确认后判定。
 
 ### 62.4 静态路径与本格实际支路（分开）
 
-- **静态已证**：API 路径 = `RpcSrvLaunch → RunRpcServerApi → ReadAddrMsg(turn)/AddTaskForHcclMsg → WriteTurnCnt`；等待门槛 = `ReadApiValidMsg(slot[turn])`；无消息时按 20 s×w24 退避、最长约 43 min。
+- **静态已证**：API 路径 = `RpcSrvLaunch → RunRpcServerApi → ReadAddrMsg(turn)/AddTaskForHcclMsg → WriteTurnCnt`；等待门槛 = `ReadApiValidMsg(slot[turn])`；无消息时按 20 s×w24 退避，**条件式**总上界约 2560 s（待 35 复核 `ubfiz`/w24 上限与 `ReadApiValidMsg` 内提前返回）。
 - **本格实际**：无任何运行期证据表明 Grouped 走 RunRpcServerApi（kernelType 未落盘、无 Init 重载调用点、无 turn/slot 日志）；180 s plog 超时与 ReadAddrMsg 退避**相容但非证明**。若 Grouped 走 `AicpuRunRpcServerForMC2/V2` 或 stage-wait 路径，等待条件不同。
 - **仍缺写者**：+50/+51 在已交付的全部函数中无写指令；可能在 `ReadApiValidMsg`、`GenMsgByTaskParam`，或 host/runtime/TS 侧写共享工作区。
 
