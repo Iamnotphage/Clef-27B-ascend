@@ -137,7 +137,8 @@
    "OPP9 7b79c5db / LD12 ca27dbb7 byte-exact vs fcbdcbf1",
    "joint keys FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1, no SMALLQ",
    "source aa3e1758, fused guard 36eaff44, old guard 76595657",
-   "no stray clients"
+   "no stray clients",
+   "joint-patch-record branch == aa3e-noop (normal cell)"
   ],
   "backup_evidence": {
    "snapshot": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/snapshot-and-restore-spec.json",
@@ -150,6 +151,14 @@
    "any global tree/guard/vendor write during probes",
    "extending probe timeout as a fix",
    "card reset / driver upgrade / global kill"
+  ],
+  "expected_branch": "aa3e-noop (tree stays aa3e)",
+  "branch_policy": [
+   {
+    "normal": "probe performs no source write; expected record branch == aa3e-noop and tree SHA remains aa3e1758 before/after",
+    "exception_only": "f810->fused is listed only as an exception rescue path; if it appears unexpectedly, preserve drift evidence (record before/after SHA, plog/trace, timestamps), report to 32/20, mark the cell isolation-failed, then rescue via the authorized aa3e recovery path",
+    "unknown": "unknown source state -> stop and report; do not guess or modify"
+   }
   ]
  },
  "api_pack": {
@@ -212,5 +221,16 @@
    "fresh run-dir and unique manifest",
    "service stopped only after 32 preflight ready; restore via official start.sh aa3e-noop"
   ]
+ },
+ "first_round_scope": {
+  "cells": [
+   "A8 plain dist.all_reduce + sync (no candidate)",
+   "A12 official A3 sample (source-pinned) as positive pathway control",
+   "A0 existing bridge + small legal M",
+   "H1 static group string keepalive",
+   "H2 workspace keepalive to sync"
+  ],
+  "caution": "A12 differs from the v4r1 bridge in several aspects; it is pathway control only and cannot alone establish a single-factor root cause",
+  "deferred": "A9 instrumentation detail, H3/H11, H4/H5, H6, H7 M sweep -- incremental after first-round results"
  }
 }
