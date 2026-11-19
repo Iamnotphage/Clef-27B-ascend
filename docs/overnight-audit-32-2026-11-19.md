@@ -283,6 +283,7 @@
 - **clean_expect**：31 本地副本 SHA `fcbdcbf1…`（12,933 B；OPP9 `7b79c5db…`、LD12 `ca27dbb7…`）——P1 env gate 满足；此前 fcbdc7b1 为转录错。
 - **仍缺（A12 GO 前）**：① 恢复状态机安全门：old_alive 时绝不 Popen（端口 open+health ready → skip+该格失败；端口非 0/未知 → restore_blocked 停报）；仅 old_root gone 时进入恢复，且 Popen 前再门 port==111/旧 PGID 非 Z 空/无 probe 残留/source==aa3e；skip/blocked 记 identity/health/port/PGID/source。② A12 maps 按 PGID 子树每 PID 记录（pid/cmdline/命中库 path SHA/SONAME），识别实际 binary 进程并记录 opapi_math/transformer/hccl_fwk/hcomm 实际加载（未链上记 absent）。③ CPU 补真实前台常驻 fixture（Popen 后窗口完成、服务仍活、fixture 清理）与 stop 失败/旧服务活不双启；不得整段 mock win.run。④ 小项：stop-script build_plan 强制 is_file；skip 记 health。
 - **skip 语义决定**：接受“旧服务活+端口 open+health ready → skip 且判失败”；不接受旧 root 活时因 port==111 启动第二棵树（必须 blocked/停报）。A12 inputs/identity/plan/clean_expect 已 PASS；完成①②③后重冻结再核。
+- **对 31“安全门已存在”的复核**：`needs_restore=(stopped or port==111 or not old_alive)` 只覆盖 old_alive+port open；**old_alive+port111（partial）仍 Popen**，且 Popen 前未检查旧 PGID/探针残留/source。要求：old_alive=True 绝不 Popen（health ready+port open→skip+fail；否则 blocked 停报）；old_alive=False 时 Popen 前再门 port==111/旧 PGID 非 Z 空/无 child-probe 残留/source==aa3e；任一不满足→blocked。A12 maps 需 per-PID `{pid,cmdline,libs[]}` 并识别实际 binary（a12_grouped_mmar/timeout），记录 opapi_math/transformer/hccl_fwk/hcomm/ascendcl/nnopbase 实际 loaded/absent；硬门保持 libhccl+opapi_math/transformer（hccl_fwk 未链上不硬门，hcomm 记录）。CPU 真实前台 fixture（Popen+health+进程存活+清理；old_alive+port111→blocked 无 Popen）仍必须补。
 
 ## 9. 本地核对副本
 
