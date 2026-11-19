@@ -1,0 +1,19 @@
+H11 sample-based profiling CPU candidate — preparation (NOT executed)
+commit: 5a1147721edee096c3f4c178b4567d3312bc24e3
+base:   8f4b84357cc86cce97e08f011f8ad704dd0596da
+remote fresh dir: /tmp/h11-sprofile-cand-5a11477
+python: /workspace/yangchen/venvs/clef-py312/bin/python 3.12.16
+files + SHA256 (verified local and remote):
+  sample_profile_collector.py f15980bde49d67e95c76ca1a8eb739932fe6ed5d9695ca82662b027f91832a2b (29576)
+  test_sample_profile_cpu.py  555cf836cbc81854cfe097028561310f0117fcdc822f392ad69768fa06006852 (22686)
+  h11_sample_profile_plan.json 0aa63c1b8e9d7942897e7dcf8dde840850f219a11e9d0b5d644c85cf1fedb1cf (7677)
+  README.md                   88343df3c9f652d16756143b3b2e5160a841ac09c2a90c6fead7ac2c5540ba04 (51923)
+  supervised_probe_window.py  d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013 (53078, base supervisor)
+  manifest.json               b6acfb066481bd28684eb5e948cb174916aaded2710efed47e0ef17775c6af56 (88111, candidate tree)
+audit (source only):
+- test: MSPROF = "/opt/mock/msprof"; APP is a literal argv list used for build_collector_argv;
+  no torch/torch_npu import; no device/service/18143; subprocess only for its own fake app scripts/processes.
+- collector: docstring states CPU-only, never imports torch/torch_npu, never starts msprof, never touches device;
+  provides argv builder/plan skeleton/classifier; real output adapter placeholder.
+- base supervisor unchanged from 8f4b843 (d2576c63).
+status: READY; do not run until 32 Linux safety confirmation + 20 execution authorization.
