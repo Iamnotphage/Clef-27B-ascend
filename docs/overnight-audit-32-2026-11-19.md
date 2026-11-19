@@ -386,6 +386,12 @@
 - **证据**：成功/失败均保留 rank0/1 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）、trace、child 日志、window.json/per-PID maps、plog；结束完整恢复（五 PID/双 worker/四检/env/joint/clients/branch aa3e-noop）。
 - **解释**：A14 通过→KFC 路径可用、被拒包非普遍阻断；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。large M968/K8704/N5120 等 small 结果 + 32 有限核，且须用 small 恢复后的新 root identity 重建 plan。A13 不执行；服务 aa3e。
 
+## 8.31 A14 small 首次执行 = harness 失败（非 MC2），GO 暂停（2026-11-19）
+
+- **执行**：plan `18fdf185…`；d0_stop 1305145 成功、torchrun 2 ranks 启动；约 4 s 后 rank1 exit1；child.stdout 仅 `ERR99999`；child.stderr `run_probe.py:243 out.mkdir(parents=True, exist_ok=False)` → `FileExistsError`（rank0 先创建 `probe-out-a14-small-v2`），rank0 SIGTERM；probe-out 仅 rank0 stub/空 trace；**无 507046/stream47，未进入 MC2 调用**。该格不作为 A14 判据。
+- **根因/修复**：harness mkdir 竞争；最小修复 `out.mkdir(parents=True, exist_ok=True)`，per-rank `rank_dir.mkdir()` 保持 `exist_ok=False` 以保留 fresh 检查。35 重冻 run_probe 新 SHA；31 先完成 safe window 官方 aa3e 恢复（回传新 root/五 PID/branch/四检/restore 原件），再从新冻重 stage/编译/重出 small plan（新 root identity、新 run_probe SHA、新 probe-out 路径），预检 `master_port 29531` 空闲；32 核后重发 A14 small GO。
+- **状态**：A14 仍未检验；H6 限定结论（user workspace 初值削弱）不变；依赖 `supported_but_unproven`；A13 不执行；服务恢复 aa3e。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
