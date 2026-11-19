@@ -1981,3 +1981,13 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
   - prestart1 原目录未删未改，独立快照 `archive-h11-observe-v2-prestart1`（SUMS 4c370713…），仓库证据 `h11-observe-v2-prestart1/`（SUMS 73963a05…）；canonical 改 attempt2。
 - 仅剩顺序口径：32/35 措辞“preflight 之前 begin”，当前 **preflight→begin**（仍 stop/window 前、begin 失败 exit6）。若要求字面顺序需 31 再调；否则 A/B 已满足。identity 结论不受影响。
 - 无设备动作；旧 GO 仍挂起，attempt-2 GO 待 20 明确。
+
+### 110.2 A/B 版本确认与 archive 证据（85f3ae4）
+
+- **包不变**：`3c4bdc5` / SUMS `7f24f88b…`（24/24）；35/33 的 A/B 观察对应旧 `4cbe23a`。
+- **A**：wrapper 第 20-21 行 `export ARCH=…archive-h11-observe-v2-attempt2` → `collect-raw.sh begin || exit 6`，位于 preflight 之后、`exec window --execute` 之前；begin 失败不进 stop/window。
+- **B**：旧 canonical `archive-h11-observe-v2` 未删未改（0B identity 保留）；独立快照 `archive-h11-observe-v2-prestart1`；canonical 采集路径 `…-attempt2` 当前 ABSENT（fresh）；模板 end 命令显式 `ARCH=…-attempt2`（begin/end 同路径）。
+- **证据**：commit `85f3ae4`，`h11-observe-v2-archive-evidence/`（`archive-path-evidence.txt` `030a9cd1…`），SUMS **4ef99a4c…**。
+- **哈希更正**：此前“prestart1 自哈希 4c370713”有误——`4c370713` 是快照内 `meta/start-utc.txt`；prestart1 `SHA256SUMS` 文件哈希为 **292cf7fe…**（3480772 已更正）。
+- **残余操作注意**：`collect-raw.sh` 在 `ARCH` 未设置时默认仍指向旧 canonical（line 13）；**end 必须按模板显式带 `ARCH=…-attempt2`**。若要求默认改 attempt2 或对默认路径硬拒绝，属新的包修改，需明确指示。
+- 状态：plan/identity/helper/frozen 未变；未启动 window/stop/torchrun，无设备；旧 GO 挂起；32/35 按 3c4bdc5 增量审后由 20 发绑定新包的续行。
