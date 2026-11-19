@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "33a101fd509d70d0dc8e7d15e6d73603a597d8d45e606107dbbaf02645b1ac43",
-      "bytes": 26905
+      "sha256": "d414d454c5d30a432a248ddca0e87dcc445af069e0ae89d6e5df557b031f9bbd",
+      "bytes": 28264
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -340,7 +340,7 @@
     "decision": "status narrowed; A14 MRS V1 KFC path proven live at small shape, so the refused mc2_server is not a universal blocker; remaining question is Grouped-specific (op/kernel/tiling/rac_server/context) and H12; no all-MC2 generalization",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
     "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
-    "status": "grouped_matched_small_hang_exact_cause_unresolved; mc2_server dependency supported_but_unproven",
+    "status": "grouped_matched_small_hang_exact_cause_unresolved; thread/sync path excluded by H11+H4K; Grouped device path candidate; mc2_server dependency supported_but_unproven",
     "established": [
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
       "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
@@ -355,8 +355,9 @@
       "Grouped-specific cause of stream47/507046 while A14 MRS V1 KFC path returns synchronously at small shape"
     ],
     "pending": [
-      "H4K/H5K discriminator design provisioning after 20/32 scheduling (run_probe ARMS + window choices, no binding change)",
-      "A14 large M968/K8704/N5120 paused until the Grouped-specific cause narrows"
+      "A14 large M968/K8704/N5120 CPU preparation after 32 reviews the H4K originals (device GO separately; existing code only)",
+      "A15 MRS+all_gather freeze review; no device authorization",
+      "Grouped device-path/producer-consumer evidence remains open; A13 and Grouped large paused"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -434,7 +435,7 @@
     "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
   },
   "matched_grouped_control": {
-    "status": "H5K still hangs with a different log signature; H4K pending; exact cause unresolved; Grouped-specific candidates prioritized",
+    "status": "H11 and H4K hang with the same stream47/task13 signature; H5K invalid pre-launch; thread/sync path excluded as the differentiator; Grouped device path candidates remain",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
     "design_sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
@@ -471,7 +472,17 @@
       "interpretation": "H5K still hangs; its log signature differs from H11, but missing logs are not proof of no dispatch, and REFETCH causality is not established; no stream/context attribution; numeric absent",
       "timeline": "33 commit 4766771: rank0 handler_enter @2.557746s, Python api_return @2.557772s, sync_enter @2.557821s; no stream_compare/launch_enter/launch_return/handler_return. Code fact: fields() for handler_enter calls aclrtGetDevice/aclrtGetCurrentContext before the mark; between the handler_enter mark (binding L335) and the stream_compare mark (L344) the only runtime query is L339 getCurrentNPUStream(); the L341-344 block uses only hex/snprintf and the trace mark, and probe_trace emit is POSIX clock_gettime/getpid/getpgrp/gettid/write with no ACL calls. The block is in the handler_enter->stream_compare interval, with getCurrentNPUStream internals or the trace write as candidates and no proof which; H5K is not a valid Grouped device-path discriminator and H11 remains the matched Grouped hang cell"
     },
-    "h4k_preflight": "planned: flags 24 (KEEP_ALL|DIRECT_LAUNCH), H5K-recovery root 1316176 fresh identity, h4k-small-v1 fresh out/run/restore, window d7e73514, adapter d181b15a, port 29531 preflight; 32 GO after plan increment review; H4K is a thread+sync combination and never proves context alone",
+    "h4k_result": {
+      "tuple": "0d3f7fb / manifest 21758ff5 / run_probe 508e2931 / window d7e73514 / binding 101660f8 / adapter d181b15a / plan 947fe77a / identity 1316176/399261496",
+      "trace": "flags=24; prepare/handler thread, stream, context and device identical; launch_enter -> launch_return rc0 -> cpp sync_enter on the calling thread with no sync_return",
+      "plog": "both devices stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1 three-minute timeout, the same signature as H11",
+      "device": "KFCtaskAndTilingTraceData + AivAicpuOpParam created; RunAicpuKfcResInit (V1) plus ResInitV2/RpcSrvLaunchV2 loaded",
+      "live_snapshot": "rank0 pid 1318300 and rank1 pid 1318301 live /proc maps/stat/libs saved (PGID=self, starttime 399358649, boot 393ecc15, 15 libs each); the snapshot was taken early, before probe_adapter.so/libopapi.so were mapped, so it cannot prove the adapter load and the stub result did not flush libraries; timing limitation recorded",
+      "watchdog": "child rc -9, timed_out true, survivors [], result stub",
+      "restore": "branch aa3e-noop, root 1319033, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue",
+      "evidence": "h4k-small-v1-cell SUMS 23/23 (8fe4986b, 31 commit cd561f6); window 3b89c0b1, rank0 trace 1ef1a021/result e1a580b8, rank1 trace e3d3625b/result bfd730b7, restore 99c5c10a/eb5f25f0, rank-snapshots 8 files",
+      "interpretation": "three-point comparison: H11 (OpCommand handler + Python sync) hangs at stream47 task13; H4K (calling thread + real cpp aclrtSynchronizeStream) hangs with the same signature; H5K is invalid because its handler blocks before launch inside getCurrentNPUStream. The thread/sync path is therefore not the differentiator, and the Grouped device path (KFC task/response progress) remains the candidate; one cell does not establish a cause and the mc2_server dependency stays supported_but_unproven"
+    },
     "next_discriminators": {
       "status": "H5K executed (hang, signature differs); H4K preflight pending; 33 contract review done",
       "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination; never proves context alone)",
