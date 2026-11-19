@@ -10,7 +10,7 @@
 set -u
 
 CELL=${CELL:-/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2}
-ARCH=${ARCH:-$CELL/archive-h11-observe-v2}
+ARCH=${ARCH:-$CELL/archive-h11-observe-v2-attempt2}
 BODIES=${BODIES:-/workspace/yangchen/work/grouped-deepdive-cell-a15-large}
 # 必需元数据实际来源（已在 CELL 核 SHA；可用环境变量覆盖为其它权威副本）
 SRC_ID=${SRC_ID:-$CELL/root-identity-h11-observe-v2.json}      # 84c9edb2…

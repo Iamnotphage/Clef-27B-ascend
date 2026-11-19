@@ -113,6 +113,9 @@ for p in "$CELL/run-h11-observe-v2" "$CELL/probe-temp-h11-observe-v2" \
   [ -e "$p" ] && bad "must be absent: $p" || ok "absent $p"
 done
 [ -w "$CELL/logs-h11-observe-v2" ] && ok "logdir writable" || bad "logdir not writable"
+[ -e "$CELL/archive-h11-observe-v2-attempt2" ] \
+  && bad "must be absent before window: $CELL/archive-h11-observe-v2-attempt2" \
+  || ok "attempt2 archive fresh (absent)"
 
 # 7) SHA 清单
 check_sha() { # path expected label

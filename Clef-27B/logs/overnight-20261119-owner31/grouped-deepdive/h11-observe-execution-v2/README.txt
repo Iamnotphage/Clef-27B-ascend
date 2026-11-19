@@ -46,6 +46,15 @@ h11-observe-execution-v2 — H11 观测 v2 执行命令包（CPU-only 准备；�
 - 若改用绝对路径 torchrun 写入 child_argv，需通过 `--child-argv` 完整重建 argv（与 `--arm` 冲突），
   并在预扫中校验该路径 SHA 与 `--help` rc0；本包采用同 shell PATH 方案。
 
+raw 采集命令（canonical = attempt2；begin 由 wrapper 执行，end 在 restore 后单独执行）
+----------------------------------------------------------------------------------
+begin 由 wrapper 在停服前自动执行：
+  ARCH=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/archive-h11-observe-v2-attempt2
+restore 完成后：
+  ARCH=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/archive-h11-observe-v2-attempt2 \
+    bash /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/collect-raw.sh end
+collect-raw 的默认 ARCH 现同为 …-attempt2；不得使用旧 archive-h11-observe-v2（prestart1 证据，勿动）。
+
 rank env 观测命令（v2，ranks 存活期运行）
 ------------------------------------------
 必须显式给 v2 CELL（helper 默认 CELL 已是 v2，但仍建议显式）：
