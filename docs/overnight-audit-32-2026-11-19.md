@@ -104,6 +104,16 @@
 - S2 b8/b16 完整扫描、ERQA 400 与最终最佳服务恢复——待 31 执行。
 - cc34 candidate 正式 S1 三轮与 finally restore——**暂停**：等 34 修复 entry 的 state/prod_env 构造契约并出新 stage/entry SHA；重跑绑定 `be55b18c…` restore + prior `1da03a19…`，之后核 3×2352 raw/质量/P95 对新基线 156.4051。
 
+## 8.1 f810 正式验收 S2_b8（已完成并核）
+
+- phase 切换：`owner31-phase-s2b8-20261119T0116Z`，complete ok=true、phase s2_b8、label `d0-final-s2_b8-20261119T011723Z-77231922`、root 1264634、五 PID 同 PGID、四检 rc0/ok；launch argv 与 live cmdline 均含 `--max-num-seqs 8 --max-num-batched-tokens 8192`（effective 同）；live env OPP 9/LD 12 clean、仅 SINGLE_FIELD。
+- v5 两点（每点 2352，journal 为**完成序**；以 index 集合完整 + 逐行 index→request 绑定核验，均通过、0 异常）：
+  - C8：inflight_max 8；p50 479.306 / p95 940.082 / p99 1021.762 ms；14.7148 dec/s；Cal 82.6932 / Int 65.8648 / Cap 74.278957（Δ−0.1465 pp）/ acc 1902 / MAE 0.402839。
+  - C16：inflight_max 16；p50 855.177 / p95 1773.543 / p99 1865.495 ms；16.8259 dec/s；Cal 81.8729 / Int 65.8217 / Cap 73.847316（Δ−0.5782 pp）/ acc 1905 / MAE 0.402753。
+  - 两点作者 scorer 独立重打分与记录逐位一致；均 2PP 内。
+- supervision complete、clients_exited=true、client_rc0、timed_out false、remaining_group []。
+- 待续：S2_b16（C32/C64）→ ERQA 400 → s1 clean 恢复。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
