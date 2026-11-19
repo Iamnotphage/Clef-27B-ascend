@@ -394,6 +394,22 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **最小修复建议（供 35/32/20）**：window 的 cleanup/survivors 应以 **child.pid 的 PPID 子树**为目标（启动后及超时前重新 scan，记录每个 rank 的 pid/ppid/pgid/starttime/boot_id），对每个独立 PGID 先校验 leader 身份（PID+start+boot 匹配）再 `killpg`；survivors 覆盖这些组；不伤未知/复用 PID 成员。H4K/H11/H5K 的历史 window 记录仍只证明 child PGID；修复需新 window SHA 并由 32/33 复核，A14 large 等安全修复后再按原授权继续。
 
+## 29. Safe-window rank-group 修复审阅清单（2026-11-19）
+
+**当前代码缺口（d7e73514/f05f352f 同型，行号）**：`cleanup_child` L284-303 仅 `pgid==child.pid` 并 `killpg(child.pid)`；survivors L551 仅 `pgid==child.pid`；异常/ finally 清理 L569/L577 仍只传 child.pid；`recovery_gate` L416-417 `residual` 仅 `pgid==child_pid`（`old_pgid` 是服务根，`runners` 是 HTTP clients），**恢复门可看不到独立 rank 组**；`maps_evidence` L321-351 同样只筛 child PGID。H4K window `survivors=[]`/`cleanup.members=[]` 只证明 torchrun PGID 1318268 为空；rank PGID 1318300/1318301 未被枚举/清理。**历史 H4K/H11/H5K 的健康恢复事实保留，但“no_survivors”声明须修订为“child PGID 无 survivor”，不能覆盖 rank 组。**
+
+**原始 stat 事实**：`.stat` 是 JSON（pid/ppid/pgid/starttime/boot_id/state/cmdline，无 SID/session）；child 1318268 pgid self start 399358408；rank0 1318300/rank1 1318301 均 ppid 1318268、pgid self、start 399358649；SID 未落盘且进程已终止，**无法事后补证**；PGID=self 说明独立组，但是否 setsid 未证。
+
+**修复必须满足（审阅门槛）**：
+1. **运行期身份登记**：child 启动后及运行期/超时前多次记录每个 rank 的 `pid/ppid/pgid/sid/starttime/boot_id/cmdline`（原始 `/proc/<pid>/stat` 至少含 session 字段），写入 window 证据；不得只依赖 cleanup 时 PPID 树（父异常退出后 reparent 会丢失）。
+2. **清理目标**：child PGID + 所有已登记 rank 独立 PGID + 当时仍可归属的 descendants；对每个组先校验 leader PID/start/boot（可加 cmdline）与登记一致，再 `killpg`；SIGTERM→rescan→SIGKILL。
+3. **未知/漂移不杀**：leader 身份不匹配、PID 复用、未知 PGID、受保护服务/其它租户成员不得 kill；记录 `unknown/drift` 并阻止恢复，不得报 survivors[] 成功。
+4. **survivors/恢复门**：cleanup 后 survivors 覆盖 child PGID + 所有登记 rank PGID + 当时 descendants；`recovery_gate` residual 必须包含这些组，任一存活/未知/drift → 不 `start_restore`；恢复后再用现有“root ppid=1/pgid=self/descendants 同组”门校验服务。
+5. **CPU fixtures（Linux，31 提供证据）**：独立 rank PGID、rank reparent 到 1、PID 复用/starttime 漂移、同 PGID 未知成员、rank 早退/采样缺失、child 异常退出/超时、cleanup 逐组 kill、survivors 拦截、restore 被阻断、无任意 kill、恢复门顺序；测试需覆盖“父异常退出后仍能清理已登记 rank 组”。
+6. **语义修订**：`no_survivors`/success 文本必须声明覆盖范围（child+rank groups）；旧 H4K/H11/H5K 记录的 `survivors[]` 仅 child PGID，历史证据保留但覆盖声明降级。
+
+**当前状态**：35 尚无新 cleanup freeze（tip 94aa830，window f05f352f 仍只父组）；A14 large `fac2d948` 未启动、暂缓；A15 仅 CPU（94aa830/0bd1fde8），无设备 GO；新 window 审过前设备暂停。本清单不进行进程操作。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
