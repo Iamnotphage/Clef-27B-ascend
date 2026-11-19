@@ -2097,3 +2097,47 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 3. grep `GetPreparePosition|GetTaskType|AicpuKfcRpcServer|WaitTaskFinish|RunConcreteAlgorithm|AicpuCcOpExe` 是否任何行；无则记缺测。
 4. 仅静态补：`AicpuRunRpcServerForMC2/V2` 是否调用 `RunAicpuRpcSrvLaunch`（解释 Init4 标记的路径归属）。
 - 不新增运行/开关/设备；不从 0 命中排路；root cause 仍 unresolved。
+
+## 116. b009f73 标记上下文单次判读：启动核 rc0、task13 下发/pending 与 AICPU 本地边界
+
+**包/口径**：commit `b009f73`、SUMS `4c1601a2…`（9 文件）；`kfc-window-extract-2456.txt`、`marker-grep-full.txt`（1264 行）、`kfc-focused-greps.txt`（98 行）、`stream47-notify-and-taskfinished.txt`（53 行）、`static-launch-direct-callers.txt`/`static-mc2-function-calls.txt`、`hit-files-MANIFEST.txt`（12/12 OK）；完整两 rank device 日志在 `archive-marker-hits/`。本轮只读本地副本，无 SSH/设备/运行。**0 命中仅限本取证集合**（12 个 marker 原件 + 上述 9 文件），不排 92 文件全集之外。
+
+**1. stream12 task7（KFC 启动核）已完成 rc0——撤回 §115 的“启动核未返回”**
+- submit rank0 `14:49:06.287.017` / rank1 `06.286.266`（plog 06023:91538 / 05927:95221）→ `TaskFinished` `06.291.869/291.762`（91578/95320）、`TaskFailCallBack: task ok, retCode=0`（91579/95321）。
+- device `End send ack to Ts ... kernelType[5] streamId[12] taskId[7] result[0]`：rank0 `22:49:06.261.338`（device-0:6252）、rank1 `06.261.233`（device-1:6319）。
+- 结论：启动核约 5.5 ms 内完成、rc0；**它不是悬挂点**。device 日志与本轮 host plog 同事件相差约 27–30 ms，仅用于跨域排序推断，不作绝对对齐。
+
+**2. stream47 task13 已真实下发，3 min 仍 pending**
+- `AllocTaskAndSendStars: stream_id=47, task_id=13, task_type=0(KERNEL_AICORE), sendSqeNum=1, head=12 tail=14`：rank0 `06.287.513`（91538）、rank1 `06.286.603`（95276）；`SqeTaskUpdateForExpandSpec: real_stream_id=47 real_task_id=13 new_stream_id=32781 new_task_id=47`：rank0 `06.287.501`（91535）、rank1 `06.286.591`（95273）。
+- 3 min 后两 rank `SynchronizeExecutedTask: report three minutes timeout! stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1`：rank1 `14:52:06.286.359`（run/plog 1267:386）、rank0 `06.287.354`（1276:407）。
+- 无 `TaskFinished(stream_id=47, task_id=13)`、无对应 returncode；**task13 未完成是本节唯一正证**。
+
+**3. AICPU 侧：参数收到 + SQE 下发 + 本地主 stream 排空（仅此三项）**
+- 两 rank 行号对齐：`Start to run, round 0`（deprecated_process.cc:551）6062；`RcvMsg by task param 1`（rpc_server.cc:298）6067；`Addr Msg[...]`（process.cc:217）6069；`addEndTask, curTurnCnt:1, totalTurnCnt:1` 6155；`WaitMainStreamFinish` start/end 6164/6166（rank0 sqid92）、6164/6233（rank1 sqid93）；`SetOpExecStatus: state:2` 6215/6282；`end RunAicpuRpcSrvLaunch` 6250/6317。
+- AddrMsg 原文（两 rank 相同）：`commType 2, opType 0, sendBuffer 0x12c081671600, recvBuffer 0x12c081671600, count 65536, strideLen 0, bfloat16, valid 1558123066, isLast 1, funID 2, sendCnt 52, rcvCnt 18, everyTurnRsp 1, everyTurnWait 1, totalTurnCnt 1, winOffset 0`。
+- **字段区分**：`AddrMsg count 65536` 是元素数（=128×512 BF16，send/recv 同址）；`HcclKFCTilingData.sendCnt 65536` 是 tiling 字段（32 报同值不同结构）；`AddrMsg sendCnt 52=0x34`、`rcvCnt 18=0x12` 与 GenMsg `+50..51=0x1234` 的字节拆分一致，**按常量/布局记录，不当运行时轮次**；轮次以 `totalTurnCnt 1`/`addEndTask curTurnCnt:1` 为准。
+- `WaitMainStreamFinish` 的 `head:11 tail:11 loopCnt:0`（两 rank 25 µs/652 µs）只证明 AICPU 本地主 stream 队列排空，**不是 stream47/task13 完成**；`state:2`、`addEndTask`、after-copy 同值拷贝均不能当远端 AllReduce 完成或 task13 完成。
+
+**4. 完成回写与 notify 归属：不能归因 task13**
+- Grouped 窗口 `[SQE] write value` 指向 rank0 `0x2f06a0140530/052c`、rank1 `0x2e06a01405f8/05f4`；`rts_notify.cc:292 res get write value success` 显示同址对应 resId 2379/2380（及 2429/2430/2436/2437 相邻），是 **notify flag/credit 写**，不是 `AivAicpuOpParam` 的 +44/+48/+50/+51，不能当 AICORE 完成回写。
+- `PostMsg`/`Post finishedTurnCnt`/turn 字符串在本集合 **0 命中**（`marker-grep-full` lines=0）；end-task notify 2437(rank0)/2387(rank1) 在 stream92/93，与 runtime task12 的 notify 同 id，但现有原件没有 wait/returncode/TaskFinished 把它绑定到 task13，**不能归因为 task13 完成**。
+- 因此：完成回写的字段/值仍缺测；AICORE 在等哪个变量/是否已启动无原文。
+
+**5. P1–P4/F 字段更新（§15 条件保持）**
+- F1 顶层分支（部分）：`Get api RunAicpuKfcSrvLaunch` 与 `end RunAicpuRpcSrvLaunch`（V1）表明本轮走 **RpcSrvLaunch V1**，不是 MC2/V2/CommKfc；desc/sub 值仍未观测。
+- 子分支（F8/F9/F10）：实际形态为 `AicpuKfcDeprecatedProcess`（deprecated_process.cc:551）+`RcvMsg by task param`+`AicpuCcOpExe`，与 API/one-stage 一致、与 TwoStageWait 的 PostMsg 串不符；但 GetPreparePosition/GetTaskType/f31bc 值未记录，**分支谓词未证**。
+- P2：Init4 已执行 2/2（log line 27 在分支前打印 y）；判据 `*(u32*)(*(KFCTask+40))` 的值未观测，零/非零分支未证。
+- P1/P4：无 runtime；本路径未出现 PostMsg/TwoStage 串，条件式同字节链未被证实（guard 不同，不排路）。
+- F6 `y`：新增部分证据——Init 的 x1=y 低 32 位 `0x9BC00000`，两 rank 相同；高 32 位与“y==ctx+184”未证。
+- F4/F5：无（52/18 不是 j/T）；F3/F7/F8/F9/F10/F11/F12：仍无运行值；F11 不能区分 server_A/B（Init 日志只打印 y，不打印 this）。
+- 静态补证：`RunAicpuKfcSrvLaunch`/`RunAicpuRpcSrvLaunch`/`V2` 直接 caller 均 0，与 `Get api` 动态调用一致；无 .plt/函数指针/dlsym 覆盖，不能据此推断 MC2 不调用 Launch/Init4。
+
+**6. 本轮结论 + 下一最小“现有证据静态/日志分析”问题清单**
+- 结论：根因 unresolved；启动核 rc0、task13 已真实下发且 3 min pending；AICPU 侧仅证“参数收到 + SQE 下发 + 本地主 stream 排空”；设备端 AllReduce 完成与完成回写未证；0 命中限本集合；52/18 按常量字节记录。
+- 下一最小（只做现有证据的静态/日志分析，不追加设备取证/新 GO）：
+  1. 两 rank device 日志 `end RunAicpuRpcSrvLaunch`（06.261）至 14:52:06 之间是否有 task13/stream47 的 AICORE 异常、wait/notify 未满足、sqe 超时或看门狗行；无则记缺测。
+  2. `AivAicpuOpParam`/`KFCtaskAndTiling` 的 ATRACE create 行是否含 buffer 地址；若有，把 write-value 地址与 op-param base 对齐，判定是否存在 +50/+51 写；无地址记缺测。
+  3. 静态把 `aicpu_kfc_deprecated_process.cc:551` 行号映射到函数边界（只反汇编/行号映射，不改库），确认本轮子分支与 `AicpuKfcDeprecatedProcess` 的 OneStage/API 对应关系。
+  4. 若上述仍不足，由 20 决定是否需要一次最小 entry 日志/只读快照；本轮不请求。
+
+**状态**：31/35 本阶段已完成（31 CPU 候选 `8f4b843` 50/50 PASS、未部署；服务 root 1355077/ppid 1355076 health ready）；33 仅完成本节只读判读与一次文档提交；无设备/新 GO。
