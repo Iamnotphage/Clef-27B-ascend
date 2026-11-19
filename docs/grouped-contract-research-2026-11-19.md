@@ -1329,7 +1329,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - H11 是真实 arm：`flags=8 KEEP_ALL`、`native=True`、`rows=128`、bias `fp32_zero`；plan-only 已验 H11/flags8/native/128/256/512/240/90。
 - argv：torchrun 2 ranks + `run_probe --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root/out fresh --adapter d181b15a --arm-timeout 240 --comm-timeout 90 [--execute]`。
 - env：window 设 `GLOBAL_LOG_LEVEL=0` + fresh `PROCESS_LOG_PATH`；`child_env` 继承到 torchrun/ranks；restore 用 `env -i`，观察 env 不进入服务；source SHA 检查。
-- window `1f780bf8` 含 H11，兼容 plan-only/240 s/cleanup/唯一 restore；runtime 用 `e38b541`。
+- window `1f780bf8` 含 H11，兼容 plan-only/240 s/cleanup/唯一 restore；runtime 用 `e38b541`。35 已完成 H11 doc-only 更新：`h11_matched_control.md` SHA `fa62db6c`（commit 2b5729e），旧 plan `68cc5a79`/run_probe `0f90fd23`/window `2202165e` 标注为历史、不是当前 tuple。
 
 **采集口径（32 同意）**：fresh `PROCESS_LOG_PATH` + 默认 `/root/ascend/log` 时间窗 + device 日志**全量**；**不按 probe PID 过滤**；按 time/device/file/host 派生；正向标记出现才算采到，否则缺测。级别证据为 cf9f1d6/rodata 33a2226；guard 映射/新 xref 未闭。
 
@@ -1351,3 +1351,11 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - **env**：`ASCEND_GLOBAL_LOG_LEVEL=0`、`ASCEND_PROCESS_LOG_PATH=<fresh abs dir>` 必须在**启动 window 前**导出到进程环境（不在 argv）；window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → torchrun→ranks 继承；fresh dir 预创建；执行中只读 `/proc/<rank>/environ` 验证。`GLOBAL=0` 仅候选。
 - **restore**：`env -i PATH=... CLEF_LAUNCH_CONFIG=s1 setsid ... start.sh`；观察 env 不进入服务；branch/五 PID/source 三段 SHA 检查保留；aa3e-noop fresh identity 对应现网 root `1337814/400405818`，由 31 预检。
 - **前置**：fresh identity/port/dirs、stop-script SHA、text/image body、log dir、31 preflight；**无设备 GO、当前不运行**。修正 2 个 argv 阻断后继续 CPU 预审，仍不发 GO。
+
+### 82.1 预审版本对齐
+
+32 的 §81 补审消息引用的是 **7c2cf0a 之前**的 §79.2 文本；当前版本（7c2cf0a/§82）已：
+- probe child 改为 `torchrun --nproc_per_node=2 ... run_probe.py --arm H11 ... --execute`；
+- window argv 已补 `--text-body` / `--image-body`；
+- env 顺序、restore `env -i`、采集口径不变。
+请以当前 §79.2/§82 复核；若仍看到旧文本，说明审阅快照未更新。H11 文档新 SHA 为 `fa62db6c`（35 2b5729e）。
