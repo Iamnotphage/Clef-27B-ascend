@@ -39,6 +39,25 @@ need_dir() {
   FAIL=1
   return 1
 }
+need_identity() {  # identity.json 非空、可解析、且与 SRC_ID 的 pid/starttime/boot 一致
+  if [ ! -s "$ARCH/meta/identity.json" ]; then
+    echo "MISSING REQUIRED FILE: identity.json (empty or absent)" >&2
+    FAIL=1; return 1
+  fi
+  if ! ARCH="$ARCH" SRC_ID="$SRC_ID" python3 -I - <<'PY'
+import json, os, sys
+a = json.load(open(os.path.join(os.environ["ARCH"], "meta", "identity.json")))
+b = json.load(open(os.environ["SRC_ID"]))
+for k in ("pid", "starttime", "boot_id"):
+    if str(a.get(k)) != str(b.get(k)):
+        sys.exit(2)
+PY
+  then
+    echo "MISMATCH REQUIRED: identity.json vs SRC_ID ($SRC_ID)" >&2
+    FAIL=1; return 1
+  fi
+  return 0
+}
 record_src() { printf '%s -> %s\n' "$1" "$2" >> "$ARCH/meta/sources.txt"; }
 
 phase=${1:-}
@@ -51,17 +70,33 @@ begin)
   : > "$ARCH/meta/sources.txt"
   date -u +%Y-%m-%dT%H:%M:%SZ > "$ARCH/meta/start-utc.txt"
   date +%s.%N > "$ARCH/meta/start-epoch.txt"
-  python3 -I - > "$ARCH/meta/identity.json" <<'PY'
-import json
-pid=1337814
-st=open(f"/proc/{pid}/stat").read(); r=st[st.rfind(")")+2:].split()
-print(json.dumps({
- "pid": pid, "ppid": int(r[1]), "pgid": int(r[2]), "session": int(r[3]),
- "starttime": r[19], "state": r[0],
- "boot_id": open("/proc/sys/kernel/random/boot_id").read().strip(),
- "cmdline": open(f"/proc/{pid}/cmdline","rb").read().replace(b"\0",b" ").strip().decode(),
-}, indent=1))
+  if SRC_ID="$SRC_ID" python3 -I - > "$ARCH/meta/identity.tmp" <<'PY'
+import json, os, sys
+src = os.environ["SRC_ID"]
+saved = json.load(open(src))
+pid = int(saved["pid"])
+try:
+    st = open(f"/proc/{pid}/stat").read()
+    r = st[st.rfind(")")+2:].split()
+    live = {"pid": pid, "ppid": int(r[1]), "pgid": int(r[2]), "session": int(r[3]),
+            "starttime": r[19], "state": r[0],
+            "boot_id": open("/proc/sys/kernel/random/boot_id").read().strip(),
+            "cmdline": open(f"/proc/{pid}/cmdline","rb").read().replace(b"\0",b" ").strip().decode()}
+except OSError as exc:
+    print(f"identity capture failed: {exc}", file=sys.stderr); sys.exit(3)
+for k in ("pid", "starttime", "boot_id"):
+    if str(saved.get(k)) != str(live.get(k)):
+        print(f"identity mismatch on {k}: saved={saved.get(k)} live={live.get(k)}", file=sys.stderr)
+        sys.exit(4)
+json.dump(live, sys.stdout, indent=1)
 PY
+  then
+    mv "$ARCH/meta/identity.tmp" "$ARCH/meta/identity.json"
+  else
+    echo "MISSING REQUIRED: identity capture failed (SRC_ID=$SRC_ID)" >&2
+    rm -f "$ARCH/meta/identity.tmp"; FAIL=1
+  fi
+  need_identity || true
   curl -sS --max-time 5 http://127.0.0.1:18143/health > "$ARCH/meta/health.json" 2>&1 || true
   curl -sS --max-time 5 http://127.0.0.1:18143/v1/decide/info > "$ARCH/meta/info.json" 2>&1 || true
   python3 -I - > "$ARCH/meta/port-29531.txt" 2>&1 <<'PY'
@@ -150,6 +185,8 @@ end)
       cp -p "$f" "$ARCH/cell/" && record_src "$f" "cell/$(basename "$f")"
     fi
   done
+
+  need_identity || true
 
   # 派生视图（单独文件，不改 raw）
   find "$ARCH" -type f ! -name SHA256SUMS ! -name correlation.txt \

@@ -1,0 +1,28 @@
+== 1) begin with good identity ==
+archive=/tmp/h11-collect-fixture/archive-good
+markers: /tmp/h11-collect-fixture/archive-good/meta/START /tmp/h11-collect-fixture/archive-good/meta/START_SLACK
+begin_good_rc=0
+identity_size=888
+identity_pid 1347086 start 401212026 boot 393ecc15
+== 2) begin with mismatched identity (expect rc!=0) ==
+identity mismatch on starttime: saved=1 live=401212026
+MISSING REQUIRED: identity capture failed (SRC_ID=/tmp/h11-collect-fixture/bad-identity.json)
+MISSING REQUIRED FILE: identity.json (empty or absent)
+archive=/tmp/h11-collect-fixture/archive-bad
+markers: /tmp/h11-collect-fixture/archive-bad/meta/START /tmp/h11-collect-fixture/archive-bad/meta/START_SLACK
+begin_bad_rc=1
+begin: REQUIRED INPUTS MISSING
+bad_identity_size=missing
+== 3) end with fixture artifacts ==
+bash: line 26: /tmp/h11-collect-fixture/archive-bad/meta/identity.json: No such file or directory
+SUMS=/tmp/h11-collect-fixture/archive-good/SHA256SUMS
+raw files: 29
+end_good_rc=0
+== 4) end with emptied identity (expect rc!=0) ==
+MISSING REQUIRED FILE: identity.json (empty or absent)
+SUMS=/tmp/h11-collect-fixture/archive-good/SHA256SUMS
+raw files: 29
+end: REQUIRED ARTIFACTS MISSING (see above)
+end_bad_identity_rc=1
+== cleanup ==
+fixture_done

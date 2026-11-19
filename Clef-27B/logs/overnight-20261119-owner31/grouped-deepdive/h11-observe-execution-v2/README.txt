@@ -79,7 +79,10 @@ rc=0（帮助日志写入 `<CELL>/cpu-prep/rescan-torchrun-help.log`，与观测
 - plan-h11-observe-v2.json、planonly-rerun.txt、planonly-rerun-output.json：plan 与复核证据。
 - root-identity-h11-observe-v2.json / env-sidecar-h11-observe-v2.json：新身份与两项 env sidecar。
 - collect-raw.sh：v2 raw 采集（CELL/ARCHIVE 绝对、markers、fresh logs + /root/ascend/log 时间窗、
-  不按 PID、sources.txt、SUMS、correlation）。
+  不按 PID、sources.txt、SUMS、correlation）。identity 采集从 `$SRC_ID` 读取并校验
+  pid/starttime/boot 与 /proc 一致；identity 生成失败或 begin/end 校验不符均 FAIL/非零。
+- collect-identity-fix-check.txt：identity 修复的 CPU fixture 证据（好 identity begin/end rc0；
+  坏/空 identity begin/end 均 rc1 fail-closed）。
 - rank-env-read.py（v2 绑定版）：默认 CELL=v2、RUN=<CELL>/run-h11-observe-v2；支持 --run 覆盖；
   descendants `entries` + /proc pgid；ranks 存活期读三键，空/缺失=缺测。
 - preflight-rescan.sh：上述预扫（含 torchrun）。
