@@ -86,3 +86,33 @@
 
 - 旧 timeout 的**已证**仅是“host prepare/入队成功、设备完成等待未返回”；本次把可疑面收敛到 MC2 上下文/组名绑定、workspace/descriptor 生命周期、线程/context/stream 与多进程 comm 桥接四类，并给出决定性 A12 对照与 A1/A2/A3/A4/A5 单变量矩阵。
 - 不先判 API 不支持：源码/op-info/样例三方证据冲突，需 A12 实测裁决。
+
+## 6. E1：组名在 GetWorkspaceSize 是否被 executor 复制（本机 9.2.1 二进制证据）
+
+调用链（本机库 SHA 已核）：
+
+1. `libopapi.so`（SHA `eb1c788e…`）导出 `aclnnInnerGroupedMatMulAllReduceGetWorkspaceSize`：`0x2644a1c`，size `0x994`。
+2. 该函数对字符串入参调用 `strlen@plt`（`0x2644e60`、`0x2644ec4`、`0x2644f30`），随后调用 `NnopbaseAddAttrWithDtype@plt`（`0x2644e7c`、`0x2644ee0`、`0x2644f4c`）；并在 `0x264500c` 调用 `NnopbaseSetMc2@plt`。即 attrs（含 group）以“指针+长度”形式交给 Nnopbase。
+3. `libnnopbase.so`（SHA `72cd43b4…`）`NnopbaseAddAttrWithDtype`（`0x2679e8`）转调 `NnopbaseExecutorAddAttr`（`0x2df8d8`，size `0x13a0`）。
+4. `NnopbaseExecutorAddAttr` 内存在 `std::string(char const*, allocator const&)` 构造（`0x2dfa04` `_ZNSsC1EPKcRKSaIcE@plt`）、`strlen`+`std::string::append(char const*, size_t)`（`0x2dfb14`/`0x2dfb24`）、`operator new`（`0x2dfc10`）与 `memcpy_s@plt`（`0x2dfd7c`，目标为 executor args 缓冲区）——attr 值被复制进 executor 自己的存储。
+
+结论（置信度高，二进制级）：**group 字符串在 prepare/GetWorkspaceSize 阶段被复制为 executor-owned 存储；H1“launch 时仍引用调用方 c_str 导致悬垂”被强烈削弱**。局限：这是本机 9.2.1 二进制反汇编（非 generated inner 源），个别分支归属依地址上下文判断；A1 实验可保留为低成本运行时确认，但不应作为首批最高优先。该证据不改变“tiling 在 prepare 用 `GetRankSize(group_)`”的事实。
+
+## 7. E2：torch_npu 2.10 异步 handler 的 device/context/stream 传递（上游 tag 源）
+
+版本：`Ascend/pytorch` tag `v26.1.1-pytorch2.10.0`（与本机 torch_npu 2.10.0.post7 / npu-smi 26.1.1 最近；非精确 patch 对应，本机 libtorch_npu SHA `65e6be19…`）。
+
+调用链：
+
+1. `torch_npu/csrc/framework/OpCommand.cpp`：`OpCommand::Run()`（L129–179）在 task-queue 开启且非 sync-launch stream 时，`aclCmd->ExportParams(execParams)`（`ExecuteParas` 含 customHandler）→ `c10_npu::queue::QueueParas(COMPILE_AND_EXECUTE, …)` → `c10_npu::enCurrentNPUStream(&params)`；`RunOpApi`（L183–228）另有 `EXECUTE_OPAPI` 路径，但 binding 走 `SetCustomHandler` + `Run()`。
+2. `torch_npu/csrc/core/npu/NPUStream.cpp`：`enCurrentNPUStream`（L739–748）把 `paramStream = current_streams[device_index]->stream` 写入队列参数——入队时 current stream 被记录。
+3. `torch_npu/csrc/core/npu/NPUQueue.cpp`：消费线程 `StartConsume`（L795–810）只做 `SetThreadAffinity(device_id)` 与 `c10_npu::SetDevice(device_id)`，**无显式 `SetCurrentContext`**；`ReadQueue`（L425–490）→ `manager().Call`。
+4. `torch_npu/csrc/framework/OpParamMaker.cpp`：`ExecFunc`（L331–370）在 `COMPILE_AND_EXECUTE` + `customHandler` 时直接 `ret = cur_paras->customHandler()`——**handler 无参数、不接收 stream**；传入 `ExecFunc` 的 `stream` 仅用于 aclop 路径（L396–408）。`ExecFuncOpApi`（L425–465）同样无参调用。
+
+结论（上游明确事实）：custom handler 在**设备消费线程**执行；该线程通过 `SetDevice` 使用设备 primary context（ACL primary context 为设备级共享）；handler 使用 binding 捕获的 prepare-time stream，Python `torch.npu.synchronize()` 为设备级同步，覆盖该 stream。**H4“handler 使用另一 context”与 H5“捕获 stream 与同步 stream 不同”均被削弱**；仍以 A9 在本机记录 thread/context/stream id 作最终确认。局限：上游 tag 可能与 post7 有 patch 差异；本机二进制未逐行比对。
+
+## 8. 证据对假设优先级的修订
+
+- 降级：H1（组名复制）、H4（primary context）、H5（stream 一致）、H11（executor 泄漏且 attr 复制）。
+- 保持/上升：H2（workspace 在 sync 前释放）、H3（descriptor 早销毁）、H6（workspace 初值）、H12（多进程 torch comm vs 样例单进程 `HcclCommInitAll`）与 MC2 上下文/AICPU 绑定；H7 仍低（无 128 倍数约束）。
+- 首批实验仍按 A8→A12→A0→A9→A2/A3→A6→A12b 推进；A1 保留但降为确认项。
