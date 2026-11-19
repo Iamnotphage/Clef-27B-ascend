@@ -312,7 +312,7 @@
     "future_control": "MatmulReduceScatter V1 (A3 AI CPU) vs V2 commMode=aiv (A3 aiv, >=200MB) only after A3 registration/platform support is confirmed"
   },
   "closure": {
-    "root_cause": "mc2_server.tar.gz not loaded on chip:5; MC2 KFC AICPU task has no implementation; AICORE waits on stream 47",
+    "root_cause": "suspected first-cause: mc2_server.tar.gz skipped on chip:5; the grouped dependency on the refused package and the MC2 KFC implementation are unproven",
     "evidence": {
       "mc2_server_sha256": "712638354c71dff584651221d3c1227a62d809ed7de325e93c1ffa5926de25a0",
       "package_load_ini_sha256": "38b4b47eb913cf1085561f45e65f34545947a6650a0170ec4e4c333a0dc1912f",
@@ -320,11 +320,11 @@
       "libaicpu_custom_sha256": "ce4f21b605b149bc9274593746c79604d2fc8197007b3e4ffd4951ae14c5e7c7",
       "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae",
       "33_commit": "87ffb96",
-      "31_conclusion_revision": "8133e16 (suspected_environment_blockage_pending_dependency_control)",
-      "31_dependency_analysis": "d8d4050 / 31f8f1ee..."
+      "31_conclusion_revision": "8133e16 (file bfef1c02; suspected_environment_blockage_pending_dependency_control)",
+      "31_dependency_analysis": "d8d4050 / 31f8f1ee (dependency_status=supported_but_unproven)"
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
-    "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
+    "decision": "status narrowed; A12-H6 workspace-init and A14 MatmulReduceScatter V1 controls are pending; no all-MC2 generalization",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
     "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
     "status": "narrowed_pending_A12_H6_and_A14",
@@ -342,7 +342,8 @@
       "A12-H6 workspace memset derivative (prepared, 33/32 contract)",
       "A14 MatmulReduceScatter V1 control (A3 registered; header/sample pending 33)"
     ],
-    "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status"
+    "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
+    "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
     "status": "prepared_not_executed_pending_33_32_contract",
