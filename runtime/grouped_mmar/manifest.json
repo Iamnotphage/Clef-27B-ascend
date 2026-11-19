@@ -338,19 +338,18 @@
     ],
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
-      "H6 workspace initial value for the hang",
       "H12 MC2 context/AICPU binding",
-      "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
+      "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven"
     ],
     "pending": [
-      "A12-H6 GO executing; capture memset/launch/sync/costtime/maps/plog/recovery",
-      "A14 rebuild on e0b06df; old plans invalid; small GO after 32 review"
+      "A14 small v2 (identity 1305145, plan 18fdf185, KEEP_ALL) awaiting 32 GO",
+      "A14 large M968/K8704/N5120 after small result"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "go_executing_single_cell",
+    "status": "falsified_by_execution",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -379,10 +378,28 @@
       "child_timeout": 240,
       "sums_sha256": "4b4afbd49ea20fcda2047a8dedad948422ca78be332bd98d45a0a97c66a0d99d"
     },
-    "go": "32 GO; plan aedd3f68; d0_stop 1301295 -> H6 child <=240s -> cleanup -> official start.sh aa3e"
+    "go": "32 GO; plan aedd3f68; d0_stop 1301295 -> H6 child <=240s -> cleanup -> official start.sh aa3e",
+    "result": {
+      "memset_rc": "0 on both ranks (aclrtMemsetAsync, child stdout)",
+      "outcome": "still retcode 507046 at h6.cpp:392, TestCall execute AICPU failed; plog stream_id=47 KERNEL_AICORE task_id=2, 10s timeout; no costtime",
+      "window_ok": false,
+      "child_rc": 0,
+      "timed_out": false,
+      "maps_ok": true,
+      "conclusion": "workspace zero-init does not change the hang; H6 weakened/falsified for this incident",
+      "recovery": "branch=aa3e-noop, tree aa3e, root=1305145, five PIDs, checks all true"
+    },
+    "evidence": {
+      "window_sha256": "5bcea516",
+      "child_stdout_sha256": "a365d4fb",
+      "plog_debug_sha256": "4b7b7eab",
+      "plog_run_sha256": "c5e50599",
+      "sums_sha256": "e88d9d23",
+      "commit": "f176183"
+    }
   },
   "a14_control": {
-    "status": "e0b06df_rebuild_pending_small_then_large",
+    "status": "small_v2_plan_ready_pending_32_go",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -432,6 +449,27 @@
     ],
     "rebuild_required": "31 re-stage e0b06df (binding 101660f8, run_probe 6ae866b1 KEEP_ALL, window 2202165e), recompile/log, new identity after H6 recovery, new small plan M128/K256/N512",
     "small_go": "after 32 reviews 101660f8+6ae866b1 and the new plan/binary/identity",
-    "large": "M968/K8704/N5120 after small result and 32 limited review"
+    "large": "M968/K8704/N5120 after small result and 32 limited review",
+    "small_v2": {
+      "identity": "1305145/start 398845277 (file 4ace4a79)",
+      "plan_sha256": "18fdf185",
+      "shapes": {
+        "M": 128,
+        "K": 256,
+        "N": 512
+      },
+      "flags": "KEEP_ALL",
+      "window_sha256": "2202165e",
+      "adapter_sha256": "d181b15a",
+      "child_timeout": 240,
+      "status": "plan_not_executed",
+      "stage": {
+        "commit": "e0b06df",
+        "run_probe_sha256": "6ae866b1",
+        "binding_sha256": "101660f8"
+      },
+      "sums_sha256": "2e1086eb (13/13)"
+    },
+    "go": "32 reviews identity/plan then gives small GO; no user/20 second permission needed"
   }
 }
