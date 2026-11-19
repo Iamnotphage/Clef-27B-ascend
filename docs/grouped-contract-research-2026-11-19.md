@@ -2638,3 +2638,28 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 **边界**：源码/运行事实不证明设备侧 AllReduce/task13 完成；B722 未到调用点、非本轮 sync 挂因；SDK 缺口保留；27 继续 comm/stream/nativehandle 与 SDK docs，33 不重复实现/取件。
 
 **状态**：root cause unresolved；对象表三分；无新设备/新 GO。
+
+## 129. release 注册表/单 TU/私有 dispatch 前提（32 窄核；与 sync 挂起分开）
+
+**依据**：32 对 `binding_probe.cpp`（`101660f8…`）的只读窄核；不重复 flags8/g_states。无设备/测试/包。
+
+### 129.1 注册表与构建 TU（源码已证）
+
+- B722 `m.def("release(int id) -> int");` —— **只有 schema**。
+- B725 `TORCH_LIBRARY_IMPL(clef_mmar_probe, PrivateUse1, m) {`；B726–728 仅 `m.impl("run"/"run_mmar"/"run_mrs", ...)`。
+- **没有 `m.impl("release", ...)`**；全目录只找到 `grouped_mmar_release` 定义（B681–710）与 B725 的 impl 块，无其它注册点。
+- `compile_probe.sh` C9–14 的 g++ 只编译 `binding_probe.cpp` 一个源文件（单 TU）；release 实现只能来自该 TU，而该 TU 未注册 release ⇒ **成功后清理缺口成立**（构建事实，不是运行结论）。
+
+### 129.2 私有 dispatch 的静态前提
+
+- schema `release(int id) -> int` **没有 Tensor 参数**；PyTorch 的 `PrivateUse1` dispatch key 由 Tensor 参数产生。仅在 `TORCH_LIBRARY_IMPL(..., PrivateUse1)` 注册无 Tensor 的 op，不是有效 dispatch 路径；需要 CatchAll/Composite 注册或带 Tensor 的 schema。
+- 这是静态前提，**不能据此说 attempt2 的 release 已失败**：R579 因 R534 `torch.npu.synchronize()` 未返回而不可达，未到该调用点。
+- 若未来到达，R210–217 的 `call_release` 会捕获异常并记录 `release_error`/`harness_release_ok=False`；数值结果保留（host 代码，无运行证据）。
+
+### 129.3 边界
+
+- **当前 sync 挂起（R534）** 与 **未来 post-sync cleanup（release 无 impl/无 Tensor dispatch/单 TU）** 分开；后者不是本次挂起原因。
+- §128 对象表相应补充：release 的“schema-only + 无 impl + 单 TU + 无 Tensor dispatch”为源码已证；release 的 **SDK 内部行为**（注册后如何选 kernel、异常/返回值语义）仍待证。
+- SDK executor/stream/descriptor/native handles/设备 task 引用仍缺；27 主责其余 comm/stream/nativehandles 与 docs；35 查候选覆盖/最小修复/CPU 计划，暂不实现；33 不重复实现/取件；无新设备/GO。
+
+**状态**：root cause unresolved；release 缺口与 sync 挂起因果分离；B722 仍非本轮挂因。
