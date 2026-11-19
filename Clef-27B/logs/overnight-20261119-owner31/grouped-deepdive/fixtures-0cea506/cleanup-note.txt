@@ -1,0 +1,4 @@
+0cea506 Linux 40-test run: manifest 29/29 SHA OK. Fake-restore test errored:
+1) variable shadowing: `original = win.start_restore`, later reassigned `original = win.get_subreaper()` (int 1), so counted() calls an int -> TypeError 'int' object is not callable (line 801).
+2) the fixture's fake_restore.py still forks twice after os.setsid(), so the manifest pid is a grandchild with the intermediate pgid (already proven 1325752 != 1325753 on 3d8667a); single-fork setsid-then-exec model required.
+Fixture daemons 1325992/1325995 were SIGKILLed by exact identity and confirmed gone; service untouched.
