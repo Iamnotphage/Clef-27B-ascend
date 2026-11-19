@@ -1,0 +1,23 @@
+{
+ "schema": "owner31-grouped-dependency-analysis/1",
+ "at": "2026-11-19T07:00Z",
+ "question": "does GroupedMatMulAllReduce depend on the rejected mc2_server package or on another libccl_kernel KFC implementation",
+ "facts": {
+  "libmc2_server_on_disk": "absent (find /usr/local/Ascend -name libmc2_server.so -> none; only inside the rejected package)",
+  "mc2_server_config": "libmc2_server.json maps HcclLaunchAicpuKernel(AICPUKernel), Mc2AicpuTaskCacheClearKernel(KFCKernel), Mc2ServerKernel(KFCKernel) to libmc2_server.so",
+  "mc2_server_kernel_references": "only libmc2_server.json mentions Mc2ServerKernel; no op-info/binary_info/op config references it",
+  "libccl_kernel_exports": "46 KFC/HCCL kernels including RunAicpuKfcResInit/SrvLaunch and RunAicpuRpcSrvLaunchV2_* families; also HcomMc2AiCpuStreamAllocAndGet, HcclMc2ComOpResCtx, HcclMc2ComResourceByTiling, AicpuKfcUtils::PrintMC2AicpuContext, ExecutorTracer::KfcCommandHandle; no Mc2ServerKernel/RacServer symbols",
+  "installed_aicpu_so": "libcpu_kernels_v1.0.1.so, libaicpu_custom.so, libcpu_kernels.so contain no Mc2ServerKernel strings or symbols",
+  "grouped_kernel_source": "tbe impl/ops_transformer/ascendc/grouped_mat_mul_all_reduce/op_kernel/rac_server.h defines HcclServer over AivAicpuOpParam / MC2 buffer types, i.e. an AICPU server counterpart is expected",
+  "runtime_logs": "AICPU scheduler loads RunAicpuKfcResInit/SrvLaunch from libccl_kernel.so and completes AicpuRpcResInit; MC2 AICPU stream allocated as stream 46 (aicpuStreamMode 1); AI Core kernel on stream 47 times out; no dispatch line names Mc2ServerKernel"
+ },
+ "assessment": {
+  "dependency_status": "supported_but_unproven",
+  "reasoning": "the only implementation of Mc2ServerKernel is inside the rejected package; grouped kernel source expects an AICPU server via rac_server.h; however libccl_kernel provides a functioning HCCL KFC server and the runtime logs never show which server kernel grouped awaited, so dependency is not yet demonstrated at runtime",
+  "discriminators_pending": [
+   "A12-H6 workspace zero-init derivation (35, commit b4a658c) reviewed by 32/33",
+   "A14 MatmulReduceScatter V1 after 33 confirms A3 registration and package requirements"
+  ]
+ },
+ "status": "read-only analysis; no device actions; service aa3e/s1 root 1301295 online"
+}
