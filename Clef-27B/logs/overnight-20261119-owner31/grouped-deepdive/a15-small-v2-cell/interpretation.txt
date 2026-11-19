@@ -1,0 +1,3 @@
+A15 v2 executed: pad rows127->128 (pad_value 1.0), row_block rank0 (0,64) / rank1 (64,128), gather_ms 1.164/1.158, workspace 17170432, sync 7.78 ms; both ranks finite/both_finite/numeric_pass/pass true; child rc0.
+equivalence and diagnostic_gate are absent from result.json although the code path exists. Root cause: a15_flow computes reference = all_reduce(matmul(x, w)); the all_reduce lambda wraps dist.all_reduce(t) which is in-place and returns None, so reference is None and the post-sync diff block (meta['reduced']/equivalence/diagnostic_gate) is skipped. Fix: lambda should call dist.all_reduce(t) and return t.
+restore: branch aa3e-noop, root 1330921, five pids, all checks true; subreaper 0 -> cleared -> restored 0.
