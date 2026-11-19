@@ -210,24 +210,38 @@ class F821Test(unittest.TestCase):
 
 class A15RecordTest(unittest.TestCase):
     def test_missing_reference_is_fail_closed(self):
-        self.assertIsNone(run_probe.a15_record(
-            [1.0], None, 1, 1, diff=lambda o, r: {}, equal=lambda o, r: False))
+        record, error = run_probe.a15_record(
+            [1.0], None, 1, 1, diff=lambda o, r: {}, equal=lambda o, r: False)
+        self.assertIsNone(record)
+        self.assertEqual(error, 'missing_equivalence_record')
+
+    def test_wrong_shape_is_fail_closed(self):
+        record, error = run_probe.a15_record(
+            [[0.0] * 512], [[0.0] * 512], 127, 512,
+            diff=lambda o, r: {'max_abs': 0.0, 'mean_abs': 0.0},
+            equal=lambda o, r: True)
+        self.assertIsNone(record)
+        self.assertEqual(error, 'invalid_equivalence_shape')
 
     def test_record_contains_equivalence_and_diagnostic(self):
-        record = run_probe.a15_record(
-            [1.0], [2.0], 127, 512,
+        output = [[1.0] * 512 for _ in range(127)]
+        reference = [[2.0] * 512 for _ in range(127)]
+        record, error = run_probe.a15_record(
+            output, reference, 127, 512,
             diff=lambda o, r: {'max_abs': 0.01, 'mean_abs': 1e-5},
             equal=lambda o, r: False)
+        self.assertIsNone(error)
         self.assertEqual(record['reduced'], {'max_abs': 0.01, 'mean_abs': 1e-5,
                                              'bit_equal': False})
         self.assertEqual(record['equivalence']['shape'], [127, 512])
         self.assertTrue(record['diagnostic_gate']['within_bounds'])
         self.assertEqual(record['diagnostic_gate']['status'],
                          'diagnostic_only_not_an_official_gate')
-        record = run_probe.a15_record(
-            [1.0], [2.0], 127, 512,
+        record, error = run_probe.a15_record(
+            output, reference, 127, 512,
             diff=lambda o, r: {'max_abs': 2.0, 'mean_abs': 5e-5},
             equal=lambda o, r: False)
+        self.assertIsNone(error)
         self.assertFalse(record['diagnostic_gate']['within_bounds'])
 
 

@@ -311,10 +311,25 @@ def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
     return output, reference, info
 
 
-def a15_record(output, reference, rows, n, *, diff, equal):
-    """Build the A15 result record; a missing reference is a fail-closed error."""
-    if reference is None:
+def _shape_of(tensor):
+    shape = getattr(tensor, 'shape', None)
+    if shape is not None:
+        return tuple(int(dim) for dim in shape)
+    try:
+        return (len(tensor), len(tensor[0]))
+    except (TypeError, IndexError):
         return None
+
+
+def a15_record(output, reference, rows, n, *, diff, equal):
+    """Build the A15 record; missing or wrong-shaped inputs fail closed."""
+    if reference is None:
+        return None, 'missing_equivalence_record'
+    output_shape = _shape_of(output)
+    reference_shape = _shape_of(reference)
+    if (output_shape != (rows, n) or reference_shape != (rows, n) or
+            output_shape != reference_shape):
+        return None, 'invalid_equivalence_shape'
     item = diff(output, reference)
     item['bit_equal'] = bool(equal(output, reference))
     return {'reduced': item,
@@ -327,7 +342,7 @@ def a15_record(output, reference, rows, n, *, diff, equal):
                                       item['mean_abs'] <= 1e-4),
                 'provenance': ('MC2 RS probe 0.03125; Dense SP probe '
                                '0.015625 / 2e-5; not the fixed_gate'),
-                'status': 'diagnostic_only_not_an_official_gate'}}
+                'status': 'diagnostic_only_not_an_official_gate'}}, None
 
 
 def execute(a, plan):
@@ -509,13 +524,14 @@ def execute(a, plan):
                         return {'max_abs': float(delta.max()),
                                 'mean_abs': float(delta.mean())}
 
-                    record = a15_record(output, reference, rows, a.n,
-                                        diff=diff_item,
-                                        equal=lambda out, ref: torch.equal(out, ref))
+                    record, error = a15_record(
+                        output, reference, rows, a.n,
+                        diff=diff_item,
+                        equal=lambda out, ref: torch.equal(out, ref))
                     if record is not None:
                         meta.update(record)
                     else:
-                        meta['numeric_error'] = 'missing_equivalence_record'
+                        meta['numeric_error'] = error
                 else:
                     diff = (output.float() - reference.float()).abs()
                     meta['reduced'] = {'max_abs': float(diff.max()),
