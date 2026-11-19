@@ -1,6 +1,6 @@
 {
  "schema": "owner31-grouped-conclusion/1",
- "status": "environment_blocked_pending_33_confirmation",
+ "status": "confirmed_environment_blocked",
  "a12_cell": {
   "window": "51d6bc0c3b9e307ae9cab51d338d8c73e67f8b06f3da25414694bbefcf0895d3",
   "manifest": "e55eac00b5844365911e94dbb87c80705f88ef0c4d4de33ee8213b27e23d6cd4",
@@ -36,7 +36,7 @@
   "conclusion": "GroupedMatMulAllReduce is environment-blocked on this A3/CANN 9.2.1 because the MC2 AICPU server package is not supported on chip:5; this reproduces identically in the official A12 sample with all lifetimes kept alive, so binding/lifetime hypotheses (H1-H12) do not explain the hang"
  },
  "actions": {
-  "device_arms": "paused (H6/H7/H12/A8/A13) per 32/35 until 33 confirms chip support matrix",
+  "device_arms": "all grouped arms paused (H6/H7/H12/A8/A13); A13 staged only after 20/32 authorization",
   "service": "kept online as aa3e/s1 (root 1301295), no further stop",
   "entry_metrics": "unchanged; no PR; grouped path recorded as environment-blocked; official aa3e delivery remains default"
  },
@@ -47,5 +47,23 @@
    "655845b (A12 cell evidence)",
    "e33d5f7 (mc2 support evidence)"
   ]
+ },
+ "confirmation": {
+  "independent_reviewer": "32",
+  "review": "mc2-support SUMS 5/5; loader lines byte-identical to A12 plog; ini has no soc field, runtime package decision; libmc2_server.json maps kernels to libmc2_server.so",
+  "conclusion": "MC2 server package not loaded -> KFC tasks have no implementation -> AICORE wait -> stream47 pending/507046 (sample) or 239s hang (v4r1); unrelated to v4r1 binding/lifetime/comm creation; H1-H12 closed for the hang",
+  "records": {
+   "32": "commit 34ccde7 (audit sections 8.20-8.22)",
+   "35": "commit d4b600c",
+   "31": "commit e33d5f7 (mc2-support), a02030a (conclusion)"
+  }
+ },
+ "a13_pending": {
+  "commit": "365cb95",
+  "window": "706d802b",
+  "manifest": "460757b1",
+  "binding": "52287e3a",
+  "run_probe": "94f3b9a1",
+  "note": "not staged/executed; awaiting authorization"
  }
 }
