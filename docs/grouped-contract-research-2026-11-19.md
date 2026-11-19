@@ -1991,3 +1991,25 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - **哈希更正**：此前“prestart1 自哈希 4c370713”有误——`4c370713` 是快照内 `meta/start-utc.txt`；prestart1 `SHA256SUMS` 文件哈希为 **292cf7fe…**（3480772 已更正）。
 - **残余操作注意**：`collect-raw.sh` 在 `ARCH` 未设置时默认仍指向旧 canonical（line 13）；**end 必须按模板显式带 `ARCH=…-attempt2`**。若要求默认改 attempt2 或对默认路径硬拒绝，属新的包修改，需明确指示。
 - 状态：plan/identity/helper/frozen 未变；未启动 window/stop/torchrun，无设备；旧 GO 挂起；32/35 按 3c4bdc5 增量审后由 20 发绑定新包的续行。
+
+## 111. C/D 最小修复重冻 8ecf8f9 / bed3a6e6（24/24）：ARCH 统一 + attempt2 fresh
+
+**包**：commit `8ecf8f9`，SUMS `bed3a6e6…`（24 行），本地 `shasum -c` **rc=0，24/24 OK**；远端 execution-v2 24/24（31 报）。**唯一固定包**；旧 GO 挂起。
+
+**C 已闭（ARCH 统一）**：
+- `collect-raw.sh` 默认 `ARCH=${ARCH:-$CELL/archive-h11-observe-v2-attempt2}`（line 13），不再回落旧 0B archive。
+- README 新增与模板一致的 end 命令（显式 `ARCH=…-attempt2` + `collect-raw.sh end`）；begin（wrapper）、end（模板/README）、默认值、文档四处统一 attempt2；README 明确旧 archive 为 prestart1 证据、勿动。
+
+**D 已闭（attempt2 fresh）**：
+- `preflight-rescan.sh` 在 window 前检查 `archive-h11-observe-v2-attempt2` 必须 **ABSENT**（line 116-118）；`validation-prepared-pass.txt` 含 `PASS attempt2 archive fresh (absent)`，整体 **RESULT: ALL PASS rc=0** 并计入 SUMS。
+
+**顺序（20 裁定）**：保留 `env/caller → preflight → collect begin（exit6）→ exec window`；要求是任何 stop 前 begin 成功，不要求字面 begin-before-preflight。
+
+**prestart1 哈希口径（澄清）**：
+- `prestart1-remote-SHA256SUMS.txt`（远端快照 SUMS 副本）哈希 = **d9217518…**（repo 证据 SUMS 内条目；31 所指）。
+- 仓库证据目录 `h11-observe-v2-prestart1/SHA256SUMS` 文件自哈希 = **292cf7fe…**。
+- `4c370713…` 是快照内 `meta/start-utc.txt`，非 SUMS 自哈希。
+
+**不变**：plan `9c2936c2`、identity 1347086/401212026、helper `68dc9e2c`、冻结产品 e38b541/8e308804/1f780bf8/101660f8/d181b15a；旧 archive/prestart1 原字节保全；未启动 window/stop/torchrun，无设备动作。
+
+**状态**：C/D 已闭；32/35 只审 `8ecf8f9` 增量，PASS 后由 20 发绑定新包的续行；**无新 GO/设备**；root cause 待真正 v2 实测。
