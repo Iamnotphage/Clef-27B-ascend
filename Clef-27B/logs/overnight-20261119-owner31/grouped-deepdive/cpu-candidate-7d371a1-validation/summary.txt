@@ -1,0 +1,14 @@
+commit 7d371a1 (window 5bbda3cc, test 8336a663)
+command: cd /tmp/cpu7d371a1-remote && python3 -m unittest -v test_supervised_window_cpu
+python: 3.10.12; Linux aarch64 (5.10.0-216.0.0.115.oe2203sp4.aarch64)
+result: Ran 48 tests in 16.017s -> FAILED (failures=1); unittest_rc=1
+counts: 47 pass, 1 fail, 0 skip (mac-skipped 7 Linux /proc fixtures ran on Linux)
+failure: test_orphan_after_immediate_parent_exit_is_registered_and_cleaned
+  line 840: self.assertFalse(allow) -> AssertionError: True is not false
+  single-test rerun 3/3 identical failure (not flaky)
+notes: ResourceWarnings (unclosed restore.log; subprocess still running) observed as test noise.
+test side effects: no torch/torchrun/NPU invoked; system python3 only; fake d0_stop/npu-smi/HTTP boundaries except
+  local temp HTTP+manifest fixtures. Leftover daemon test processes 1361942/1361945 (ppid1, cmdline os.fork/time.sleep(60))
+  were identity-checked then TERM/KILLed; remaining none. Service health unchanged (root 1355077, ppid 1355076, ready).
+separate incident: the background wrapper that had launched the manual restore hit its 25-min command limit and was stopped
+  locally; the remote service remains healthy (health ready, five PIDs unchanged). No new restore/window was started.
