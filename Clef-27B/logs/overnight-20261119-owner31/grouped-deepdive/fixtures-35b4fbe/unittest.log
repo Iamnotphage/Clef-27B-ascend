@@ -1,0 +1,141 @@
+test_adopted_intermediate_and_child_are_recorded (test_supervised_window_cpu.AttributedProcessTest.test_adopted_intermediate_and_child_are_recorded) ... FAIL
+test_drift_identity_is_not_signaled (test_supervised_window_cpu.AttributedProcessTest.test_drift_identity_is_not_signaled) ... ok
+test_orphan_after_immediate_parent_exit_is_registered_and_cleaned (test_supervised_window_cpu.AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned) ... FAIL
+test_protected_identity_is_not_signaled (test_supervised_window_cpu.AttributedProcessTest.test_protected_identity_is_not_signaled) ... ok
+test_stop_before_cleanup_records_orphan_without_waiting (test_supervised_window_cpu.AttributedProcessTest.test_stop_before_cleanup_records_orphan_without_waiting) ... FAIL
+test_dead_leader_group_member_is_attributed (test_supervised_window_cpu.AttributedTargetsTest.test_dead_leader_group_member_is_attributed) ... ok
+test_pid_reuse_and_starttime_drift_rejected (test_supervised_window_cpu.AttributedTargetsTest.test_pid_reuse_and_starttime_drift_rejected) ... ok
+test_reparent_does_not_break_registered_identity (test_supervised_window_cpu.AttributedTargetsTest.test_reparent_does_not_break_registered_identity) ... ok
+test_unknown_group_member_is_not_group_killed (test_supervised_window_cpu.AttributedTargetsTest.test_unknown_group_member_is_not_group_killed) ... ok
+test_a12_evidence_rejects_error_lines (test_supervised_window_cpu.WindowTest.test_a12_evidence_rejects_error_lines) ... ok
+test_a13_arm_builds_torchrun_child (test_supervised_window_cpu.WindowTest.test_a13_arm_builds_torchrun_child) ... <frozen os>:715: ResourceWarning: unclosed file <_io.FileIO name=4 mode='rb' closefd=True>
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<frozen os>:715: ResourceWarning: unclosed file <_io.TextIOWrapper name=3 encoding='UTF-8'>
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_a14_arm_builds_torchrun_child (test_supervised_window_cpu.WindowTest.test_a14_arm_builds_torchrun_child) ... ok
+test_cleanup_protected_member_is_not_signalled (test_supervised_window_cpu.WindowTest.test_cleanup_protected_member_is_not_signalled) ... ok
+test_f810_to_fused_marks_isolation_failure (test_supervised_window_cpu.WindowTest.test_f810_to_fused_marks_isolation_failure) ... ok
+test_full_success_path (test_supervised_window_cpu.WindowTest.test_full_success_path) ... ok
+test_h4k_h5k_a15_arms_build_torchrun_child (test_supervised_window_cpu.WindowTest.test_h4k_h5k_a15_arms_build_torchrun_child) ... ok
+test_joint_env_requires_exact_keys (test_supervised_window_cpu.WindowTest.test_joint_env_requires_exact_keys) ... ok
+test_linux_subreaper_failure_blocks_before_stop (test_supervised_window_cpu.WindowTest.test_linux_subreaper_failure_blocks_before_stop) ... ok
+test_live_healthy_service_is_skipped_not_restarted (test_supervised_window_cpu.WindowTest.test_live_healthy_service_is_skipped_not_restarted) ... ok
+test_live_service_blocks_second_start (test_supervised_window_cpu.WindowTest.test_live_service_blocks_second_start) ... ok
+test_live_service_with_port_111_is_blocked (test_supervised_window_cpu.WindowTest.test_live_service_with_port_111_is_blocked) ... ok
+test_maps_per_pid_and_coverage (test_supervised_window_cpu.WindowTest.test_maps_per_pid_and_coverage) ... ok
+test_missing_probe_body_rejected (test_supervised_window_cpu.WindowTest.test_missing_probe_body_rejected) ... ok
+test_missing_stop_script_rejected (test_supervised_window_cpu.WindowTest.test_missing_stop_script_rejected) ... ok
+test_npu_rows_parser (test_supervised_window_cpu.WindowTest.test_npu_rows_parser) ... ok
+test_old_pgid_remnant_blocks (test_supervised_window_cpu.WindowTest.test_old_pgid_remnant_blocks) ... ok
+test_plan_only_does_not_require_subreaper (test_supervised_window_cpu.WindowTest.test_plan_only_does_not_require_subreaper) ... ok
+test_plan_only_validates_and_prints (test_supervised_window_cpu.WindowTest.test_plan_only_validates_and_prints) ... ok
+test_port_open_without_root_blocks (test_supervised_window_cpu.WindowTest.test_port_open_without_root_blocks) ... ok
+test_real_foreground_http_restore_keeps_service_alive (test_supervised_window_cpu.WindowTest.test_real_foreground_http_restore_keeps_service_alive) ... /workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/subprocess.py:1127: ResourceWarning: subprocess 1322557 is still running
+  _warn("subprocess %s is still running" % self.pid,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_restore_argv_is_clean (test_supervised_window_cpu.WindowTest.test_restore_argv_is_clean) ... ok
+test_restore_output_must_be_fresh (test_supervised_window_cpu.WindowTest.test_restore_output_must_be_fresh) ... ok
+test_runner_residual_blocks (test_supervised_window_cpu.WindowTest.test_runner_residual_blocks) ... ok
+test_stop_failure_with_old_root_gone_still_restores (test_supervised_window_cpu.WindowTest.test_stop_failure_with_old_root_gone_still_restores) ... ok
+
+======================================================================
+FAIL: test_adopted_intermediate_and_child_are_recorded (test_supervised_window_cpu.AttributedProcessTest.test_adopted_intermediate_and_child_are_recorded)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-35b4fbe/runtime/grouped_mmar/test_supervised_window_cpu.py", line 641, in test_adopted_intermediate_and_child_are_recorded
+    self.assertGreaterEqual(len(snapshot), 2)
+AssertionError: 1 not greater than or equal to 2
+
+======================================================================
+FAIL: test_orphan_after_immediate_parent_exit_is_registered_and_cleaned (test_supervised_window_cpu.AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-35b4fbe/runtime/grouped_mmar/test_supervised_window_cpu.py", line 573, in test_orphan_after_immediate_parent_exit_is_registered_and_cleaned
+    self.assertFalse(Path(f'/proc/{worker}').exists())
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_stop_before_cleanup_records_orphan_without_waiting (test_supervised_window_cpu.AttributedProcessTest.test_stop_before_cleanup_records_orphan_without_waiting)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-35b4fbe/runtime/grouped_mmar/test_supervised_window_cpu.py", line 609, in test_stop_before_cleanup_records_orphan_without_waiting
+    self.assertFalse(Path(f'/proc/{worker}').exists())
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 34 tests in 7.375s
+
+FAILED (failures=3)
+{
+  "schema": "grouped-mmar-window-plan/1",
+  "run_dir": "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/run",
+  "root_identity": {
+    "pid": 4242,
+    "starttime": "1",
+    "boot_id": "b",
+    "pgid": 4242,
+    "ppid": 1
+  },
+  "stop_argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/stop.py",
+    "--api-pid",
+    "4242",
+    "--saved-identity",
+    "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/id.json",
+    "--out",
+    "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/run/stop.json"
+  ],
+  "child_argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "-c",
+    "print(1)"
+  ],
+  "child_timeout": 240.0,
+  "restore_argv": [
+    "env",
+    "-i",
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+    "CLEF_LAUNCH_CONFIG=s1",
+    "setsid",
+    "/bin/bash",
+    "-c",
+    "cd /workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m && source /workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/activate.sh && exec bash /workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/start.sh --model-dir /workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/model --output-dir /workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/restore"
+  ],
+  "restore_output": "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/restore",
+  "source_target": "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/clef_joint_schema.py",
+  "expected_source_sha256": "3366f280c209a95dc769a269c8ab6a737d2195989ebfff54d25abd1418265a61",
+  "port": 18143,
+  "clean_expect": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+  "probes": {
+    "text": "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/text.json",
+    "image": "/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-bfv7xd7m/image.json"
+  },
+  "success": {
+    "child_rc": 0,
+    "not_timed_out": true,
+    "no_survivors": true,
+    "source_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "branch": "aa3e-noop",
+    "four_checks": true,
+    "env": true,
+    "joint_env": true,
+    "two_workers": true,
+    "clients_empty": true
+  },
+  "failure_branches": [
+    "preflight identity/port/client mismatch",
+    "stop rc!=0 or post-stop port/PGID/NPU not empty",
+    "child timeout/nonzero/unknown group member",
+    "restore rc!=0/health timeout/unknown pid",
+    "branch f810->fused (isolation failure, rescue only)",
+    "source SHA drift",
+    "four-check/env/joint/worker mismatch"
+  ],
+  "no_service_writes": true,
+  "no_f810_revert": true,
+  "status": "plan_not_executed"
+}
+sys:1: ResourceWarning: unclosed file <_io.BufferedWriter name='/workspace/yangchen/work/fixtures-35b4fbe/grouped-mmar-window-9gygb5em/run/restore.log'>
