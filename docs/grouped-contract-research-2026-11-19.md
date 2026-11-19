@@ -610,3 +610,7 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 2. `libccl_kernel.so` SHA 2281deca 的完整反汇编文本（已有仅头部）：ReadWorkMsg `0x7d71cc-0x7d7284`、CheckRcvWorkMsg `0x7d7284-0x7d7624`、AddTaskForHcclMsg `0x7b2800-0x7b3704`（可切 0x7b2800-0x7b3000/0x7b3000-0x7b3704）、AicpuCcOpExe `0x7b21d0-0x7b2800`、RunAicpuKfcSrvLaunch `0x763108-0x7641f4`、RunAicpuRpcSrvLaunch `0x761380-0x762a84`、RpcSrvLaunchV2 `0x7547a0-0x755104`、ResInit `0x760468-0x760500`、ResInitV2 `0x754568-0x7547a0`；并给 `AicpuKfcRpcServer|AicpuKfcProcess|AivAicpuOpParam` 的 nm 起址/size。  
 3. 若本机 CANN 9.2.1 安装文档/已知问题可只读检索，给路径/版本/片段；不做外部 issue/消息。  
 **结论**：新方向可判别但未证——若 Grouped KFC 是 type6/cust，则 507046/AICore 等握手是强候选；若 type5/2，则依赖/协议路径另找。root cause 仍 **unresolved**，不回到 `confirmed_environment_blocked`；`mc2_server` 依赖仍 `supported_but_unproven`。A15 v3 zero-diff 仅本格；A15 large/生产未授权；设备暂停。
+
+## 58. ed12a12 A15 large 误差字段：生产 tensor 路径未被 CPU 直测（2026-11-19）
+
+32 finding 核：ed12a12（manifest 8e5846de、run_probe 8e308804、test 07e5a5b4）已实现 `relative_l2`（denominator=max(ref_norm,TINY)，0/0→0、zero_reference）和 `tensor_error_stats`（torch tensor：max/mean、ref/out abs max、nonzero/total、max_error index/position+值、max_rel_abs、relative_l2/denominator/zero_reference），但 **CPU 测试仍用 `list_error_stats` 或 `stats=lambda`**；`tensor_error_stats` 的真实 torch 张量路径未被直接执行。故生产字段的数学/边界仅由 list helper 证明，非生产实现证明；需 torch-available 直测（Linux venv 可跑）后重冻。A15 large c482f3f plan d1b02bcd/stage 已 superseded，ed12a12 预检 plan 34bfb3aa/stage39ffb333/identity1334752 元数据待最终冻；GO 应等 torch 直测重冻。A15 bench/生产仍由 32/35 范围；Grouped 研究不受影响；设备暂停。
