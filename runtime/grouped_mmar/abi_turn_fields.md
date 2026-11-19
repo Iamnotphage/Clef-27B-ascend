@@ -99,12 +99,35 @@ recv base C+j+64T, matching `GetSendCnt/GetRecvCnt`. It does **not** set server+
 (+0xd10 vs +0xcf0), so S=C requires the same server object plus `Init(y)`; that
 link is still unproven.
 
-abi6 also shows the slot gate/consume fields (33 §63): ReadApiValidMsg reads
-`[slot+48]` and compares `0x5CDF123A`; on consume it writes `0xA320EDC5` at +48 and
-does **not** access +50/+51. The +50/+51 writes are attributed by 33 to
-`GenMsgByTaskParam` (constant 0x1234); `rac_server.h` has `sendCnt=curTurn` and
-`TurnWait` zeroing `rcvCnt`. This does not resolve the S/C/j alias question, but it
-separates the +50/+51 producer from the server turn word.
+abi6 also shows the slot gate/consume fields, but the earlier "does not access
++50/+51" wording must be corrected by width: the accesses are **4-byte words**, and
+a word at `[slot+48, slot+52)` physically covers +50 and +51.
+
+| Function | Base / object | Start | Width | Covered bytes | Value / semantics |
+| --- | --- | --- | --- | --- | --- |
+| ReadApiValidMsg gate 0x7d6f40 | `x0` = slot pointer from ReadAddrMsg (`[server+8]+64*turn`) | +48 | 4 B load | 48,49,50,51 | compare to `0x5CDF123A`; LE bytes `3A 12 DF 5C`; valid-word gate |
+| ReadApiValidMsg consume 0x7d7118-0x7d7124 | same slot | +48 | 4 B store | 48,49,50,51 | `0xA320EDC5`; LE bytes `C5 ED 20 A3`; consume marker |
+| GenMsgByTaskParam 0x7d7f08 | `x19` = `AivAicpuOpParam` | +48 | 1 B store | 48 | isLast |
+| GenMsgByTaskParam 0x7d7f20 | same | +49 | 1 B store | 49 | funID from task+105 |
+| GenMsgByTaskParam 0x7d7f2c | same | +44 | 4 B store | 44-47 | `0x5CDF123A` (valid word) |
+| GenMsgByTaskParam 0x7d7f30 | same | +50 | **2 B store** | 50,51 | `0x1234`; source layout means sendCnt=0x34, rcvCnt=0x12 |
+| CopyAndCheckApiMsg 0x7d6b24 | destination message | 0 | 64 B `memcpy_s` | 0-63 incl 50/51 | bulk copy, not an independent counter op |
+| GetSendCnt/GetRecvCnt | `[ctx+184]+...` | +50/+51 | 1 B load each | 50 / 51 | dedicated counter reads |
+
+Provable statement: the gate/consume use an **integer valid word** and no
+**independent byte counter store** was observed in that function; the 4-byte range
+still physically covers +50/+51. Whether `slot` equals the `AivAicpuOpParam` base or
+base-4 is unproven: GenMsg writes the same `0x5CDF123A` at struct+44, which is
+consistent with a 4-byte shift between the two pointers, but the layout relation is
+not established.
+
+`GenMsgByTaskParam` writes a u16 `0x1234` at +50, covering both bytes; the
+`CopyAndCheckApiMsg` 64-byte copy also covers them as a bulk operation. The **"libccl
+has a unique +50/+51 writer" claim is retracted**: no full-library store/alias/wide-
+write survey exists, and bulk copies or other writers may cover these bytes. This
+does not imply a protocol conflict; the actual object identity remains unproven.
+`rac_server.h` has `sendCnt=curTurn` and `TurnWait` zeroing `rcvCnt`, but that is
+source semantics, not proof of the runtime object.
 
 Exact alias sets (S==C, t=0..63). The 8-byte writes are at `S+0x4008+64t` and
 `S+0x5008+64t`; the continuous ranges `[0x4008,0x4FD0)` and `[0x5008,0x5FD0)` are
@@ -127,4 +150,7 @@ only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
    different offsets; S=C needs the same object plus `Init(y)`).
 3. `CheckDebugMode` body only if a blocking/sleep question remains;
    `CopyAndCheckApiMsg` is confirmed as a 64-byte copy/GenXor/memcmp by 31/33.
+4. Whether the ReadAddrMsg `slot` pointer equals the `AivAicpuOpParam` base or
+   base-4 (GenMsg valid at +44 vs ReadApiValidMsg gate at +48), and a full store/
+   alias/wide-write survey only if a "unique writer" claim is ever needed.
 Do not fetch these outside 31; 33 merges and 31 executes the single remote read.
