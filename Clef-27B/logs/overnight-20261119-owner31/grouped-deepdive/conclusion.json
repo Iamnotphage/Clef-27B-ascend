@@ -1,0 +1,51 @@
+{
+ "schema": "owner31-grouped-conclusion/1",
+ "status": "environment_blocked_pending_33_confirmation",
+ "a12_cell": {
+  "window": "51d6bc0c3b9e307ae9cab51d338d8c73e67f8b06f3da25414694bbefcf0895d3",
+  "manifest": "e55eac00b5844365911e94dbb87c80705f88ef0c4d4de33ee8213b27e23d6cd4",
+  "commit": "4653278",
+  "result": "failed_liveness_control",
+  "child_rc": 0,
+  "child_timed_out": false,
+  "child_duration_s": "~114",
+  "masked_error": "[ERROR] acl interface return err ...:383, retcode: 507046; TestCall execute AICPU failed",
+  "plog": "stream synchronize timeout 10s, stream_id=47, KERNEL_AICORE pending, device 0 and 1, ErrCode=507046 InnerCode=0x7030010; DestroyAicpuComm 50s x2 timeout",
+  "maps": "libhccl/opapi_math/opapi_transformer/hcomm/ascendcl/nnopbase loaded; hccl_fwk absent; binary pid 1301080",
+  "restore": {
+   "branch": "aa3e-noop",
+   "root": 1301295,
+   "pids": [
+    1301295,
+    1301429,
+    1301430,
+    1301455,
+    1301456
+   ],
+   "checks_all_true": true
+  }
+ },
+ "root_cause_evidence": {
+  "package": "/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/aicpu/kernel/mc2_server.tar.gz (private aa55aa55 format, 873250 B, sha 712638354c71dff584651221d3c1227a62d809ed7de325e93c1ffa5926de25a0)",
+  "loader_lines": [
+   "current device chip:5 does not support package:mc2_server.tar.gz (device 0 and 1)",
+   "does not need to load to device:0/1",
+   "cann-tsch-compat.tar.gz likewise skipped"
+  ],
+  "aicpu_state": "RunAicpuKfcResInit/RunAicpuKfcSrvLaunch loaded from libccl_kernel.so; AicpuRpcResInit complete; mc2 server package absent",
+  "conclusion": "GroupedMatMulAllReduce is environment-blocked on this A3/CANN 9.2.1 because the MC2 AICPU server package is not supported on chip:5; this reproduces identically in the official A12 sample with all lifetimes kept alive, so binding/lifetime hypotheses (H1-H12) do not explain the hang"
+ },
+ "actions": {
+  "device_arms": "paused (H6/H7/H12/A8/A13) per 32/35 until 33 confirms chip support matrix",
+  "service": "kept online as aa3e/s1 (root 1301295), no further stop",
+  "entry_metrics": "unchanged; no PR; grouped path recorded as environment-blocked; official aa3e delivery remains default"
+ },
+ "evidence_locations": {
+  "a12_cell": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/a12-cell (10 files, sha256sums 10/10)",
+  "mc2_support": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/mc2-support (5 files, sha256sums 5/5, sums sha 1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae)",
+  "commits": [
+   "655845b (A12 cell evidence)",
+   "e33d5f7 (mc2 support evidence)"
+  ]
+ }
+}
