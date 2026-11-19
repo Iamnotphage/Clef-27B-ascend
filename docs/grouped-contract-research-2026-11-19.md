@@ -1691,7 +1691,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 
 **harness 根因（31 诊断）**：
 - 启动 shell `PATH=/usr/local/sbin:...:/snap/bin` **不含 venv bin**；`torchrun` 仅存在于 `/workspace/yangchen/venvs/clef-py312/bin/torchrun`；window 按 plan `child_argv` 用**裸名 `torchrun`**，`Popen` 在 fork 前抛 FileNotFoundError。
-- `activate_env.sh` 只装载 CANN/ATB，不把 venv bin 加入 PATH；官方 `start.sh` 用绝对 venv python，故 restore 正常。
+- **口径更正（v2 实测）**：`activate_env.sh` 实际会 `source $CLEF_VENV/bin/activate`，本身已把 venv bin 加入 PATH；v1 失败是启动 shell **从未 source activate**，而非 activate 不含 venv。v2 显式 `export PATH=venv/bin:$PATH` 是幂等加固。官方 `start.sh` 用绝对 venv python，故 restore 正常。此前“activate 只含 CANN/ATB、不改 PATH”的表述撤回。
 - `preflight-rescan.sh` 覆盖 stop/source/body/frozen SHA，但**未检查 torchrun 可解析性**——清单缺口。
 
 **后续候选（不改包/不重跑）**：启动 shell PATH 前置 venv bin，或 child_argv 用绝对 `torchrun`；preflight 增加 `command -v torchrun`/绝对路径可执行检查。本次无算子/分派证据，不排除任何支路；静态 ABI（§78/§80/§91）与 §15 结论保持；无新增 GO/设备动作；root cause 仍 unresolved。
@@ -1719,7 +1719,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 旧 plan 身份 `1337814/400405818` 因恢复变为历史，是**正常恢复结果**；v1 **不得复用**（preflight/README/planonly 均为旧身份）。
 
 **v2 CPU 准备（20 按既有 seq3882 授权，31 执行；仅 CPU，无设备）**：
-1. 真实启动 shell 使用 `activate_env.sh`（只含 CANN/ATB）+ **venv bin PATH**；确认 `command -v torchrun`。
+1. 真实启动 shell **source `activate_env.sh`**（实际会 source `$CLEF_VENV/bin/activate`）+ 显式 **venv bin PATH**（幂等加固）；确认 `command -v torchrun`。
 2. 裸 `torchrun` 解析验证 + `torchrun --help` 实际可用；若失败，v2 包用绝对路径或显式 PATH 前置（产品 window/runner/adapter 不改）。
 3. fresh root/dirs、新 identity、新 plan 与新 execution 包；旧 v1 plan/identity 不复用。
 4. 预扫清单补 `command -v torchrun`/绝对路径可执行检查，并存 identity 新 pin；其余采集/白名单/restore 口径沿用 v1 经验。
@@ -1738,7 +1738,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 4. `--child-argv` 可覆盖（line 552-554），但 v1 模板警告会覆盖 `--arm`；若用绝对 `torchrun` 写入 child_argv，需完整重建 argv 并在预扫校验绝对路径 SHA 与 `--help` rc0；更稳妥是同 shell 前置 PATH。
 
 **v2 验收判据（必须同时满足）**：
-- 同一 shell、启动 window **之前**：`source <activate_env.sh>`（CANN/ATB）→ `export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH` → `command -v torchrun` 必须解析到 `<venv>/bin/torchrun`（记录绝对路径与 SHA）→ 该 torchrun `--help` rc0。
+- 同一 shell、启动 window **之前**：`source <activate_env.sh>`（含 `$CLEF_VENV/bin/activate`）→ `export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH`（幂等加固）→ `command -v torchrun` 必须解析到 `<venv>/bin/torchrun`（记录绝对路径与 SHA）→ 该 torchrun `--help` rc0。
 - 随后**同一 shell/同一 SSH** 运行 `preflight-rescan.sh`（fail-closed），再运行 `supervised_probe_window.py ... --execute`；三者不得拆到不同 shell/SSH，否则 PATH 不进 window 的 os.environ。
 - 只在 plan/planonly 生成时 source，或把 PATH 放在 `--activate`，**均不作用于 child**（line 894/546-548）。
 - v2 用当前恢复身份 **root 1347086 / starttime 401212026** 重生成 preflight/README/planonly，避免 v1 `1337814` pin 导致 fail-closed；fresh root/dirs/plan/包。
@@ -1747,3 +1747,24 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **v1 对照**：window 用 venv 绝对 python 启动但未 export PATH；child 继承登录 shell PATH（不含 venv bin），故裸 `torchrun` FileNotFound。v1 模板只写“execute 前先跑 preflight-rescan”，未写“同一 shell/PATH 前置”，是 v2 要补的核心。
 
 **操作来源**：仍只引用 31 最终 v2 包；本节不写第二套命令；无 v2 设备 GO/NPU 步骤；root cause unresolved。
+
+## 98. H11-observe-v2 CPU 准备核验（ea30cec / e30e221c 19/19）
+
+**包**：commit `ea30cec`，`h11-observe-execution-v2/` 19 文件，SUMS `e30e221c…`（本地 `shasum -c` **19/19 OK**）；远端 cell `execution-v2/` 同步 19/19（31 报）。v1 包与 attempt-1 未覆盖。
+
+**新 identity/plan**：
+- 新 CELL `…/grouped-deepdive-cell-h11-observe-v2`；run/temp/out/restore fresh ABSENT，logs 已建可写。
+- identity 实读 **pid 1347086 / starttime 401212026 / ppid1 / pgid=sid 1347086 / boot 393ecc15…**；五 PID `1347086/1347229/1347230/1347258/1347259`。
+- `plan-h11-observe-v2.json` status `plan_not_executed`，SHA **9c2936c2…3137**；`planonly-rerun-output.json` 同 SHA，逐字节一致。
+
+**torchrun/PATH 实测**：
+- 基线（restore 同款 `env -i` PATH）`command -v torchrun` 空、rc1（复现 v1 缺口）。
+- effective env（activate + 显式 venv PATH）解析到 `/workspace/yangchen/venvs/clef-py312/bin/torchrun`，SHA `fd801bde…`，解释器 `#!/workspace/yangchen/venvs/clef-py312/bin/python`（Python 3.12.16），`torchrun --help` **rc0**（CPU-only）。
+- `activate_sha 3b363394…`；PATH 头 venv bin 出现两次（幂等，无害）。
+- **口径更正**：`activate_env.sh` 实际 source `$CLEF_VENV/bin/activate`，本身已加 venv bin；v1 是启动 shell 从未 source activate，之前“activate 仅 CANN/ATB”表述撤回。
+
+**预扫**：`validation-readonly-v2.txt` **ALL PASS rc0**；含 identity/boot/五 PID、health/info/clients、29531 tcp+udp×127+0.0.0.0、四路径 ABSENT、logs 可写、全部冻结 SHA、baseline torchrun missing 复现、effective resolve/executable/--help rc0、无其他 probe/torchrun。CPU help 日志单列 `cpu-prep/rescan-torchrun-help.log`。
+
+**冻结产品**：e38b541/8e308804/1f780bf8/d181b15a/101660f8 未变；rank helper `a4b76676` 同 blob。
+
+**状态**：v2 CPU 准备完成；操作来源仍只引用该 v2 包；32/35 增量复核后由 20 在既有 scope 内另发一次 v2 GO；**当前仅审核、无设备执行/无 GO**。静态 ABI/§15 不再重审，待 v2 实测证据再推根因。
