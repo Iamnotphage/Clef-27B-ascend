@@ -65,11 +65,13 @@ abi11 caller and body windows, all libccl `2281deca`.
 | 10 | K-cond (reset valid) | `ReadApiValidMsg` reset path; text `[%s:%d] [%u]reset valid value %u`, prints the actual `[slot+48]` word | 0x7d71bc | gate at 0x7d7160 (not fully read) | w0=3, w1=1, x2=0x1613ce0, x3=0x1613cc8, w4=241, x5=tid, x6=`[slot+48]` | shared method | immediate when that branch is taken | presence: prints the observed valid word; absence: branch not taken/guard, not proof |
 | 11 | K-cond (6 s timeout) | `CheckRcvWorkMsg` budget expired with `sendCnt < turn` (e.g. turn > 255); text `ErrToWarn: ReadValidMsg timeout 6s... ` | 0x7d744c | `HcclCheckLogLevel(3,3)` at 0x7d7410, `tbz -> 0x7d7450`, then `IsErrorToWarn` at 0x7d7418 | w0=0x01000003, w1=2, x2=0x1614060, x3=0x1613cc8, w4=285, x5=tid | shared method; called at 0x7c7f20 in TwoStageWait among others (caller set not enumerated) | 6 s per call; no caller-loop evidence, so periodic repetition is not claimed; in a 180 s window, one event per call at most | presence: the condition held for 6 s (the loop still reached the same continuation as the success jump); absence: no 6 s expiry, or guard failed. **Not a TwoStage entry marker; an empty log cannot exclude TwoStage** |
 | 12 | K-entry (per response, not Dlog) | `PostMsg` response; `AivAicpuOpParam::PrintMsg(dest, stack string)` | 0x7d6868 | none | x0=dest, x1=&stack string built from global 0x1613c90 +704 (u16) / +706 (u8) | abi8 reports only two direct PostMsg callers (0x7c7f44/0x7c7f90), both in TwoStageWait | every PostMsg call | presence/visibility unknown: PrintMsg's body (abi11, 0x7c24e0/0x654) does not write dest +24/+44/+51, but whether it emits a Dlog and at which level is not established here |
+| 13 | K-cond (periodic consistency) | `CopyAndCheckApiMsg`, `memcmp(rMsg,msg,64)` at 0x7d6d40 unequal (after `dsb ld`); log only when the global failure counter `% 10000 == 0` (0x7d6d60–0x7d6d7c) | 0x7d6e14 | `HcclCheckLogLevel(2,3)` at 0x7d6d88 | w0=3, w1=2, x2=0x1613b80, x3=0x1613cc8, w4=207, x5=tid, x6=GetMsgSimpleStr(rMsg), x7=GetMsgSimpleStr(msg) | called from `ReadApiValidMsg` at 0x7d70e4; stage = API valid-message copy/check | only at a multiple of 10000 cumulative unequal memcmps (counter at 0x22ca000+0xe64); in 180 s only if that many occur | presence: a persistent 64 B message mismatch (the count hit a multiple of 10000); absence: fewer than 10000 cumulative mismatches or guard off — does not exclude a mismatch; **not a slot+48 valid-word comparison** |
 
 ## Resolved format strings (abi12, libccl 2281deca)
 
 | Format addr | Text | Arguments after the common `[%s:%d] [%u]` (file, line, tid) |
 | --- | --- | --- |
+| 0x1613b80 | `[%s:%d] [%u][MC2] Check msg equal failed, rMsg:%s msg:%s` | x6=GetMsgSimpleStr(rMsg), x7=GetMsgSimpleStr(msg) |
 | 0x1613bd0 | `[%s:%d] [%u][%s]call trace: hcclRet -> %d` | x6=`ReadApiValidMsg` (0x1613bc0), x7=ret |
 | 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | x6=`ReadApiValidMsg`, x7=ret |
 | 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | `[slot+48]` |
@@ -92,12 +94,11 @@ semantics clue, not a OneStage label); the 6 s site prints `ReadValidMsg timeout
 6s...` (the function is `CheckRcvWorkMsg`).
 
 Unassigned strings present in the dumped ranges (text known, call site not in the
-audited marker set; do not assign): 0x1613b80 `[%s:%d] [%u][MC2] Check msg equal
-failed, rMsg:%s msg:%s` — the actual message-equality failure text, a natural future
-target but outside the audited windows; 0x14ee680 `ErrToWarn: Run rpc error, opIdx:%u,
+audited marker set; do not assign): 0x14ee680 `ErrToWarn: Run rpc error, opIdx:%u,
 sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d`; 0x1613f58 `[%s:%d] [%u]Post
 finishedTurnCnt[%u].cnt = %lu.`; 0x1614098 `ReadValidMsg timeout 6s... `
-(non-ErrToWarn variant).
+(non-ErrToWarn variant). The former "unassigned" 0x1613b80 is now assigned to #13
+inside `CopyAndCheckApiMsg`.
 
 ## Positive-control rule for any observation run
 
@@ -121,9 +122,11 @@ MC2 (33 §73).
 - **API / address wait**: #6 is a conditional timeout log (20 s first; text
   `ReadAddrMsg ... ReadValidMsg[%u] timeout %lus`), not an entry marker; the 1280 s
   figure is the CFG return ceiling, not a log event. #7–#10 are failure call-trace /
-  reset-valid logs; the actual equality-failure text (`[MC2] Check msg equal failed`)
-  exists at 0x1613b80 but its call site is not in the audited windows. None of these
-  is a mandatory entry marker.
+  reset-valid logs. #13 is the only message-equality marker: a 64 B
+  `memcmp(rMsg,msg)` inside `CopyAndCheckApiMsg` (called from ReadApiValidMsg at
+  0x7d70e4), logged every 10000 cumulative mismatches — a message-consistency
+  failure, not the slot+48 valid-word gate. None of these is a mandatory entry
+  marker.
 - **TwoStage**: #11 is a 6 s conditional timeout inside `CheckRcvWorkMsg`, text
   `ErrToWarn: ReadValidMsg timeout 6s... `; the function is also invoked from other
   paths, so this is not TwoStage-exclusive. The only TwoStage-exclusive facts
