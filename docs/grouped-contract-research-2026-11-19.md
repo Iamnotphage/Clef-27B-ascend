@@ -382,7 +382,7 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 - plog 两 device `2026-11-19-08:26:31.680/.677 [stream.cc:1996] three minutes timeout! stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1`；device 日志创建 `KFCtaskAndTilingTraceData` + `AivAicpuOpParam`（device0 L108/L111、device1 L108/L111）、`End AicpuRpcResInit` L113，并加载 `RunAicpuKfcResInit`（V1）/`ResInitV2`/`RpcSrvLaunchV2`/`SrvLaunch`（L88/L107/L114）。
 - 活 rank 快照：rank0 pid 1318300、rank1 1318301，PGID self、starttime 399358649、cmdline=torchrun H4K；保存 `/proc/<pid>/maps` 全文 + 15 项过滤库 SHA；**快照在启动早期采集，probe_adapter.so/libopapi.so 尚未映射，result libraries 未 flush**——adapter 加载门不能由该快照证明，时序限制如实记录。restore aa3e-noop root **1319033**/五 PID/四检全 true。
 
-**有限结论**：H4K（调用线程 + 真实 C++ sync）与 H11（OpCommand handler + Python sync）**同样挂 stream47/task_id=13 pending**；H5K 为 launch 前区间阻塞（非 Grouped device 判别）。→ **线程/同步路径不是差异源**；Grouped device path（KFC task/AivAicpuOpParam 响应推进）候选保持，不单格定因；H4K 无 numeric/reduced diff（stub）；`mc2_server` 依赖仍 `supported_but_unproven`。A14 large 的设备事实条件（H4K 同挂+完整恢复）已满足，待 32 核原件与 20 授权 CPU 准备；A15 无设备授权；Grouped large/A13 暂停。
+**有限结论（按 32 措辞修订）**：H4K（调用线程 + 真实 `aclrtSynchronizeStream`）与 H11（OpCommand handler + Python sync）**同样挂 stream47/task_id=13 pending**；H5K 为 launch 前区间阻塞（非 Grouped device 判别）。→ **该线程+显式同步组合未解除挂起**；更广 context/线程内部仍未证，**不能单格断言线程/同步不是差异源**。Grouped device path（KFC task/AivAicpuOpParam 响应推进）候选保持，不单格定因；H4K 无 numeric/reduced diff（stub）；`mc2_server` 依赖仍 `supported_but_unproven`。A14 large 的设备事实条件已满足，但按 32/20 **暂缓**：fac2d948/0cd3531a/bf119527 预检保留、未执行；待 window rank-group 修复+CPU fixtures+新 window plan/32 核后再按原授权继续。A15 无设备授权；Grouped large/A13 暂停。
 
 ## 28. H4K rank PGID/清理边界核（2026-11-19，20 优先）
 
