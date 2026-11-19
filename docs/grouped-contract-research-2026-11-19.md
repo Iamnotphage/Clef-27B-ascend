@@ -1256,7 +1256,6 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 mkdir -p <fresh>/cann-plog
 export ASCEND_GLOBAL_LOG_LEVEL=0          # 0=DEBUG（同版 msft/asys 文本；仅候选）
 export ASCEND_PROCESS_LOG_PATH=<fresh>/cann-plog
-unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
 source <activate_env.sh>                   # 现有 probe 运行前提（无 CANN env 会 torch_npu 段错误）
 
 # 2) probe child（必须由 torchrun 2 ranks 启动；不能直接 python run_probe --execute，
@@ -1447,8 +1446,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
    ```
    export ASCEND_GLOBAL_LOG_LEVEL=0
    export ASCEND_PROCESS_LOG_PATH="$LOGDIR"
-   unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
-   env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='
+      env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='
    ```
    不把这两个变量写进 argv/plan；`GLOBAL=0` 仍仅候选。
 3. window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → child torchrun → ranks 继承；service/restore 不在同一环境（restore 用 `env -i`）。
@@ -1495,59 +1493,19 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 
 **绑定**：plan `c95ae5c3…`（01e8631/SUMS cf59ed66）、`plan_not_executed`；窗口/runner/adapter 冻结不变；plan JSON **不是** window 的输入，window 由 argparse 重新生成 plan；`--execute` 才执行。
 
-### 86.1 完整 window --execute 模板（env 先导出）
+### 86.1 操作命令来源（31 `h11-observe-execution-v1`）
 
-```bash
-LOGDIR=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/logs-h11-observe-v1
-mkdir -p "$LOGDIR"
-export ASCEND_GLOBAL_LOG_LEVEL=0
-export ASCEND_PROCESS_LOG_PATH="$LOGDIR"
-unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
-env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='   # 启动前自检
+- **唯一操作命令以 31 产出的 `h11-observe-execution-v1` 包为准**（由真实 `c95ae5c3` argv 与本机实路径统一），本节不再给第二套 placeholder argv，避免与 31 包不一致。
+- 该包必须满足：① venv 绝对 python `/workspace/yangchen/venvs/clef-py312/bin/python`；② window 脚本用 **e38b541 stage 绝对路径** `/workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py`（不是 repo 相对）；③ 全部 argparse、plan JSON 非输入、`--execute` 才执行；④ 同命令去 `--execute` 应复现 plan SHA `c95ae5c3…`；⑤ `--python` 显式 venv。
+- env 只有两项 sidecar：启动同一 window 前 `export ASCEND_GLOBAL_LOG_LEVEL=0`、`export ASCEND_PROCESS_LOG_PATH=/workspace/.../logs-h11-observe-v1`；**其他环境变量保持基线，不额外 unset**；fresh dir 预创建；child_env 继承到 torchrun/ranks。
+- 包内需列全：run-dir、root-identity、source-target、official-start、activate、service-root、model-dir、restore-output、text-body/image-body、stop-script 的实路径，以及 plan-only/execute 两条命令。
 
-cd /workspace/yangchen/Clef-27B-ascend
-source scripts/activate_env.sh
+### 86.2 采集要求（具体命令以 31 包为准）
 
-/workspace/yangchen/venvs/clef-py312/bin/python runtime/grouped_mmar/supervised_probe_window.py \
-  --execute \
-  --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1 \
-  --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json \
-  --stop-script /tmp/d0cc/d0_stop.py \
-  --arm H11 \
-  --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so \
-  --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-temp-h11-observe-v1 \
-  --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-out-h11-observe-v1 \
-  --k 256 --n 512 --rows 128 --seed 20261119 \
-  --master-port 29531 --comm-timeout 90 --child-timeout 240 \
-  --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py \
-  --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh \
-  --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh \
-  --service-root /workspace/yangchen/Clef-27B-ascend \
-  --model-dir /workspace/yangchen/models/Clef-27B \
-  --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v1 \
-  --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
-  --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
-```
-- **plan-only 复核（不改任何参数，只去掉 `--execute`）**：同一命令去掉 `--execute`，输出重定向到 `/tmp/plan-check-h11-observe-v1.json`；`sha256sum` 应为 `c95ae5c3…`（若路径/顺序一致）。该步只写 plan，不启动 child/服务。
-- `--port 18143`、`--clean-env-expect`、`--expect-stop-sha d6d49d…`、`--stop-timeout 120`、`--restore-timeout 900`、`--python` 用默认。
-- `--official-start/--activate/--service-root/--model-dir` 由 restore_argv 推得，31 预检确认实路径。
-
-### 86.2 raw 采集命令/时间关联/SUMS
-
-```bash
-START=$(date +%s); date -Is > meta/start-time.txt
-# 运行后（成功/超时/失败均执行）
-mkdir -p archive/{cann-plog,device,cell,meta}
-cp -a "$LOGDIR"/. archive/cann-plog/
-# device：沿用既有 cell 的 device 日志采集路径/脚本；按 START/END 时间窗复制**完整文件**，不按 PID 过滤
-find /root/ascend/log -type f -newermt "@$START" -print0 | tar --null -T - -cf archive/device/device-logs.tar
-cp -a run-h11-observe-v1/{window.json,descendants.json,child.stdout,child.stderr,stop.json,exec.log} archive/cell/ 2>/dev/null || true
-cp -a run-h11-observe-v1/*result*.json run-h11-observe-v1/*trace*.jsonl archive/cell/ 2>/dev/null || true
-cp -a plan-h11-observe-v1.json root-identity-h11-observe-v1.json env-sidecar-h11-observe-v1.json archive/meta/
-( cd archive && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
-```
-- device 路径以 31 既有采集脚本为准；`find` 仅列时间窗候选，复制完整文件；不按 PID 过滤。
-- `correlation.txt` 另存：rank/device、pid/tid、file:line、时间、stream/task/opIdx；未知标 unknown。
+- 定义 `CELL=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe`、`ARCHIVE=$CELL/logs-h11-observe-v1-archive`；**先 mkdir meta/archive，再写 start marker**；START/END 两个 marker，restore 时间窗单列。
+- fresh `LOGDIR` 整目录 + `/root/ascend/log` 两 device 时间窗**完整文件**（不按 PID 过滤，沿用 31 既有采集脚本）+ cell（window/descendants/child/result/trace/stop/exec）+ meta（plan/root-identity/env-sidecar）；`sha256sum > SHA256SUMS`。
+- `correlation.txt` 另存：rank/device、pid/tid、file:line、时间、stream/task/opIdx；未知标 unknown；raw 与派生分开，不删原件。
+- 31 包内需含实际 device 日志路径/采集脚本与 SUMS 命令。
 
 ### 86.3 rank env 3 白名单读取
 
@@ -1555,8 +1513,8 @@ cp -a plan-h11-observe-v1.json root-identity-h11-observe-v1.json env-sidecar-h11
 # 从 window/descendants 取 torchrun/rank PID（不猜）
 python3 - <<'PY'
 import json
-d=json.load(open('run-h11-observe-v1/descendants.json'))
-print([x['pid'] for x in d.get('records',[]) if 'run_probe.py' in ' '.join(x.get('cmdline',[]))])
+d=json.load(open('/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1/descendants.json'))
+print([x['pid'] for x in d.get('entries',[]) if 'run_probe.py' in ' '.join(x.get('cmdline',[]))])
 PY
 for pid in <rank_pids>; do
   echo "== $pid $(cat /proc/$pid/comm 2>/dev/null)"
@@ -1570,7 +1528,7 @@ done > meta/rank-env.txt
 
 ```bash
 cat root-identity-h11-observe-v1.json
-ps -o pid,ppid,pgid,sid,stat,cmd -p 1337814,1337961,1337962,1337979,1337980
+ps -o pid,ppid,pgid,sess,stat,cmd -p 1337814,1337961,1337962,1337979,1337980  # 如 ps 无 sess，用 /proc/<pid>/stat 第 5/6 字段
 curl -s http://127.0.0.1:18143/health; curl -s http://127.0.0.1:18143/v1/decide/info
 python3 - <<'PY'   # 29531 TCP FREE（无 ss 时）
 import socket
@@ -1580,7 +1538,9 @@ for p in run-h11-observe-v1 probe-temp-h11-observe-v1 probe-out-h11-observe-v1 r
   test ! -e "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/$p" && echo "ABSENT $p"
 done
 test -w "$LOGDIR" && echo "LOGDIR writable"
-sha256sum /tmp/d0cc/d0_stop.py /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py \
+sha256sum /tmp/d0cc/d0_stop.py /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py /
+  /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/plan-h11-observe-v1.json /
+  /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json \
   /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
   /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json \
   /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/{supervised_probe_window.py,run_probe.py,probe_adapter.so,binding_probe.cpp,manifest.json,test_probe_cpu.py}
