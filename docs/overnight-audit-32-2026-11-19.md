@@ -403,6 +403,8 @@
 - **崩溃点（harness）**：sync 后 `run_probe.py:353 release` 的零 Tensor 参数自定义算子 dispatch `NotImplementedError: clef_mmar_probe::release ... no fallback`；result.json 仅 stub、reference diff 未落盘；与 MC2 无关。
 - **修复/重跑**：35 最小修 release schema（占位 token tensor 或 fallback）+ 先 flush result 再 release + try/except；重冻 run_probe 新 SHA。31 先完成官方 aa3e 恢复（新 root **1308632**）并回传身份/五 PID/branch/四检/原件；修后以新 root 重建 identity/plan、fresh out（v4）、master_port 预检，重跑同小格取完整 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）。large 等完整 small + 32 有限核。
 - **解释**：Grouped 仍 507046/stream47；A14 可用 → 差异转向 Grouped-specific（op/kernel/tiling/rac_server 协议/上下文）与 H12/依赖证据；**仍不单独裁决 mc2_server 依赖（supported_but_unproven）**。H6 限定结论、A13 不执行不变；服务恢复 aa3e。
+- **35 记录核（7bb4dd8）**：run_probe `b7f255cb…`、manifest `6517c34c…`、cpu_tests **14/14+9/9+22/22=45/45**（与 32 独立跑一致）；v2 invalid/旧 plan superseded 记录正确。**但 a14 状态仍写 “small_v3_plan_8782537a_pending_32_review”**，与已执行的 v3 不符（liveness pass + release harness crash；新 root 1308632）——已请 35 改为 `small_v3_executed_liveness_pass_release_harness_crash; numeric rerun pending release fix` 并保留 trace/原始日志引用。
+- **release 修复**：schema 占位 token tensor 或 fallback；先 flush result 再 release；try/except；重冻 run_probe 新 SHA；31 完成 1308632 恢复回传后以新 root 重建 identity/plan、fresh out（v4）、port 预检，重跑同小格取完整 result.json；large 等完整 small + 32 有限核。
 
 ## 9. 本地核对副本
 
