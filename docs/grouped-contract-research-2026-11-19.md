@@ -592,3 +592,9 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 - `a15_record` 现返回 `(record,error)`：reference None→`missing_equivalence_record`；`_shape_of(output)` 与 `_shape_of(reference)` 均须 `(rows,n)` 且互相一致，否则 `invalid_equivalence_shape`；正常才生成 reduced/equivalence/diagnostic_gate。execute L528-535 解包 error，写 `numeric_error`；record_ok 缺三键→numeric_pass=false。
 - 测试：`[1,512]` 可广播错 shape 被拒（invalid_equivalence_shape）；正常 `[127,512]` 生成 equivalence/gate；None→missing；三态覆盖。代码级 PASS。
 - 该候选只供 v3 后复用/最终记录完整性闭合；v3 结果产出后需评估是否用 shape-guard 重跑或仅 CPU 记录校验。A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
+
+## 56. A15-small-v3 成功：zero diff 仅本格诊断（2026-11-19）
+
+31 归档 `a15-small-v3-cell/`（17 文件，SUMS `d7e8b90f…` 17/17，commit 1d1daef）；tuple cdc8324/run_probe 103b9775/test f6fe2c99/window 1f780bf8/binding 101660f8/adapter d181b15a/plan 2fcd101b/identity 1330921/400000296。两 rank：pad `{127,128,1.0}`、row_block 0 `(0,64)`/1 `(64,128)`、gather **1.22224/1.21543 ms**、workspace **17,170,432**、sync **13.172/8.525 ms**；`reduced.max_abs=0.0`、`mean_abs=0.0`、`bit_equal=true`；`equivalence.shape=[127,512]` 同为零差；`diagnostic_gate` 0.03125/1e-4 `within_bounds=true`、status diagnostic-only；finite/both/numeric_pass/pass=true。window child rc0、survivors[]、cleanup_final 空、maps_ok=false 仅采样伪影；restore aa3e-noop root **1334752**/五 PID/四检全 true、subreaper 0→cleared→final0、无第二树。
+
+**判读**：A15 rows127/pad128/crop127、k256/n512 的 all-gather 重建与 full-row reference **逐位一致**，是**本格诊断事实**；**不得据此称精度通过或外推 large/生产**。shape guard 8807597 未用于 v3（结果 shape 正确，但 record 完整性最终仍需候选/校验）。A15 large/生产未授权；Grouped large/A13 暂停；official/CSV 未动；服务 aa3e root 1334752 健康。
