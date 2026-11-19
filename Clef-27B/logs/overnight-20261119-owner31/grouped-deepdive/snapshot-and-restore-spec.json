@@ -130,7 +130,6 @@
   "success_assertions": [
    "health ready",
    "/v1/decide/info config=s1/4096/seqs1/TP2",
-   "joint-patch-record ok=true branch in {f810->fused, aa3e-noop}",
    "five PIDs same PGID/SID",
    "card7 chip0+chip1 two workers",
    "four checks health/workers/text/image rc0 ok",
@@ -159,7 +158,8 @@
     "exception_only": "f810->fused is listed only as an exception rescue path; if it appears unexpectedly, preserve drift evidence (record before/after SHA, plog/trace, timestamps), report to 32/20, mark the cell isolation-failed, then rescue via the authorized aa3e recovery path",
     "unknown": "unknown source state -> stop and report; do not guess or modify"
    }
-  ]
+  ],
+  "exception_note": "f810->fused is exception-only and never satisfies the normal-cell success gate"
  },
  "api_pack": {
   "local_path": "/tmp/aa3e-grouped-api-pack-20261119",
