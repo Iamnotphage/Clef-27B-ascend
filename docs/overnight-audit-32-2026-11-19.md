@@ -371,6 +371,13 @@
 - **A14 流程**：31 从 e0b06df 重 stage/编译（adapter 若仍 101660f8 可复用 d181b15a，需重出 compile log）/重出 small plan M128/K256/N512；若 H6 先跑，用新 AA3E root 重建 identity/plan。小格 plan/binary/identity + 32 核 KEEP_ALL 契约后 **GO**（无需二次许可）；large M968/K8704/N5120 按小格结果与 32 有限核再定。
 - **A14 判定**：通过→KFC 路径可用、被拒包非普遍阻断；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。A13 编译-only 不执行；服务 aa3e 在线。
 
+## 8.29 A14 重建核验与执行顺序（2026-11-19）
+
+- **A14 stage-identity v2 `99a2dc04…`**：e0b06df / manifest `1c8d2682…` / binding `101660f8…` / run_probe `6ae866b1…`（A14 flags=KEEP_ALL，group/workspace/descriptors/tensors 保活到 sync 后）/ window `2202165e…` / adapter `d181b15a…` / compile log `7ce25dad…`。small plan `2ee38a28…`（M128/K256/N512）、large `bc1efa2d…`（M968/K8704/N5120），argv/240 s/adapter/identity 均核；root-identity `03c437ee…`=1301295/398656442。KEEP_ALL 契约正确（无早释放混淆）。
+- **顺序**：**H6 GO 已发出，先执行 H6**（plan aedd3f68/window 51d6bc0c/binary cdf48553/identity 1301295）。H6 恢复后 AA3E root 变；**当前 A14 plans 基于 1301295，届时作废**：H6 后重建 fresh root-identity → 重出 A14 small plan（M128/K256/N512，KEEP_ALL，window 2202165e，adapter d181b15a）→ 32 核 identity/plan（代码/args 不变）→ A14 small **GO**（无需二次许可）；large 等 small 结果 + 32 有限核。若选择 A14 先于 H6，当前 small plan 有效，但 H6 必须用 A14 恢复后的新 root；不得跨格复用旧 plan。
+- **A14 small 判据**：run_probe pass（API rc0+两 rank sync+finite+both）+ window child_ok（rc0+maps adapter/libhccl/ascendcl）+ reference diff 记录；失败记录 stream47/mc2_server。minor：input metadata 记 bias zero 但 run_mrs 实际传 nullptr（op-info bias optional），参考无 bias，数值口径一致。
+- **解释**：A14 通过→KFC 路径可用（被拒包非普遍阻断）；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。A13 不执行；服务 aa3e。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
