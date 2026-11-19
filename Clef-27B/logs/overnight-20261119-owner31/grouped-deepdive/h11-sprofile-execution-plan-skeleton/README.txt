@@ -38,11 +38,15 @@ Budgets and gates (machine-readable in plan-skeleton.json)
   10+120 s and app arm 240 s/comm 90 s are inside child and not added again. Lifecycle evidence must keep kill time,
   per-round same-snapshot state/pid/starttime, first-empty/two-empty times and deadline_hit.
 - pre_stop_gates (ordered): caller_env -> preflight_ALL_PASS -> collect_begin_rc0; stop_after collect_begin_rc0.
-  preflight/collect/wrapper new-cell copies are pending (constructor paths), with source SHAs recorded
-  (3ea4e890 / 2bedc64a / 0af37af4); their derived-copy SHAs are produced in the final merge after 35 fix/32 review.
+  Legacy unordered gates.preflight has been removed; gates_reference points to pre_stop_gates/residual/restore/end.
+- run_entry: the v2 wrapper 0af37af4 is NOT reusable by path-only (it hardcodes the old torchrun child and has
+  no --child-argv). A final wrapper must be authored in the final merge: env -> caller -> preflight -> collect
+  begin -> supervisor argv from build_window_argv.py --execute; its SHA is $PENDING_FINAL_WRAPPER_SHA.
+  preflight/collect new-cell copies remain pending with source SHAs 3ea4e890 / 2bedc64a.
 - continuous two-empty residual before restore; exactly one begin_restore; no second restore tree; no same-cell retry;
   collector wait/unflushed/rank-exits-first remains fail-closed.
-- collect end/archive/SUMS paths are encoded; archive SUMS at <archive>/SHA256SUMS; end may repeat to collect late flush.
+- collect end/archive/SUMS paths are encoded; archive SUMS at <archive>/SHA256SUMS. End is SINGLE; a second
+  collection requires a versioned new archive, not repeated end on the same archive (repeat SUMS semantics unproven).
 - Success requires: valid AIC sample + kernel identity + sample time within this submit-end window +
   this run's actual stream/task; otherwise capability_unproven. timeline-only/empty/truncated are not success.
 - Collector help flags/units: aic-freq 100 Hz; delay/duration seconds; no documented conflicts;
@@ -51,7 +55,8 @@ Budgets and gates (machine-readable in plan-skeleton.json)
 Files
 - child-argv.json: exact child argv list (msprof + native app).
 - build_window_argv.py: canonical generator for the supervisor argv (reads child-argv.json only;
-  optional --check-argv asserts exact equality, preventing duplicate/drifting embedded child argv).
+  --execute appends the top-level execution flag; --check-argv asserts exact child-argv equality and
+  trailing --execute when requested).
   $PENDING_WINDOW_PATH and $PENDING_FRESH_IDENTITY_FILE must be pinned at execution time.
 - plan-skeleton.json: plan fields, budgets, gates, pending list, status.
 - identity-snapshot-now.txt: informational current read (not final).
@@ -60,5 +65,6 @@ Files
 
 No real msprof / torch / device / service stop / deployment occurred while preparing this skeleton.
 Note: the 7fcba47 Linux 34/34 run was executed under 32 incremental A BEFORE the settle-300 decision
-(evidence commit 6eca211); it is an intermediate result, superseded, and NOT readiness. No further runs of
-that intermediate source are permitted; wait for the integrated 27+35 fixed source.
+(evidence commit 6eca211); it is an intermediate result, superseded, NOT readiness, and its A permission is
+VOID per 32's later review. No further runs of that intermediate source; wait for the integrated 27+35 fixed
+source (END_KINDS/end fix + settle CLI + new supervisor identity/integrity) and a new A safety delta.

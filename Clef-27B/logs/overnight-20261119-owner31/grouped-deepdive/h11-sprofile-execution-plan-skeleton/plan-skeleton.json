@@ -27,7 +27,6 @@
   "duration_end_semantics": "unproven (flush/exit/kill/wait app)"
  },
  "child_argv_file": "child-argv.json",
- "window_argv_file": "window-argv-skeleton.json",
  "native_app": {
   "arm": "H11",
   "rows": 128,
@@ -50,16 +49,6 @@
   "restore": 900,
   "settle_default": 30,
   "settle_note": "default 30 s does not prove covering the old exit delay"
- },
- "gates": {
-  "preflight": [
-   "caller env",
-   "preflight-rescan ALL PASS",
-   "collect begin (identity/metadata)"
-  ],
-  "residual": "continuous two-empty residual before any restore",
-  "restore": "single begin_restore only; no second restore tree; no same-cell retry",
-  "success": "valid AIC sample + kernel identity + sample time within this submit-end window + this run's actual stream/task; else capability_unproven"
  },
  "restore_source": {
   "file": "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/plan-h11-observe-v2.json",
@@ -181,7 +170,7 @@
    "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/archive-h11-sprofile-v1"
   ],
   "logdir": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/logs-h11-sprofile-v1",
-  "note": "end after restore; end may be repeated to collect late flush"
+  "note": "single end only; a second collection requires a versioned new archive, not repeated end on the same archive (end rewrites end timestamps and SUMS semantics unproven for repeat)"
  },
  "residual_gate": {
   "rule": "continuous two-empty residual before begin_restore",
@@ -275,5 +264,19 @@
   "total_with_settle300": 1800,
   "margin_s": 300,
   "outer_deadline_s": 2100
- }
+ },
+ "window_argv_generation": {
+  "builder": "build_window_argv.py",
+  "add_execute": "required for execution (--execute appended by builder or final wrapper)",
+  "equality_check": "--check-argv asserts child-argv payload and trailing --execute if requested"
+ },
+ "run_entry": {
+  "kind": "final wrapper to be authored in final merge",
+  "baseline_source": "h11-observe-execution-v2/run-h11-observe-v2.sh 0af37af4",
+  "baseline_reusable": false,
+  "reason": "baseline hardcodes old H11 torchrun child and has no --child-argv",
+  "required_content": "env -> caller_env -> preflight_ALL_PASS -> collect_begin_rc0 -> run supervisor with build_window_argv.py output + --execute; no shell/split",
+  "sha256": "$PENDING_FINAL_WRAPPER_SHA"
+ },
+ "gates_reference": "pre_stop_gates (ordered); residual_gate; restore_gate; end_semantics"
 }
