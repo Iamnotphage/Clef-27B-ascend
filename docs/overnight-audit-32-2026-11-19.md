@@ -397,6 +397,13 @@
 - **v3 最终核验/GO**：不可变 tuple = commit **f087746**/manifest **02fdd342**（代码与 d571641 逐字节相同：binding `101660f8…`、run_probe `b7f255cb…`、window `2202165e…`）、adapter `d181b15a…`（compile `fc8efe47…`）、identity **1306695/398875478**（`a85ff9b8…`）、plan **8782537a…**（M128/K256/N512/KEEP_ALL/out probe-out-a14-small-v3/run+restore v3 fresh/240 s/plan_not_executed）；stage-v5 `a3b12870…`、SUMS 17/17（`4eaf108e…`）、master_port 29531 FREE。早前 d88250e4 为 v4 旧 plan，已 superseded。**A14 small v3 GO 已发**；回传 rank0/1 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）、trace、child 日志、window.json/per-PID maps、plog、完整恢复；large 等 small 结果 + 32 有限核，用 small 恢复后新 root 重建；A13 不执行。
 - **33 修复独立核**：run_probe `b7f255cb…`（20,278 B）diff 仅新增 `prepare_out(exist_ok=True)` 并保留 `rank_dir.mkdir()` fresh 门；binding/window 未变；`test_probe_cpu.py ea514245…`（7,708 B）含 `test_out_dir_shared_by_two_ranks`，实际 **14/14**、总 **45/45**（14+9+22，32 独立跑）。**metadata finding（非阻断）**：manifest cpu_tests 仍写 13/13、role tests(11)，与实际不符；35 在 docs-only v3 metadata 修正，但不使已冻结执行 tuple 失效（无需重编译/重跑）。
 
+## 8.32 A14 small v3 liveness = KFC 路径可用（2026-11-19）
+
+- **trace（rank0/1，probe-out-a14-small-v3）**：prepare_rc=0/executor_nonnull；handler workspace `0x12c09aa00000`、bytes 17,170,432、rows128/k256/n512/rank2；**launch_rc=0**；**sync_rc=0**；sync_ms 18.66/8.16；**无 stream47、无 507046** → MRS V1 MC2 KFC 路径在小形状正常同步返回。A14 liveness 成立：**被拒 mc2_server 包非普遍阻断**。
+- **崩溃点（harness）**：sync 后 `run_probe.py:353 release` 的零 Tensor 参数自定义算子 dispatch `NotImplementedError: clef_mmar_probe::release ... no fallback`；result.json 仅 stub、reference diff 未落盘；与 MC2 无关。
+- **修复/重跑**：35 最小修 release schema（占位 token tensor 或 fallback）+ 先 flush result 再 release + try/except；重冻 run_probe 新 SHA。31 先完成官方 aa3e 恢复（新 root **1308632**）并回传身份/五 PID/branch/四检/原件；修后以新 root 重建 identity/plan、fresh out（v4）、master_port 预检，重跑同小格取完整 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）。large 等完整 small + 32 有限核。
+- **解释**：Grouped 仍 507046/stream47；A14 可用 → 差异转向 Grouped-specific（op/kernel/tiling/rac_server 协议/上下文）与 H12/依赖证据；**仍不单独裁决 mc2_server 依赖（supported_but_unproven）**。H6 限定结论、A13 不执行不变；服务恢复 aa3e。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
