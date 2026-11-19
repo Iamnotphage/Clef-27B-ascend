@@ -216,22 +216,23 @@ def list_error_stats(output, reference):
     index = diffs.index(max_abs)
     diff_norm = sum(value * value for value in diffs) ** 0.5
     ref_norm = sum(value * value for value in ref) ** 0.5
-    rel_l2, denom_zero = run_probe.relative_l2(diff_norm, ref_norm)
+    rel_l2, denominator, zero_reference = run_probe.relative_l2(diff_norm, ref_norm)
+    max_rel_abs = max(d / max(abs(r), run_probe.TINY) for d, r in zip(diffs, ref))
     return {
         'max_abs': max_abs,
         'mean_abs': sum(diffs) / len(diffs),
-        'output_abs_max': max(abs(value) for value in out),
-        'reference_abs_max': max(abs(value) for value in ref),
-        'reference_rms': (sum(value * value for value in ref) / len(ref)) ** 0.5,
-        'reference_abs_mean': sum(abs(value) for value in ref) / len(ref),
-        'nonzero_count': sum(1 for value in diffs if value != 0),
-        'element_count': len(diffs),
+        'ref_abs_max': max(abs(value) for value in ref),
+        'out_abs_max': max(abs(value) for value in out),
+        'diff_nonzero_count': sum(1 for value in diffs if value != 0),
+        'diff_total_count': len(diffs),
         'max_error_index': index,
         'max_error_position': [index // len(output[0]), index % len(output[0])],
         'max_error_reference': ref[index],
         'max_error_output': out[index],
+        'max_rel_abs': max_rel_abs,
         'relative_l2': rel_l2,
-        'relative_l2_denominator_zero': denom_zero,
+        'relative_l2_denominator': denominator,
+        'relative_l2_zero_reference': zero_reference,
     }
 
 
@@ -251,40 +252,48 @@ class A15RecordTest(unittest.TestCase):
         self.assertEqual(error, 'invalid_equivalence_shape')
 
     def test_relative_l2_zero_denominator_rule(self):
-        self.assertEqual(run_probe.relative_l2(0.0, 0.0), (0.0, True))
-        self.assertEqual(run_probe.relative_l2(1.0, 0.0), (None, True))
-        self.assertEqual(run_probe.relative_l2(2.0, 4.0), (0.5, False))
+        self.assertEqual(run_probe.relative_l2(0.0, 0.0),
+                         (0.0, run_probe.TINY, True))
+        self.assertEqual(run_probe.relative_l2(1.0, 0.0),
+                         (1.0 / run_probe.TINY, run_probe.TINY, True))
+        self.assertEqual(run_probe.relative_l2(2.0, 4.0), (0.5, 4.0, False))
 
     def test_record_contains_equivalence_and_diagnostic(self):
-        output = [[1.0] * 512 for _ in range(127)]
-        reference = [[2.0] * 512 for _ in range(127)]
+        output = [[1.0, 2.0], [3.0, 4.0]]
+        reference = [[1.0, 1.0], [1.0, 1.0]]
         record, error = run_probe.a15_record(
-            output, reference, 127, 512,
+            output, reference, 2, 2,
             stats=list_error_stats, equal=lambda o, r: False)
         self.assertIsNone(error)
         reduced = record['reduced']
-        self.assertEqual(reduced['max_abs'], 1.0)
-        self.assertEqual(reduced['mean_abs'], 1.0)
-        self.assertEqual(reduced['nonzero_count'], 127 * 512)
-        self.assertEqual(reduced['max_error_position'], [0, 0])
-        self.assertEqual(reduced['max_error_reference'], 2.0)
-        self.assertEqual(reduced['max_error_output'], 1.0)
-        self.assertAlmostEqual(reduced['relative_l2'], 0.5)
-        self.assertFalse(reduced['relative_l2_denominator_zero'])
-        self.assertEqual(record['equivalence']['shape'], [127, 512])
+        self.assertEqual(reduced['max_abs'], 3.0)
+        self.assertEqual(reduced['ref_abs_max'], 1.0)
+        self.assertEqual(reduced['out_abs_max'], 4.0)
+        self.assertEqual(reduced['diff_nonzero_count'], 3)
+        self.assertEqual(reduced['diff_total_count'], 4)
+        self.assertEqual(reduced['max_error_position'], [1, 1])
+        self.assertEqual(reduced['max_error_reference'], 1.0)
+        self.assertEqual(reduced['max_error_output'], 4.0)
+        self.assertAlmostEqual(reduced['relative_l2'], (14 ** 0.5) / 2)
+        self.assertEqual(reduced['relative_l2_denominator'], 2.0)
+        self.assertFalse(reduced['relative_l2_zero_reference'])
+        self.assertEqual(reduced['max_rel_abs'], 3.0)
+        self.assertEqual(record['equivalence']['shape'], [2, 2])
         self.assertFalse(record['diagnostic_gate']['within_bounds'])
         self.assertEqual(record['diagnostic_gate']['status'],
                          'diagnostic_only_not_an_official_gate')
 
     def test_zero_reference_records_finite_neutral_rule(self):
-        output = [[0.0] * 512 for _ in range(127)]
-        reference = [[0.0] * 512 for _ in range(127)]
+        output = [[0.0, 0.0], [0.0, 0.0]]
+        reference = [[0.0, 0.0], [0.0, 0.0]]
         record, error = run_probe.a15_record(
-            output, reference, 127, 512,
+            output, reference, 2, 2,
             stats=list_error_stats, equal=lambda o, r: True)
         self.assertIsNone(error)
-        self.assertEqual(record['reduced']['relative_l2'], 0.0)
-        self.assertTrue(record['reduced']['relative_l2_denominator_zero'])
+        reduced = record['reduced']
+        self.assertEqual(reduced['relative_l2'], 0.0)
+        self.assertEqual(reduced['relative_l2_denominator'], run_probe.TINY)
+        self.assertTrue(reduced['relative_l2_zero_reference'])
         self.assertTrue(record['diagnostic_gate']['within_bounds'])
 
 

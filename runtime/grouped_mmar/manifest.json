@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "21d4ebc704e2215e999b471d8a645768bc54bafd12d0b1df80e4debe42322553",
-      "bytes": 30652
+      "sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+      "bytes": 30686
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record-shape/error-stats/F821/arm_output tests (27)",
-      "sha256": "500d338736af3232824932b6345cff89b06224b84b8315284bfaf2808e4f4ca6",
-      "bytes": 20713
+      "sha256": "07e5a5b4d3cebb39a6e36b9b6f81ea4558ddfdc0489e21399518b27ec0260570",
+      "bytes": 21128
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "11fa82e1a3502735db17c72a912d98a540428c3bf31aebf979b38322241e416c",
-      "bytes": 36322
+      "sha256": "a42c994d6a4fb1b86ba77d4364fe527fd8c4dd310ebe370db40af85aacf73b79",
+      "bytes": 36367
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "500d3387", "run_probe": "21d4ebc7", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "07e5a5b4", "run_probe": "8e308804", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -472,8 +472,8 @@
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
       "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
-      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields for later review; NOT the v3 execution tuple", "run_probe.py": "21d4ebc7", "test_probe_cpu.py": "500d3387", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
-      "error_stats": "a15_record's stats callback now records output_abs_max, reference_abs_max, reference_rms, reference_abs_mean, nonzero_count, element_count, max_error_index/position, max_error_reference/output, and relative_l2 with an explicit zero-denominator rule (0/0 -> 0.0, nonzero/0 -> null + denominator_zero=true). These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
+      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields for later review; NOT the executed v3 tuple", "run_probe.py": "8e308804", "test_probe_cpu.py": "07e5a5b4", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
+      "error_stats": "a15_record's stats callback records max_abs/mean_abs/bit_equal plus ref_abs_max, out_abs_max, diff_nonzero_count, diff_total_count, max_error_index/position and values, max_rel_abs, and relative_l2 = ||out-ref||_2 / max(||ref||_2, 1e-12); it also stores relative_l2_denominator and relative_l2_zero_reference. These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
       "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
       "v3_result": {
         "status": "executed on the locked tuple; diagnostic success only, not a production or precision-pass claim",

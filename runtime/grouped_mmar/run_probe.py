@@ -321,39 +321,41 @@ def _shape_of(tensor):
         return None
 
 
+TINY = 1e-12
+
+
 def relative_l2(diff_norm, ref_norm):
-    """Explicit zero-denominator rule for relative L2."""
-    if ref_norm == 0:
-        return ((0.0, True) if diff_norm == 0 else (None, True))
-    return diff_norm / ref_norm, False
+    """relative_l2 = ||diff||_2 / max(||ref||_2, TINY), with the denominator recorded."""
+    denominator = max(ref_norm, TINY)
+    return diff_norm / denominator, denominator, ref_norm == 0
 
 
 def tensor_error_stats(output, reference):
-    """Minimal raw error statistics for A15 (torch tensors; no new pass gate)."""
+    """Raw error statistics for A15 (torch tensors; no pass/fail inference)."""
     out = output.float()
     ref = reference.float()
     diff = (out - ref).abs()
-    element_count = int(diff.numel())
     flat_index = int(diff.reshape(-1).argmax().item())
     diff_norm = float(diff.pow(2).sum().sqrt().item())
     ref_norm = float(ref.pow(2).sum().sqrt().item())
-    rel_l2, denom_zero = relative_l2(diff_norm, ref_norm)
+    rel_l2, denominator, zero_reference = relative_l2(diff_norm, ref_norm)
+    max_rel_abs = float((diff / ref.abs().clamp_min(TINY)).max().item())
     return {
         'max_abs': float(diff.max().item()),
         'mean_abs': float(diff.mean().item()),
-        'output_abs_max': float(out.abs().max().item()),
-        'reference_abs_max': float(ref.abs().max().item()),
-        'reference_rms': float(ref.pow(2).mean().sqrt().item()),
-        'reference_abs_mean': float(ref.abs().mean().item()),
-        'nonzero_count': int((diff != 0).sum().item()),
-        'element_count': element_count,
+        'ref_abs_max': float(ref.abs().max().item()),
+        'out_abs_max': float(out.abs().max().item()),
+        'diff_nonzero_count': int((diff != 0).sum().item()),
+        'diff_total_count': int(diff.numel()),
         'max_error_index': flat_index,
         'max_error_position': [flat_index // output.shape[1],
                                flat_index % output.shape[1]],
         'max_error_reference': float(ref.reshape(-1)[flat_index].item()),
         'max_error_output': float(out.reshape(-1)[flat_index].item()),
+        'max_rel_abs': max_rel_abs,
         'relative_l2': rel_l2,
-        'relative_l2_denominator_zero': denom_zero,
+        'relative_l2_denominator': denominator,
+        'relative_l2_zero_reference': zero_reference,
     }
 
 
