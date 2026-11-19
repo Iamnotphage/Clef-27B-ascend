@@ -89,6 +89,7 @@ Api& api() { static Api value; return value; }
 struct Lists {
     Api& a;
     std::vector<aclTensorList*> lists;
+    std::vector<aclTensor*> singles;
     bool closed = false;
     explicit Lists(Api& value) : a(value) {}
     int close() noexcept {
@@ -99,10 +100,32 @@ struct Lists {
             int rc = a.destroy_list(list);  // Owns/destroys its member descriptors.
             if (rc && !first_error) first_error = rc;
         }
+        for (auto* tensor : singles) {
+            int rc = a.destroy_tensor(tensor);
+            if (rc && !first_error) first_error = rc;
+        }
         lists.clear();
+        singles.clear();
         return first_error;
     }
     ~Lists() { (void)close(); }
+    aclTensor* add_single(const at::Tensor& t, aclDataType dtype) {
+        const auto* storage =
+            static_cast<const torch_npu::NPUStorageImpl*>(t.storage().unsafeGetStorageImpl());
+        const auto& desc = storage->npu_desc_;
+        TORCH_CHECK(static_cast<aclFormat>(desc.npu_format_) == ACL_FORMAT_ND,
+                    "grouped-mmar requires actual ND storage, got ",
+                    static_cast<int>(desc.npu_format_));
+        std::vector<int64_t> sizes(t.sizes().begin(), t.sizes().end());
+        std::vector<int64_t> strides(t.strides().begin(), t.strides().end());
+        std::vector<int64_t> storage_sizes(desc.storage_sizes_.begin(), desc.storage_sizes_.end());
+        auto* tensor = a.create_tensor(sizes.data(), sizes.size(), dtype, strides.data(),
+                                       t.storage_offset(), ACL_FORMAT_ND, storage_sizes.data(),
+                                       storage_sizes.size(), const_cast<void*>(t.storage().data()));
+        TORCH_CHECK(tensor, "grouped-mmar aclCreateTensor returned null");
+        singles.push_back(tensor);
+        return tensor;
+    }
     aclTensorList* add(const at::Tensor& t, aclDataType dtype) {
         const auto* storage =
             static_cast<const torch_npu::NPUStorageImpl*>(t.storage().unsafeGetStorageImpl());
@@ -418,10 +441,10 @@ std::tuple<at::Tensor, int64_t, int64_t> matmul_all_reduce_run(
     auto lists = std::make_shared<Lists>(a);
     state->lists_ptr = lists.get();
     if (keep_descriptors(flags)) state->keep_lists = lists;
-    auto* tx = lists->add(x, ACL_BF16);
-    auto* tw = lists->add(weight_kn, ACL_BF16);
-    auto* tb = lists->add(bias, ACL_BF16);
-    auto* ty = lists->add(y, ACL_BF16);
+    auto* tx = lists->add_single(x, ACL_BF16);
+    auto* tw = lists->add_single(weight_kn, ACL_BF16);
+    auto* tb = lists->add_single(bias, ACL_BF16);
+    auto* ty = lists->add_single(y, ACL_BF16);
     if (state->trace)
         state->trace->mark("descriptors_ready",
                            fields(*state, "descriptors", group_object, group_pointer,
@@ -559,9 +582,9 @@ std::tuple<at::Tensor, int64_t, int64_t> matmul_reduce_scatter_run(
     auto lists = std::make_shared<Lists>(a);
     state->lists_ptr = lists.get();
     if (keep_descriptors(flags)) state->keep_lists = lists;
-    auto* tx = lists->add(x, ACL_BF16);
-    auto* tw = lists->add(weight_kn, ACL_BF16);
-    auto* ty = lists->add(y, ACL_BF16);
+    auto* tx = lists->add_single(x, ACL_BF16);
+    auto* tw = lists->add_single(weight_kn, ACL_BF16);
+    auto* ty = lists->add_single(y, ACL_BF16);
     if (state->trace)
         state->trace->mark("descriptors_ready",
                            fields(*state, "descriptors", group_object, group_pointer,
