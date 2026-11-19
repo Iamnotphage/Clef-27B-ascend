@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import secrets
 import shutil
 import signal
 import socket
@@ -128,14 +129,28 @@ def _scan_direct():
     return result
 
 
+OWNER_ENV = 'CLEF_WINDOW_OWNER'
+
+
+def _has_env_token(pid, token):
+    if not token:
+        return False
+    try:
+        raw = (Path('/proc') / str(pid) / 'environ').read_bytes()
+    except OSError:
+        return False
+    return f'{OWNER_ENV}={token}'.encode() in raw.split(b'\0')
+
+
 class DescendantRegistry:
     """Records child descendants while they are still reachable by PPID."""
 
-    def __init__(self, root_pid, path, protected, interval=0.2):
+    def __init__(self, root_pid, path, protected, interval=0.2, token=None):
         self.root_pid = int(root_pid)
         self.path = Path(path)
         self.protected = set(protected)
         self.interval = interval
+        self.token = token
         self._entries = {}
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -149,8 +164,9 @@ class DescendantRegistry:
         pids = tree(table, self.root_pid) | known
         self_pid = os.getpid()
         for pid, row in table.items():
-            if row['ppid'] == self_pid and pid != self.root_pid:
-                pids.add(pid)  # subreaper orphans
+            if (row['ppid'] == self_pid and pid != self.root_pid and
+                    _has_env_token(pid, self.token)):
+                pids.add(pid)  # adopted orphan that provably carries the child's token
         # Expand again so children of an adopted orphan are recorded in the same pass.
         while True:
             children = {p for p, row in table.items() if row['ppid'] in pids}
@@ -216,12 +232,13 @@ class DescendantRegistry:
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2)
-        # Repeat until stable so an adopted intermediate and its children both land.
+        # Short settle plus repeat so an adopted intermediate and its children both land.
         for _ in range(3):
             before = len(self.snapshot())
             self.record_now()
             if len(self.snapshot()) == before:
                 break
+            time.sleep(0.1)
         self.write()
 
     def snapshot(self):
@@ -314,8 +331,10 @@ def cleanup_attributed(child_pid, child_identity, registry, protected, *, wait=1
         targets = _attributed_targets(entries)
         _signal_targets(targets, signal.SIGKILL)
         time.sleep(wait)
-    if reap:
-        _reap(targets['verified'])
+    # Reap every registered candidate, including PIDs that are already zombies:
+    # _live_verified excludes Z entries, so reaping only "verified" misses them.
+    _reap(entries)
+    time.sleep(0.05)
     final = _attributed_targets(entries)
     members = ({row['pid'] for row in final['verified']} |
                set(final['unknown']) |
@@ -805,16 +824,20 @@ def execute(a, plan):
         step('stopped', {'port': 111, 'npu_empty': True})
 
         protected = {saved['pid'], *[p for p, row in table.items() if row['pgid'] == saved['pid']]}
+        owner_token = secrets.token_hex(16)
+        child_env = {**os.environ, OWNER_ENV: owner_token}
         with (run_dir / 'child.stdout').open('xb') as out, (run_dir / 'child.stderr').open('xb') as err:
             child = subprocess.Popen(plan['child_argv'], cwd=a.cwd, stdout=out, stderr=err,
-                                     start_new_session=True)
+                                     env=child_env, start_new_session=True)
         identity = proc_identity(child.pid)
         if not identity or identity['pgid'] != child.pid or child.pid in protected:
             raise RuntimeError('child is not a fresh own-PGID process')
         child_state.update(started=True, pid=child.pid, identity=identity,
                            subreaper=subreaper)
-        registry = DescendantRegistry(child.pid, run_dir / 'descendants.json', protected).start()
+        registry = DescendantRegistry(child.pid, run_dir / 'descendants.json', protected,
+                                      token=owner_token).start()
         child_state['descendants'] = str(run_dir / 'descendants.json')
+        child_state['owner_token'] = True
         names = (['libhccl', 'libopapi', 'libnnopbase', 'libascendcl', 'libhcomm']
                  if a.arm == 'A12' else
                  [Path(a.adapter).name if a.adapter else 'clef_mmar_probe',

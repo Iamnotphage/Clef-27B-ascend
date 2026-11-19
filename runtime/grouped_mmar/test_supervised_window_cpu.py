@@ -536,16 +536,19 @@ class AttributedProcessTest(unittest.TestCase):
             '"import time; time.sleep(60)"], start_new_session=True)\n'
             'print(w.pid, flush=True)\n'
             'sys.exit(0)\n')
+        token = 'test-orphan-token'
+        env = {**os.environ, win.OWNER_ENV: token}
         unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
-                                     start_new_session=True)
+                                     start_new_session=True)  # deliberately no token
         parent = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
-                                  start_new_session=True, text=True)
+                                  env=env, start_new_session=True, text=True)
         worker = None
         try:
             worker = int(parent.stdout.readline().strip())
             parent.wait(timeout=10)
             root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-'))
-            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set(),
+                                              token=token).start()
             try:
                 deadline = time.time() + 5
                 snapshot = []
@@ -555,6 +558,7 @@ class AttributedProcessTest(unittest.TestCase):
                         break
                     time.sleep(0.1)
                 self.assertTrue(any(entry['pid'] == worker for entry in snapshot))
+                self.assertFalse(any(entry['pid'] == unrelated.pid for entry in snapshot))
                 entry = next(e for e in snapshot if e['pid'] == worker)
                 self.assertEqual(entry['ppid'], os.getpid())
                 self.assertIn(worker, win.attributed_survivors(registry))
@@ -594,14 +598,17 @@ class AttributedProcessTest(unittest.TestCase):
             '"import time; time.sleep(60)"], start_new_session=True)\n'
             'print(w.pid, flush=True)\n'
             'sys.exit(0)\n')
+        token = 'test-race-token'
         parent = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
+                                  env={**os.environ, win.OWNER_ENV: token},
                                   start_new_session=True, text=True)
         worker = None
         try:
             worker = int(parent.stdout.readline().strip())
             parent.wait(timeout=10)
             root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-race-'))
-            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set(),
+                                              token=token).start()
             try:
                 registry.stop()  # synchronous final record, no wait for the poller
                 self.assertTrue(any(entry['pid'] == worker for entry in registry.snapshot()))
@@ -626,16 +633,32 @@ class AttributedProcessTest(unittest.TestCase):
                         '"import time; time.sleep(60)"], start_new_session=True)\n'
                         'time.sleep(60)\n')
         parent_code = ('import subprocess, sys\n'
-                       f'subprocess.Popen([sys.executable, "-c", {intermediate!r}], '
+                       f'p = subprocess.Popen([sys.executable, "-c", {intermediate!r}], '
                        'start_new_session=True)\n'
+                       'print(p.pid, flush=True)\n'
                        'sys.exit(0)\n')
+        token = 'test-chain-token'
         parent = subprocess.Popen([sys.executable, '-c', parent_code],
-                                  start_new_session=True)
+                                  stdout=subprocess.PIPE,
+                                  env={**os.environ, win.OWNER_ENV: token},
+                                  start_new_session=True, text=True)
         root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-chain-'))
         registry = None
         try:
+            intermediate_pid = int(parent.stdout.readline().strip())
             parent.wait(timeout=10)
-            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            deadline = time.time() + 5
+            grandchild = None
+            while time.time() < deadline and grandchild is None:
+                for row in win._scan_direct().values():
+                    if row['ppid'] == intermediate_pid:
+                        grandchild = row['pid']
+                        break
+                if grandchild is None:
+                    time.sleep(0.05)
+            self.assertIsNotNone(grandchild)
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set(),
+                                              token=token).start()
             registry.stop()
             snapshot = registry.snapshot()
             self.assertGreaterEqual(len(snapshot), 2)

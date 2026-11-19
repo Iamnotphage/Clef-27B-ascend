@@ -62,13 +62,13 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "0ca36426da2903a176f1297cf92d4cfe66ce6b6b4bb78ebed3c0d59c39f94637",
-      "bytes": 45182
+      "sha256": "9a31091b9583e1a479c90dcbe9a4cd9082ce91b9e64bf7623dbc3a0e1ba8ca92",
+      "bytes": 46020
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
       "role": "CPU window control-flow tests (34; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, Linux real-process fixtures)",
-      "sha256": "33961f36d0aff43cb1dd25f3bdb560d712defc76207f9e0635d9446262f014c5",
-      "bytes": 33503
+      "sha256": "5fdc498ffdc17916df1fb651e7957006f2677fb9dc67d61595a4704c8fdd9b36",
+      "bytes": 34752
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "5ad6708a7c11142f0cca3e392f5b4d1dcd62f6f0eb8b82e25b9976264a3e5a9c",
-      "bytes": 29746
+      "sha256": "00665d23e5e2dff8c85463024eb85cb06a85b5bff39b153e88157556cfae2abc",
+      "bytes": 30152
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -423,7 +423,18 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "0ca36426", "test_supervised_window_cpu.py": "33961f36", "cpu": "60/60 (17+9+34; 5 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "9a31091b", "test_supervised_window_cpu.py": "5fdc498f", "cpu": "60/60 (17+9+34; 5 Linux-only skipped on macOS)"},
+    "linux_fixture_result": {
+      "version_under_test": "35b4fbe (window 0ca36426)",
+      "outcome": "34 tests ran on Linux; 3 failed: zombie not reaped, subreaper adoption too broad, chain fixture race",
+      "log_sha256": "b6357e475123ebeb9f14fc4ee4685bd65312a599d1717adea42abe9d3c63fdd5",
+      "fixes": [
+        "cleanup reaps every registered candidate after SIGKILL, including PIDs already in Z state, then settles before the final scan",
+        "adoption now requires the child's per-cell env token CLEF_WINDOW_OWNER; an unrelated subreaper child without the token is never registered or signaled",
+        "registry.stop() repeats record with a short settle; the chain fixture waits for the grandchild to exist before stop"
+      ],
+      "rerun_required": "31 reruns the 34 window tests plus the F2/F3 probes on the new window 9a31091b"
+    },
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
   },
