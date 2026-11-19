@@ -947,6 +947,16 @@
 - **结论不变**：window restore 未发起；人工唯一 restore 按人工口径闭合（9/9 现有当前复核原件，ppid 偏差保留）；archive 仍 92 文件、SUMS 52d145ee、probe-temp 缺失、end rc1 **不完整**；H11 为 sync 挂起复现（API 已返回/handler rc0/sync 未返回），无数值、无 A/B；包 8ecf8f9/bed3a6e6 未改；无新 GO、无设备。
 - 35 已获 CPU 候选实现授权（默认总 settle 30 s，不动远端/设备）；待其固定 commit 后我只读增量审代码/fixture。
 
+## 8.124 settle 候选 7d371a1 代码审：Linux orphan fail-open（2026-11-19，无 GO）
+
+- **固定件**：35 research commit **7d371a1**（仅 README/manifest/window/test 4 文件）；window **5bbda3cc…**（52,752 B，base **1f780bf8…**）、test **8336a663…**（51,814 B，base **228150e4…**）均逐字节核对；实际 diff window **+101/−10**、test **+234**（35 报 +111/−10，计数口径差 10 行）。
+- **本地 CPU**：macOS `python3 -m unittest -q test_supervised_window_cpu` → **Ran 48 tests, OK (skipped=7)**（9.658 s），与 35 报一致。
+- **设计符合项**：settle 每轮单一 `table_reader()` 快照（survivor 与 state 同表）、连续两空才 clean、默认 30 s 上限、逐 pid state/starttime（无 state=unknown）、超期 fail-closed、gate 复用同一 settle table、唯一 `begin_restore`、child timeout `ok=False` 保持；`_signal_targets`/`_attributed_targets`/`cleanup_attributed`/protected/unknown/drift/PID 复用规则未改。
+- **阻断发现（fail-open 回退）**：`recovery_gate` L822-823 把 gate 的 `table`（无 settle 时来自 `scan()`）与 `reader=table.get` 传给 `attributed_survivors`（L836）；base 1f780bf8 是 `attributed_survivors(registry, child_pid)`，内部走 `_scan_direct()` 真实 `/proc`。Linux test `test_orphan_after_immediate_parent_exit_is_registered_and_cleaned` 将 `scan()` mock 为 `{}`，candidate 因此 `attributed=[]、residual=[]、gate allow=True`，与 31 Linux 48 rc1 的 `orphan-after-immediate-parent-exit (gate allow=True)` 完全对应。生产含义：无 settle 的 gate 失去第二次独立 `/proc` 读取，对 scan 竞态/缺失不再 fail-closed，属相对 base 的回退，不只测试问题。
+- **最小修复**：仅当调用方显式传 `table`（settle 路径）时把 table/reader 传给 `attributed_survivors`；`table is None` 时保持 base（`table=scan()` 后 `attributed_survivors(registry, child_pid)` 内部 `_scan_direct`）；settle 路径不变。
+- **其它审查项**：①默认 30 s 对 attempt2 退出延迟（gate 时 >1.4 s，最长可能约 174 s，精确未知）不保证覆盖，若 >30 s 仍 fail-closed，不能声称已修复该格；②manifest `files` 的 window/test SHA 已改为候选 5bbda3cc/8336a663，而 README/manifest 又称 frozen 1f780bf8/228150e4 不动——manifest-driven 校验会与 v2 包不一致，建议 files 保持 frozen 或明确候选分支；③31 另有 2 个 CPU 测试残留待精确身份清理。
+- **结论**：7d371a1 **NOT READY**；等 35 修复后的新固定 commit + 31 macOS/Linux 48 复跑。无设备、无新 GO、不改 v2 包。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
