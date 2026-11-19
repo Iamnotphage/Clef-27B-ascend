@@ -1410,3 +1410,12 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - H11 hang 未解，本观测仅诊断。
 
 **当前不运行、不发 GO；H11 文档 SHA `fa62db6c`（35 2b5729e）。**
+
+### 83.3 32 复验补充（e7d1782/eb50f10）
+
+- 远端字面 body 路径在本机（macOS）跑：`build_plan` 按预期 `ValueError: text/image probe bodies must exist`——**不是命令缺陷**；注意管道 `| tail` 会把 rc 显示为 0，实际 Python 已失败，必须看 Python 退出码/日志。31 远端 `test -f` 通过即可。
+- 同命令用 `/tmp` 同名 body 副本：**rc=0**，生成 child_argv 与 §83 一致；probes 指向 body。
+- master-port 再次确认：window 消费，child torchrun 仅一个 `--master_port 29531`，run_probe 无该参数；独立 probe 命令仍须放 torchrun 后/脚本前。
+- env 白名单合理；restore `env_evidence` 仍比 `ASCEND_CUSTOM_OPP_PATH`/`LD_LIBRARY_PATH`，隔离靠 `env -i`，与观察 env 不冲突。
+- 采集 raw 默认 + candidate + device、关联视图另存，OK。
+- 结论：命令/计划兼容性可闭；仅剩 31 只读 preflight + 3 xref/条件项；当前不运行、不发 GO。
