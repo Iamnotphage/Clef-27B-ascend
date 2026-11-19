@@ -159,7 +159,14 @@
   - C16：2352/0 异常、inflight 16；p50 851.255/p95 1764.774/p99 1861.114；**16.9038 dec/s**（report 16.9037，wall 139.141 s）；Cap 73.82501/Cal 81.8361/Int 65.814/acc 1905/MAE 0.402936。
   - 对同窗 f810：吞吐 +0.47%/+0.46%、p95 −0.26%/−0.49%、Cap −0.0259/−0.0223 pp、acc +1/0；2PP 内；作者 scorer 重打分一致；supervision complete/clients_exited=true/rc0/cleanup 干净。
   - restore：label `d0-restore-20261119T015105Z-05a535b7`、manifest_source=deploy_record、prior=候选自身 v5 supervision、source f810/guard 76595657、五 PID 四检 ok、envcompare match=true（9/12 哈希）；新 current_restore=restore.json `2f62529b…`。restored 服务随后由下一格 s2_b16 deploy 正常停止。
-- **typed s2_b16（deploy 已核，v5 运行中）**：OUT `owner31-typed-s2b16-20261119T0155Z`；label `d0-cand-20261119T015300Z-75005c96`、root 1274993、aa3e/36eaff44、from s1、current_restore=`2f62529b…`、prior=s2b8 supervision `70b1834f…`、overrides 16/16384；五 PID 四检 ok、effective 16/16384；v5 output `v5-s2b16`、records `v5-s2b16-records`、deadline 02:25Z。
+- **typed s2_b16（cell 闭合，已核）**：OUT `owner31-typed-s2b16-20261119T0155Z`；label `d0-cand-20261119T015300Z-75005c96`、root 1274993、aa3e/36eaff44、from s1、current_restore=`2f62529b…`、prior=s2b8 supervision `70b1834f…`、overrides 16/16384；五 PID 四检 ok、effective 16/16384；v5 `v5-s2b16`、deadline 02:25Z；supervision 干净。
+  - C32：2352/0 异常、inflight 32；p50 1668.498/p95 3117.81/p99 3608.027；17.6576 dec/s（report 17.6572，wall 133.203 s）；Cap 74.14685/Cal 82.5512/Int 65.7425/acc 1902/MAE 0.40242。
+  - C64：2352/0 异常、inflight 64；p50 3511.907/p95 5913.838/p99 7164.443；17.7050 dec/s（report 17.7047，wall 132.846 s）；Cap 74.141828/Cal 82.5383/Int 65.7454/acc 1902/MAE 0.402338。
+  - 对 f810 同点：+0.65%/+0.60% dec/s、p95 −7.55/−23.75 ms、Cap +0.0070/+0.0007 pp；重打分一致；restore label `d0-restore-20261119T020026Z-6fc6f7cc`、envmatch true、新 current_restore `06dfcc0f…`。
+- **typed erqa（cell 闭合，已核）**：OUT `owner31-typed-erqa-20261119T0202Z`；label `d0-cand-20261119T020219Z-8ec9bc97`、root 1278447、overrides 16384/16 图/1048576、五 PID 四检 ok、deploy complete `c6742044…`；v5 `v5-erqa`、deadline 02:45Z、supervision `5ec2942e…` 干净。
+  - 400/400、0 失败；我逐题核 gold/argmax/图像 SHA/概率/状态 0 issue；**216/400 = 0.5400**，single 167/287、multi 49/113、8 类分项与 f810 全等；acceptance `1f119678…` 与 f810 **字节相同**；33 另核仅 5/400 概率差 max 0.001328、argmax 0 变化。
+  - restore label `d0-restore-20261119T020614Z-b57139dc`、source f810/guard pre、manifest_source=deploy_record、envmatch true、新 current_restore `a61bdf31…`。
+- **typed 全链结论**：三格 deploy→v5→restore 全 rc0、全部 client 退出/cleanup 干净；S2 两点小幅正收益（+0.46~0.65% 吞吐、p95 −0.24~−0.49%）、ERQA 完全同值、S1 中性；所有质量 Δ 在 2PP 内（B8 C8 −0.0259pp 最大负向，B16 略正）。最终 f810/s1 最佳服务已恢复：root 1279960、4096/seqs1/batched4096、OPP9/LD12 clean、仅 SINGLE_FIELD、source f810、guard 76595657。
 
 ## 9. 本地核对副本
 
