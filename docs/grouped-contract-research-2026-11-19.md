@@ -539,3 +539,11 @@ freeze `6dae03f`：manifest `83dd8e85…`、window `1f780bf8`（未变）、test
 - 可计算：N=(968/2)×5120=**2,478,080**；total_abs=mean_abs×N = **134.958979**（rank0）/ **119.054683**（rank1）；因每元素 |diff|≤max_abs=2.0，非零差元素数**至少 ceil(total_abs/2.0)=68/60**；这只是下界，若存在小于 2.0 的差，元素数更多。不能由此得到“60–68 个元素差 1 ulp”的精确计数。
 - 不可证：2.0 是否等于“峰值处 1 个 BF16 ulp”、输出峰值 420–510、相对误差 ~7e-7 都依赖未落盘的 reference/output 幅值与逐元素数据；K=8704、N(0,1) 的 σ≈93.3 只是模型估计，不是本格实测。**不能把 max_abs=2.0 直接归因为 BF16 累加/非缺陷**，也不能据此改门或宣称精度通过。
 - 修复/后续：probe 记录 reference/output 的 max/p50/p99 幅值、逐元素 diff 分位数、非零计数、max_rel/mean_rel、ulp_at_max；或做模型级 OD/ERQA 2PP。A14 large v3 仍为 numeric-complete、not precision pass；A14 对照臂不新增绝对门。Grouped 研究不受此格影响；A15 rows127 合同不扩展审核。
+
+## 48. A15 small v1 失败：run_probe A15 pad 分支 NameError（2026-11-19）
+
+31 归档 `a15-small-v1-cell/`（18 文件，SUMS `e185265f…` 18/18，commit 2cb8fdd）；tuple 6d09515/run_probe d54584b7/window 1f780bf8/adapter d181b15a/plan 99db4369/identity 1326845/399871182（执行前实核一致）。
+
+- 两 rank trace：`arm_enter flags=8` 后 `python_exception: NameError: name 'k' is not defined`；result 定位 `run_probe.py:386` `x_mrs = torch.ones((m_pad, k), ...)`，应为 `a.k`；仅 A15 tail pad（rows127→128）触发，未产生 pad_ready/gather/equivalence/diagnostic_gate/数值。api/sync false；child rc1、timed_out=false、survivors []、cleanup_final killed 且各集空。
+- 恢复：branch aa3e-noop、root **1328734**/start 399924959、五 PID、四检全 true；`subreaper_original=0 → cleared=true → final_restored=true → final=0`；无第二棵树。
+- **判定**：A15 harness 产品缺陷（变量名 `k`→`a.k`），本格 invalid，无数值；Grouped 研究不受影响。修复重冻 run_probe 后需新 A15 plan（a15-small-v2）与一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
