@@ -1,0 +1,267 @@
+{
+  "schema": "grouped-mmar-sample-profile-plan/1",
+  "status": "cpu_prepared_not_deployed",
+  "mock_only": true,
+  "device_go": false,
+  "collector": {
+    "msprof": "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
+    "version": "26.2.0",
+    "sha256": "fe8b7256faea5fcf08b1878744177a368893cd8169ba2fe58957e8fe2dacd01d",
+    "help_package": "profiling-metadata-msprof-20261120/msprof-help.txt",
+    "mode": "sample-based",
+    "command_prefix": [
+      "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
+      "--output",
+      "<fresh-absolute-dir>",
+      "--task-time",
+      "l1",
+      "--ai-core",
+      "on",
+      "--aic-mode",
+      "sample-based",
+      "--aic-freq",
+      "100",
+      "--aic-metrics",
+      "PipeUtilization",
+      "--delay",
+      "10",
+      "--duration",
+      "120"
+    ]
+  },
+  "flags": [
+    {
+      "name": "--output",
+      "value": null,
+      "unit": null,
+      "help_default": null,
+      "range": "directory",
+      "help_line": "L9",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "optional, no default; must be a fresh absolute directory"
+    },
+    {
+      "name": "--task-time",
+      "value": "l1",
+      "unit": null,
+      "help_default": "on",
+      "range": "l0, l1, l2, l3, on, off",
+      "help_line": "L17",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "task profiling data; no unit"
+    },
+    {
+      "name": "--ai-core",
+      "value": "on",
+      "unit": null,
+      "help_default": "on when collecting app profiling",
+      "range": "on, off",
+      "help_line": "L20",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "AI Core profiling switch"
+    },
+    {
+      "name": "--aic-mode",
+      "value": "sample-based",
+      "unit": null,
+      "help_default": "task-based in AI task mode; sample-based in system mode",
+      "range": "task-based, sample-based",
+      "help_line": "L21-L24",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "collected in a specific interval"
+    },
+    {
+      "name": "--aic-freq",
+      "value": "100",
+      "unit": "Hz",
+      "help_default": "100 Hz",
+      "range": "1-100 Hz",
+      "help_line": "L25",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "sampling frequency in hertz, not milliseconds"
+    },
+    {
+      "name": "--aic-metrics",
+      "value": "PipeUtilization",
+      "unit": null,
+      "help_default": "PipeUtilization",
+      "range": "ArithmeticUtilization, PipeUtilization, Memory, MemoryL0, ResourceConflictRatio, MemoryUB, L2Cache, MemoryAccess",
+      "help_line": "L41-L42",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "default aic metric group"
+    },
+    {
+      "name": "--delay",
+      "value": "10",
+      "unit": "s",
+      "help_default": null,
+      "range": "1-4294967295 s",
+      "help_line": "L83",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "collect start delay in seconds"
+    },
+    {
+      "name": "--duration",
+      "value": "120",
+      "unit": "s",
+      "help_default": null,
+      "range": "1-4294967295 s",
+      "help_line": "L84",
+      "help_conflict": "none documented",
+      "runtime_proven": false,
+      "note": "collection duration in seconds; flush/exit/kill/wait semantics unknown"
+    }
+  ],
+  "app": {
+    "argv_list_only": true,
+    "shell": false,
+    "source": "supervised_probe_window.build_child_argv (unchanged)",
+    "native_binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+    "native_run_probe_sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+    "adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+    "app_args_boundary": "explicit list; fixed app command fixture must verify no split/consume"
+  },
+  "target": {
+    "fields": [
+      "kernel_name",
+      "stream_id",
+      "task_id",
+      "submit_ns",
+      "end_ns",
+      "end_kind",
+      "clock",
+      "source",
+      "provenance"
+    ],
+    "values": {
+      "kernel_name": null,
+      "stream_id": null,
+      "task_id": null,
+      "submit_ns": null,
+      "end_ns": null,
+      "end_kind": null,
+      "clock": null,
+      "source": null,
+      "provenance": null
+    },
+    "source_required": "fresh StreamLaunchKernelV2 / ConstructFftsMixSqe / AllocTaskAndSendStars or fresh trace",
+    "no_hardcode": true,
+    "fail_closed_on_missing_or_ambiguous": true,
+    "note": "old stream/task/kernel labels are historical; this run must bind its own"
+  },
+  "clock": {
+    "submit_clock": "host plog UTC",
+    "collector_clock": "collector timestamps",
+    "sample_clock": "collector",
+    "offset_required": true,
+    "raw_and_converted": true,
+    "same_clock_required_for_window": true,
+    "unproven_if_offset_missing": true
+  },
+  "coverage": {
+    "scope": "early_pending_only",
+    "delay_s": 10,
+    "duration_s": 120,
+    "total_s": 130,
+    "timeout_approx_s": 180,
+    "covers_timeout": false,
+    "covers_late_pending": false,
+    "unproven": "duration arrival flush/exit/kill/wait semantics are not documented"
+  },
+  "success": {
+    "and": [
+      "valid AIC sample",
+      "kernel identity",
+      "sample time in this run submit-end window",
+      "this run stream/task attribution"
+    ],
+    "kernel_name_only": false,
+    "timeline_only": false,
+    "empty_truncated_error_timeout": "capability_unproven",
+    "capability_proven_default": false,
+    "capability_demonstrated_requires_manual_device_review": true
+  },
+  "classification": {
+    "statuses": [
+      "capability_candidate",
+      "capability_unproven",
+      "not_success"
+    ],
+    "capability_demonstrated": "only after manual review of device raw artifacts",
+    "mock_only": true,
+    "harness_pass_separate": true,
+    "no_auto_pass": true,
+    "reasons": [
+      "ambiguous_target",
+      "clock_mismatch",
+      "collector_error",
+      "collector_exited_early",
+      "collector_timeout",
+      "invalid_synthetic_record",
+      "invalid_window",
+      "missing_clock",
+      "missing_end_kind",
+      "missing_end_ns",
+      "missing_kernel_name",
+      "missing_provenance",
+      "missing_sample_clock",
+      "missing_sample_kernel",
+      "missing_sample_stream",
+      "missing_sample_task",
+      "missing_sample_timestamp",
+      "missing_source",
+      "missing_stream_id",
+      "missing_submit_ns",
+      "missing_task_id",
+      "multiple_candidates",
+      "output_missing",
+      "ranks_alive",
+      "sample_empty",
+      "sample_invalid",
+      "synthetic_not_labeled",
+      "timeline_only",
+      "truncated",
+      "unknown_clock",
+      "unknown_end_kind",
+      "unknown_schema"
+    ]
+  },
+  "lifecycle": {
+    "tree": [
+      "msprof",
+      "app",
+      "torchrun",
+      "ranks"
+    ],
+    "outer_timeout_s": 240,
+    "collector_exit_flush_semantics": "unproven",
+    "settle": "two consecutive empty rounds",
+    "gate": "fail-closed",
+    "restore": "exactly one begin_restore",
+    "no_second_tree": true,
+    "no_same_cell_retry": true,
+    "raw_artifacts": "retain stdout/output even on failure",
+    "supervisor": "supervised_probe_window.py 8f4b843 baseline; child-argv hook unchanged"
+  },
+  "freeze": {
+    "baseline_commit": "8f4b843",
+    "no_8ec": true,
+    "no_minus2_go": true,
+    "no_device": true,
+    "no_workspace_read": true,
+    "no_dynamic_attach": true,
+    "no_instr_or_source": true
+  },
+  "tests": {
+    "suite": "test_sample_profile_cpu.py",
+    "existing_50_not_rerun": true,
+    "mock_only": true
+  }
+}

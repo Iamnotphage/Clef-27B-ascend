@@ -885,5 +885,119 @@
     "v3": "executed at identity 1306695; liveness pass (KFC path works), release harness crash; see small_v3.result",
     "v4": "final execution plan is v5 b6429191 (20 naming decision): fresh out/run/restore v5, identity 1308632/398926792, stage-identity v7, adapter d181b15a reused, run_probe 0f90fd23, port 29531 preflight; plan v4 6da7309c and out v4 are kept unexecuted"
 
+  },
+  "sample_profile_cpu_candidate_20261120": {
+    "status": "cpu_prepared_not_deployed",
+    "baseline_commit": "8f4b843",
+    "branch": "ao/resume-cc/h11-sample-profile-cpu-20261120",
+    "mock_only": true,
+    "capability_proven": false,
+    "device_go": false,
+    "scope": "outer collector argv/plan/classification only; native binding_probe.cpp, run_probe.py, adapter, old 8ec and 8f4b843 supervisor settle/gate core unchanged; existing 50 tests not rerun",
+    "files": {
+      "runtime/grouped_mmar/sample_profile_collector.py": {
+        "sha256": "f15980bde49d67e95c76ca1a8eb739932fe6ed5d9695ca82662b027f91832a2b",
+        "bytes": 29576
+      },
+      "runtime/grouped_mmar/h11_sample_profile_plan.json": {
+        "sha256": "0aa63c1b8e9d7942897e7dcf8dde840850f219a11e9d0b5d644c85cf1fedb1cf",
+        "bytes": 7677
+      },
+      "runtime/grouped_mmar/test_sample_profile_cpu.py": {
+        "sha256": "555cf836cbc81854cfe097028561310f0117fcdc822f392ad69768fa06006852",
+        "bytes": 22686
+      }
+    },
+    "readme": {
+      "path": "runtime/grouped_mmar/README.md",
+      "sha256": "88343df3c9f652d16756143b3b2e5160a841ac09c2a90c6fead7ac2c5540ba04",
+      "bytes": 51923
+    },
+    "fixed_command": [
+      "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
+      "--output",
+      "<fresh-absolute-dir>",
+      "--task-time",
+      "l1",
+      "--ai-core",
+      "on",
+      "--aic-mode",
+      "sample-based",
+      "--aic-freq",
+      "100",
+      "--aic-metrics",
+      "PipeUtilization",
+      "--delay",
+      "10",
+      "--duration",
+      "120"
+    ],
+    "coverage": {
+      "scope": "early_pending_only",
+      "delay_s": 10,
+      "duration_s": 120,
+      "total_s": 130,
+      "timeout_approx_s": 180,
+      "covers_timeout": false,
+      "covers_late_pending": false,
+      "unproven": "duration arrival flush/exit/kill/wait semantics are not documented"
+    },
+    "success_and": [
+      "valid AIC sample",
+      "kernel identity",
+      "sample time in this run submit-end window",
+      "this run stream/task attribution"
+    ],
+    "classification": {
+      "statuses": [
+        "capability_candidate",
+        "capability_unproven",
+        "not_success"
+      ],
+      "capability_proven_default": false,
+      "capability_demonstrated_requires_manual_device_review": true,
+      "harness_pass_separate": true,
+      "no_auto_pass": true
+    },
+    "lifecycle": {
+      "tree": [
+        "msprof",
+        "app",
+        "torchrun",
+        "ranks"
+      ],
+      "outer_timeout_s": 240,
+      "collector_exit_flush_semantics": "unproven",
+      "settle": "two consecutive empty rounds",
+      "gate": "fail-closed",
+      "restore": "exactly one begin_restore",
+      "no_second_tree": true,
+      "no_same_cell_retry": true,
+      "raw_artifacts": "retain stdout/output even on failure",
+      "supervisor": "supervised_probe_window.py 8f4b843 baseline; child-argv hook unchanged"
+    },
+    "tests": {
+      "command": "python3 runtime/grouped_mmar/test_sample_profile_cpu.py",
+      "result": "31/31 OK",
+      "platform": "macOS CPU",
+      "existing_50_not_rerun": true,
+      "mock_only": true
+    },
+    "unknowns": [
+      "real msprof output field schema and attribution mapping",
+      "duration arrival flush/exit/kill/wait semantics",
+      "A3 PC sampling / wait-point capability",
+      "130 s collection window does not cover the ~180 s timeout or late pending",
+      "collector flag combination and CLI runtime acceptance"
+    ],
+    "freeze": {
+      "binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+      "run_probe_sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+      "adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+      "baseline_commit": "8f4b843",
+      "no_8ec": true,
+      "no_minus2_go": true,
+      "no_device": true
+    }
   }
 }
