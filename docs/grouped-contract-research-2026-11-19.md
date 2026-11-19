@@ -1566,3 +1566,12 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - official/activate/service-root/model-dir 由 restore_argv 推得并已 test/ls。
 
 **未闭**：缺 3 文件 + SUMS/commit；`planonly-rerun.txt` 的 c95ae5c3 逐字节结果未归档；`preflight-rescan.sh`/`restore-and-failure.txt` 未落盘。31 补齐并提交后，32 再审 plan-only=c95ae5c3、采集/白名单/预扫/唯一 restore，并给 readiness/包 SHA。**无 GO/不执行。**
+
+### 87.1 35 标记表微调对齐（2bbddc37 / 5452ca6）
+
+35 更新 `log_path_markers.md` SHA `2bbddc37`（commit `5452ca6`）：
+- `#14 0x1613f58` = **K-helper（每次 finish）**，helper、非路径入口；出现只说明该 turn 的 finish 字被写并回读，缺席不判路。
+- `#15 0x14ee680` = **K-cond（共享返回错误摘要）**，caller 范围 = `RunAicpuRpcSrvLaunch` 内、跨返回路径共享，非分支标记；出现不单独判路，缺席不排除。
+- `#16 0x14f7160` 保持 MC2Trace 条件失败、非 MC2 入口；`0x7b3a24` 仍只作 start-to-read。
+- `0x1614098` 仍未知，保留不用、不阻塞；env 两项 sidecar 与基线口径不变。
+与 §78/§85 当前判读一致；无设备动作。
