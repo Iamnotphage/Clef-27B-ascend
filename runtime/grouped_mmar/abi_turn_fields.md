@@ -73,19 +73,51 @@ are 1-byte fields at +50/+51 with the ctx field arithmetic; the group tiling sou
 consistent with u8 counters. The consumer chain does not prove the same object as
 the server slots.
 
-Unproven: the relation `[server+8]` vs `[ctx+184]+u32[ctx+192]`; whether
-`C+j+50/51` intersects `S+0x5008+64*t` for the actual j/t (byte-range alias not
-established or excluded); which Init overload and branch Grouped uses; the meaning of
-the WriteFinish constant and whether it is meant to overwrite the counter;
-`ctx+0xf31d`; the AivAicpuOpParam population path (33's consumer chain).
+Unproven: whether S=C for the actual Grouped server (both Init call sites exist but
+target different server offsets +0xd10/+0xcf0, so the same object is unproven);
+whether `C+j+50/51` intersects the exact 8-byte sets for the actual j/T (byte-range
+alias not established or excluded); which Init overload and branch Grouped uses; the
+meaning of the WriteFinish constant and whether it is meant to overwrite the counter;
+`ctx+0xf31d`; the AivAicpuOpParam population path (33's consumer chain). The Init
+call sites and ctx 184/192/196 writers are now resolved by abi-preflight6.
+
+## abi-preflight6 call sites and exact alias sets
+
+abi-preflight6 (SUMS `b8775ff6`, commit `433b88f`) provides the call-site evidence:
+
+- `Init(y,j,t,KFCTask*)` is called at 0x76192c in `RunAicpuRpcSrvLaunch` with
+  `x1=[ctx+184]`, `w2=[ctx+192]`, `w3=ldrh[ctx+196]`, `x0=r23+0xd10`, `x4=KFCTask*`.
+- `Init(y)` is called at 0x7b67c4 in `AicpuKfcProcess::AicpuRunRpcServerForApi` with
+  `x1=[x19+184]`, `x0=x20+0xb50+0x1a0 = x20+0xcf0`.
+- ctx fields: `ctx+184` writer 0x7b9f50 (`str x2,[x20,#184]`), `ctx+192/200` read
+  0x7ba23c (`ldp x5,x3,[x19,#192]`), `ctx+196` writer 0x761834 (`strh w0,[x28,#196]`).
+
+Consequences: the 4-arg call's `y` is `[ctx+184]` (C) and `j=u32[ctx+192]`,
+`T=u16[ctx+196]`; its zero branch stores C at server+0 and computes send base C+j,
+recv base C+j+64T, matching `GetSendCnt/GetRecvCnt`. It does **not** set server+8.
+`Init(y)` stores C at server+8. The two call sites use different server offsets
+(+0xd10 vs +0xcf0), so S=C requires the same server object plus `Init(y)`; that
+link is still unproven.
+
+Exact alias sets (S==C, t=0..63). The 8-byte writes are at `S+0x4008+64t` and
+`S+0x5008+64t`; the continuous ranges `[0x4008,0x4FD0)` and `[0x5008,0x5FD0)` are
+only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
+
+- send byte `j+50` hits the first array iff
+  `j ∈ ∪_t [0x3FD6+64t, 0x3FDE+64t)`; second array is the same set +0x1000.
+- recv byte `j+64T+51` hits the first array iff
+  `j+64T ∈ ∪_t [0x3FD5+64t, 0x3FDD+64t)`; second array +0x1000.
+- `T=u16[ctx+196]` is fixed per record and only adds multiples of 64, so for a given
+  j only discrete 64T values can hit; it does not cover all j. The wide "T arbitrary"
+  envelope cannot be used to exclude an alias. With S/C, j and T unproven, the alias
+  remains neither established nor excluded.
 
 ## Minimal merged request (33 to merge; 31 sole remote fetch)
 
-1. Call-site xrefs of `AicpuKfcRpcServer::Init(y,j,t,KFCTask*)` and `Init(y)` in
-   libccl_kernel, with argument setup for the Grouped/MC2 path.
-2. `AicpuComContext` layout offsets 184/192/196 (types and width) and any reference
-   to `ctx+0xf31d`, plus the server-to-context link (is the server embedded at a
-   known ctx offset?).
-3. Struct layout/size for the record at `[ctx+184]+u32[ctx+192]` (AivAicpuOpParam)
-   to confirm +50/+51 and the u16 slot index at ctx+196.
+1. Compiled `AivAicpuOpParam` layout/size at `[ctx+184]+u32[ctx+192]`, confirming
+   +50/+51 and the u16 slot index at ctx+196 (source rac_server.h is not enough).
+2. Which server object/branch the Grouped path uses (the two Init call sites target
+   different offsets; S=C needs the same object plus `Init(y)`).
+3. Deeper `ReadApiValidMsg` helpers (`CopyAndCheckApiMsg`, `CheckDebugMode`) only if
+   a blocking/sleep question remains.
 Do not fetch these outside 31; 33 merges and 31 executes the single remote read.

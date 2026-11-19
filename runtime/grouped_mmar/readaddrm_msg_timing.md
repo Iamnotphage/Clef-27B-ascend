@@ -1,7 +1,8 @@
 # ReadAddrMsg timing derivation (read-only)
 
 Source: 31 abi-preflight5 `disasm-ReadAddrMsg.txt` SHA `9ec8e134` (SUMS
-`ae91a530`), libccl_kernel.so `2281deca`; function range `0x7d8b6c-0x7d9360`.
+`ae91a530`) and abi-preflight6 `disasm-ReadApiValidMsg.txt` SHA `57412224` (SUMS
+`b8775ff6`), libccl_kernel.so `2281deca`; function range `0x7d8b6c-0x7d9360`.
 No SSH, device, or code change. This note checks 33's timing claim
 (20 s x w24 backoff, w24 1..128,0, 960 s cutoff, ~2560 s worst case, 180 s between
 160/320 s).
@@ -61,12 +62,27 @@ reached because the 960 s check returns at the 1280 s crossing.
 not a sleep and not a return point. An external 180 s or 240 s window truncates the
 call long before ~1280 s; ReadAddrMsg itself does not return at 180 s.
 
+## Callee check from abi-preflight6
+
+`ReadApiValidMsg` is now available in abi-preflight6 (SUMS `b8775ff6`, file SHA
+`57412224`, range `0x7d6f20-0x7d71cc`). The body contains **no
+sleep/nanosleep/usleep/select/poll** call. It calls `TraceProfSubmit`,
+`CopyAndCheckApiMsg@plt`, `CheckDebugMode`, `DlogRecord` and `syscall(178)` (gettid),
+and returns 0/1. The non-blocking premise is therefore supported at depth 1; whether
+`CopyAndCheckApiMsg` or `CheckDebugMode` blocks internally is not in this body and
+remains unproven.
+
+This also corrects 33's sequence at the 640 s point: w24 is 32 before the 640 s
+crossing and becomes **64** (not 128), so the next threshold is 1280 s. At the
+1280 s crossing w24 becomes 128 and the same block checks elapsed > 960 s and
+returns 0. The 2560 s threshold is therefore not reached in a non-blocking run; the
+ceiling remains about 1280 s plus one poll iteration. A single callee call would
+have to block for more than 1920 s (crossing from <640 s to >2560 s) to reach the
+2560 branch, and no such blocking is evidenced.
+
 ## Conditional gap and merged request
 
-`ReadApiValidMsg` (PLT target at 0x7d6f20) is not in abi-preflight5; whether it
-blocks or sleeps internally is unproven. The "no sleep / ~1280 s ceiling" above is
-therefore **conditional on a non-blocking callee**. Add to the merged 31 request:
-one read-only disassembly of `ReadApiValidMsg 0x7d6f20` (or its source) to check for
-sleep/nanosleep/poll and its own timing constants before the ~1280 s bound is
-treated as final. No device action; the static path and this cell's actual path are
-kept separate.
+The remaining condition is whether the deeper helper bodies block. The static path
+and this cell's actual path remain separate. No device action. The 20 s x w24
+intervals are timeout-log intervals; 180 s is a log-interval point, not a sleep or
+return.

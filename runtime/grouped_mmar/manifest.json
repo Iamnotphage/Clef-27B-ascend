@@ -72,13 +72,13 @@
     },
     "runtime/grouped_mmar/readaddrm_msg_timing.md": {
       "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
-      "sha256": "272f424d1fda87c31a6fb95172d48d10fd32470249af0dc23c7c6c8f8434ae27",
-      "bytes": 4149
+      "sha256": "78caf46ff02b57dcd2a52134c22c51aaee136086524607fff2d13153d1494da6",
+      "bytes": 5032
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "ae7289842d124bf30e8f0df6fd3fd7ad9ebf3cea06b2da2bf77e9ed93f1a283e",
-      "bytes": 6260
+      "sha256": "a5425dfc3fe2e8576f5ca0ec0933b720f710d412110aa4fc6ad3d4ff123bcfa0",
+      "bytes": 8226
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -92,8 +92,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "ce0fe12c7fbc32a96754544ed441461ec05c9fbd610f070ccdee3bd887afa951",
-      "bytes": 40899
+      "sha256": "0072059d0e85c37237dba4935e52acfcbf14b5a006abfda38de0d6724ce04c07",
+      "bytes": 41408
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -464,28 +464,30 @@
   },
   "readaddrm_timing": {
     "status": "read-only derivation; conditional on a non-blocking ReadApiValidMsg",
-    "source": "abi-preflight5 disasm-ReadAddrMsg 9ec8e134, SUMS ae91a530, libccl 2281deca",
+    "source": "abi-preflight5 disasm-ReadAddrMsg 9ec8e134 (SUMS ae91a530) and abi-preflight6 disasm-ReadApiValidMsg 57412224 (SUMS b8775ff6), libccl 2281deca",
     "doc": "runtime/grouped_mmar/readaddrm_msg_timing.md",
-    "design_sha256": "272f424d1fda87c31a6fb95172d48d10fd32470249af0dc23c7c6c8f8434ae27",
+    "design_sha256": "78caf46ff02b57dcd2a52134c22c51aaee136086524607fff2d13153d1494da6",
     "proven": [
       "clock_gettime(4)=CLOCK_MONOTONIC_RAW; start/elapsed in nanoseconds via *1e9",
       "20 s = 0x4a817c800 ns and 960 s = 0xdf84758000 ns constants",
       "w24 = ubfiz(w24,#1,#7): 1,2,4,8,16,32,64,128,0; thresholds 20..2560 s",
       "no sleep/nanosleep/usleep/select/poll call exists in ReadAddrMsg; 20 s*w24 is the timeout-log interval, not a sleep",
       "the 960 s hard check sits inside the timeout-log branch; the first threshold above 960 s is 1280 s, so the ceiling is about 1280 s plus one poll iteration (960-1280 s if a poll straddles the cutoff), not 2560 s",
-      "180 s lies in the 160-320 s log interval; it is not a return point and an external 180/240 s window truncates first"
+      "180 s lies in the 160-320 s log interval; it is not a return point and an external 180/240 s window truncates first",
+      "abi6 ReadApiValidMsg 0x7d6f20-0x7d71cc (57412224) contains no sleep/nanosleep/usleep/select/poll and returns 0/1; the non-blocking premise holds at depth 1",
+      "at the 640 s crossing w24 is 32->64, not 128; at 1280 s it is 64->128 and the 960 s check returns, so 2560 s is not reached in a non-blocking run"
     ],
     "unproven": [
-      "ReadApiValidMsg (0x7d6f20) body is absent from abi5; it may block or sleep internally, so the non-sleep and 1280 s bound are conditional",
+      "deeper helpers CopyAndCheckApiMsg/CheckDebugMode could block or sleep; not in the ReadApiValidMsg body",
       "any ctx+0xf31d turn path is not in this disassembly (only ctx+0xF31F0 is loaded here)"
     ],
-    "request": "33/31 add one read-only disassembly of ReadApiValidMsg 0x7d6f20 (or source) to check sleep/nanosleep/poll before the 1280 s ceiling is final; static path and the actual cell remain separate"
+    "request": "the abi6 callee disassembly resolves the depth-1 sleep question; only deeper helper blocking remains, and 33/31 can merge it if a blocking question persists; static path and the actual cell remain separate"
   },
   "abi_turn_analysis": {
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
-    "source": "abi-preflight5 SUMS ae91a53073b9a5f323b903ce50c342ae1b3ccfc08d833be6a21f5416e5cff559; libccl_kernel 2281deca; Init 9cac74e1, WriteFinish/Turn 29027459; abi4 GetSendRecvCnt",
+    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "ae7289842d124bf30e8f0df6fd3fd7ad9ebf3cea06b2da2bf77e9ed93f1a283e",
+    "design_sha256": "a5425dfc3fe2e8576f5ca0ec0933b720f710d412110aa4fc6ad3d4ff123bcfa0",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
@@ -493,7 +495,9 @@
       "WriteTurnCnt zeroes u64 at [server+8]+0x4008+64*turn and increments u64 at [server+8]+0x5008+64*turn",
       "WriteFinish and WriteTurn share the same u64 address base+0x5008+64*turn",
       "GetSendCnt reads u8 at [ctx+184]+u32[ctx+192]+50; GetRecvCnt reads u8 at that base + u16[ctx+196]*64 + 51",
-      "sendCnt/rcvCnt are 1-byte reads at +50/+51; the server turn word is 8 bytes at +8 of a 64-byte slot. The literal offsets/widths differ, but the base relation and the dynamic offset j are unproven, so a byte-range alias is NEITHER established nor excluded"
+      "sendCnt/rcvCnt are 1-byte reads at +50/+51; the server turn word is 8 bytes at +8 of a 64-byte slot. The literal offsets/widths differ, but the base relation and the dynamic offset j are unproven, so a byte-range alias is NEITHER established nor excluded",
+      "abi6 call sites: Init(y,j,t,KFCTask*) at 0x76192c gets y=[ctx+184], j=[ctx+192], T=ldrh[ctx+196], server r23+0xd10; Init(y) at 0x7b67c4 gets y=[ctx+184], server x20+0xcf0; its zero branch stores C at server+0 (not +8) and computes C+j / C+j+64T, while Init(y) writes C to server+8",
+      "exact alias sets (S==C): 8-byte words at S+0x4008+64t and S+0x5008+64t; send hits iff j in union [0x3FD6+64t,0x3FDE+64t) (+0x1000 for the second array); recv iff j+64T in union [0x3FD5+64t,0x3FDD+64t) (+0x1000); T is a fixed u16 and only adds multiples of 64"
     ],
     "unproven": [
       "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
@@ -503,7 +507,7 @@
       "ctx+0xf31d turn: no reference in abi5, so it cannot be equated with rcvCnt",
       "AivAicpuOpParam population (33 consumer chain)"
     ],
-    "request": "33 merges this with the consumer chain: 31 read-only fetch of Init call sites, AicpuComContext offsets 184/192/196 and any ctx+0xf31d reference, and the AivAicpuOpParam layout/size; 31 remains the sole remote fetcher"
+    "request": "abi6 resolved Init call sites and ctx 184/192/196; remaining are the compiled AivAicpuOpParam layout/size, which server object/branch the Grouped path uses (the two Init sites target +0xd10/+0xcf0), and deeper ReadApiValidMsg helpers only if a blocking question persists; 33 merges and 31 remains the sole remote fetcher"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
