@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "e61cfe43e426e8811edb301a1bcb11a21848782814138aaf47150a4e8b5e3e09",
-      "bytes": 33334
+      "sha256": "02152268f653200edfa8ebb8d8e3701573bf89e1142dcffcd95e63249f2895c0",
+      "bytes": 33611
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -683,7 +683,7 @@
         "status": "executed; support/workspace/sync pass; numeric completed with a large actual diff; not an accuracy pass",
         "tuple": "6d09515 / manifest f82f44ad / run_probe d54584b7 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan efb6fb19 / identity 1323589/399707126",
         "numeric": "both ranks numeric_pass/pass true, finite/both_finite true; reduced.max_abs=2.0, mean_abs=5.446e-05 (rank0) / 4.804e-05 (rank1), bit_equal=false; workspace 115,818,496 B; sync ~9.97 ms; wall 432/457 ms",
-        "interpretation": "MRS V1 large support, workspace and sync are established. The pre-registered 0.03125 absolute diagnostic was derived from small-magnitude probes and is not scale-invariant; at this shape the output magnitude is far larger, so max_abs=2.0 is a few BF16 ulps rather than automatically a correctness failure. Accuracy is NOT claimed: the tensor diagnostic is not met in absolute terms and the model-level 2PP gate has not been measured",
+        "interpretation": "MRS V1 large support, workspace and sync are established. The pre-registered 0.03125 absolute diagnostic was derived from small-magnitude probes and is not scale-invariant, so it is not applied as an A14 gate. The result logs contain only max_abs=2.0, mean_abs and bit_equal=false: no reference/output magnitudes, per-element diffs, quantiles or relative/ULP values were persisted, so the earlier '1 BF16 ulp' and '60-68 elements' readings are NOT established. Only a lower bound follows: nonzero-diff elements are at least ceil(total_abs / 2.0) = 68 (rank0) / 60 (rank1), with more possible at smaller diffs. This cell is numeric-complete but NOT a precision pass; no absolute gate is added for the A14 control arm and any adoption still needs the model-level 2PP gate",
         "window": "child rc0, timed_out false, survivors []; cleanup_final killed=true with empty members/groups/singles/unknown/drift; ok=false only from the maps sampling artifact",
         "restore": "branch aa3e-noop, root 1326845/399871182, five PIDs, health/info/text/image/env/joint/source/clients true; subreaper_original=0, cleared=true, final_restored=true, final=0; no second tree",
         "evidence": "a14-large-v3-cell SUMS 18/18 (774bbdf5, 31 commit 691a826); window 5002417d, descendants 80b47430, rank0 result e50be663/trace 250ed152, rank1 result 22238683/trace aa350079, restore 55a0704b/c7134f6b",
