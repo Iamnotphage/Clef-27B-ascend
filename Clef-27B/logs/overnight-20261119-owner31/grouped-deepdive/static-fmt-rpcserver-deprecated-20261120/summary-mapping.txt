@@ -1,0 +1,37 @@
+libccl_kernel.so SHA256 = 2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c (sha_ok=True)
+
+字符串（address=file offset=VMA，均在 .rodata）
+1) 0x1613c38 len38 raw=5b25733a25645d205b25755d5263764d7367206279207461736b20706172616d3a25642f2564
+   text='[%s:%d] [%u]RcvMsg by task param:%d/%d'（冒号，双值）
+2) 0x1614250 len35 raw=5b25733a25645d205b25755d5263764d7367206279207461736b20706172616d202575
+   text='[%s:%d] [%u]RcvMsg by task param %u'（空格，单值）
+3) 0x14fa9c0 len34 raw=5b25733a25645d205b25755d537461727420746f2072756e2c20726f756e64202575
+   text='[%s:%d] [%u]Start to run, round %u'（空格，单值）
+4) file 0x1613cc8 len23 = 'aicpu_kfc_rpc_server.cc'
+5) file 0x14fa618 len31 = 'aicpu_kfc_deprecated_process.cc'
+
+xref（ADRP+ADD 链，跟踪 ≤160 指令；另有 ADR 扫描）
+- 0x1613c38：唯一引用 @0x7d8130（AicpuKfcRpcServer::RcvMsg+0x130, x2）。
+  窗口：adrp x0,0x1613000@0x7d812c + add x2,x0,#0xc38@0x7d8130；
+  file x3@0x7d8124/0x7d8128 = 0x1613cc8；w4=121(0x79)@0x7d8120；w0=3,w1=0；
+  x5=syscall(178) 返回值(tid)@0x7d80f0-0x7d80f8；x6=[server+800]+1（ldr x0,[sp,#40]; ldr x0,[x0,#800]; add x1,x0,#1; mov x6,x1）；
+  x7=[server+816]+80（ldr x0,[sp,#40]; ldr x0,[x0,#816]; ldr w0,[x0,#80]; mov w7,w0）；
+  call bl 29a0f0 DlogRecord@0x7d813c。→ 该 fmt 用在 line 121，不是 298/551。
+- 0x1614250：唯一引用 @0x7d8408（CheckRcvAddrMsg+0x120, x2）。
+  窗口：adrp x2,0x1613000@0x7d83f0 + add x2,x2,#0xc90@0x7d83f4（base 0x1613c90）；
+  file x3=base+0x38=0x1613cc8@0x7d83fc；fmt x2=base+0x5c0=0x1614250@0x7d8408；
+  w4=298(0x12a)@0x7d8400；w0=3,w1=1；x5=syscall tid@0x7d83e4-0x7d83f8；
+  x6=[x1+80]（ldr x1,[x19,#816]; ldr w6,[x1,#80]）；call Dlog@0x7d8414。
+  → rpc_server.cc:298 的实际 fmt = 0x1614250（单值空格），file=0x1613cc8。
+- 0x14fa9c0：唯一引用 @0x7ca2c4（AicpuKfcDeprecatedProcess::TryRunRpcServerOneStageWait+0xa4, x2）。
+  窗口：adrp x3,0x14fa000@0x7ca2b8 + add x3,x3,#0x618@0x7ca2c0 = file 0x14fa618；
+  adrp x2,0x14fa000@0x7ca2bc + add x2,x2,#0x9c0@0x7ca2c4 = fmt 0x14fa9c0；
+  w4=551(0x227)@0x7ca2cc；w0=3,w1=1；x5=syscall tid@0x7ca2a8-0x7ca2b4；
+  x6=[x21+0xF0000+0x3208]（add x1,x21,#0xf0,lsl #12; ldr w6,[x1,#12808]；12808=0x3208）；
+  call Dlog@0x7ca2d8。→ deprecated_process.cc:551 的实际 fmt = 0x14fa9c0，file=0x14fa618。
+
+覆盖范围与限制
+- xref 仅覆盖 .text 内 ADRP+ADD（同寄存器链）与 ADR 直接物化；未枚举 .plt/间接调用/函数指针/dlsym。
+- 0 直接匹配不外推“无调用”；本包三个 fmt 各有且仅有 1 个直接引用。
+- 未把 attempt2 运行日志的 RcvMsg 行强行绑定到 0x1613c38：line 121 与 298/551 分属不同 fmt/file 组合。
+- 不复制整份 so；仅保留上述地址/字节/窗口片段。未知项：无（三个请求字符串均 found）；不扩展全库证明。
