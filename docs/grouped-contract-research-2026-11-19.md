@@ -2533,3 +2533,34 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 4. 实际 tiling `notifyOff/j/T`、`kfcNotifyId`、`workspaceOff`；运行 `ctx+0xF3200/F3208/F31BC`（设备侧）。
 
 **状态**：root cause unresolved；worker CFG 已闭，站点判别收紧为“领先候选/弱排除/条件式”；ack 仍收窄到 WaitTaskFinish/AicpuCcOpExe 但未证；无新设备/取件/GO。
+
+## 126. 27 宿主源码事实并入与 ACLNN 文档/静态路径清单
+
+### 126.1 27 的宿主源码事实（采纳；与设备侧分开）
+
+- 冻结 binding/run/manifest 完整 SHA 与 `e38b541` stage 一致；flags8 跳过 handler sync 与 close；`cleanup_rc0`/`sync_rc0` 为初始化 0；`g_states` 持有 group/workspace/lists/x/w/bias/y；Python sync 534 未返回；release 579 不可达；当前**无**用户 earlyfree 证据。
+- 读法：这些是 27 的只读**宿主源码**事实（生命周期与挂起位置），**不证明**设备侧 AllReduce 完成或 task13 完成。设备侧仍为：`rcvCnt` 回写缺测、task13 3 min pending、AICPU 仅证参数收到/SQE 下发/本地主 stream 排空。
+- 与 trace 对应：`sync_enter` 未返回、launch/handler rc0；release 不可达 + 无 earlyfree ⇒ “sync 前用户释放 workspace/descriptor”方向进一步削弱（不等于排除）。
+
+### 126.2 本地 ACLNN 材料清单（给 27）
+
+| 材料 | 路径/SHA | 版本/性质 | 能回答 | 不能回答 |
+| --- | --- | --- | --- | --- |
+| MRS v1 头 | `a14-preflight/aclnn_matmul_reduce_scatter.h` `ad8f98b4…` | **本机 CANN 9.2.1** | 两段式签名/参数注释 | executor 生命周期、auto-release、queuekeepalive、aclCreateTensor 拷贝语义 |
+| MRS v2 头 | 本机 `…/include/aclnnop/aclnn_matmul_reduce_scatter_v2.h` `055d0ec7…` | 9.2.1 | 同上 | 同上 |
+| MRS level2 头 | `a377b21b…` / `7b0745e3…` | 9.2.1 | 同上 | 同上 |
+| Grouped 文档 | `a12/aclnnGroupedMatMulAllReduce.docs.md` `31333c59…` | **上游 f5703e4，非 9.2.1** | 两段式签名/参数/约束 | 9.2.1 合同、executor 生命周期、拷贝语义 |
+| Grouped 样例 | `test_aclnn_grouped_mat_mul_all_reduce.cpp` `6c1a90ab…` | 上游 f5703e4 | `aclCreateTensor(shape.data(),…,strides.data(),…)`、`aclCreateTensorList`、第二段后**未** destroy executor | 是否复制数组、executor auto-release 合同 |
+| 编译文档 | `compile_and_run_sample.md` `c591f0e3…` | 上游 | 编译/链接 | executor 生命周期 |
+| keepalive 探针 | `binding_probe.cpp` | 35 的 H1/H2 探针 | keepalive 字段是**探针设计** | 官方合同 |
+
+- **A3 支持表述矛盾**：Grouped 文档产品表“Atlas A3：不支持”，同文样例注释“本样例基于 Atlas A3，必须在 A3 运行”，op_host 同时注册 `ascend910b` 与 `ascend910_93`；SOURCE.md 明确记录为矛盾，**不作支持性裁决**，也不把它当 9.2.1 合同。
+- 27 的 `/tmp/aa3e-grouped-api-pack` 有头/库、无合同文档；可把上表 docs.md 作为 Grouped 两段式参考，但**不补**拷贝语义/auto-release/queuekeepalive。
+
+### 126.3 缺口与给 27 的问题
+
+- 本地**无** `two_phase_api.md`（Grouped 文档相对链接 `../../../docs/zh/context/two_phase_api.md`）与 `acl_op.h`/`acl_base.h`（`aclCreateTensor` 语义所在）；若 9.2.1 安装也无，保留缺口，不臆测。
+- 待 27 核：①`aclCreateTensor`/`aclCreateTensorList` 是否复制 shape/stride/member 数组，还是持有指针；②第二段 API 后 executor 是否 auto-release、queuekeepalive 条文；③样例未 destroy executor 是 auto-release 还是泄漏。
+- 27 继续宿主 comm/stream/nativehandle 审计；33 不重复宿主代码审计，不新设备/GO。
+
+**状态**：root cause unresolved；设备侧结论不变；宿主侧 27 证据并入但不与设备完成混用。
