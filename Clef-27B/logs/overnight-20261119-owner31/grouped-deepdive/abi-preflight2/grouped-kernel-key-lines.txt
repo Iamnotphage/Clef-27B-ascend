@@ -1,0 +1,8 @@
+1db26125bedea99896733bff25d2f63e19e76f8d0c6bc6fe44b335dbfd2a0eec  /usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/impl/ops_transformer/ascendc/grouped_mat_mul_all_reduce/op_kernel/arch22/grouped_mat_mul_all_reduce.cpp
+--- key lines ---
+30:    uint64_t WorkSpace;
+31:    uint64_t WorkSpaceSize;
+47:    AscendC::OOMCheckAddrRange((__gm__ uint8_t *)(context->WorkSpace), context->WorkSpaceSize);
+73:    HcclServer hcclServer;
+74:    __gm__ HcclCombinOpParam *context = (__gm__ HcclCombinOpParam *)(GetHcclContext<0>());
+76:    __gm__ uint8_t *workspaceMsg = (__gm__ uint8_t *)(context->WorkSpace + aicore_tiling_data.notifyOff);
