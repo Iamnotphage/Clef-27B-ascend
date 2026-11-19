@@ -99,8 +99,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "56b94eb369d2d79b1e97fcea20700bd053660ebafccb3733c3216de68d028b29",
-      "bytes": 48997
+      "sha256": "2cdc4e7eb7cb77119445181568e5889e2fb335a0f246f86a86915a04a4922df0",
+      "bytes": 49038
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -446,9 +446,9 @@
     "linux_failure_evidence": "31 e72b967 / SUMS e6a36fe387bf78d94849466fa89b03178ba2d348c378d27dbb06e57c90337d5f: 48 tests 47 pass/1 fail/0 skip; AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned L840 assertFalse(allow) got True, stable 3/3",
     "linux_fix": "recovery_gate uses the passed settle table only when explicitly provided; without it, attributed_survivors(registry, child_pid) keeps the base real _scan_direct path so a mocked scan() cannot hide a live descendant; daemon fixture kills the exact grandchild PID after identity read instead of killpg(pid) whose PGID is the setsid child; no assertion or identity/protected/gate rule relaxed",
     "attempt2_caveat": "the default 30 s settle may not cover attempt2's exit delay (observed >1.4 s, upper bound about 174 s, exact unknown); if the residual persists past 30 s the gate remains fail-closed; the candidate is not claimed to fix attempt2",
+    "linux_result": "31 ab397b2 / SUMS 210beca38e7a68f9dd23967f4db7fd215c44ec92c253854f2497680060a03a72: Ran 50 tests OK, 50 pass/0 fail/0 skip on Linux aarch64 (Python 3.10.12); the four required tests pass; no os.fork|time.sleep residue; only fake boundaries, no torch/torchrun/NPU/18143",
     "unrun": [
-      "31 to rerun the Linux real-process regression (orphan + daemon + new gate tests, or full 50/43+7) on the new candidate",
-      "no device/NPU; not adopted by the v2 package"
+      "no device/NPU; not adopted by the v2 package; 32 increment review pending"
     ],
     "notes": "settle runs once per window (settle_outcome reused by exception/finally/gate, no per-path 30 s accumulation); child timed_out/rc/trace facts are preserved and the timeout experiment is not reclassified as success; the two daemon residue processes observed by 31 (1361942/1361945) are addressed by the exact-PID cleanup"
   },
