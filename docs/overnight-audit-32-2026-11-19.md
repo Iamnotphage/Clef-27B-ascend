@@ -79,7 +79,9 @@
 - 结论：ready，无阻断修复；待 31 设备执行后核实际 raw。
 - 31 外层组合脚本（本机 `/tmp/owner31_candidate_s1.sh`，SHA `78be7737…`）已有限核：只顺序调用两条冻结入口（deploy → v5 → restore），无 kill/pgrep/signal/source 写；deploy 失败不 restore、v5 非 0 仍 restore、restore 的 unknown/blocked 由 entry 记录。GO 条件：OUT 全新；`--current-restore` 用本次恢复 restore.json+fresh SHA；deploy prior=f810 supervision `1da03a19…`；v5 后 restore 前确认候选 supervision `clients_exited=true`；外层 rc0 仅代表 deploy+restore，S1 看 v5.rc/acceptance.json。
 - 恢复驱动（`/tmp/owner31_clean_restore.py`，SHA `ffd75bd6…`）已有限核：只 import ebca source-control（a1c502）调用未改 `restore_prod()`（clean 两键、原 launch/wait、d0 discover+四检、OPP/LD 对 12933 B/`fcbdcbf1…` 逐字节），无 stop/signal/source/guard 写；run-dir 必须不存在。驱动自身无端口/进程/source 前置门，故执行前紧邻 fresh 四查并保留 `fresh-inventory`/原 window/原 record 绑定。
-- **已发生的具体 finding（调用参数，非代码缺陷）**：31 首次候选 deploy（OUT `owner31-candidate-s1-20261119T0048Z`）0.5 s 内 rc1，`stage_candidate()` 报 `FileNotFoundError: .../joint-fused-5c045eb/runtime/apply_joint_service_check.py`。原因：`--repo` 用了 5c045eb，而 stage 需要 ebca bundle 根的 `runtime/{apply_joint_fused_attention.py, apply_joint_service_check.py, joint_fused_attention/, joint_service_check/}`。正确 `--repo=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`；该处四件与 d0 六件 SHA 全部命中 pin（b09cd602/1ed35f0a/aa3e1758/36eaff44）。失败发生在停服前：未发信号、source/guard 未动，服务五 PID 仍存活，prior/current-restore 仍有效；重跑用全新 OUT 即可。
+- **已发生的具体 finding 1（调用参数，非代码缺陷）**：31 首次候选 deploy（OUT `owner31-candidate-s1-20261119T0048Z`）0.5 s 内 rc1，`stage_candidate()` 报 `FileNotFoundError: .../joint-fused-5c045eb/runtime/apply_joint_service_check.py`。原因：`--repo` 用了 5c045eb，而 stage 需要 ebca bundle 根的 `runtime/{apply_joint_fused_attention.py, apply_joint_service_check.py, joint_fused_attention/, joint_service_check/}`。正确 `--repo=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`；该处四件与 d0 六件 SHA 全部命中 pin（b09cd602/1ed35f0a/aa3e1758/36eaff44）；helper 仍须显式 5c `9245e1a6…`。失败发生在停服前：未发信号、source/guard 未动，服务五 PID 仍存活。
+- **finding 2（entry 代码缺陷，阻断候选）**：修正 `--repo` 后第二次 deploy（OUT `owner31-candidate-s1-20261119T0051Z`）在 stop+apply 成功后，entry:306 `deps.ab.switch_source('aa3e','deploy')` 抛 `AttributeError: 'SourceControl' object has no attribute 'state'`（source_control.py:100）。entry 构造 `SourceControl(ns)` 后既未设 `state`（switch_source:100 / verify_restored_env:168 / restore_prod:181 需要），也未设 `prod_env`（restore_prod:179、arm_environment 需要）；ebca main 在调用前显式赋值 `state`（schema/at/args/rounds/steps/source_switches/overall_rc）与 `prod_env`（当前服务 env）。entry 的 recover() 在 `switch_source('f810','recover')` 同错，故未走到 restore_prod，服务 down；source 已回 f810、guard 已回 pre。
+- 已向 34 提出最小修复：build_deps 构造后初始化 `ab.state` 与 `ab.prod_env`，并用真实 a1c502 SourceControl 实例补 CPU 契约测试（成功/失败/recovery/restore，仅外部边界替身）；fba7b00 阶段仅文档更正、entry 仍 1f98dba9，不得执行。
 
 ## 7. 环境事实（最终验收清单）
 
@@ -89,9 +91,10 @@
 ## 8. 未闭合项
 
 - Grouped29 v4r1：已按 240 s 单次执行并超时，无 candidate raw；结论为设备侧 final_sync 等待（见第 4 节），不重试、不采用。
-- Grouped 后一次 clean 恢复（8 节续）：`/workspace/yangchen/logs/owner31-grouped-recover-20261119T0044Z/restore-run`，driver rc0、complete ok=true、label `d0-restore-20261119T004611Z-cec60d1c`、五 PID；restore.json 四检全 ok（SHA `4e022bce…`）；envcompare match=true（OPP 9 `7b79c5db…`/LD 12 `ca27dbb7…`，expected 12933 B/`fcbdcbf1…`）；live 服务 clean env、source f810、guard 76595657、卡7 双 worker。
+- Grouped 后第一次 clean 恢复：`/workspace/yangchen/logs/owner31-grouped-recover-20261119T0044Z/restore-run`，label `d0-restore-20261119T004611Z-cec60d1c`、restore.json `4e022bce…`、四检 ok、envcompare match（OPP 9/`7b79c5db…`、LD 12/`ca27dbb7…`）。
+- 候选 deploy 两次失败后的第二次 clean 恢复：`/workspace/yangchen/logs/owner31-candidate-recover-20261119T0052Z/restore-run`，driver rc0、label `d0-restore-20261119T005148Z-c4a4a6af`、五 PID [1258713,1258853,1258854,1258880,1258881] 同 PGID、四检 rc0/ok、envcompare match=true；restore.json **`be55b18c…`**（后续候选 current_restore）、complete `67b9511a…`、envcompare `c9a73e77…`、inventory `ea47954e…`；live clean env、source f810、guard 76595657。旧 `4e022bce…` 对应服务已不存在。
 - S2 b8/b16 完整扫描、ERQA 400 与最终最佳服务恢复——待 31 执行。
-- cc34 candidate 正式 S1 三轮与 finally restore——已 GO（绑定 `4e022bce…` restore + `1da03a19…` prior），待 31 执行后核 3×2352 raw/质量/P95 对新基线 156.4051。
+- cc34 candidate 正式 S1 三轮与 finally restore——**暂停**：等 34 修复 entry 的 state/prod_env 构造契约并出新 stage/entry SHA；重跑绑定 `be55b18c…` restore + prior `1da03a19…`，之后核 3×2352 raw/质量/P95 对新基线 156.4051。
 
 ## 9. 本地核对副本
 
