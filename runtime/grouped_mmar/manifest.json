@@ -71,9 +71,9 @@
       "bytes": 21047
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
-      "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented)",
-      "sha256": "8cb94e2f542c7370fd9215863d6085255b5fbf2bc7b4305525eada05a893ebac",
-      "bytes": 7531
+      "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
+      "sha256": "e5638d62e86961469308f35c59351e66067ecf03e8f0028820c42e244cd32161",
+      "bytes": 12444
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "cee57d00c15984a45223383f4a9c9f8bee5cc84fd37dac2ccf1c97b31e6660f6",
-      "bytes": 26056
+      "sha256": "a69d4b61f95dbcebbe5f53442b29a4741ab8880d80b70f27a4304253229c8dfd",
+      "bytes": 26760
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -412,21 +412,21 @@
     }
   },
   "mrs_allgather_alternative": {
-    "status": "CPU design for 32/20 review; not implemented, no device cell",
+    "status": "CPU design supplemented for 32/20 review (six items + full-layer HBM budget); A15 implementation pending static PASS; no device cell",
     "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
-    "design_sha256": "8cb94e2f542c7370fd9215863d6085255b5fbf2bc7b4305525eada05a893ebac",
+    "design_sha256": "e5638d62e86961469308f35c59351e66067ecf03e8f0028820c42e244cd32161",
     "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
     "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
     "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
     "comm_cost": "ring R=2 total volume parity with all-reduce (0.5S reduce-scatter + 0.5S all-gather = S); two collectives and no matmul overlap, so performance is not expected to beat AllReduce",
-    "memory": "x_pad ~16.85 MB, MRS partial ~4.96 MB, all-gather full ~9.91 MB, optional ND down weight ~89.1 MB/rank; large-shape MRS workspace untested",
+    "memory": "x_pad ~16.85 MB, MRS partial ~4.96 MB, all-gather full ~9.91 MB; a full ND down copy is 89.1 MB/rank/layer = 5.31 GiB/rank over 64 layers, so the preferred plan is load-time format replacement for down only (ND, skip NZ) with zero extra bytes and a measured rollback cost; large-shape MRS workspace untested",
     "gates": "A14 large M968/K8704/N5120 support first; probe A15 max_abs<=0.03125/mean_abs<=1e-4 vs all-reduce reference; frozen fixed_gate; full OD 2352 + ERQA 400 within 2PP of the BF16 NZ baseline",
     "unknowns": "MRS large support/performance, workspace, executor lifetime, NZ weight acceptance, mlp_bias config, vLLM TP group name/stream ordering",
     "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
     "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
   },
   "matched_grouped_control": {
-    "status": "executed_hang_at_device_sync; exact cause unresolved; Grouped-specific candidates prioritized; H5K/H4K discriminators implemented",
+    "status": "H5K still hangs with a different log signature; H4K pending; exact cause unresolved; Grouped-specific candidates prioritized",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
     "design_sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
@@ -451,8 +451,21 @@
       "evidence": "h11-small-v1-cell SUMS 15/15 (57932c67, 31 commit f576d23); window 30152154, rank0 trace 6431785c/result 78523809, rank1 trace eb4d9097/result fdabc46b, restore 63ea26c5/f2aa5924",
       "interpretation": "under the same M128/K256/N512, BF16, single group, KEEP_ALL, adapter, comm and window as A14 v5, the Grouped op still leaves stream47 task_id=13 pending and the Python device sync never returns; this excludes a large-shape/tiling-only explanation and prioritizes Grouped-specific rac_server/AivAicpu/KFC task delivery candidates; single cell does not establish a cause, and the mc2_server dependency remains supported_but_unproven"
     },
+    "h5k_result": {
+      "tuple": "0d3f7fb / manifest 21758ff5 / run_probe 508e2931 / window d7e73514 / binding 101660f8 / adapter d181b15a / plan f10bfa01 / identity 1313827/399164390",
+      "trace": "flags=40; prepare and handler stream/context/device identical in each rank; api_return workspace 16,777,216, run_id 1; sync_enter with no sync_return",
+      "plog": "only Mc2AiCpuStreamAllocAndGet stream id 12 and Mc2AiCpuInitStreamAllocAndGet stream id 11; no stream_id=47 and no three-minute timeout line",
+      "device": "only RunAicpuKfcResInitV2 / AicpuRpcResInitV2 / RunAicpuRpcSrvLaunchV2 loads; no KFCtaskAndTilingTraceData or AivAicpuOpParam creation",
+      "watchdog": "child rc 1 (torchrun aggregate), timed_out true, survivors [], result stub",
+      "stub_note": "the stub libraries=0/provider none is a flush-timing artifact before final metadata; it is not load evidence and not a load-gate result",
+      "restore": "branch aa3e-noop, root 1316176, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue",
+      "evidence": "h5k-small-v1-cell SUMS 15/15 (b89b8fa7, 31 commit 93eac05); window 2c056ce1, rank0 trace 00ca7852/result 1e678933, rank1 trace e58f0ff8/result 468177f6, restore d04d2289/55ea795e",
+      "interpretation": "H5K still hangs; its log signature differs from H11, but missing logs are not proof of no dispatch, and REFETCH causality is not established; no stream/context attribution; numeric absent",
+      "timeline": "33 commit 4766771: rank0 handler_enter @2.557746s, Python api_return @2.557772s, sync_enter @2.557821s; no stream_compare/launch_enter/launch_return/handler_return. The handler blocks inside getCurrentNPUStream() at binding L339 before launch; H5K is therefore not a valid Grouped device-path discriminator, and H11 remains the matched Grouped hang cell"
+    },
+    "h4k_preflight": "planned: flags 24 (KEEP_ALL|DIRECT_LAUNCH), H5K-recovery root 1316176 fresh identity, h4k-small-v1 fresh out/run/restore, window d7e73514, adapter d181b15a, port 29531 preflight; 32 GO after plan increment review; H4K is a thread+sync combination and never proves context alone",
     "next_discriminators": {
-      "status": "implemented H5K/H4K in run_probe and the window choices; awaiting 33 contract review, 31 stage, 32 GO",
+      "status": "H5K executed (hang, signature differs); H4K preflight pending; 33 contract review done",
       "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination; never proves context alone)",
       "H5K": "REFETCH_STREAM|KEEP_ALL=40: retention identical to H11; single stream-source variable in the same OpCommand handler thread; first in the schedule",
       "freeze": {"run_probe.py": "508e2931", "supervised_probe_window.py": "d7e73514", "test_probe_cpu.py": "89acbb63", "test_supervised_window_cpu.py": "0fcdf991", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "cpu_tests": "48/48 (16+9+23)"},

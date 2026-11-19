@@ -43,18 +43,36 @@ For rank `i` with local `x_i [T, 8704]` and `W_i [8704, 5120]` (torch layout
 This reproduces the current all-reduce result because reduce-scatter distributes the
 M chunks of the summed partial matmul and all-gather reassembles them.
 
+Row-block mapping (32 item 1): with `T' = 2 * (T'/2)`, rank 0 contributes and receives
+rows `[0, T'/2)`, rank 1 rows `[T'/2, T')`; `all_gather_into_tensor` concatenates the
+rank outputs **in rank order**, so the reassembled `[T', N]` keeps the original row
+order. A15 must record, per rank, which row block it owns and verify the full
+`[T', N]` against a full matmul+all_reduce reference, not only its own block. The
+vLLM TP group rank order must match this rank order; that mapping is unproven and is
+a production-wiring item (see 4).
+
 ## 4. Bias and TP-rank semantics
 
 - Each rank owns the K-slice `[K_local, N]` of the down weight and the matching
   activation columns; MRS sums the two partial matmuls, exactly the all-reduce sum.
-- No bias is present in the current path (`bias=nullptr`). If the model config is
-  `mlp_bias=True`, the bias is replicated: add it once after step 3, before the norm,
-  on the full `[T, N]` tensor.
-- Group: the service TP world is size 2, so the group name is the TP HCCL group name
-  captured once at init (`get_hccl_comm_name(rank)`), not a per-call lookup.
-- Stream: MRS captures the current NPU stream at prepare and launches on it; the
-  all_gather must be issued on the same stream so ordering is preserved. No
-  `torch.npu.synchronize()` in production; the probe sync is measurement only.
+- Bias (32 item 3): the local repo/docs contain **no verified `mlp_bias` value** and
+  no local `config.json` copy, and the current probe passes `bias=nullptr`; that is a
+  precondition, not a proven fact. vLLM `RowParallelLinear` convention adds a
+  row-parallel bias **once, after the all-reduce** (not per rank). If the Clef config
+  is `mlp_bias=True`, the equivalent design adds the same replicated bias once after
+  step 3; if `False`, the branch is unreachable and must be marked so. 31 must read
+  the model config and the installed `RowParallelLinear` source (read-only) before
+  any device work; the bias placement is otherwise unproven.
+- Group (32 item 4): the service TP world is size 2. The TP HCCL group name must come
+  from the vLLM TP group's `get_hccl_comm_name(rank)` captured once at init; the MRS
+  call and the all_gather must use that **same group**. The probe's `group_name_0`
+  only validates numbers; the vLLM group-name mapping and the TP-rank order are
+  production-wiring items that remain unproven.
+- Stream (32 item 4): MRS captures the current NPU stream at prepare and launches on
+  it; the all_gather must be issued on that same stream so the MRS output is ordered
+  before it. No `torch.npu.synchronize()` in production; the probe sync is measurement
+  only. This ordering is unproven in the service and must be validated before enabling
+  the flag.
 
 ## 5. Padding, shapes, reproducibility
 
@@ -64,10 +82,13 @@ M chunks of the summed partial matmul and all-gather reassembles them.
 | 967 | 968 | [484, 5120] | [968, 5120] |
 | 1595 | 1596 | [798, 5120] | [1596, 5120] |
 
-Zero rows produce zero partial rows and do not change any real row's sum; the slice
-`[:T]` removes them. Reproducible probe shapes: `M=968, K=8704, N=5120` (the real
-local shape; the earlier A14 large plan used exactly this), plus the small
-`M=128, K=256, N=512` control. Seeds and input hashing follow run_probe.
+Pad rows are appended **at the tail**; the original rows keep their positions and
+`[:T]` drops only the tail. Because the matmul is row-independent, a pad row cannot
+change any real row's sum. The A15 probe must prove this with **non-zero pad rows**
+(not zeros): compare the original rows after slice against a full all_reduce reference
+computed on the original `[T, N]` only. Reproducible probe shapes: `M=968, K=8704,
+N=5120` (the real local shape; the earlier A14 large plan used exactly this), plus the
+small `M=128, K=256, N=512` control. Seeds and input hashing follow run_probe.
 
 ## 6. Communication and memory cost (TP2, BF16)
 
@@ -105,10 +126,18 @@ Let `S = T' * 5120 * 2` bytes.
    shape. No new arm; fresh identity/plan. If it hangs or is unsupported, the
    alternative stops here.
 3. **Probe reconstruction**: minimal new arm `A15` (≈15 lines in run_probe, no binding
-   change) that reuses `run_mrs`, then `dist.all_gather_into_tensor`, and compares to a
-   matmul+all_reduce reference; records max_abs/mean_abs/bit_equal and comm timing.
-   Gate: `max_abs <= 0.03125`, `mean_abs <= 1e-4` (prior MC2 RS/Dense SP probes), no
-   systematic bias.
+   change) that reuses `run_mrs`, then `dist.all_gather_into_tensor`, and compares the
+   full cropped `[T, N]` to a matmul+all_reduce reference; records max_abs/mean_abs/
+   bit_equal, per-rank row blocks, pad/crop timing and comm timing.
+   Threshold provenance (32 item 5): `fixed_gate.py` `041a66aa` is an **AddRMSNorm
+   y/residual/rstd gate**, not an MLP/down gate. The numbers `0.03125` and `2e-5`
+   come from the project's earlier probes (`docs/mc2-reduce-scatter-2026-11-16.md`
+   reported max_abs 0.03125; `docs/dense-sp-mlp-probe-2026-11-16.md` reported
+   max_abs 0.015625, mean_abs ≈2e-5). A15 therefore uses a **pre-registered
+   equivalence diagnostic** of `max_abs <= 0.03125` and `mean_abs <= 1e-4` (bounded
+   above the observed values) and labels it as such; it is not a new official gate.
+   The authoritative gates remain `fixed_gate` for the norm boundary and the official
+   2PP for the full model.
 4. **Model wrapper** behind an off-by-default env flag (e.g. `CLEF_MLP_MRS_AG=1`), with
    padding/slice, optional bias, cached ND down weight, same stream, no sync. No
    official entry/default/CSV change in this step.
@@ -123,12 +152,54 @@ Let `S = T' * 5120 * 2` bytes.
 - Workspace size, executor lifetime, and any NZ acceptance at the real shape are
   unknown.
 - The model config's `mlp_bias` must be confirmed (read-only) before choosing the
-  nullptr/zero-bias variant.
-- Group-name retrieval from the vLLM TP group and stream ordering must be validated in
-  the service before enabling the flag.
+  nullptr/zero-bias variant; vLLM's bias-after-all-reduce placement must be confirmed
+  from the installed source.
+- Group-name retrieval from the vLLM TP group, TP-rank order and stream ordering must
+  be validated in the service before enabling the flag.
+- The A15 probe itself uses the probe group `group_name_0` and its own sync; that only
+  validates numbers and ordering in the harness, not the production wiring.
 - This path does not explain the Grouped hang, does not establish the `mc2_server`
   dependency, and does not claim a throughput win. Grouped root-cause work and this
-  equivalent substitution stay separate conclusions.
+  equivalent substitution stay separate conclusions. H5K's later timeline shows its
+  handler blocked inside `getCurrentNPUStream()` before launch, so H5K is not a valid
+  Grouped device-path discriminator; that does not affect this design.
+
+## 11. Full-layer HBM budget (32 item 6)
+
+Per layer per rank the ND down weight is `[8704, 5120]` BF16 = 89,128,960 B
+(85.0 MiB). The model has 64 layers with an MLP (`docs/current-progress-2026-11-15.md`),
+so a full dual-format resident copy would add:
+
+- `64 * 85.0 MiB = 5,440 MiB = 5.31 GiB per rank`, TP2 total **10.62 GiB**.
+
+Current budget facts: 64 GiB HBM per rank; the recorded TP2 vLLM target budget at
+`gpu_memory_utilization` 0.90 is about **55.14/55.15 GiB per rank**
+(`docs/baseline-2026-11-12.md`), which already includes weights, activations and the
+KV pool. The remaining KV/activation headroom is roughly the difference between that
+budget and the per-rank weights; adding 5.31 GiB/rank of ND down copies would cut the
+KV pool by the same amount (about a fifth of the observed KV headroom), which is not
+free for 4096-token and multi-image ERQA workloads. A full dual-copy is therefore
+**not the preferred plan**.
+
+Preferred: **load-time format replacement for down only**. Keep the down weight in ND
+and skip the NZ29 cast for down (gate/up keep NZ); zero extra resident bytes, and the
+MRS path needs no runtime conversion. Cost: the down-NZ benefit is lost for this path.
+The adopted full-NZ S1 gain was about 2% p95, and the down-only share is **not
+measured**; it must be measured as part of any service A/B. Rollback: flip the MLP-NZ
+flag back and restart with the AllReduce path; no weight conversion is required at
+runtime.
+
+Alternatives if both formats must coexist: per-layer ND cache for only the active
+layers (89.1 MB × active layers), on-demand NZ→ND cast per call (format-cast cost per
+layer per step, untested and likely expensive), or proving the installed MRS kernel
+accepts NZ directly (unproven). The choice stays open until 31 reads the installed
+kernel/config and 32/20 review the budget.
+
+Executor lifetime and `release`: the probe binding does not destroy the
+`aclOpExecutor`, and the `release` op is unregistered. That is acceptable for a
+one-shot probe but **not** for a long-running service; a production wrapper must
+resolve executor destruction and per-call workspace ownership. The A15 experiment and
+the sustainable production integration remain separate gates.
 
 ## 10. Non-goals
 
