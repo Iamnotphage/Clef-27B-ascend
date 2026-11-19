@@ -1,0 +1,59 @@
+{
+  "schema": "official-entry-aa3e-cpu-evidence/1",
+  "no_network_no_npu": true,
+  "fixture": {
+    "original_preimage_sha256": "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be",
+    "note": "32 read-only copy; not part of the submission tree"
+  },
+  "objects": {
+    "Clef-27B/inference.py": "de5b0d1ea95194dcb7e039e65cb192c3fb6ad98e5c8217579040ecce309e7b29",
+    "runtime/apply_joint_fused_attention.py": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406",
+    "runtime/joint_fused_attention/clef_joint_schema.py": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "runtime/apply_joint_single_field_patch_fused.py": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "runtime/apply_joint_service_check.py": "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c",
+    "runtime/joint_service_check/apply_joint_single_field_patch.py": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "runtime/joint_single_field/clef_joint_schema.py": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "runtime/apply_joint_single_field_patch.py": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
+  },
+  "suites": [
+    {
+      "module": "test_joint_fused_entry",
+      "ok": true,
+      "returncode": 0,
+      "ran": 11,
+      "skipped": 0,
+      "tail": [
+        "test_failure_prevents_service_launch (test_joint_fused_entry.JointFusedEntryTest.test_failure_prevents_service_launch) ... ok",
+        "test_non_fused_config_pops_candidate_env (test_joint_fused_entry.JointFusedEntryTest.test_non_fused_config_pops_candidate_env) ... ok",
+        "test_original_start_runs_guard_then_fused (test_joint_fused_entry.JointFusedEntryTest.test_original_start_runs_guard_then_fused) ... ok",
+        "test_resolve_tree_validates_probe_and_layout (test_joint_fused_entry.JointFusedEntryTest.test_resolve_tree_validates_probe_and_layout) ... ok",
+        "test_unknown_tree_fails_closed_with_record (test_joint_fused_entry.JointFusedEntryTest.test_unknown_tree_fails_closed_with_record) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 11 tests in 14.503s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "module": "test_inference_launch",
+      "ok": true,
+      "returncode": 0,
+      "ran": 17,
+      "skipped": 0,
+      "tail": [
+        "test_quantized_launch_keeps_json_and_value_tokens (test_inference_launch.LaunchTests.test_quantized_launch_keeps_json_and_value_tokens) ... ok",
+        "test_s1_and_s2_defaults_emit_one_mm_option (test_inference_launch.LaunchTests.test_s1_and_s2_defaults_emit_one_mm_option) ... ok",
+        "test_s1_data_path_defaults_follow_the_decision_patch (test_inference_launch.LaunchTests.test_s1_data_path_defaults_follow_the_decision_patch) ... ok",
+        "test_unknown_equals_and_bare_flags_preserve_tokens (test_inference_launch.LaunchTests.test_unknown_equals_and_bare_flags_preserve_tokens) ... ok",
+        "test_unknown_separate_values_preserve_spaces_equals_and_empty (test_inference_launch.LaunchTests.test_unknown_separate_values_preserve_spaces_equals_and_empty) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 17 tests in 1.694s",
+        "",
+        "OK"
+      ]
+    }
+  ],
+  "ok": true
+}
