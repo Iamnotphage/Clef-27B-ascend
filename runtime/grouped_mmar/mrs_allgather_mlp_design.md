@@ -273,17 +273,28 @@ matmul+all_reduce down path. Same seed, x/w hashes, TP2 group, stream ordering a
 per-iteration synchronization; the native AddRMSNorm boundary is measured as a
 separate optional stage, not mixed into the matmul comparison.
 
-- **Shapes**: real local shape M968/K8704/N5120 and the small M127/K256/N512; fixed
-  input/weight hashes; same adapter/provider and HCCL group.
-- **Order**: ABBA per pair, W warmups, N measured iterations, per-iteration Python
-  sync; report per-stage and total median/p95 for both arms, plus paired deltas.
-  No single-run adoption claim.
-- **KEEP_ALL leak budget**: the probe still leaks one executor/workspace per call
-  because the release op is unregistered. At small shape the workspace is
-  17,170,432 B/rank; at large shape it is 115,818,496 B/rank. Bound the cell so the
-  accumulated workspace stays under 1 GiB/rank (about 32 small or 8 large
-  iterations), then let the process exit reclaim everything. This budget is part of
-  the plan, not a claim that the leak is solved.
+- **Baseline arm (design, not implemented)**: a minimal `A16` baseline that keeps the
+  weight in FRACTAL_NZ29 (record the ND source hash and the NZ cast result hash) and
+  calls the production-shaped `F.linear`/matmul followed by `dist.all_reduce` on the
+  same stream. It retains x/weight/output and the NZ weight until after sync,
+  matching A15's KEEP_ALL lifetime; flags are not used by the binding because A16
+  does not call it. A15 uses ND; before any benchmark, verify ND/NZ numerical
+  equivalence at the benchmark shape (earlier MLP NZ vs ND output was bit-identical,
+  but it must be re-recorded here).
+- **Shapes and padding**: primary comparison at M968 (the A15 967+1 pad) for both
+  arms, so M is identical; also record a secondary baseline at M967 and quantify
+  the one-row pad effect rather than mixing the two M values.
+- **Order and timing**: ABBA per pair; W warmups excluded from statistics; N measured
+  iterations; each timing interval covers launch + collective + sync; report per-stage
+  and total median/p95 for both arms plus paired deltas. No single-run adoption claim.
+- **Process model and KEEP_ALL budget**: choose either one process alternating arms
+  or one fresh process per arm. The A15 probe leaks one executor/workspace per call
+  because release is unregistered; small workspace is 17,170,432 B/rank and large is
+  115,818,496 B/rank. Count W warmups, all A15 calls, retries and auxiliary calls
+  against the same 1 GiB/rank cap: total calls <= floor(1 GiB / per-call workspace),
+  i.e. about 62 small or 9 large per rank. If both arms leak in one process they share
+  that budget; separate processes isolate it and let process exit reclaim. Suggested
+  bounded cells: small W=3/N=20 (23 calls), large W=2/N=6 (8 calls).
 - **Production lifecycle**: a long-running service still needs executor destruction
   and workspace pooling/ownership; using flags=0 and relying on early release is not
   a solution and is not measured here.

@@ -7,6 +7,7 @@ path guards, release ordering, timeout watchdog and metadata checklist.
 import builtins
 import contextlib
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -295,6 +296,53 @@ class A15RecordTest(unittest.TestCase):
         self.assertEqual(reduced['relative_l2_denominator'], run_probe.TINY)
         self.assertTrue(reduced['relative_l2_zero_reference'])
         self.assertTrue(record['diagnostic_gate']['within_bounds'])
+
+
+@unittest.skipUnless(importlib.util.find_spec('torch') is not None, 'torch required')
+class TensorErrorStatsTest(unittest.TestCase):
+    def setUp(self):
+        import torch
+        self.torch = torch
+
+    def test_tensor_stats_match_the_list_helper(self):
+        output = self.torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+        reference = self.torch.tensor([[1.0, 1.0], [1.0, 1.0]])
+        stats = run_probe.tensor_error_stats(output, reference)
+        expected = list_error_stats([[1.0, 2.0], [3.0, 4.0]],
+                                    [[1.0, 1.0], [1.0, 1.0]])
+        for key in ('max_abs', 'mean_abs', 'ref_abs_max', 'out_abs_max',
+                    'diff_nonzero_count', 'diff_total_count', 'max_error_index',
+                    'max_error_reference', 'max_error_output', 'max_rel_abs',
+                    'relative_l2', 'relative_l2_denominator'):
+            self.assertEqual(stats[key], expected[key], key)
+        self.assertEqual(stats['max_error_position'], [1, 1])
+        self.assertFalse(stats['relative_l2_zero_reference'])
+        record, error = run_probe.a15_record(
+            output, reference, 2, 2, stats=run_probe.tensor_error_stats,
+            equal=self.torch.equal)
+        self.assertIsNone(error)
+        self.assertFalse(record['reduced']['bit_equal'])
+
+    def test_tensor_zero_reference_rule(self):
+        output = self.torch.zeros(2, 2)
+        reference = self.torch.zeros(2, 2)
+        stats = run_probe.tensor_error_stats(output, reference)
+        self.assertEqual(stats['relative_l2'], 0.0)
+        self.assertEqual(stats['relative_l2_denominator'], run_probe.TINY)
+        self.assertTrue(stats['relative_l2_zero_reference'])
+
+    def test_tensor_none_and_wrong_shape_fail_closed(self):
+        tensor = self.torch.zeros(2, 2)
+        record, error = run_probe.a15_record(
+            tensor, None, 2, 2, stats=run_probe.tensor_error_stats,
+            equal=self.torch.equal)
+        self.assertIsNone(record)
+        self.assertEqual(error, 'missing_equivalence_record')
+        record, error = run_probe.a15_record(
+            tensor, self.torch.zeros(1, 2), 2, 2,
+            stats=run_probe.tensor_error_stats, equal=self.torch.equal)
+        self.assertIsNone(record)
+        self.assertEqual(error, 'invalid_equivalence_shape')
 
 
 class A15FlowTest(unittest.TestCase):
