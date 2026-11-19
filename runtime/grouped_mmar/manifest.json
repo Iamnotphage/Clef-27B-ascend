@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "00665d23e5e2dff8c85463024eb85cb06a85b5bff39b153e88157556cfae2abc",
-      "bytes": 30152
+      "sha256": "c7a47c4718f1a8e57ad388caba87294ece219d8fec25578c148c8c3be4629619",
+      "bytes": 30562
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -413,7 +413,7 @@
     }
   },
   "process_cleanup": {
-    "status": "implemented in the supervised window; Linux real-process fixtures pending 31; device cells paused until 32/33 review",
+    "status": "implemented and Linux-validated on window 9a31091b (34/34 + F2/F3); awaiting 32/33 result review; device cells paused",
     "problem": "d7e73514/f05f352f cleanup_child and survivors only covered pgid == child pid; torchrun workers run in independent PGIDs (rank0 1318300, rank1 1318301, PGID=self), so rank groups were not attributed, cleaned, or visible to the recovery gate",
     "fix": "runtime DescendantRegistry polls the child PPID subtree plus subreaper orphans every 0.2 s and persists pid/ppid/pgid/sid/starttime/boot_id/cmdline to descendants.json; cleanup_attributed verifies pid/starttime/boot_id/pgid/sid (ppid may reparent) and signals only verified group leaders, unknown members are never group-killed; SIGTERM -> rescan -> SIGKILL -> reap; protected overlap refuses to signal; survivors and recovery_gate residual include all attributed groups; Linux subreaper failure blocks before d0_stop; plan-only is unaffected",
     "gates": "240 s window, official aa3e restore, old_alive never Popen, restore root ppid1/pgid self/descendants same-group checks unchanged",
@@ -425,15 +425,19 @@
     },
     "freeze": {"supervised_probe_window.py": "9a31091b", "test_supervised_window_cpu.py": "5fdc498f", "cpu": "60/60 (17+9+34; 5 Linux-only skipped on macOS)"},
     "linux_fixture_result": {
-      "version_under_test": "35b4fbe (window 0ca36426)",
-      "outcome": "34 tests ran on Linux; 3 failed: zombie not reaped, subreaper adoption too broad, chain fixture race",
-      "log_sha256": "b6357e475123ebeb9f14fc4ee4685bd65312a599d1717adea42abe9d3c63fdd5",
-      "fixes": [
-        "cleanup reaps every registered candidate after SIGKILL, including PIDs already in Z state, then settles before the final scan",
-        "adoption now requires the child's per-cell env token CLEF_WINDOW_OWNER; an unrelated subreaper child without the token is never registered or signaled",
-        "registry.stop() repeats record with a short settle; the chain fixture waits for the grandchild to exist before stop"
-      ],
-      "rerun_required": "31 reruns the 34 window tests plus the F2/F3 probes on the new window 9a31091b"
+      "version_under_test": "a00edad (window 9a31091b)",
+      "outcome": "34/34 window tests OK on Linux, including 5 real-process cases; F2/F3 probes pass",
+      "log_sha256": "659754bd1cbc80494aa5a95c35add2d6b0eb9be264ae1675ade3f93840a71ba4",
+      "f2_f3_probe_sha256": "d180c08a042a83a4",
+      "f2_f3_script_sha256": "ab5dded182653e55",
+      "sums_sha256": "fc780c760adb45c6 (3/3)",
+      "archive": "grouped-deepdive/fixtures-a00edad/, 31 commit 165d5ad",
+      "f2": "tokened worker 1323101 registered and killed, /proc gone (zombie reaped); unrelated 1323102 without the token survived and was not registered; survivors empty",
+      "f3": "parent -> adopted intermediate -> setsid grandchild: entries 1323106/1323107, both gone after cleanup, survivors empty",
+      "residue": "none; existing system sleep 60/300 processes untouched",
+      "service": "root 1319033/399382752 healthy, config s1, TP2/4096, TP0+TP1, card7 phy14/15, boot 393ecc15 unchanged",
+      "earlier_run": "35b4fbe/0ca36426 ran 34 tests with 3 failures (zombie, over-broad adoption, chain race), all fixed before this pass",
+      "next": "32/33 review the Linux result; 31 then refreshes the A14 large stage-identity with window 9a31091b and requests one GO"
     },
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
