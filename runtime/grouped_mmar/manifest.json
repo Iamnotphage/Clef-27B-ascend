@@ -66,9 +66,9 @@
       "bytes": 43245
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (30; H4K/H5K/A15 choices, attribution/drift/unknown/dead-leader logic, Linux real-process fixtures)",
-      "sha256": "53deb3c252dbc9de844bad674c24889f20ad9e5924ba76024b6c838e453fde91",
-      "bytes": 28116
+      "role": "CPU window control-flow tests (31; H4K/H5K/A15 choices, attribution/drift/unknown/dead-leader logic, subreaper gate/plan-only, Linux real-process fixtures)",
+      "sha256": "0bddc78595f3c359e8582274f70d864753a6c05ff1b632332b7398d6ad86a0a7",
+      "bytes": 28950
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,7 +82,7 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "bf0edde94e4fadd104ef1546440dc3390de08f10729adb07111018f4a8ec27c0",
+      "sha256": "e8a22b38ea3c34024dd92821d779c7a2c466417018838c6acac3f5e8165e273d",
       "bytes": 29443
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "17/17",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "30/30 (2 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "31/31 (2 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -417,7 +417,7 @@
     "problem": "d7e73514/f05f352f cleanup_child and survivors only covered pgid == child pid; torchrun workers run in independent PGIDs (rank0 1318300, rank1 1318301, PGID=self), so rank groups were not attributed, cleaned, or visible to the recovery gate",
     "fix": "runtime DescendantRegistry polls the child PPID subtree plus subreaper orphans every 0.2 s and persists pid/ppid/pgid/sid/starttime/boot_id/cmdline to descendants.json; cleanup_attributed verifies pid/starttime/boot_id/pgid/sid (ppid may reparent) and signals only verified group leaders, unknown members are never group-killed; SIGTERM -> rescan -> SIGKILL -> reap; protected overlap refuses to signal; survivors and recovery_gate residual include all attributed groups; Linux subreaper failure blocks before d0_stop; plan-only is unaffected",
     "gates": "240 s window, official aa3e restore, old_alive never Popen, restore root ppid1/pgid self/descendants same-group checks unchanged",
-    "freeze": {"supervised_probe_window.py": "07e0429c", "test_supervised_window_cpu.py": "53deb3c2", "cpu": "56/56 (17+9+30; 2 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "07e0429c", "test_supervised_window_cpu.py": "0bddc785", "cpu": "57/57 (17+9+31; 2 Linux-only skipped on macOS)"},
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
   },

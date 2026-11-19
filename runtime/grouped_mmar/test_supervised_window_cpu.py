@@ -128,6 +128,18 @@ class WindowTest(unittest.TestCase):
             self.assertIn(arm, plan['child_argv'])
             self.assertIn('--adapter', plan['child_argv'])
 
+    def test_plan_only_does_not_require_subreaper(self):
+        import contextlib
+        import io
+        with mock.patch.object(win.sys, 'platform', 'linux'), \
+                mock.patch.object(win, 'enable_subreaper') as sub_mock:
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                rc = win.main(self.args())
+        self.assertEqual(rc, 0)
+        sub_mock.assert_not_called()
+        self.assertEqual(json.loads(output.getvalue())['status'], 'plan_not_executed')
+
     def test_linux_subreaper_failure_blocks_before_stop(self):
         calls = []
         with mock.patch.object(win.sys, 'platform', 'linux'), \
@@ -515,6 +527,8 @@ class AttributedProcessTest(unittest.TestCase):
             '"import time; time.sleep(60)"], start_new_session=True)\n'
             'print(w.pid, flush=True)\n'
             'sys.exit(0)\n')
+        unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
+                                     start_new_session=True)
         parent = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
                                   start_new_session=True, text=True)
         worker = None
@@ -548,6 +562,7 @@ class AttributedProcessTest(unittest.TestCase):
                 win.cleanup_attributed(parent.pid, None, registry, set(), reap=True)
                 self.assertEqual(win.attributed_survivors(registry), [])
                 self.assertFalse(Path(f'/proc/{worker}').exists())
+                self.assertIsNotNone(win._read_proc(unrelated.pid))  # no arbitrary kill
             finally:
                 registry.stop()
         finally:
@@ -559,6 +574,8 @@ class AttributedProcessTest(unittest.TestCase):
                     os.killpg(worker, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+            unrelated.kill()
+            unrelated.wait(timeout=5)
 
     def test_protected_identity_is_not_signaled(self):
         sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
