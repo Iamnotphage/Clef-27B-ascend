@@ -17,8 +17,25 @@ export ASCEND_PROCESS_LOG_PATH=/workspace/yangchen/work/grouped-deepdive-cell-h1
   resolved 同路径；executable=yes；SHA fd801bde…0903；解释器 #!/workspace/yangchen/venvs/clef-py312/bin/python；
   `torchrun --help` rc=0（CPU-only）。基线 PATH 下 `command -v torchrun` 为空（已复现）。
 
-A. plan-only（应与 plan SHA 9c2936c2…3137 逐字节一致）
--------------------------------------------------------
+执行顺序（v2 GO 后；**必须同一 shell / 同一 SSH 会话**，不得拆开）
+-----------------------------------------------------------------
+child 环境 = window 进程的 os.environ（window 1f780bf8 line 894：`{**os.environ, OWNER_ENV: token}`），
+因此 PATH 只有在**运行 window 的那个 shell** 中导出才生效；`--activate` 仅用于 restore（line 546-548），
+不能当作 child 激活。且 `--execute` 内部先 stop 再 spawn（line 876/896），所以预扫必须先行。
+
+随后按以下顺序在**同一个 shell** 内执行：
+1) cd /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar
+2) source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh
+3) export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH
+4) command -v torchrun   # 必须 = /workspace/yangchen/venvs/clef-py312/bin/torchrun
+   sha256sum "$(command -v torchrun)"   # 期望 fd801bde…0903
+   torchrun --help                      # 期望 rc=0（CPU-only）
+5) bash /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/preflight-rescan.sh
+   # 必须 RESULT: ALL PASS / rc=0；任一 FAIL 即停，绝不进入第 6 步
+6) 运行下方 B 段（window ... --execute），仅此一次
+
+A. plan-only（应与 plan SHA 9c2936c2…3137 逐字节一致；可在任意只读 shell 执行）
+---------------------------------------------------------------------------------
 /workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py --python /workspace/yangchen/venvs/clef-py312/bin/python --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/run-h11-observe-v2 --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/root-identity-h11-observe-v2.json --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 --arm H11 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --master-port 29531 --comm-timeout 90.0 --child-timeout 240.0 --stop-timeout 120.0 --restore-timeout 900.0 --port 18143 --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py --expected-source-sha aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503 --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh --service-root /workspace/yangchen/Clef-27B-ascend --model-dir /workspace/yangchen/models/Clef-27B --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2 --clean-env-expect /workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
 
 B. v2 授权后 execute（仅在 20 另发 v2 明确 GO 后；本包从未执行）

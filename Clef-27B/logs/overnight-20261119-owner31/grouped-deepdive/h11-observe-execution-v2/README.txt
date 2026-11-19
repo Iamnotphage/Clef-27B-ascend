@@ -32,6 +32,18 @@ h11-observe-execution-v2 — H11 观测 v2 执行命令包（CPU-only 准备；�
 - 注意：activate_env.sh 实际会 source `$CLEF_VENV/bin/activate`，本身已加入 venv bin；显式前置为幂等
   加固（最终 PATH 中 venv bin 出现两次，无害）。v1 的根因是启动 shell **从未 source activate**。
 
+同 shell 执行要求（v2 GO 后，硬性）
+-----------------------------------
+- window 的 child env = 运行 window 进程的 `os.environ` + OWNER token（window 1f780bf8 line 894/896）：
+  PATH 必须在**同一个 shell** 中导出才会传给 child；`--activate` 只用于 restore（line 546-548）。
+- `--execute` 内部先 stop 再 spawn child（line 876/896）：预扫必须在调用 `--execute` 之前完成并
+  fail-closed。
+- 因此下列步骤必须在同一 shell / 同一 SSH 会话内顺序执行，不得拆开：
+  source activate_env.sh → export PATH=venv/bin:$PATH → `command -v torchrun`（记录路径/SHA）→
+  `torchrun --help` rc0 → `preflight-rescan.sh`（rc0）→ `supervised_probe_window.py ... --execute`。
+- 若改用绝对路径 torchrun 写入 child_argv，需通过 `--child-argv` 完整重建 argv（与 `--arm` 冲突），
+  并在预扫中校验该路径 SHA 与 `--help` rc0；本包采用同 shell PATH 方案。
+
 预扫（preflight-rescan.sh）
 ---------------------------
 执行前只读检查：identity/boot/ppid/pgid/sid/starttime、精确五 PID、health/info、clients、29531
