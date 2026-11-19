@@ -1677,3 +1677,21 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 4. 31 raw：exec/child stderr、window.json、preflight 输出、服务/restore 证据；确认失败发生在 child spawn 前、服务未受影响、唯一 restore 完成。
 
 **状态**：本次未产生 Grouped 算子/分派证据；不排除任何支路（缺测）；静态 ABI（§78/§80/§91）与 §15 结论保持；固定包 953eb2d/754859dc 不变；无新增 GO/设备动作；root cause 仍 unresolved。后续方案待恢复与上述 PATH/预扫核查结果。
+
+## 94. H11-observe-v1 attempt-1 证据与 harness 根因（50241c2）
+
+**证据包**：commit `50241c2`，`h11-observe-v1-cell-attempt1/` 13 文件，SUMS `fd41ac86…`（本地 `shasum -c` **13/13 OK**）；远端 archive `…/archive-h11-observe-v1` 51 文件 SUMS `4fbf9653…`（31 报）。
+
+**window.json 实测**：
+- top error = `FileNotFoundError: [Errno 2] No such file or directory: 'torchrun'`；steps = preflight/stop/stopped/child；`child={started:false,error:FileNotFoundError torchrun}`。
+- `restore={started:true, waited:false, wrapper_pid:1347085, argv=env -i + 官方 start.sh}`；`restore_checks` 9/9 true（health/info/workers/text/image/env/joint_env/source/clients）；`clients=[]`。
+- `source_sha256_before/after_child/after_restore` 均 `aa3e1758…`；`subreaper 0→cleared true→final restored true→0`；`recovery_gate.allow=true, reason=restore`，`attributed_survivors=[]`、`probe_residual=[]`、`runner_residual=[]`。
+- 恢复 root **1347086** / starttime **401212026** / ppid1 / pgid=sid=1347086 / boot `393ecc15…`；五 PID `1347086/1347229/1347230/1347258/1347259`；health ready、info s1；无第二 restore/无残留。
+- `rank-env-h11-observe-v1.jsonl` 26 个采样均 `entries:0, rows:[]` → **缺测**，不是“无 rank”或路径证据。
+
+**harness 根因（31 诊断）**：
+- 启动 shell `PATH=/usr/local/sbin:...:/snap/bin` **不含 venv bin**；`torchrun` 仅存在于 `/workspace/yangchen/venvs/clef-py312/bin/torchrun`；window 按 plan `child_argv` 用**裸名 `torchrun`**，`Popen` 在 fork 前抛 FileNotFoundError。
+- `activate_env.sh` 只装载 CANN/ATB，不把 venv bin 加入 PATH；官方 `start.sh` 用绝对 venv python，故 restore 正常。
+- `preflight-rescan.sh` 覆盖 stop/source/body/frozen SHA，但**未检查 torchrun 可解析性**——清单缺口。
+
+**后续候选（不改包/不重跑）**：启动 shell PATH 前置 venv bin，或 child_argv 用绝对 `torchrun`；preflight 增加 `command -v torchrun`/绝对路径可执行检查。本次无算子/分派证据，不排除任何支路；静态 ABI（§78/§80/§91）与 §15 结论保持；无新增 GO/设备动作；root cause 仍 unresolved。
