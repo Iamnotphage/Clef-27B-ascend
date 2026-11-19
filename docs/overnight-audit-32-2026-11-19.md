@@ -311,7 +311,8 @@
 - **独立实测 plog-run-1301080.log**：06:24:20.366 `insert package:mc2_server.tar.gz config`；device0 06:24:20.502 与 device1 06:24:20.927 均 `current device chip:5 does not support package:mc2_server.tar.gz`、`does not need to load to device:0/1`；同段 `cann-tsch-compat.tar.gz` 亦不支持。发生在进程启动 TDT 阶段、op launch 之前。
 - **因果链**：MC2 AICPU server 包未加载 → AICORE kernel 等待 AICPU/KFC → stream47 KERNEL_AICORE pending → RUNTIME 10 s 507046 / v4r1 无超时挂起 → DestroyAicpuComm 50 s×2。官方样例（生命周期全保活、显式 context/stream、单进程 HcclCommInitAll）与 v4r1 同因；**H1–H12 对“挂起”不再有解释力**。
 - **结论**：GroupedMatMulAllReduce 在本机 A3/CANN 9.2.1 **环境阻塞**（mc2_server 不支持 chip:5）；不改变官方 aa3e/f810 默认、不影响提交；不新建 PR/不改指标。H6/H7/H12/A8/A13 暂停（A8 基座 comm 此前 baseline/nd_native 已通过；A13 若同需 mc2_server 会同样被拒）。
-- **收口证据请求**：31 提供 `mc2_server.tar.gz`（或包内 config/ini 支持列表）本地副本+SHA；33 核支持矩阵与官方文档 chip 映射（chip:5 ↔ 本机 A3），确认是否所有 MC2 包均排除；确认后 Grouped 记环境阻塞并关闭深挖。
+- **收口证据（已核，31 mc2-support 5/5）**：`mc2_server.tar.gz` SHA `71263835…`（873,250 B，头 `aa55aa55` 私有格式）；`ascend_package_load.ini` 中 mc2_server `optional:true`、`package_path opp/built-in/op_impl/aicpu/kernel`、`load_as_per_soc:false`（ini 无 soc/chip 支持字段，匹配决策在运行时包内）；`libmc2_server.json` 明确 `HcclLaunchAicpuKernel/Mc2AicpuTaskCacheClearKernel/Mc2ServerKernel` 均在 `libmc2_server.so`；`mc2-load-evidence-lines.txt` 与 plog 行逐字一致（device0/1 chip:5 不支持 mc2_server/tsch-compat；AICPU 仅从 libccl_kernel.so 取 KFC ResInit/SrvLaunch）。→ **环境阻塞结论成立**：MC2 server 包未加载，MC2 KFC 任务无实现，AICORE 等待 → stream47 pending/507046/DestroyAicpuComm 超时；与绑定/生命周期/comm 创建无关。
+- **结案**：Grouped MMAR 在本机 A3/CANN 9.2.1 不可运行（平台包支持限制）；暂停 H6/H7/H12/A8/A13 及所有 Grouped 设备臂；官方 aa3e/f810 默认、入口、指标不变；服务 aa3e root 1301295 健康。33 的支持矩阵/chip 映射确认留作文档收尾（loader 实测拒绝已足够操作结论）。35 记录 commit d4b600c 存在，无代码/参数改动。
 - **A12 监督/恢复链 PASS**：rc0 假成功被日志门拦、gate allow、官方 start.sh aa3e-noop、root 1301295/五 PID/四检全过；服务当前健康在线。
 
 ## 9. 本地核对副本
