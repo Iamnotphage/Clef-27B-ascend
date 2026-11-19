@@ -783,13 +783,11 @@ class AttributedProcessTest(unittest.TestCase):
             'manifest = sys.argv[1]\n'
             'if os.fork() == 0:\n'
             '    os.setsid()\n'
-            '    if os.fork() == 0:\n'
-            '        with open(manifest, "w") as handle:\n'
-            '            json.dump({"pid": os.getpid()}, handle)\n'
-            '        time.sleep(60)\n'
-            '        os._exit(0)\n'
+            '    with open(manifest, "w") as handle:\n'
+            '        json.dump({"pid": os.getpid()}, handle)\n'
+            '    time.sleep(60)\n'
             '    os._exit(0)\n'
-            'sys.exit(0)\n')
+            'os._exit(0)\n')
         plan = {'restore_argv': [sys.executable, str(script), str(manifest)],
                 'restore_output': str(restore_output)}
         result = {}
