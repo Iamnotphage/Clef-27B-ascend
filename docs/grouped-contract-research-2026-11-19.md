@@ -576,3 +576,7 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 - `a15_record` L314-330 纯函数：reference None→None；否则 `reduced/equivalence/diagnostic_gate`（0.03125/1e-4 diagnostic，非 fixed_gate）。execute L512-518 调用，None 时写 `numeric_error=missing_equivalence_record`；L546-553 `record_ok` 要求 A15 三键齐全，缺则 numeric_pass=false（fail-closed，记录完整性，不是误差门）。
 - 测试：CPU 桩 all_reduce 返回 None 并原地改 tensor，断言 reference 非 None/值正确、output/reference 127、max_abs=8.0；`A15RecordTest` 正常/None 两态；test_probe 24。代码级 PASS。
 - A15 v3 待 31 用 fresh identity **1330921**（restore manifest 无 starttime，需实扫 /proc）出 plan（rows127/k256/n512、flags8、bias null、window 1f780bf8、run_probe 103b9775、adapter d181b15a、fresh a15-small-v3、port 预检）→ 32/33 核 → 一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
+
+## 53. A15 record shape 校验缺口（2026-11-19）
+
+确认 32 finding：`a15_record` L314-330 只判断 `reference is None`，**未校验 `reference.shape == output.shape == (rows,n)`**；`equivalence.shape` 直接写 `[rows,n]`。若 reference 形状错误但与 output 可广播（如 `[1,n]`），`diff/equal` 会静默广播并生成误导性 `max_abs/mean_abs/bit_equal`，记录仍标 `[rows,n]`；完全不可广播时才抛错（fail-closed）。修复：在 `a15_record`（或调用前）断言两者 `tuple(shape)==(rows,n)`，不匹配返回 None/写 `numeric_error=shape_mismatch`；CPU 用例覆盖可广播错 shape（必须 fail-closed，不得静默记录）。属 record-integrity，不是本轮 v3 的算子精度结论；v3 可先跑，但记录完整性闭合前必须补；设备仍暂停。
