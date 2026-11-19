@@ -1319,3 +1319,22 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - 比较对象：`0x7d6d30 dsb ld`；`0x7d6d34 mov x2,#0x40`；`0x7d6d38/3c` 取两参；**`0x7d6d40 bl memcmp` 比较 64 B**；`0x7d6d48 b.eq 0x7d6e4c`（相等继续）。**不是 slot+48 魔数比较**。
 - 日志门：不等后 `0x7d6d4c` 取全局计数（`0x22ca000+0xe64`），`0x7d6d58-78` 判 `count % 10000 == 0`，仅余数为 0 进入；再过 `HcclCheckLogLevel(2,3)`@`0x7d6d88`。Dlog 参数 w0=3/w1=2/x2=0x1613b80/x3=0x1613cc8(line 207)/x5=tid/x6=GetMsgSimpleStr(rMsg)/x7=GetMsgSimpleStr(msg)。
 - 判读：出现=累计 64 B 不等达到 10000 的倍数（持续不一致）；缺席=累计不足 10000 或 guard 未开，**不排除**不一致；**非逐事件标记**，也不用于判 valid 魔数。
+
+## 81. 32 H11 草案预审结果（无 GO）
+
+**已确认（32 本机 plan-only）**：
+- H11 是真实 arm：`flags=8 KEEP_ALL`、`native=True`、`rows=128`、bias `fp32_zero`；plan-only 已验 H11/flags8/native/128/256/512/240/90。
+- argv：torchrun 2 ranks + `run_probe --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root/out fresh --adapter d181b15a --arm-timeout 240 --comm-timeout 90 [--execute]`。
+- env：window 设 `GLOBAL_LOG_LEVEL=0` + fresh `PROCESS_LOG_PATH`；`child_env` 继承到 torchrun/ranks；restore 用 `env -i`，观察 env 不进入服务；source SHA 检查。
+- window `1f780bf8` 含 H11，兼容 plan-only/240 s/cleanup/唯一 restore；runtime 用 `e38b541`。
+
+**采集口径（32 同意）**：fresh `PROCESS_LOG_PATH` + 默认 `/root/ascend/log` 时间窗 + device 日志**全量**；**不按 probe PID 过滤**；按 time/device/file/host 派生；正向标记出现才算采到，否则缺测。级别证据为 cf9f1d6/rodata 33a2226；guard 映射/新 xref 未闭。
+
+**阻断/前置（当前不运行、不发 GO）**：
+1. 无设备 GO；
+2. **device/AICPU daemon 的 env 传播未证**——window 的 env 只证到 child/torchrun，daemon 是否继承未证；无正向标记时不能区分“未生效”与“未走该路径”；
+3. guard 级别映射未证（Dlog w0/w1 不套 GLOBAL 0–4）；
+4. fresh log dir 必须预创建；
+5. 不得按 PID 过滤，raw 全量保留；
+6. H11 hang 未解，本观测仅诊断，不构成根因结论；
+7. H11 文档需从旧 run_probe/window 更新到 `e38b541`（doc-only）。
