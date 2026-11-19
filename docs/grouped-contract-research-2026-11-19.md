@@ -182,3 +182,16 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 **A12-H6 workspace 约定**：GWS 仅返回大小、调用方 aclrtMalloc；官方样例不初始化。Grouped kernel `GetUserWorkspace(workspace)` 仅作 GEMM scratch；MC2 消息区在 `GetHcclContext<0>()->WorkSpace`。无证据要求预置/必须未初始化 → memset 清零在契约上安全。建议同 stream `aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream)`，紧随 aclrtMalloc、launch 前；**同流顺序足够，勿额外 sync**（第二变量）。API 可用性：31 只读实读确认 `include/acl/acl_rt.h:2563` 声明 `aclrtMemsetAsync`、`:2293` 声明 `aclrtMemset`，`libascendcl.so` 导出两符号（31 证据；33 本机无 acl_rt.h 副本，未独立复核）。签名：`aclrtMemset(void*, size_t maxCount, int32_t value, size_t count)`；`aclrtMemsetAsync(void*, size_t maxCount, int32_t value, size_t count, aclrtStream)`；成功 0。H6 未被 A12 证伪；仅 memset 的派生仍是单变量。
 
 **A14 当前状态**：本机 A3 注册与合法控制参数已确认（见上）；`MatmulReduceScatter` V1 在 A3 仅 AI CPU；与 Grouped 同 KFC 家族但**对 mc2_server 的依赖仍未证**。A14 本身即“合法 AICPU MC2 控制”：通过 → KFC 路径可用、被拒包非普遍阻断；同挂 → 路径阻塞更广，但仍须证明 A14 与 Grouped 同依赖被拒包。待 31 补本机 `aclnn_matmul_reduce_scatter*.h`、MatmulReduceScatter kernel `.o` 符号串与 `libccl_kernel.so` 符号映射；32 ready、20 排程后执行。
+
+## 13. A14 本机证据核验与支持结论（2026-11-19）
+
+31 `a14-preflight` 包（`Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/a14-preflight/`，6 文件 + SHA256SUMS，SUMS 文件 `21dcae08…`，6/6 OK）经 33 独立核：
+
+- 本机 V1 头 `include/aclnnop/aclnn_matmul_reduce_scatter.h` SHA `ad8f98b4…`（3,158 B）；v2 头 `055d0ec7…`；level2 版 `a377b21b…`/`7b0745e3…`。**本机头与上游 tag `6e49c20f…` 不同，编译以本机头为准**；签名与 35 `run_mrs` 逐项一致：`GetWorkspaceSize(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`、`launch(workspace,size,executor,stream)`。
+- `libccl_kernel.so`（`aarch64-linux/devlib/device/`，26,274,080 B，SHA `2281deca…`）导出 7,626 个 RunAicpu/Hccl/Mc2 定义符号，含 `RunAicpuKfcClearOpRes/ResInit/ResInitV2/SrvLaunch`、`HcclKernelEntrance`、`HcomMc2AiCpuStreamAllocAndGet`、`HcclMc2Com*`；**`Mc2Server`/`RacServer` 计数 0**。
+- A3 `MatmulReduceScatter` kernel `.o` 两个变体（`30500ca7…` SHA `b4819757…`、`3d3ce88a…` SHA `da0cf9db…`）符号仅 `AscendC::AssembleHcclMsg`/`AclnnHcclMsg`/`g_hcclContextReserved` 等 HCCL/KFC 家族，**无 Mc2Server/RacServer**——与 Grouped 同族。
+- AICPU kernel 目录仅 6 项（`aicpu_hccl` d98036b1、`aicpu_hcomm` 37cc9e63、`cann-hixl-compat` 05a18e5a、`libaicpu_custom.json/so`、`mc2_server.tar.gz` 71263835），**无其它 mc2* 变体**。
+- `LoadSysOpKernel: cannot find aicpu packages` 在 A12 pid 1301080 与健康服务 1301295 启动 plog 均出现 → **常见启动行，非失败特异**，从嫌疑列表移除。
+
+**结论**：A14（MatmulReduceScatter V1）的 A3 注册、本机头、kernel 与 libccl_kernel KFC 家族均成立，是合法的 AICPU/ KFC 路径控制；但 Grouped 与 A14 对 `mc2_server` 包的必要依赖均**未被证明**，且两 kernel 符号层面均无 Mc2Server/RacServer。A14 通过 → KFC 路径可用、被拒包非普遍阻断（重心转 Grouped 特定/H6/H12）；A14 同挂 → KFC 路径阻塞更广，但仍需单独证明被拒包为原因。**不得由 A14 单独裁决 mc2_server 依赖**。
+执行门（未执行）：35 preflight `351679f`/manifest `7bc0f155`（binding `cb4430de…`、run_probe `331f9929…`、window `2202165e…`、CPU 44/44）；31 编译/plan（小臂 M=128/K=256/N=512，再 M=968/K=8704/N=5120，output 484×5120）→ 32 ready → 20 排程。A12-H6 同样等 31 编译/plan 与 20 GO。A13 停跑；服务 aa3e/s1 root 1301295 在线；驱动/固件兼容仅记录（V1 文档要求配套 ≥8.0.RC2，version.info compatible_fw `[7.0.0,9.9.9]`），不改白名单强载。
