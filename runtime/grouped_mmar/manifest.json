@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "eacb056361da2ee141679223da9a1ef869983d7c3a7871488b74729a12225e17",
-      "bytes": 32549
+      "sha256": "8cdccaf30230f76451160c0f3e324ae637937e19df312eb663c45575bf751c6b",
+      "bytes": 32834
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -438,7 +438,16 @@
       "residue": "none; existing system sleep 60/300 processes untouched",
       "service": "root 1319033/399382752 healthy, config s1, TP2/4096, TP0+TP1, card7 phy14/15, boot 393ecc15 unchanged",
       "earlier_run": "35b4fbe/0ca36426 ran 34 tests with 3 failures (zombie, over-broad adoption, chain race), all fixed before this pass",
-      "next": "32/33 review the Linux result; 31 then refreshes the A14 large stage-identity with window 9a31091b and requests one GO"
+      "final_run": {
+        "version_under_test": "6d09515 (window 1f780bf8, test_window 228150e4)",
+        "outcome": "single fake_restore test OK; full 40/40 window tests OK on Linux",
+        "single_log_sha256": "6a369a97",
+        "unittest_log_sha256": "53cb7baff3c1f58142d370f0f2b86d6bd9ef6c19fa361a1de20fc6518d30be7e",
+        "archive": "fixtures-6d09515/ (SUMS 90f20867), 31 commit ad6d347",
+        "fixture_cleanup": "daemons 1326360/1326363 killed by exact identity; service untouched",
+        "v3_plan": "efb6fb19bef383ea9dde120af080b7a5236b7d266125d95d1991f6a91649dffa, stage-identity-v4 47ec314f, identity 1323589/399707126, window 1f780bf8, run_probe d54584b7, fresh out/run/restore a14-large-v3, port 29531 FREE, plan_not_executed",
+        "next": "32/33 increment review then one A14 large GO; v1/v2 plans superseded"
+      }
     },
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
@@ -668,7 +677,7 @@
       ],
       "service_manual": "root 1323589/start 399707126, ppid1/pgid/sid self, five PIDs, branch aa3e-noop, OPP9 7b79c5db, LD12 ca27dbb7, health/info/text/image/clients all pass",
       "evidence": "a14-large-cell SUMS 19/19 (a560be11, 31 commit 4372c7f)",
-      "next": "32 approved one rerun on the fixed run_probe/window with fresh identity 1323589 and a new plan (fac2d948's 1319033 is stale); actual reduced max_abs/bit_equal is required, not just finite"
+      "next": "v3 plan efb6fb19 is ready on stage-identity-v4 (window 1f780bf8, run_probe d54584b7, identity 1323589/399707126, M968/K8704/N5120 KEEP_ALL, fresh a14-large-v3 out, port 29531 FREE); 32/33 increment review then one GO. Actual reduced max_abs/bit_equal is required, not just finite"
     },
     "release_fix": {
       "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
