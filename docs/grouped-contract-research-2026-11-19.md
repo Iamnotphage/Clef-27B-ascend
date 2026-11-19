@@ -1662,3 +1662,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 35 CPU 替身 18/18 PASS 与该边界一致；`rank-env-read.py` `a4b76676…` 不变。
 
 **状态**：命令准备闭合（32 PASS），最终文本 953eb2d/754859dc；仍无 GO/未执行 cell/设备暂停；AICPU env/guard 映射、执行前 preflight-rescan、正向标记才计数仍为条件。
+
+## 93. H11-observe-v1 执行结果：child 启动失败（torchrun FileNotFoundError）
+
+**事实（20/31 报，待 31 raw 归档）**：
+- child 启动前 **FileNotFoundError: torchrun**；真实 Grouped 探针**未启动**。
+- 因此本格**无算子执行、无分派日志、无 rank env 证据**；空 entries/rows、空日志**不得**解释为“无 rank”或任何路径/支路证据。
+- 31 当前优先 aa3e 服务、唯一 restore 与 raw 保全；本格定性为 **harness 启动失败**，不是 Grouped 根因证据。
+
+**待恢复闭合后只读核查（不重跑/不设备）**：
+1. 启动 window 的进程 PATH 是否含 torchrun（venv/bin 或系统路径）；`activate_env.sh` 是否只作用于 restore 而未作用于 window/child。
+2. window `child_env` 继承链：`{**os.environ, CLEF_WINDOW_OWNER}` 在本次启动 shell 中的实际 PATH；是否应以绝对 `torchrun` 路径或显式 PATH 前置。
+3. `preflight-rescan.sh` 为何漏检：当前只查文件/SHA/端口/identity，是否应增加 `command -v torchrun`/绝对路径可执行检查（本次**不改包**，只记录后续候选）。
+4. 31 raw：exec/child stderr、window.json、preflight 输出、服务/restore 证据；确认失败发生在 child spawn 前、服务未受影响、唯一 restore 完成。
+
+**状态**：本次未产生 Grouped 算子/分派证据；不排除任何支路（缺测）；静态 ABI（§78/§80/§91）与 §15 结论保持；固定包 953eb2d/754859dc 不变；无新增 GO/设备动作；root cause 仍 unresolved。后续方案待恢复与上述 PATH/预扫核查结果。
