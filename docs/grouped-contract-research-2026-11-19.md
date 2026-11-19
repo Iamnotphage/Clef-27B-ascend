@@ -1259,12 +1259,14 @@ export ASCEND_PROCESS_LOG_PATH=<fresh>/cann-plog
 unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
 source <activate_env.sh>                   # 现有 probe 运行前提（无 CANN env 会 torch_npu 段错误）
 
-# 2) probe child（由 supervised window 以 torchrun 2 ranks 启动；这里给可审核 argv 形状）
-python runtime/grouped_mmar/run_probe.py --execute --arm H11 \
+# 2) probe child（必须由 torchrun 2 ranks 启动；不能直接 python run_probe --execute，
+#    否则 world/RANK/LOCAL_RANK 未注入会 ValueError。window build_child_argv 生成如下形状：）
+torchrun --nproc_per_node=2 --master_port 29531 \
+  runtime/grouped_mmar/run_probe.py --arm H11 \
   --rows 128 --k 256 --n 512 --seed 20261119 \
   --temp-root <fresh>/temp --out <fresh>/out \
   --adapter <frozen>/probe_adapter.so \
-  --arm-timeout 240 --comm-timeout 90
+  --arm-timeout 240 --comm-timeout 90 --execute
 
 # 3) window 形状（其余 restore/identity 参数按既有 H11 plan 模板由 31 填）
 python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
@@ -1276,7 +1278,8 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
   --source-target <aa3e source target> --official-start <official start> \
   --activate <activate_env.sh> --service-root <service root> \
   --model-dir <model dir> --restore-output <fresh>/restore \
-  --stop-script /tmp/d0cc/d0_stop.py
+  --stop-script /tmp/d0cc/d0_stop.py \
+  --text-body <existing cell text body> --image-body <existing cell image body>
 ```
 - 端口 29531 执行前须 `ss -ltn` 预检空闲（既有前置）；不自动 GO。
 - `ASCEND_GLOBAL_LOG_LEVEL=0` 只是候选：**不假设 Init4/ReadApiValidMsg 的 guard 会被它满足**；未证模块/bit 不设置。
@@ -1338,3 +1341,13 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 5. 不得按 PID 过滤，raw 全量保留；
 6. H11 hang 未解，本观测仅诊断，不构成根因结论；
 7. H11 文档需从旧 run_probe/window 更新到 `e38b541`（doc-only）。
+
+## 82. 32 预审 v2：两个 argv 阻断已修正
+
+- **阻断 1（已修）**：probe child 不能直接 `python run_probe.py --execute`——`execute` 要求 world=2 且 RANK/LOCAL_RANK 由 torchrun 注入，直跑会 ValueError。§79.2 已改为 window `build_child_argv` 的 torchrun 形状：
+  `torchrun --nproc_per_node=2 --master_port 29531 runtime/grouped_mmar/run_probe.py --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root <fresh>/temp --out <fresh>/out --adapter <frozen>/probe_adapter.so --arm-timeout 240 --comm-timeout 90 --execute`。
+- **阻断 2（已修）**：window argparse **required** `--text-body` 与 `--image-body`，且 `build_plan` 检查文件存在；§79.2 已补 `<existing cell text body>` / `<existing cell image body>`（取现有 cell 文件，fresh plan 检查存在性）。
+- **可闭项**：H11 flags8 KEEP_ALL/native/rows128/bias fp32_zero；child 由 build_child_argv 生成 torchrun，传 `--arm-timeout 240`/`--comm-timeout 90`/`--adapter`；KEEP_ALL/backend/契约一致。
+- **env**：`ASCEND_GLOBAL_LOG_LEVEL=0`、`ASCEND_PROCESS_LOG_PATH=<fresh abs dir>` 必须在**启动 window 前**导出到进程环境（不在 argv）；window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → torchrun→ranks 继承；fresh dir 预创建；执行中只读 `/proc/<rank>/environ` 验证。`GLOBAL=0` 仅候选。
+- **restore**：`env -i PATH=... CLEF_LAUNCH_CONFIG=s1 setsid ... start.sh`；观察 env 不进入服务；branch/五 PID/source 三段 SHA 检查保留；aa3e-noop fresh identity 对应现网 root `1337814/400405818`，由 31 预检。
+- **前置**：fresh identity/port/dirs、stop-script SHA、text/image body、log dir、31 preflight；**无设备 GO、当前不运行**。修正 2 个 argv 阻断后继续 CPU 预审，仍不发 GO。
