@@ -2871,3 +2871,23 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 不改变 §135 的可行性结论：自有 user workspace 可读但不含 KFC response；HCCL context workspace 无 host 访问器；候选 `0x...0073` 不可盲读。
 
 **状态**：SDK 契约 9.2.0/9.3beta1 对照已记录；9.2.1 未获取；release CPU PASS、候选未部署；8f4b843 冻结；无新设备/取件/GO。
+## 137. SDK 契约边界采纳（32；9.2.1 未获取，9.2.0/9.3beta1 仅对照）
+
+**采纳 32 的边界**：版本口径与 §136 一致——9.2.1 **本轮未获取**，9.2.0/9.3.0-beta.1 仅对照；**不记**“9.2.1 已证/不存在”。
+
+### 137.1 可用的 9.2.0 文字（仅对照）
+
+- `aclCreateTensorList` 与 `aclDestroyTensorList` 配套；`aclDestroyTensorList` 销毁列表，“对于 list 内 aclTensor 不需要重复释放”。
+- `aclDestroyTensor` 销毁 `aclCreateTensor` 创建的 tensor。
+- executor：非复用“框架自动释放”；复用“用户自行处理，需显式 `aclDestroyAclOpExecutor`”。
+- `two_phase_api` 无“保活”明文；executor 自动释放仅指 host executor。
+- 无 tensorlist/executor 的 released/valid 查询条文；invalid-id 0 是应用层 `g_states` map 行为，不是 SDK 已释放。
+
+### 137.2 未闭合项（不因 9.2.0 对照升级）
+
+- 9.2.1 未核；binding 是否 reuse executor、Lists/executor 的 future cleanup 仍待 9.2.1 或运行证据。
+- 当前 sync 挂起与 post-sync cleanup 仍**分开**；a12 样例 `31333c59…` 是代码级（第二段后 sync→free/destroy），非文字契约、无版本元数据。
+- release dispatcher CPU readiness 不变（仅 dispatcher + invalid-id 0）；valid-state/SDK release 仍 **false**。
+- 若需 9.2.1，需 20 另行授权取件；本轮无新取件/设备；`8f4b843` 冻结、候选未部署。
+
+**状态**：SDK 契约边界固化；H11/task13 结论不变；root cause unresolved；无设备/新 GO。
