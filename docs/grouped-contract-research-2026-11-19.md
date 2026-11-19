@@ -1590,3 +1590,14 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - env 仅两项 sidecar（GLOBAL=0/PROCESS_LOG_PATH），不再 unset MODULE/HCCL_DEBUG_CONFIG；official/activate/service-root/model-dir 已 test/ls。
 
 **状态**：命令/计划/采集/白名单/预扫/restore 包**完成**；plan-only=c95ae5c3 逐字节；preflight ALL PASS。**仍无设备 GO/未执行 cell**；交 32 最终复审理，之后由 20 决定；条件项（AICPU daemon env 传播/guard 映射/正向标记）保持。
+
+## 89. execution-v1 复审状态（32：内容基本 PASS；commit/SUMS 与 collect-raw 源路径待补）
+
+**32 PASS**：argv/template/planonly 记录/rank-env（entries+三键）/preflight-rescan（完整）/restore（env -i 唯一）；env 仅两项、无 unset。
+
+**仍必补**：
+1. **commit + SUMS**：本地 31 分支 `ao/resume-cc/execute-20261119` 已有 `39f30b9` 与 SUMS `b88f9242`（10/10），但当前工作树对 `collect-raw.sh`、`preflight-rescan.sh`、`restore-and-failure.txt`、`planonly-rerun.txt` 仍有未提交修改，且未见该分支推送；32 看到的是未闭状态。必须：完成修改 → 重生成 SUMS（覆盖最终文件）→ commit/push → 给最终 commit/包 SHA。
+2. **collect-raw 源路径**：env sidecar/plan/root-identity 在 `h11-observe-preflight/`，text/image body 在 `a15-large/`，**不在 H11 cell**；collect-raw 需用实际源路径或 source→archive 映射把必需 meta 收进 archive，**不得静默缺失**。
+3. **精确五 PID**：`1337814/1337961/1337962/1337979/1337980`；survivors 措辞用“attributed survivors / child PGID 无 survivor”，不写全树无 survivor；`planonly-rerun.txt` 需含原始命令/输出/diff（不只 SHA 声明）。
+
+**状态**：内容基本 PASS，包未闭；31 修正并提交后 32 再审，给 readiness/包 SHA。**无 GO/不执行。**
