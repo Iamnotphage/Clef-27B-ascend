@@ -1900,3 +1900,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **32 最终 readiness PASS**：包 `991c21c`/SUMS `6075c4c0`（22/22）、plan `9c2936c2`、helper `68dc9e2c`；A/D/C 闭、B 闭（默认 v2 + `--run`）；35 artifact `d3a0787a` 显式/默认/`--run` 均 v2、旧负控保留；SUMS 独立复核 22/22。
 **计数口径（35 澄清）**：旧 18/18 = helper A 11 + registry B 7；新 SHA A 11 项逻辑全过 + 2 项 cell/run 绑定 = **13/13**；B 7/7 与 helper 无关，合计 **20/20**。
 **状态**：v2 CPU 准备/包/回归/32 最终 readiness **闭合**；仍无 v2 GO/未执行 cell；下一单次 v2 设备步骤待 20 在既有 scope 内明确授权。执行前仍需 fresh `preflight-rescan`；AICPU env/guard/正向标记为观测条件；静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 待 v2 实测。
+
+## 107. v2 GO 执行停止：collect-raw 硬编码 v1 pid（未进入 window）
+
+**事实（31 报 + 本地核实）**：
+- 启动前核验/采集发现真实阻断：`collect-raw.sh` 第 56 行仍硬编码 `pid=1337814`（v1 身份）；v2 实际 root **1347086**。
+- `collect-raw.sh begin` 中 python 读取 `/proc/1337814/stat` 抛 FileNotFoundError，`archive-h11-observe-v2/meta/identity.json` 为 **0 字节**；脚本未对该捕获 fail-closed，**begin 仍 rc=0**。
+- 现场：archive 已建（START/START_SLACK 14:09Z；sources/plan/body/sidecar/health/info/port 已复制，仅 identity.json 空）；run/probe-temp/probe-out/restore 四路径仍 ABSENT；未启动 wrapper/window；**无 stop、无 torchrun、无设备动作**；服务 root 1347086、health ready、五 PID 未变。
+- GO 绑定 `991c21c`，未执行 window，**本轮 GO 不视为完成**；不能静默修包再跑。
+
+**最小修复（需 20 决定，31 执行）**：
+1. `collect-raw.sh` 从 `<CELL>/root-identity-h11-observe-v2.json` 读取 pid，校验 pid/starttime/boot 与 `/proc` 一致；
+2. identity 捕获失败必须置 FAIL/非零退出（begin/end 均 fail-closed）；
+3. 重建 SUMS/commit 得新固定包，20 另发新 GO；旧空 archive 保留为证据，下次 begin 前清理/重建。
+
+**状态**：v2 仍未进入设备执行；无第二 GO/设备动作；静态 ABI/§15 与 v2 包其余结论保持；root cause 待真正 v2 实测。
