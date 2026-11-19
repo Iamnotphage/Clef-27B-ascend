@@ -15,6 +15,7 @@ h11-observe-v2-prestart1 — 第一次 v2 GO 在 collect begin 阶段中止的�
 ----
 - 远端原件保留：`archive-h11-observe-v2`（未删除，未改动）。
 - 独立快照：`archive-h11-observe-v2-prestart1`（cp -a 副本；内含自己的 SHA256SUMS，
-  自哈希 4c370713812b9cc22a46648d3ff2a2fa697734ffc2202b4e5fbdd280d8b43b5f）。
+  SUMS 文件本身的 SHA-256 为 d92175185fca4b7ee0fda2c58d9896b40a148d4a30c4cc8d308efed1811a4446；
+  汇总内容中 `./meta/start-utc.txt` 的哈希为 4c370713…，此前误写为“自哈希”，已更正）。
 - 本目录：prestart1-live-facts.txt（只读现场）、identity.json.zero（0B，SHA e3b0c442…）、
   START.empty / START_SLACK.empty、prestart1-remote-SHA256SUMS.txt（远端副本 SUMS）。
