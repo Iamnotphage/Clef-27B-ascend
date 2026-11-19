@@ -580,3 +580,7 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 ## 53. A15 record shape 校验缺口（2026-11-19）
 
 确认 32 finding：`a15_record` L314-330 只判断 `reference is None`，**未校验 `reference.shape == output.shape == (rows,n)`**；`equivalence.shape` 直接写 `[rows,n]`。若 reference 形状错误但与 output 可广播（如 `[1,n]`），`diff/equal` 会静默广播并生成误导性 `max_abs/mean_abs/bit_equal`，记录仍标 `[rows,n]`；完全不可广播时才抛错（fail-closed）。修复：在 `a15_record`（或调用前）断言两者 `tuple(shape)==(rows,n)`，不匹配返回 None/写 `numeric_error=shape_mismatch`；CPU 用例覆盖可广播错 shape（必须 fail-closed，不得静默记录）。属 record-integrity，不是本轮 v3 的算子精度结论；v3 可先跑，但记录完整性闭合前必须补；设备仍暂停。
+
+## 54. A15-small-v3 preflight 元数据核（2026-11-19）
+
+`a15-preflight/SHA256SUMS` `68c1660f…` **13/13**；plan `2fcd101b…`：A15、rows127/k256/n512、fresh `run/temp/out/restore-a15-small-v3`、240/90、plan_not_executed；child argv 指向 `grouped-deepdive-35-cdc8324` 的 run_probe（103b9775）/adapter（d181b15a）；root identity **1330921/400000296**（78b95dc0，实扫 /proc）。stage-v7 `0e65c9e4…`：commit cdc8324、manifest eedd36c9（Linux **29/29** exact）、run_probe 103b9775、window 1f780bf8、binding 101660f8、adapter d181b15a；test_probe f6fe2c99、Linux **24/24 OK**（log 0b71b25a）；port 29531 FREE；v2 a9ea5fe2 numeric-incomplete、v1 99db4369 invalid。元数据一致；v3 可跑，但 §53 shape validation 仍未修，record 完整性最终必须补；GO 由 32，设备暂停。
