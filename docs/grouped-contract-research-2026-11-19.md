@@ -2382,3 +2382,38 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - `ctx+0xF3200`/`F3208`/`F31BC` 运行值（仅设备可读；当前不请求）。
 
 **状态**：root cause unresolved；本轮整合 abi15+PLT 并闭合“唯一 CheckRcv 站点”与 dispatch 负约束，无设备/快照/新 GO；候选封存。
+
+## 122. §121 站点/selector 口径降级（20 裁定）：时序相关 ≠ 已证
+
+**依据**：20 裁定“每 rank 仅 1 条 RcvMsg 且在 AicpuCcOpExe 之前”先作**时序相关证据**，不得单凭日志计数判第二 Check 未执行或唯一 caller；需 CFG、相同 param/isLast 对象与日志 guard/覆盖前提。abi16（`h11-abi16-worker31-20261120-1`）已授权 31 取完整 `RunRpcServerOneStageWait`；32 从 abi3 复核 35 的 F31BC selector 原始跨度与到 0x762228 的连接。无新取件/设备。
+
+### 122.1 撤回/降级
+
+- **“唯一 CheckRcv 站点：0x7c98b4 执行、0x7c9a14 未执行”降级为条件假设**。理由：
+  1. 298/305 条数与 `genTaskNum=1` 只对**同一 server 对象**的 CheckRcv 后处理成立；第二次 Check 若用不同 param/server 对象，`server+800` 未必同一字段。
+  2. 298 只证 `CheckRcvAddrMsg` 执行，**不能区分 5 个站点**（TwoStage×2、OneStage×2、Unfold×1）；OneStage 归属依赖 551 日志 + 执行路径假设。
+  3. 日志计数受 guard/去重/覆盖前提影响；“仅 1 条”不能单独当“第二次未执行”的证明（与 `NsRecovery` 0 命中同口径）。
+  4. 298 早于 AicpuCcOpExe 是**时间相关**，不是 worker CFG 顺序证明；+0x150..+0x80c 未覆盖。
+- **“dispatch 负约束（v&~2 != 1）已闭合”降级为条件 claim**：selector 跨度 0x761978–0x761994 不在 8d4a708 的 4 文件内，本包不能独立复核；35 的 abi15 claim 与既有 abi9 §68.2 指令记录一致，但“到 0x762228 的连接”待 32 用 abi3 复核。写为“若 selector→call 链成立，则 551 正日志 ⇒ v&~2 != 1（v 非 1/3）”。
+- **保留**：①0x762228 后 `cmp/ccmp` 是 BL 后返回码处理（w0 是 TryRun 返回值；w0==22→NsRecovery 块），不是入口 dispatch；②line121 有 `NeedAutoGenMsg` + `HcclCheckLogLevel(0,3)` 两个局部 gate，零命中三解释；③CheckRcv 后处理静态链（GenMsgByTaskParam → server+800++ → isLast → server+0x220+idx*4=1）在覆盖函数内成立。
+
+### 122.2 当前只能写条件式结论
+
+- **条件 A**（298 调用对象与 305 的 server+800 同一、guard 未变）：两 rank 各 1 条 298/305、genTaskNum=1 ⇒ 只观察到一次 CheckRcv 后处理；第二次调用未被日志证据覆盖——**不等于未执行**。
+- **条件 B**（298 与 AicpuCcOpExe 的时序在 worker CFG 中对应第一站点）：298 早于 AicpuCcOpExe ⇒ 与 OneStage 第一站点 0x7c98b4 一致；第二站点 0x7c9a14 未被日志证据覆盖。
+- **条件 C**（selector→0x762228 链成立）：551 正日志 ⇒ `v&~2 != 1`（v 非 1/3）；v 值未落盘。
+- 以上待 abi16 worker CFG + 32 selector 复核后再升级或否决。
+
+### 122.3 abi16 / 32 复核的接口
+
+- **abi16**：完整 `RunRpcServerOneStageWait`（两个 Check 的顺序/前驱/退出/完成通知），用于判定：第一站点后 `CheckAivIsEnd` 分支；AicpuCcOpExe 与第二站点的先后/是否同一轮；返回/尾部是否写 response+51 或调用 `PostMsg/WriteFinish/WriteTurnCnt`；完成通知与 AICORE `TurnWait` 的关系。
+- **32**：abi3 中 F31BC selector 的原始跨度、0x761978–0x761994 到 0x762228 的连接证据；不把 post-BL w0==22 当 selector。
+- 到包后：35 核入口/条件，32 只审新 claims，33 做**条件明确的站点判别**，不先写“已证”。
+
+### 122.4 不变项
+
+- 候选地址 `0x12c09bc20040..007f` / `rcvCnt 0x12c09bc20073`、j/T/notifyOff、worker 源码/`TurnWait` 仍是候选，与实际 task13 绑定分开。
+- 缺失 ack 结论不变：无 response 写证据；task13 3 min pending 仍是唯一正证。
+- 无新设备/GO；只现有日志 + 有限 CPU 静态读取。
+
+**状态**：root cause unresolved；§121 的站点/selector 结论已降级为条件式，待 abi16 + 32 复核。
