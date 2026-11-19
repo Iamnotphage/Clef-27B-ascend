@@ -158,3 +158,13 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **口径**：只使用官方 JSON benchmark 的 `decisions_per_second`（successful/wall_seconds）；journal span（首 start→末 finish）重算仅作交叉核对，末位差单注。
 - **证据**：[主记录](../docs/overnight-owner27-2026-11-19.md)、`logs/final-aa3e-20261119/`、提交 `934fff0` / `da5a6d1` / `dd2f513`；官方 `start.sh` 入口验证与最终 aa3e/s1 服务见该目录的入口记录（待官方入口 tuple 冻结后补链）。
 
+
+## 2026-11-19 Grouped Matmul+AllReduce 深挖（环境阻塞，负结果，不采用）
+
+为验证 MC2 融合是否可用于 MLP down+allreduce，按分层最小复现执行了官方 aclnn 样例控制臂（A12，FP16，单进程 HcclCommInitAll，group/workspace/descriptor 全部保活到同步之后）与 v4r1 torch 桥接对照。
+
+- **A12 结果**：同步调用返回 `retcode 507046`（`InnerCode 0x7030010`，stream synchronize timeout，10 s）；plog 明示 `stream_id=47`、`current task is type_name=KERNEL_AICORE`（device 0/1）。样例主线程忽略 `ACL_CHECK` 返回值仍 rc0，窗口按日志门正确判失败。
+- **根因证据**：TDT 启动阶段 `package_loader` 对 device 0/1 均记录 `current device chip:5 does not support package:mc2_server.tar.gz`（`cann-tsch-compat.tar.gz` 同样跳过）；AICPU 仅从 `libccl_kernel.so` 加载 KFC ResInit/SrvLaunch，`libmc2_server.so` 未加载 → MC2 KFC 任务无实现可执行 → AICORE 等待 → stream 47 pending；HCCL `DestroyAicpuComm` 50 s×2 超时。
+- **与 v4r1 的关系**：v4r1 全部保活假设（组名/workspace/descriptor 生命周期）与 A12 的官方实现对照均复现同一 stream 47 pending，说明挂起与 binding/生命周期/comm 创建方式无关；H1–H12 对挂起结案。
+- **结论**：GroupedMatMulAllReduce（MC2 AICPU/KFC 路径）在本机 A3（Ascend910_9382）/CANN 9.2.1 为**平台环境阻塞**，不可用作提交配置；A13（MatMulAllReduce）在 A3 本机 op-info 未注册，保留代码不执行。官方 aa3e/f810 默认、入口、指标与 CSV 均不变。
+- **证据**：`Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/`（a12-cell 10/10、mc2-support 5/5、a12-preflight 7/7、conclusion.json），提交 `655845b`、`e33d5f7`、`a02030a`、`cb90bc3`；监督/恢复链在真实失败下验证通过（官方 start.sh 恢复 aa3e-noop、root 1301295、五 PID/四检全过）。
