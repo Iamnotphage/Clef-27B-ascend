@@ -2300,3 +2300,41 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 到包后：35 核入口/条件，32 只审新 claims，33 并入 §117 表；当前不加设备/快照/GO。
 
 **状态**：root cause unresolved；本轮仅整合 §118 对象边界与窗口实参值，无新取件/设备；abi15 包未到前不推进设备问题。
+
+## 120. 2e8d4c0 入口身份整合：OneStageWait 是包装器，worker 未覆盖
+
+**包核**：commit `2e8d4c0`，`SHA256SUMS` 自哈希 `18e6338b…`，4/4 OK；源 ELF `2281deca…`（已核）。仅并包原件，无新取件/设备。
+
+### 120.1 已闭合的精确关系（原件窗口内）
+
+| 关系 | 证据 | 结论 |
+| --- | --- | --- |
+| `TryRunRpcServerOneStageWait(arg0=ctx, arg1=RpcServer&)` | x21=arg0@0x7ca244、x22=arg1@0x7ca248；x20=ctx+0xF31E0(DfxExtendInfo)；x23=ctx+0xF0000 | `round = *(u32*)(ctx+0xF3208)` 是**ctx 字段**（身份已证，不再只是候选） |
+| 包装器调用 worker | 0x7ca278 `bl AicpuKfcDeprecatedProcess::RunRpcServerOneStageWait@plt`；前置 0x7ca268 `bl DfxExtendInfoHelper::TryRestartTooManyTimes` | `TryRun...` 是**包装/重试层**；真正的 one-stage wait 在 `RunRpcServerOneStageWait`（size/body **不在本包**） |
+| `CheckRcvAddrMsg(AivAicpuOpParam*, j)` 的 this | x19=arg0(this)@0x7d8300、x20=arg1、w21=arg2；size 0x19c 全函数覆盖 | `*(*(this+816)+80)=1` 是 **server 对象字段**（身份已证） |
+| `RcvMsg(AivAicpuOpParam*, j, h)` 的 this | this=[sp,#40]@0x7d8010；param=[sp,#32]；w2=[sp,#28]；w3=[sp,#27] | line 121 的 `x6=[[sp,#40]+800]+1`、`x7=[[[sp,#40]+816]+80]` 表达式成立 |
+| line 121 零命中的原因 | gate 0x7d80cc `HcclCheckLogLevel(0,3)`；0x7d80ec `b.eq 0x7d8140` 跳过 | **是日志级别 gate（w1=0 vs 298/551 的 w1=1），不是 RcvMsg 未调用**；零命中解释为被抑制 |
+| 298/551 的 gate | 298：`HcclCheckLogLevel(1,3)` + `tbnz` 进日志块；551：`HcclCheckLogLevel(1,3)` + `tbz` 跳过 | 两条运行日志的发出与级别一致 |
+
+### 120.2 覆盖边界（不完整窗口，不外推）
+
+- `TryRunRpcServerOneStageWait` 函数体 **0x80c**，本包只覆盖 **entry..+0x150**；返回路径自 0x7ca338 起，**+0x150 之后未覆盖**。包装器内的 `[ctx+0xF3200]==3`/`TryRestart*` 谓词与 line553 块（fmt `0x14fa9e8`）只记“窗口内可见”，语义/方向未证。
+- `RunRpcServerOneStageWait`（worker，0x28ff00@plt）**完全未覆盖**；不得从包装器窗口推 worker 的 round 循环、返回路径或 response 写。
+- `CheckRcvAddrMsg(Aiv)` 覆盖全函数；`RcvMsg` 只覆盖序言+旧日志窗口，未扩全函数。
+- 包装器窗口内可见的调用只有 `TryRestartTooManyTimes` 与 `RunRpcServerOneStageWait`；**未见** `PostMsg/WriteFinish/WriteTurnCnt` 调用，但“未见”只限覆盖段，不推 worker 无写。
+
+### 120.3 对 §117 表/缺失 ack 的影响
+
+- AICPU 路径行更新为：`RunAicpuKfcSrvLaunch` → `RunAicpuRpcSrvLaunch` V1 → **`TryRunRpcServerOneStageWait`（包装器；line551；round=*(ctx+0xF3208)=0）** → **`RunRpcServerOneStageWait`（worker，未覆盖）** → `CheckRcvAddrMsg`（line298，`*(*(this+816)+80)=1`）→ `Addr Msg` → `AicpuCcOpExe`。
+- 注意：line551 在包装器**调用 worker 之前**，它只证明“包装器进入 OneStage 分支”，不证明 worker 的等待循环/返回；`Addr Msg`/`AicpuCcOpExe` 才是 worker 路径执行的证据（仍属间接）。
+- 缺失 ack 结论不变：包装器覆盖段无 response 写；**worker `RunRpcServerOneStageWait` 是 response 写点的主要未覆盖面**；workspace `y/jT` 与 `TurnWait` 仍是候选，task13 绑定仍只有“提交/展开 + 3 min pending”正证。
+- P1–P4/F 不变：P1/P4 未执行（OneStage 包装器非 TwoStage）；P2 未观测；F8/F9/F10 值仍缺；新增观察 `ctx+0xF3200==3`、line553 fmt `0x14fa9e8`，**不并入 F 表**，语义未证。
+
+### 120.4 下一阶段可关闭的确切问题（无设备）
+
+1. `RunRpcServerOneStageWait` worker 的调用表/尾部：是否调用 `PostMsg/WriteFinish/WriteTurnCnt` 或直接写 response+51；这是“缺失 rcvCnt 回写”能否升级的关键，需另一段静态片段（当前不请求，交 20 决定）。
+2. 包装器 `[ctx+0xF3200]==3` 与 `TryRestartTooManyTimes` 的方向/语义：能否解释 round/重试；仅静态窗口。
+3. Init `y/jT` 数据流与 response 地址（`0x12c09bc20040..007f` 候选）仍按候选保留，与实际 task13 绑定条件分开。
+4. 两 PLT stub `0x29c040`/`0x297570` 的 BL/B 补片段已由 20 交 31；本包不重复请求。
+
+**状态**：root cause unresolved；本轮仅整合入口身份与覆盖边界，无设备/快照/新 GO。
