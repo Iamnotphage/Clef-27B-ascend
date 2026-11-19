@@ -615,9 +615,9 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 
 32 finding 核：ed12a12（manifest 8e5846de、run_probe 8e308804、test 07e5a5b4）已实现 `relative_l2`（denominator=max(ref_norm,TINY)，0/0→0、zero_reference）和 `tensor_error_stats`（torch tensor：max/mean、ref/out abs max、nonzero/total、max_error index/position+值、max_rel_abs、relative_l2/denominator/zero_reference），但 **CPU 测试仍用 `list_error_stats` 或 `stats=lambda`**；`tensor_error_stats` 的真实 torch 张量路径未被直接执行。故生产字段的数学/边界仅由 list helper 证明，非生产实现证明；需 torch-available 直测（Linux venv 可跑）后重冻。A15 large c482f3f plan d1b02bcd/stage 已 superseded，ed12a12 预检 plan 34bfb3aa/stage39ffb333/identity1334752 元数据待最终冻；GO 应等 torch 直测重冻。A15 bench/生产仍由 32/35 范围；Grouped 研究不受影响；设备暂停。
 
-## 59. abi-preflight3（c1f5a41，SUMS 20fc3ed8）consumer 控制流与 rcvCnt 数据流
+## 59. consumer 控制流与 sendCnt/rcvCnt 数据流（abi-preflight3+4）
 
-**材料**：`libccl_kernel.so` SHA `2281deca…`（9.2.1 `aarch64-linux/devlib/device`）完整区间反汇编（ReadWorkMsg 53 行、CheckRcvWorkMsg 239、AddTaskForHcclMsg 968、AicpuCcOpExe 403、SrvLaunch 1090、RpcSrvLaunch 1480、RpcSrvLaunchV2 608）+ nm 部分符号。31 的日志 grep 结果：**仅有 2026-11-18 旧实验 6 个 plog 命中 `kernel_type=TS_AICPU_KERNEL_AICPU_KFC(5)`**（device 0/1、stream 13、task 6/28/3）；11-19 Grouped 各格无 `kernel_type=`、无 `ConstructAICpuSqeForDavinciTask`、无 `CUSTKFC/CUSTAICPU/cust_aicpu_sd`。这是现有归档中**唯一**观察到的 KFC kernel type，且为 5；但属另一实验，**不能**据此判定 Grouped 也是 5，也不能反证 type6 类比。
+**材料**：`libccl_kernel.so` SHA `2281deca…`（9.2.1 `aarch64-linux/devlib/device`）。包 3：`c1f5a41`、SUMS `20fc3ed8`（ReadWorkMsg 53 行、CheckRcvWorkMsg 239、AddTaskForHcclMsg 968、AicpuCcOpExe 403、SrvLaunch 1090、RpcSrvLaunch 1480、RpcSrvLaunchV2 608 + nm）；包 4：SUMS `d29e80eb`（RunRpcServerApi 967 行、GetSendCnt/GetRecvCnt 27 行、ResetSqBuff 296、WaitTaskFinish 119、DealReturnValue 299、nm 符号 36 行）。31 的日志 grep 结果：**仅有 2026-11-18 旧实验 6 个 plog 命中 `kernel_type=TS_AICPU_KERNEL_AICPU_KFC(5)`**（device 0/1、stream 13、task 6/28/3）；11-19 Grouped 各格无 `kernel_type=`、无 `ConstructAICpuSqeForDavinciTask`、无 `CUSTKFC/CUSTAICPU/cust_aicpu_sd`。这是现有归档中**唯一**观察到的 KFC kernel type，且为 5；但属另一实验，**不能**据此判定 Grouped 也是 5，也不能反证 type6 类比。
 
 ### 59.1 已证（静态反汇编事实）
 
