@@ -2029,3 +2029,22 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **操作注意（非阻断）**：若 begin 中途失败留下部分 attempt2，下一次 preflight 会因 fresh 门失败而拒绝执行（fail-closed）；需先保全/重命名该部分目录再重试，不得删除证据；包不自动清理。
 
 **状态**：32/35 最终 readiness PASS；旧 GO 挂起；等待 20 发绑定 `8ecf8f9` 的**续行许可**；当前无 window/stop/NPU/设备动作；root cause 待真正 v2 实测。
+
+## 113. v2 attempt2 科学证据判读（80c73d9 / 56a99868，21 文件）
+
+**执行事实**：
+- 单次 window（handle `h11-observe-v2-go-20261119-2`）：child 240 s 超时；两 rank result `api_returned=false/sync_returned=false/finite=false/pass=false`。
+- trace：`api_return`（workspace 16,777,216/run_id 1）→ `sync_enter` → cpp `launch_return rc0` → `handler_return cleanup_rc0/sync_rc0`；**无 `sync_return`** → 与既有 H11 Grouped 挂起同型。
+- window restore **未发起**：`restore_block=skipped/blocked`，`reason=blocked_probe_residual`；cleanup groups/members 两 rank（1354310/1354311）、killed=true、unknown/drift/singles 空；gate residual 同两 PID。SIGTERM 14:52:59.633，window 结束约 14:53:01（1.4–4.4 s 后仍观察为存活）；raw 无 gate 时刻 `/proc` state 原值，**不能断言 D-state/不可杀**；两 PID 稍后退出，精确时刻/state 未留。
+- 人工唯一 restore：root **1355077**/starttime 401718579、五 PID；**ppid=1355076（ssh 包装 bash，非 1，偏差已记）**；9/9 checks true、branch aa3e-noop、source 三段 aa3e；clients=[]；18143 listen、29531 FREE。
+- collect end **rc1**：`probe-temp` 目录 ABSENT（92 文件 + SUMS **52d145ee**）；probe-out/result/trace 在，raw 原样保留、未补造/未重跑。
+- rank env：44 samples/130 rows，三键非 MISSING（GLOBAL=0/PLOG/OWNER），覆盖 torchrun 1354277 + ranks 1354310/1354311 → **window→torchrun/rank 传播已证**；尚未证明 AICPU device 侧日志生效。
+
+**判读边界**：
+- **已证**：host 侧挂起签名（sync 不返回、launch/handler rc0）、env 到 launcher/Python/ranks 的传播。
+- **未证**：设备侧实际分派路径（API/TwoStage/MC2/CommKfc）、KFC 等待/协议；仓库包仅含 archive SUMS，**无 CANN/AICPU 日志原文**，正向标记尚未检查。
+- **cleanup**：本格两 rank 均被 signal（unknown/drift 空），gate 残留是 signal 后有限窗口内仍存活；更接近 exit-delay/采样竞态，**不是** unknown/drift 未 signal 的结构缺口；D-state 未证。该问题属 harness 恢复门，不是算子根因证据。
+- **缺测口径**：无标记/日志原文只记缺测，不排除任何分派路径。
+
+**下一最小只读请求（31，一次合并）**：从远端 attempt2 archive 92 文件 grep 并按文件/时间/device/rank 回传命中（无命中则明确 0）：
+`start to read the`、`AicpuKfcRpcServer::Init addr`、`reset valid value`、`ReadValidMsg[`、`ReadValidMsg timeout 6s`、`Check msg equal failed`、`Post finishedTurnCnt`、`Run rpc error`、`NsRecovery][MC2`、`KFCtaskAndTiling`、`AivAicpuOpParam`、`RunAicpuKfcSrvLaunch`、`ReadAddrMsg`、`TwoStage`、`PostMsg`、`507046`、`stream_id=47`、`task_id=`。若命中，复制对应 plog/device 文件入证据；不新增运行/开关/设备。
