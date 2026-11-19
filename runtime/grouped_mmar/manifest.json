@@ -77,8 +77,8 @@
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "249926169660d78be61789a8de4a9ca9e5cefcde39b501ab64abc74d516c34f5",
-      "bytes": 21667
+      "sha256": "637fabbaa901abb703e1f6b6a9c5529a1c57fa736bb177894300571ce3104049",
+      "bytes": 22298
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -490,7 +490,7 @@
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
     "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer candidate 0x7d6838-50), abi-preflight8 SUMS d2a4043ba4d3b13e4e7254fe5c31d2f93c7e229dbd6b260fe3e790aba290fa79 (PostMsg windows), abi-preflight9 SUMS 809265364caa52ce0114bcce089d5bdd7f7c33278cb0f384f4fd741a0c99a7a9 (correction plus getters/Init4/ctx windows), abi-preflight3 disasm-RpcSrvLaunch.txt SHA d92fee9d517c178fc7b9513cfff3249334df29bd173df429d6c66134e25c95dc, libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "249926169660d78be61789a8de4a9ca9e5cefcde39b501ab64abc74d516c34f5",
+    "design_sha256": "637fabbaa901abb703e1f6b6a9c5529a1c57fa736bb177894300571ce3104049",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",

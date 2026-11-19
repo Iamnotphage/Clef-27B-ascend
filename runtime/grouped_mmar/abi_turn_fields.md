@@ -262,9 +262,18 @@ result matches.
   0x761990 b.ne 0x762228; 0x76198c mov x0,x28; 0x761994 bl RunRpcServerTwoStageWait`
   with `x1 = 0x191fd10` (0x76197c/0x761980). So TwoStageWait is taken iff
   `(v & ~2) == 1`, i.e. v in {1,3}; whether Grouped's value hits that is 33's
-  handshake graph. The writers of 12732 are a static initializer
-  (`0x2ea7b8 str w8=9,[x1,#12732]`) and the `CopyCtxInfo` field copy
-  (`0x7edfc0 str w5,[x7,#12732]` from `[x23,#12732]`); no increment site.
+  handshake graph. The writers of 12732 are (a) a `CopyCtxInfo` field copy
+  proven by the abi9 raw window: `0x7edfbc ldr w5,[x23,#12732]` then
+  `0x7edfc0 str w5,[x7,#12732]` — source is its argument ctx, target a table
+  context derived from x22; the only direct caller is `0x7ba9f0` in
+  `AicpuKfcProcess::AicpuRpcResInit` (x0=x20, 0x7ba9ec), and object identity
+  between these contexts and ctx_R is unproven; and (b) a static-initializer
+  claim at `0x2ea7b8 str w8(=9),[x1,#12732]` with x1 = the static global
+  0x22ce888+0xF0000 (not ctx_R), which is **summary-only in the delivered
+  archives**: the abi10 `static-init-owner.txt` window covers 0x2ea700-0x2ea710
+  and does not contain 0x2ea7b8, so this instruction is not raw-verified here.
+  No increment site is observed; the runtime value of ctx_R+0xF31BC remains
+  unproven.
 - ReadAddrMsg has the same base pattern but a different field:
   `x23 = AicpuGetComContext()` (0x7d8ba0/0x7d8bb4), `x27 = x23+0xF0000`
   (0x7d8bec), `0x7d8c00 ldr x0,[x27,#12784]` = ctx+0xF31F0 (8 B, compared with 1).
