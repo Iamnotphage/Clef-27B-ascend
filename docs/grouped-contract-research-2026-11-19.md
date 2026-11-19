@@ -2013,3 +2013,19 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **不变**：plan `9c2936c2`、identity 1347086/401212026、helper `68dc9e2c`、冻结产品 e38b541/8e308804/1f780bf8/101660f8/d181b15a；旧 archive/prestart1 原字节保全；未启动 window/stop/torchrun，无设备动作。
 
 **状态**：C/D 已闭；32/35 只审 `8ecf8f9` 增量，PASS 后由 20 发绑定新包的续行；**无新 GO/设备**；root cause 待真正 v2 实测。
+
+## 112. v2 最终 readiness（8ecf8f9 / bed3a6e6；32+35 PASS；无 GO）
+
+**固定包**：commit `8ecf8f9`、SUMS `bed3a6e6…`（24 文件，24/24 OK）；相对 `3c4bdc5` 仅 5 文件（README/SUMS/collect-raw/preflight/validation-prepared-pass）。
+
+**C（ARCH 统一）PASS**：collect 默认 `ARCH=…attempt2`；wrapper begin/模板 end/README end 均显式 attempt2；README 明确旧 `archive-h11-observe-v2` 为 prestart1 证据、勿动。
+
+**D（attempt2 fresh）PASS**：preflight 在 `--execute` 前要求 attempt2 **ABSENT**；validation-prepared 含 `PASS attempt2 archive fresh (absent)`、`RESULT: ALL PASS`、`rescan_rc=0`。
+
+**顺序/硬门（20 裁定）**：`env/caller → preflight → collect begin(exit6) → exec window`；begin 在任何 stop 前，失败绝不进入 stop/window；无需互换 preflight/begin。
+
+**冻结项（32/35 一致）**：plan `9c2936c2`、helper `68dc9e2c`、root-identity `84c9edb2`、env-sidecar `2474b487`、window-execute argv `8d965cb7`、产品 e38b541/8e308804/1f780bf8/101660f8/d181b15a 均未变；旧 canonical archive 未删未改、prestart1 快照保留。
+
+**操作注意（非阻断）**：若 begin 中途失败留下部分 attempt2，下一次 preflight 会因 fresh 门失败而拒绝执行（fail-closed）；需先保全/重命名该部分目录再重试，不得删除证据；包不自动清理。
+
+**状态**：32/35 最终 readiness PASS；旧 GO 挂起；等待 20 发绑定 `8ecf8f9` 的**续行许可**；当前无 window/stop/NPU/设备动作；root cause 待真正 v2 实测。
