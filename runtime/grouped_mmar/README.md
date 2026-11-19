@@ -9,12 +9,12 @@
 | 顺序 | 臂 | 内容 | 成功判据 |
 | --- | --- | --- | --- |
 | 1 | A8 | 普通 `matmul + dist.all_reduce + sync` | 两 rank sync 返回 + finite |
-| 2 | A12 | 33 冻结官方 A3 样例，原字节 FP16，`./main 2 1 0,1` | 进程 0、两 rank 线程 sync 返回、无挂起 |
+| 2 | A12 | 官方样例源原字节 FP16（`6c1a90ab…`），**派生 CMake 构建**（官方 CMakeLists 未随包），`./main 2 1 0,1` | 进程 0、两 rank 线程 sync 返回、无挂起（无数值参考答案） |
 | 3 | A0 | 旧桥接风格 + 最小 M=128（局部 group string、handler 后立即 close） | API 返回 + 两 rank sync 返回 + finite |
 | 4 | H1 | **prepare 前**创建同一 `std::string` 对象、直接传其 `c_str`、保活到 sync 后 | 同上；trace 记录 group object/data 指针 |
 | 5 | H2 | workspace tensor 保活到 sync 后，release 仅在 sync 返回后 | 同上 |
 
-A12 是通路正对照：它与旧桥接有 C1–C5 多个差异，**不能单凭其通过宣布单因根因**。
+A12 是通路正对照：源字节官方、构建为派生（`a12/BUILD_NOTE.md`）；它与旧桥接有 C1–C5 多个差异，**不能单凭其通过宣布单因根因**；成功仅是 liveness（API rc0 + sync 返回）。
 第二批（按结果增量）：H3 描述符保活、H4/H5 线程/context/stream 直接 launch、H6 零初始化、H7 M sweep；
 H11（executor/tiling）已降级——旧 binding 从未销毁 executor，tiling 缓冲不是“被释放”，除非头文件证明
 executor 引用调用方描述符（则并入 H3）。
@@ -104,7 +104,7 @@ torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.
 ## 7. 清理与 aa3e 恢复交接（31 唯一执行）
 
 - 每臂 fresh 进程；前置 snapshot 用 31 的 `snapshot-and-restore-spec.json`
-  （`39e52eb5…`，恢复 spec 现为 `76355dab…`）；32 已核 snapshot PASS。
+  （`39e52eb5…`，恢复 spec 新 SHA `224b0036…`；正常成功仅 `branch=aa3e-noop`）；32 已核 snapshot PASS。
 - routine finally 必须用**官方 start.sh** 恢复 **aa3e/s1**：`record branch=aa3e-noop`、tree 前后
   `aa3e1758…`；不得调用旧 5c/`restore_prod` 自动 revert f810。
 - `f810->fused` 只允许作为已知源异常的救援路径：必须记录漂移前后 SHA/trace/plog/时间戳，该格判隔离
@@ -114,9 +114,10 @@ torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.
 
 ## 8. 输入与来源
 
-- 33 契约：C1–C6、A12 冻结样例 `6c1a90ab…`（commit `f5703e4`）、矩阵 v2；A12 样例文档自相矛盾
-  已记录，不作支持性裁决。
-- 31：snapshot `39e52eb5…`、restore-spec `76355dab…`、API pack `/tmp/aa3e-grouped-api-pack-20261119`
-  （tar `685d9a33…`，64 文件）；本机 9.2.1 头/库/op-info 以该包为准。
+- 33 契约：C1–C6、A12 冻结样例 `6c1a90ab…`（commit `f5703e4`）、矩阵 v2、支持矩阵研究
+  （repo commit `2616628`）；A12 样例文档自相矛盾已记录，不作支持性裁决。
+- 31：snapshot `39e52eb5…`、restore-spec `224b0036…`、API pack `/tmp/aa3e-grouped-api-pack-20261119`
+  （权威清单 `ecffc1ff…`，63 payload 63/63 OK；tar `f40628b7…` 仅派生）；A12 设备构建参考
+  glue `22edb89f…`、binary `37929ec4…`、stage manifest `1d529ca8…`。
 - 32：首包判据、snapshot/restore 收紧、A12 不可单独作为 C1 单因证据。
 - 本包不 import torch/NPU 做 CPU 测试；CPU 测试只验证控制流/资源生命周期/超时/元数据。

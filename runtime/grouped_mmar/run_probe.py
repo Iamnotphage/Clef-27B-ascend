@@ -62,11 +62,12 @@ A12 = {
     'source': 'a12/test_aclnn_grouped_mat_mul_all_reduce.cpp',
     'source_sha256': '6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f',
     'source_commit': 'f5703e415b9be16a2af7ba85564c37414592fc03',
+    'build': 'derived CMake glue; official CMakeLists not supplied -> not an as-is official build',
     'compile': 'bash a12/compile_a12.sh <absolute-build-dir>',
     'run': 'bash a12/run_a12.sh <absolute-build-dir>/build/bin/main',
     'argv': ['2', '1', '0,1'],
-    'a12_expected': ['process exits 0', 'both rank threads return from the timed sync',
-                     'sample prints its own result', 'no hang inside 240 s'],
+    'a12_expected': ['API rc0', 'both rank threads return from the timed sync',
+                     'no hang inside 240 s (liveness only; no numeric reference)'],
     'note': ('FP16 original bytes; BF16 changes the bias dtype and is a derived arm, '
              'not the frozen A12 source'),
 }

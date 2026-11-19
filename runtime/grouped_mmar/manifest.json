@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "f5b6c347a206ac144b3953860a110099f00b463c4d513ce07d7ed2d314c4d7f4",
-      "bytes": 18853
+      "sha256": "b27a954eeac14934bd43424f1dfc49088961b915be1b5f202c62ef39fc56e06d",
+      "bytes": 18951
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -52,11 +52,11 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "248c4b55814c19be58a73397a789345e8c20a79d8e5fcd8b3688f84df770b4d3",
-      "bytes": 8911
+      "sha256": "375c1673184fa9f87e906cdf3f80702af3630007db9b06ba75f26108c0b046e2",
+      "bytes": 9303
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
-      "role": "A12 frozen official sample (byte copy)",
+      "role": "A12 official sample source (byte copy)",
       "sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
       "bytes": 21723
     },
@@ -85,6 +85,11 @@
       "sha256": "c591f0e34f223c4ee4acea0dc3aaa9b90ebdb59f19da61090de14108236e979d",
       "bytes": 8438
     },
+    "runtime/grouped_mmar/a12/BUILD_NOTE.md": {
+      "role": "A12 derived-build labeling and semantics",
+      "sha256": "d606aa224396f48b6197575306309ecca1c9c1fa671fbfbef7894e521e51d36e",
+      "bytes": 1254
+    },
     "runtime/grouped_mmar/a12/compile_a12.sh": {
       "role": "A12 CMake build wrapper",
       "sha256": "f86c5b50e8382eb5bd46dfa7c8db81c6e89dbd885bf32f6a807e6d6f210e3a9f",
@@ -105,14 +110,20 @@
     },
     {
       "arm": "A12",
-      "source": "a12/test_aclnn_grouped_mat_mul_all_reduce.cpp",
-      "sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "build": "derived CMake glue; official CMakeLists not supplied -> NOT as-is official build",
       "argv": [
         "2",
         "1",
         "0,1"
       ],
-      "success": "process 0 + both rank threads sync returned; gap vs old bridge is multi-delta path control only"
+      "success": "API rc0 + both rank threads sync returned (liveness only; no numeric reference)",
+      "device_build_reference": {
+        "stage_manifest": "088f05f6b249d3c5ccb82132edfecc1ba93a5880db30eebd7bdb3d2e6fbf5e00",
+        "glue": "22edb89f",
+        "binary": "37929ec4",
+        "ldd_missing": 0
+      }
     },
     {
       "arm": "A0",
@@ -163,15 +174,15 @@
     "release rc!=0"
   ],
   "recovery": {
-    "routine": "official start.sh to aa3e/s1; record branch=aa3e-noop; tree stays aa3e1758; four checks/env/identity/two workers recorded",
-    "f810_to_fused": "rescue only for known source anomaly: record drift before/after SHA, trace/plog/time, mark the cell isolation-failed, report 20/32, then authorized aa3e restore; never silent success",
+    "routine": "official start.sh to aa3e/s1; normal success requires branch == aa3e-noop; tree stays aa3e1758; four checks/env/identity/two workers recorded",
+    "f810_to_fused": "rescue only for known source anomaly: record drift before/after SHA, trace/plog/time, mark the cell isolation-failed, report 20/32, then authorized aa3e restore; never satisfies the success gate",
     "unknown": "stop and report; do not guess or edit source",
     "forbidden": "old 5c/restore_prod auto-revert to f810; service tree/guard/vendor writes"
   },
   "inputs": {
-    "33": "C1-C6, matrix v2, A12 frozen sample 6c1a90ab (commit f5703e4)",
-    "31": "snapshot 39e52eb5..., restore-spec 76355dab..., API pack tar 685d9a33... (64 files)",
-    "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof"
+    "33": "C1-C6, matrix v2, support research commits 2616628/334c67f, A12 frozen source 6c1a90ab (commit f5703e4)",
+    "31": "snapshot 39e52eb5..., restore-spec 224b0036..., API pack authoritative PACK_SHA256SUMS ecffc1ff (63/63), A12 stage manifest 088f05f6...",
+    "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof, derived-build labeling"
   },
   "cpu_tests": {
     "suite": "runtime/grouped_mmar/test_probe_cpu.py",
