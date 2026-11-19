@@ -62,13 +62,13 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "52c10dce1a001980faa2810b59e8bfb6f7eedb992a385b9ae7583262e81f4354",
-      "bytes": 46518
+      "sha256": "b77530bc2827c26898437d237c43eae13566c43f80dfe73a8ed7ec75306c2ebe",
+      "bytes": 47325
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (36; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, Linux real-process fixtures)",
-      "sha256": "56185a93967ca24dcd44fb5365d233ea28343a700a28dd2cb2f3b9342b43460a",
-      "bytes": 35644
+      "role": "CPU window control-flow tests (38; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, Linux real-process fixtures)",
+      "sha256": "6f6a3cc91f540e208dd5fed007b435feaa3c7b3169fdd9c413eb675f1898c92d",
+      "bytes": 38062
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "b85e6659d6e8c309b92a9ad35cc5a3728319582aa656f70af8fda7212b5caa72",
-      "bytes": 31422
+      "sha256": "f25dfef46fa214d3e78e0c9772f5954bb1018a10c8bcb23f6ce147e8d5de2786",
+      "bytes": 31788
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "18/18",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "36/36 (5 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "38/38 (6 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -423,7 +423,8 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "52c10dce", "test_supervised_window_cpu.py": "56185a93", "cpu": "63/63 (18+9+36; 5 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "b77530bc", "test_supervised_window_cpu.py": "6f6a3cc9", "cpu": "65/65 (18+9+38; 6 Linux-only skipped on macOS)"},
+    "subreaper_lifecycle": "before start_restore the window clears PR_SET_CHILD_SUBREAPER via begin_restore(); if clearing fails the restore is blocked and no second tree starts. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set, and to PID1 (not the window) after disabling, so the strict ppid1/pgid-self restore contract is reachable; the fixture is skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
       "outcome": "34/34 window tests OK on Linux, including 5 real-process cases; F2/F3 probes pass",
@@ -662,7 +663,8 @@
       ],
       "fixes": [
         "arm_output() keeps y for A14/other arms and crops the all-gathered matrix only for A15",
-        "wait_restored_root() retries the ppid1/pgid-self identity until a bounded timeout instead of failing immediately"
+        "wait_restored_root() retries the ppid1/pgid-self identity until a bounded timeout instead of failing immediately",
+        "begin_restore() clears PR_SET_CHILD_SUBREAPER before start_restore and blocks the restore if clearing fails, so the daemonized service reparents to PID1 and the strict identity contract is reachable"
       ],
       "service_manual": "root 1323589/start 399707126, ppid1/pgid/sid self, five PIDs, branch aa3e-noop, OPP9 7b79c5db, LD12 ca27dbb7, health/info/text/image/clients all pass",
       "evidence": "a14-large-cell SUMS 19/19 (a560be11, 31 commit 4372c7f)",

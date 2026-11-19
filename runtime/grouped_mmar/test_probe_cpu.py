@@ -119,6 +119,11 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(run_probe.arm_output('A14', 'y'), 'y')
         self.assertEqual(run_probe.arm_output('A11', 'y'), 'y')
         self.assertEqual(run_probe.arm_output('A15', 'y', [0, 1, 2, 3], 2), [0, 1])
+        # A14 keeps the MRS output; A15 output and its reference both cover all rows.
+        y = list(range(8))
+        full = list(range(16))
+        self.assertEqual(len(run_probe.arm_output('A14', y)), 8)
+        self.assertEqual(len(run_probe.arm_output('A15', y, full, 16)), 16)
 
     def test_out_dir_shared_by_two_ranks(self):
         import threading

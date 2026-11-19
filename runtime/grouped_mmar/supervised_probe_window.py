@@ -105,15 +105,38 @@ def atomic_write_json(path, value):
     os.replace(temp, path)
 
 
-def enable_subreaper():
-    """Linux only: orphaned descendants reparent to this window, not to init."""
-    if not sys.platform.startswith('linux'):
-        return False
+def _prctl_subreaper(enabled):
     try:
         libc = ctypes.CDLL(None, use_errno=True)
-        return libc.prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
+        return libc.prctl(36, 1 if enabled else 0, 0, 0, 0) == 0
     except Exception:  # noqa: BLE001
         return False
+
+
+def enable_subreaper():
+    """Linux only: make adopted probe orphans reparent to this window."""
+    if not sys.platform.startswith('linux'):
+        return False
+    return _prctl_subreaper(True)
+
+
+def disable_subreaper():
+    """Restore the pre-cell subreaper state before launching the official restore."""
+    if not sys.platform.startswith('linux'):
+        return True  # nothing to toggle
+    return _prctl_subreaper(False)
+
+
+def begin_restore(plan, run_dir, result):
+    """Clear the subreaper flag first so daemonized service children reparent to PID 1."""
+    if not disable_subreaper():
+        result['error'] = ('blocked_subreaper_restore: cannot restore the pre-cell '
+                           'subreaper state')
+        result['restore_blocked'] = True
+        return False
+    result['subreaper_restored'] = True
+    start_restore(plan, run_dir, result)
+    return True
 
 
 def _scan_direct():
@@ -972,7 +995,8 @@ def execute(a, plan):
             result['recovery_gate'] = {'allow': needs_restore, 'reason': reason, **context}
         if needs_restore:
             try:
-                start_restore(plan, run_dir, result)
+                if not begin_restore(plan, run_dir, result):
+                    raise RuntimeError(result['error'])
                 health = wait_health(a, result)
                 manifest_path = Path(a.restore_output) / 'launch-manifest.json'
                 if not manifest_path.is_file():

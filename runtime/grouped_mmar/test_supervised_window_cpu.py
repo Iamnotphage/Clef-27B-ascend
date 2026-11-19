@@ -128,6 +128,15 @@ class WindowTest(unittest.TestCase):
             self.assertIn(arm, plan['child_argv'])
             self.assertIn('--adapter', plan['child_argv'])
 
+    def test_begin_restore_blocked_when_subreaper_not_restored(self):
+        result = {}
+        with mock.patch.object(win, 'disable_subreaper', return_value=False), \
+                mock.patch.object(win, 'start_restore') as start_mock:
+            self.assertFalse(win.begin_restore({}, Path('/tmp'), result))
+        start_mock.assert_not_called()
+        self.assertTrue(result['restore_blocked'])
+        self.assertIn('blocked_subreaper_restore', result['error'])
+
     def test_restored_root_waits_for_wrapper_exit(self):
         wrapper = {'pid': 7, 'ppid': 8, 'pgid': 7, 'state': 'S',
                    'starttime': '1', 'boot_id': 'b', 'cmdline': []}
@@ -693,6 +702,63 @@ class AttributedProcessTest(unittest.TestCase):
             if parent.poll() is None:
                 parent.kill()
                 parent.wait(timeout=5)
+
+    def test_daemon_reparents_to_window_only_while_subreaper(self):
+        self.assertTrue(win.enable_subreaper())
+        code = (
+            'import os, sys, time\n'
+            'if os.fork() == 0:\n'
+            '    os.setsid()\n'
+            '    if os.fork() == 0:\n'
+            '        print(os.getpid(), flush=True)\n'
+            '        time.sleep(60)\n'
+            '        os._exit(0)\n'
+            '    os._exit(0)\n'
+            'sys.exit(0)\n')
+
+        def spawn():
+            proc = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
+                                    text=True, start_new_session=True)
+            pid = int(proc.stdout.readline().strip())
+            proc.wait(timeout=10)
+            return pid
+
+        first = spawn()
+        try:
+            deadline = time.time() + 5
+            live = None
+            while time.time() < deadline:
+                live = win._read_proc(first)
+                if live:
+                    break
+                time.sleep(0.05)
+            self.assertIsNotNone(live)
+            self.assertEqual(live['ppid'], os.getpid())
+        finally:
+            try:
+                os.killpg(first, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            win._reap([{'pid': first}])
+
+        self.assertTrue(win.disable_subreaper())
+        second = spawn()
+        try:
+            deadline = time.time() + 5
+            live = None
+            while time.time() < deadline:
+                live = win._read_proc(second)
+                if live and live['ppid'] != os.getpid():
+                    break
+                time.sleep(0.05)
+            self.assertIsNotNone(live)
+            self.assertNotEqual(live['ppid'], os.getpid())
+        finally:
+            try:
+                os.killpg(second, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            win.enable_subreaper()
 
     def test_protected_identity_is_not_signaled(self):
         sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
