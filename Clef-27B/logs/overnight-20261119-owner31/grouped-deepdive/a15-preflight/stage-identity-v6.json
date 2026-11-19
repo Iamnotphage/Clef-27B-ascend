@@ -1,0 +1,18 @@
+{
+ "schema": "a15-stage-identity/6",
+ "commit": "0146129",
+ "manifest_sha256": "47976c764f60c1c4107c6ce6a254a1b756b9299290da3e673725a682b1bbcaf9",
+ "manifest_files_verified": "29/29 exact on the Linux stage",
+ "run_probe_sha256": "7afd7799ac89fba8533ad2780799bb482c6d70e894747011d2407a8dba169c71",
+ "run_probe_fix": "a15_flow uses explicit k; pad ones((m_pad,k)); run_mrs(128) -> sync -> all_gather(128) -> reference matmul(127)+all_reduce -> crop 127",
+ "window_sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
+ "window_note": "unchanged; Linux 40 not rerun; adapter not rebuilt",
+ "binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+ "probe_adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+ "tests": {"test_probe": "4418a835", "linux_probe_run": "22/22 OK (log 3429b5f9)", "test_window": "228150e4 (unchanged; not rerun)", "symtable_f821": "old line negative control reports (execute,k); current passes"},
+ "preconditions": {"master_port_29531": "free at plan time (ss -ltn)"},
+ "root_identity": {"pid": 1328734, "starttime": "399924959", "file": "root-identity-1328734.json", "sha256": "8ecd96b6ae12d20c3072a7bdeac1e5b1aa69f1b3c3d2d2047bfef38955d9a112"},
+ "plan": {"file": "plan-a15-small-v2.json", "sha256": "a9ea5fe272734c19bc25c6321cfe2049871cc00dcfbcadaee7dd3780dc69baef", "runner": "grouped-deepdive-35-0146129 run_probe 7afd7799", "adapter": "d181b15a", "rows": 127, "k": 256, "n": 512, "out": "probe-out-a15-small-v2", "status": "plan_not_executed"},
+ "prior": {"plan_v1_99db4369": "invalid: run_probe NameError k; restore root 1328734", "plan_v2_22346ec_99abe352": "superseded by final test-only freeze 0146129 (runtime bytes identical)"},
+ "status": "A15 v2 preflight ready on final freeze; awaiting 32 GO"
+}
