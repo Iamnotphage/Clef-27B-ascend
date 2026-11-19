@@ -1790,8 +1790,8 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 ## 100. v2 85ab351/b5cec871 复审：A/B/C 阻断 + README 索引缺文件
 
 **32/35 阻断**：
-- **A（caller-env 假阳性）**：preflight torchrun 段只查嵌套自建 env，不查调用 shell PATH；裸 shell 可 ALL PASS→window 裸 torchrun 失败（v1 复现）。需 caller `command -v` fail-closed 或单一 wrapper。
-- **B（rank-env 硬编码 v1）**：`rank-env-read.py` 同 blob `a4b76676`，但 `RUN = os.path.join(CELL, "run-h11-observe-v1")`、默认 CELL 为 v1；传 v2 CELL 仍读 v1 run；v2 README 只写“同 blob”，无 v2 调用。需 v2 helper 副本/`--run`/env 覆盖（RUN 由 CELL 派生为 `run-h11-observe-v2`）+ README 明确命令；若改 blob 需重新验证逻辑（35 的 18/18 仅对 a4b76676）。
+- **A（caller-env 假阳性，复核后归程序性门）**：preflight torchrun 段只查嵌套自建 env，不查调用 shell PATH；裸 shell 可 ALL PASS→window 裸 torchrun 失败（v1 复现）。v2 模板 step4 已有同 shell 手工 `command -v torchrun`+SHA+`--help`，严格按模板视为**程序性 PASS**；脚本级 caller fail-closed 非必须（31 冻结），仅需把自建段标 recipe。
+- **B（rank-env 硬编码 v1，真实阻断）**：`rank-env-read.py` 同 blob `a4b76676`，但 `RUN = os.path.join(CELL, "run-h11-observe-v1")`、默认 CELL 为 v1；**仅传 v2 CELL 也不够**——仍会读 `cell-v2/run-h11-observe-v1`（不存在）→ 空行集 rc0 = 缺测。需 v2 helper 副本（RUN 改 `run-h11-observe-v2`，逻辑不变可复用 18/18）或 `--run` 覆盖 + README/模板给**精确 v2 调用**。
 - **C（collect-raw 标题/注释 v1）**：`collect-raw.sh` 标题仍 `H11-observe-v1`、注释源 SHA 为 v1；功能路径已 v2。需改标题/注释到 v2。
 
 **D（33 新增，README 索引缺文件）**：v2 `README.txt` 文件索引列出 `run-h11-observe-v2.sh`（单一 wrapper）、`validation-caller-bare-fail.txt`、`validation-prepared-pass.txt`，但**包内 19 文件不含这三项**，SUMS 也未覆盖。要么补齐文件并纳入 SUMS，要么删除索引引用；否则包自描述与内容不一致。
@@ -1802,3 +1802,15 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 3. C：collect-raw 标题/注释改 v2。
 4. D：补齐 README 索引的 wrapper/validation 文件或删除引用；重生成 SUMS 覆盖全部索引文件。
 - 完成后 commit/push，32/35 复审；**修好前 v2 未闭、无 GO/设备**。
+
+### 100.1 rank-env v2 调用配置（35/32 合并）
+
+- v2 包 README/模板/collect/restore 与计划文本**均无 `rank-env-read.py` 的实际调用命令**，只有文件描述；helper 默认 CELL 为 v1、RUN 硬编码 `run-h11-observe-v1`。
+- 若不带参数运行：读 v1 的 `run-h11-observe-v1/descendants.json`（当前 ABSENT）→ 空行集 rc0，**属缺测，不是 v2 证据**；若 v1 有残留还可能读错 cell。
+- 最小修复（doc/命令层，31）：
+  1. 提供 v2 helper 副本（`RUN` 改为 `run-h11-observe-v2`，其余逻辑不变；18/18 替身仍适用）或加 `--run`/env 覆盖；
+  2. v2 README/模板/计划写入精确调用，例如：
+     `/workspace/yangchen/venvs/clef-py312/bin/python -I <execution-v2>/rank-env-read.py /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2 --watch 180`
+     并注明必须在 ranks 存活期运行、读取 v2 的 `run-h11-observe-v2/descendants.json`，不得依赖默认路径；
+  3. 同时修 C（collect-raw 标题/注释 v1）与 D（README 索引 wrapper/validation 文件缺失/入 SUMS）。
+- helper 源 SHA `a4b76676` 不变、18/18 替身有效；阻断仅在 v2 操作步骤的调用配置。修 B+C+D 后重生成 SUMS/commit，32/35 复审；无 GO/设备。
