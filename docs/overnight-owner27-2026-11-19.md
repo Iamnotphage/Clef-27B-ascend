@@ -166,3 +166,34 @@ v3 SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`，test
 历史生产baseline与既往验收数据按其原日期、来源和配置保留，见[2026-11-17历史汇总](final-summary-2026-11-17.md)及本报告引用的既有原件；本轮状态为未完成验收。执行冻件与指标CSV保持原样，本次归档仅更新本报告、连接证据和证据manifest。
 
 整体任务保留未完成。当前继续停止重连与新窗口；平台入口恢复后，唯一优先动作是只读同一 `/workspace/yangchen/logs/joint-fused-source-control-27-ebca-first` 的ab/raw/8stop/restore/envcompare及精确现场。发现未恢复或异常时先将实际身份与原件交23；必要恢复沿已核授权、原身份门和严格清理/恢复检查执行。恢复完成须由fresh原件证明。
+
+## 2026-11-19 owner31 续跑收口：采用 aa3eON 为最终提交默认
+
+连接恢复后由 31 独占执行，完成 ebca 原 run 实读（phase=finished、rc0、四轮 8 臂 192 raw 行）、rstd8 C24 timing（4/4 轮更慢，不采纳）、smallQ A/D 直接对照（core 4/4 快、完整 head 4/4 慢，默认 off）、Grouped29 v4r1 一次诊断（240 s 超时、无 candidate raw）、f810 正式 S1/S2/ERQA 全链与候选 aa3eON 同协议 S1 及 typed S2/ERQA 三格，最后 clean 恢复。20 于全部结果与 32/33 独立核验后决定 **采用 aa3eON 作为最终提交默认**。
+
+采用理由（同窗口、同协议）：
+
+| 指标 | f810（对照） | aa3eON（采用） | 差 |
+| --- | ---: | ---: | ---: |
+| S1 p95 中位（3 轮，ms） | 156.4051（156.144–157.513） | 156.4417（156.116–156.888） | +0.0366（逐轮 2 快 1 慢） |
+| S1 吞吐（dec/s） | 8.5063/8.8317/8.9059 | 8.5184/8.8209/8.7227 | 中性 |
+| S2 B8 C8 / C16（dec/s） | 14.7148 / 16.8259 | 14.7832 / 16.9037 | +0.47% / +0.46% |
+| S2 B16 C32 / C64（dec/s） | 17.5432 / 17.5996 | 17.6572 / 17.7047 | +0.65% / +0.60% |
+| ERQA accuracy | 216/400 = 0.54 | 216/400 = 0.54 | 0 题（acceptance 字节相同） |
+| OD Capability（各点） | 74.2476 / 74.2790 / 73.8473 / 74.1398 / 74.1412 | 74.2477 / 74.2531 / 73.8250 / 74.1469 / 74.1418 | 全部 2PP 内 |
+
+- 质量：aa3e 各点相对 11-13 基线最大 Δ 为 B16 C64 Cap −0.2837 pp、C16 −0.6005 pp（f810 同点），全部远在 2PP 内；ERQA Δ0。
+- 性能：S1 中性；S2 四点单窗口一致小幅正（吞吐 +0.46~0.65%、p95 −0.24~−0.49%）；ERQA 同值。
+- 上报口径：**只使用官方 JSON benchmark 的 `decisions_per_second`（=successful/wall_seconds）**；journal span（首 start→末 finish）重算仅作交叉核对，末位差单注，不另立指标，也不拼 f810 的 S1 数字。最终 profile 全部标注 aa3e：S1=156.4417、S2=17.7047@B16C64、OD/ERQA 同版本。
+
+已关闭/透明保留项：
+
+- N1/smallQ 线关闭：rstd8 C24 timing 4/4 轮更慢（配对中位 speedup 0.8606/0.8151，不采纳）；smallQ A/D core 4/4 快、完整 head 4/4 慢（+0.125~+0.152 ms），保持默认 off，无后续 D 候选。
+- Grouped29 v4r1：一次诊断 240 s 超时（final_sync_enter 后设备完成等待未返回），无 candidate raw；三个 unknown 组员与 leader 均已 gone、无新增 signal，已按已核 clean restore 恢复（label cec60d1c）并四检闭合；240 s 不延长、不重试。
+- 34 越界时间线：00:57:51Z 其 CPU 测试误把生产 head 切至 aa3e 并立即 revert（报告 f7a2e6d1…，state_before=postimage→preimage，ready=true）；我的候选 source-deploy 记录（01:00:13Z，state_before=preimage、sha256_before=f8101b98）证明回退先于正式候选切源；f810 基线 S1 测量（00:22–00:35Z）早于事件，测量未被污染。
+- 候选 S1 两次失败：v1 为 `--repo` 参数缺少 staging 文件（未停服）；v2 为 entry `ab.state` 未初始化（停服后失败，entry recovery 回 source/guard、无 signal）；均精确 clean 恢复（c4a4a6af/be55b18c）后由修复版 00e3bdb8 成功。
+- 环境继承事实：5c 窗口 restore 会继承 prod_env（重复链），不得用于最终验收；最终验收一律走 phase/typed clean 两键父环境，OPP 9/LD 12 与冻结 expected 逐字节。
+
+本轮证据：`Clef-27B/logs/overnight-20261119-owner31/`（pre-window、rstd8、smallq-ad、grouped29、grouped-recovery-and-candidate-attempts、s1-final-f810、phase-s1-first-clean、final-chain-results、typed-chain-results）；提交 `934fff0`（f810 全链）、`da5a6d1`（typed 链）。独立核验：32（生命周期/性能/raw/恢复）、33（逐 index 逐题质量）。
+
+最终服务目标：官方 `start.sh` 入口验证通过后为**所选 aa3e/s1**（当前临时状态仍为 f810 clean s1，label `b57139dc`，仅作为入口验证前的健康基线；入口验证与最终切换见下节计划）。
