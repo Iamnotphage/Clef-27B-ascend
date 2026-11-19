@@ -547,3 +547,11 @@ freeze `6dae03f`：manifest `83dd8e85…`、window `1f780bf8`（未变）、test
 - 两 rank trace：`arm_enter flags=8` 后 `python_exception: NameError: name 'k' is not defined`；result 定位 `run_probe.py:386` `x_mrs = torch.ones((m_pad, k), ...)`，应为 `a.k`；仅 A15 tail pad（rows127→128）触发，未产生 pad_ready/gather/equivalence/diagnostic_gate/数值。api/sync false；child rc1、timed_out=false、survivors []、cleanup_final killed 且各集空。
 - 恢复：branch aa3e-noop、root **1328734**/start 399924959、五 PID、四检全 true；`subreaper_original=0 → cleared=true → final_restored=true → final=0`；无第二棵树。
 - **判定**：A15 harness 产品缺陷（变量名 `k`→`a.k`），本格 invalid，无数值；Grouped 研究不受影响。修复重冻 run_probe 后需新 A15 plan（a15-small-v2）与一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
+
+## 49. 22346ec A15 fix 代码级复核（2026-11-19）
+
+freeze `22346ec`：manifest `35bc507a…`、run_probe **`7afd7799…`（27,430 B）**、window `1f780bf8` 未变、test_probe `284974b3…`（21）、test_window `228150e4…`（40）；CPU 70/70（7 Linux-only skip）；binding/adapter/H4K tuple 未变。
+
+- **`a15_flow` L285-309**：参数显式含 `k`；`m_pad=padded_rows(rows,world)`；pad 时 `ones((m_pad,k))` 后仅 `x_mrs[:rows]=x`（原 127 行不变、尾部 pad 为 1）；`run_mrs(x_mrs,w,world,flags)`→`sync`→`full=empty((m_pad,n))`→`all_gather`→`reference=all_reduce(matmul(x,w))`→`final_sync`→`output=full[:rows]`；info 记录 pad/row_block/workspace/run_id。**execute L432-444 实际调用同一 `a15_flow`，并传 `a.k/a.n`**；A15 v1 的未定义 `k` 已消除。
+- **测试**：`test_a15_rows127_pad_gather_crop_with_stubs` 验证 pad 行非零、原行不变、run_mrs 128、sync 一次、AG 128、crop 127、reference 127；`F821Test` 用 symtable 检查 run_probe/window 并无负例 `k` 通过；`arm_output` A14/A15 冒烟。Mac 70/70。
+- **A15 v2**：v1 invalid；31 用 fresh identity **1328734/399924959** 出 plan（rows127/k256/n512、flags8、bias null、window 1f780bf8、run_probe 7afd7799、adapter d181b15a、fresh a15-small-v2、port 预检）→ 32/33 核 → 一次 GO。A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
