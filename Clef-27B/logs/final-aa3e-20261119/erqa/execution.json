@@ -1,0 +1,55 @@
+{
+  "status": "complete",
+  "started_utc": "2026-11-19T02:04:04.634060+00:00",
+  "manifest_sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+  "phase": "erqa",
+  "scope": "final_phase",
+  "steps": [
+    {
+      "name": "erqa",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/scripts/official_eval/erqa_baseline.py",
+        "--data-dir",
+        "/workspace/yangchen/datasets/erqa-official-20261114",
+        "--output-dir",
+        "/workspace/yangchen/logs/owner31-typed-erqa-20261119T0202Z/v5-erqa/erqa",
+        "--api-url",
+        "http://127.0.0.1:18143/v1",
+        "--model",
+        "clef",
+        "--scope",
+        "full",
+        "--retries",
+        "3",
+        "--retry-interval",
+        "5",
+        "--timeout",
+        "600"
+      ],
+      "started_utc": "2026-11-19T02:04:04.932002+00:00",
+      "status": "complete",
+      "returncode": 0,
+      "finished_utc": "2026-11-19T02:05:31.147852+00:00"
+    },
+    {
+      "name": "erqa-score",
+      "argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/scripts/official_eval/erqa_score.py",
+        "--run-dir",
+        "/workspace/yangchen/logs/owner31-typed-erqa-20261119T0202Z/v5-erqa/erqa",
+        "--data-dir",
+        "/workspace/yangchen/datasets/erqa-official-20261114",
+        "--verify-requests",
+        "--output",
+        "/workspace/yangchen/logs/owner31-typed-erqa-20261119T0202Z/v5-erqa/erqa-score.json"
+      ],
+      "started_utc": "2026-11-19T02:05:31.148363+00:00",
+      "status": "complete",
+      "returncode": 0,
+      "finished_utc": "2026-11-19T02:05:31.437416+00:00"
+    }
+  ],
+  "finished_utc": "2026-11-19T02:05:31.747313+00:00"
+}

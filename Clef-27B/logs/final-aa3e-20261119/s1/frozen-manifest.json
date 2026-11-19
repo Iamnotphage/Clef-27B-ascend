@@ -1,0 +1,1772 @@
+{
+  "schema_version": 1,
+  "status": "plan_not_executed",
+  "captured_utc_raw": "2026-11-18T18:48:21Z",
+  "captured_cst": "2026-11-19T02:48:21+08:00",
+  "repository": "/workspace/yangchen/Clef-27B-ascend",
+  "production_head": "3e83ae17df7b559ec2dd6b2a38aa029c2777e061",
+  "python": "/workspace/yangchen/venvs/clef-py312/bin/python",
+  "base_url": "http://127.0.0.1:18143",
+  "model_dir": "/workspace/yangchen/models/Clef-27B",
+  "hardware": {
+    "physical_card": 7,
+    "chips": [
+      0,
+      1
+    ],
+    "logical_devices": [
+      0,
+      1
+    ],
+    "phy_ids": [
+      14,
+      15
+    ]
+  },
+  "software": {
+    "cann": "9.2.1",
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0.post7",
+    "triton-ascend": "3.6.0.post2",
+    "transformers": "5.19.0",
+    "vllm": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+    "vllm_ascend": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"
+  },
+  "deadlines_cst": {
+    "new_candidates_stop": "2026-11-19T06:30:00+08:00",
+    "closeout": "2026-11-19T07:40:00+08:00",
+    "end": "2026-11-19T08:00:00+08:00"
+  },
+  "baseline_metrics": {
+    "calibration": 82.79411494415206,
+    "intelligence": 66.0568428084581,
+    "capability": 74.42547887630508,
+    "od_accuracy": 0.810374149659864,
+    "od_correct": 1906,
+    "od_total": 2352,
+    "score_mae": 0.4013893127,
+    "score_mae_total": 588,
+    "erqa_accuracy": 0.5475,
+    "erqa_correct": 219,
+    "erqa_total": 400
+  },
+  "quality_gate": {
+    "od_absolute_points": 2.0,
+    "erqa_absolute_accuracy": 0.02,
+    "temperature_scaling": false,
+    "od_accuracy_and_score_mae": "report_only"
+  },
+  "data": {
+    "od_samples": {
+      "path": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+      "bytes": 3065545,
+      "sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141"
+    },
+    "od_data": {
+      "path": "/workspace/yangchen/datasets/clef-full-20261112/full-data/open-decisions2352.jsonl",
+      "bytes": 4931936,
+      "sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6"
+    },
+    "od_scorer": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.py",
+      "bytes": 11463,
+      "sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377"
+    },
+    "od_template": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl",
+      "bytes": 14186091,
+      "sha256": "29fe80b8062b9966277f0d34b1aed76d8ef80ac260eed3c53f2bd0a83f25e915"
+    },
+    "erqa_manifest": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/manifest.json",
+      "bytes": 26600,
+      "sha256": "a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb"
+    },
+    "erqa_samples": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/samples.jsonl",
+      "bytes": 326276,
+      "sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af"
+    },
+    "erqa_tfrecord": {
+      "path": "/workspace/yangchen/work/src/ERQA/data/erqa.tfrecord",
+      "bytes": 91402921,
+      "sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2"
+    },
+    "od_revision": "ff0b640be2b72c7d06d9d656a34ad6eed79ec7fe",
+    "od_version": "1.0.1",
+    "od_split": "test",
+    "erqa_revision": "5bba488252c5b345a43335bfb9239b6bf12bd91c",
+    "erqa_dir": "/workspace/yangchen/datasets/erqa-official-20261114"
+  },
+  "phases": {
+    "s1": {
+      "historical_launch": {
+        "path": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+        "bytes": 12933,
+        "sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"
+      },
+      "expected_argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "1",
+        "--max-num-batched-tokens",
+        "4096",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ],
+      "effective": {
+        "host": "127.0.0.1",
+        "port": 18143,
+        "tensor_parallel_size": 2,
+        "max_model_len": 4096,
+        "max_num_seqs": 1,
+        "max_num_batched_tokens": 4096,
+        "gpu_memory_utilization": 0.9,
+        "limit_mm_per_prompt": "{\"image\":1,\"video\":1}",
+        "mm_processor_kwargs": "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+        "distributed_executor_backend": "mp",
+        "schema_token_cache": "off"
+      },
+      "service_environment": {
+        "CLEF_MODEL_NAME": "clef",
+        "CLEF_MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+        "CLEF_MODEL_REVISION": "local-65e5a3c5ffb6",
+        "CLEF_PROTOCOL_VERSION": "2026-11-13",
+        "CLEF_CONFIG": "s1",
+        "CLEF_MAX_MODEL_LEN": "4096",
+        "CLEF_TENSOR_PARALLEL_SIZE": "2",
+        "CLEF_HEALTH_JSON": "1",
+        "CLEF_SCHEMA_TOKEN_CACHE": "0",
+        "CLEF_SCHEMA_TOKEN_CACHE_VERSION": "0",
+        "ACLNN_CACHE_LIMIT": "1000000",
+        "CLEF_GDN_DECISION_PREFILL": "1",
+        "CLEF_GDN_NO_RECOMPUTE": "1",
+        "CLEF_MLP_BF16_NZ": "1",
+        "CLEF_GDN_BSND": "1",
+        "CLEF_GDN_SKIP_INITIAL_STATE": "1",
+        "CLEF_GDN_SKIP_CONV_STATE": "1",
+        "CLEF_GDN_PREPROCESS_FUSION": "1",
+        "CLEF_JOINT_SINGLE_FIELD": "1",
+        "CLEF_QKV_NORM_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize",
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": "1600",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "LD_LIBRARY_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "CLEF_CONV_QKV_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+        "CLEF_CONV_QKV_TILE": "32",
+        "CLEF_GDN_CONV_QKV": "1",
+        "CLEF_JOINT_FUSED_ATTN": "1",
+        "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+      },
+      "config": "s1",
+      "concurrencies": [
+        1
+      ],
+      "rounds": 3,
+      "launch_overrides": []
+    },
+    "s2_b8": {
+      "historical_launch": {
+        "path": "/workspace/yangchen/logs/perf-wave2-20261118/s2-b8-c16/launch-manifest.json",
+        "bytes": 12927,
+        "sha256": "d16e86827093f40d336aee34ace88e15d9411d8d6d06bb51f4d20af929c7133b"
+      },
+      "expected_argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "8",
+        "--max-num-batched-tokens",
+        "8192",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ],
+      "effective": {
+        "host": "127.0.0.1",
+        "port": 18143,
+        "tensor_parallel_size": 2,
+        "max_model_len": 4096,
+        "max_num_seqs": 8,
+        "max_num_batched_tokens": 8192,
+        "gpu_memory_utilization": 0.9,
+        "limit_mm_per_prompt": "{\"image\":1,\"video\":1}",
+        "mm_processor_kwargs": "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+        "distributed_executor_backend": "mp",
+        "schema_token_cache": "off"
+      },
+      "service_environment": {
+        "CLEF_MODEL_NAME": "clef",
+        "CLEF_MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+        "CLEF_MODEL_REVISION": "local-65e5a3c5ffb6",
+        "CLEF_PROTOCOL_VERSION": "2026-11-13",
+        "CLEF_CONFIG": "s1",
+        "CLEF_MAX_MODEL_LEN": "4096",
+        "CLEF_TENSOR_PARALLEL_SIZE": "2",
+        "CLEF_HEALTH_JSON": "1",
+        "CLEF_SCHEMA_TOKEN_CACHE": "0",
+        "CLEF_SCHEMA_TOKEN_CACHE_VERSION": "0",
+        "ACLNN_CACHE_LIMIT": "1000000",
+        "CLEF_GDN_DECISION_PREFILL": "1",
+        "CLEF_GDN_NO_RECOMPUTE": "1",
+        "CLEF_MLP_BF16_NZ": "1",
+        "CLEF_GDN_BSND": "1",
+        "CLEF_GDN_SKIP_INITIAL_STATE": "1",
+        "CLEF_GDN_SKIP_CONV_STATE": "1",
+        "CLEF_GDN_PREPROCESS_FUSION": "1",
+        "CLEF_JOINT_SINGLE_FIELD": "1",
+        "CLEF_QKV_NORM_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize",
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": "1600",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "LD_LIBRARY_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "CLEF_CONV_QKV_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+        "CLEF_CONV_QKV_TILE": "32",
+        "CLEF_GDN_CONV_QKV": "1",
+        "CLEF_JOINT_FUSED_ATTN": "1",
+        "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+      },
+      "config": "s1",
+      "concurrencies": [
+        8,
+        16
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-num-seqs",
+        "8",
+        "--max-num-batched-tokens",
+        "8192"
+      ]
+    },
+    "s2_b16": {
+      "historical_launch": {
+        "path": "/workspace/yangchen/logs/perf-wave2-20261118/s2-b16-c64/launch-manifest.json",
+        "bytes": 12933,
+        "sha256": "b8e5a246457ee141b873964c66b7c54716b3426561b1a1c24e7ac4822d8b9858"
+      },
+      "expected_argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "16",
+        "--max-num-batched-tokens",
+        "16384",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ],
+      "effective": {
+        "host": "127.0.0.1",
+        "port": 18143,
+        "tensor_parallel_size": 2,
+        "max_model_len": 4096,
+        "max_num_seqs": 16,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.9,
+        "limit_mm_per_prompt": "{\"image\":1,\"video\":1}",
+        "mm_processor_kwargs": "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+        "distributed_executor_backend": "mp",
+        "schema_token_cache": "off"
+      },
+      "service_environment": {
+        "CLEF_MODEL_NAME": "clef",
+        "CLEF_MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+        "CLEF_MODEL_REVISION": "local-65e5a3c5ffb6",
+        "CLEF_PROTOCOL_VERSION": "2026-11-13",
+        "CLEF_CONFIG": "s1",
+        "CLEF_MAX_MODEL_LEN": "4096",
+        "CLEF_TENSOR_PARALLEL_SIZE": "2",
+        "CLEF_HEALTH_JSON": "1",
+        "CLEF_SCHEMA_TOKEN_CACHE": "0",
+        "CLEF_SCHEMA_TOKEN_CACHE_VERSION": "0",
+        "ACLNN_CACHE_LIMIT": "1000000",
+        "CLEF_GDN_DECISION_PREFILL": "1",
+        "CLEF_GDN_NO_RECOMPUTE": "1",
+        "CLEF_MLP_BF16_NZ": "1",
+        "CLEF_GDN_BSND": "1",
+        "CLEF_GDN_SKIP_INITIAL_STATE": "1",
+        "CLEF_GDN_SKIP_CONV_STATE": "1",
+        "CLEF_GDN_PREPROCESS_FUSION": "1",
+        "CLEF_JOINT_SINGLE_FIELD": "1",
+        "CLEF_QKV_NORM_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize",
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": "1600",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "LD_LIBRARY_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "CLEF_CONV_QKV_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+        "CLEF_CONV_QKV_TILE": "32",
+        "CLEF_GDN_CONV_QKV": "1",
+        "CLEF_JOINT_FUSED_ATTN": "1",
+        "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+      },
+      "config": "s1",
+      "concurrencies": [
+        32,
+        64
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-num-seqs",
+        "16",
+        "--max-num-batched-tokens",
+        "16384"
+      ]
+    },
+    "erqa": {
+      "historical_launch": {
+        "path": "/workspace/yangchen/logs/perf-wave2-20261118/erqa-final/launch-manifest.json",
+        "bytes": 12938,
+        "sha256": "4f4ad0b6fd972db47a744b9bfc43840f43048eed9ee1e9dd6d96a486074436a8"
+      },
+      "expected_argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "16384",
+        "--max-num-seqs",
+        "1",
+        "--max-num-batched-tokens",
+        "16384",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":16,\"video\":0}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ],
+      "effective": {
+        "host": "127.0.0.1",
+        "port": 18143,
+        "tensor_parallel_size": 2,
+        "max_model_len": 16384,
+        "max_num_seqs": 1,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.9,
+        "limit_mm_per_prompt": "{\"image\":16,\"video\":0}",
+        "mm_processor_kwargs": "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+        "distributed_executor_backend": "mp",
+        "schema_token_cache": "off"
+      },
+      "service_environment": {
+        "CLEF_MODEL_NAME": "clef",
+        "CLEF_MODEL_DIR": "/workspace/yangchen/models/Clef-27B",
+        "CLEF_MODEL_REVISION": "local-65e5a3c5ffb6",
+        "CLEF_PROTOCOL_VERSION": "2026-11-13",
+        "CLEF_CONFIG": "s1",
+        "CLEF_MAX_MODEL_LEN": "16384",
+        "CLEF_TENSOR_PARALLEL_SIZE": "2",
+        "CLEF_HEALTH_JSON": "1",
+        "CLEF_SCHEMA_TOKEN_CACHE": "0",
+        "CLEF_SCHEMA_TOKEN_CACHE_VERSION": "0",
+        "ACLNN_CACHE_LIMIT": "1000000",
+        "CLEF_GDN_DECISION_PREFILL": "1",
+        "CLEF_GDN_NO_RECOMPUTE": "1",
+        "CLEF_MLP_BF16_NZ": "1",
+        "CLEF_GDN_BSND": "1",
+        "CLEF_GDN_SKIP_INITIAL_STATE": "1",
+        "CLEF_GDN_SKIP_CONV_STATE": "1",
+        "CLEF_GDN_PREPROCESS_FUSION": "1",
+        "CLEF_JOINT_SINGLE_FIELD": "1",
+        "CLEF_QKV_NORM_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize",
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": "1600",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "LD_LIBRARY_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "CLEF_CONV_QKV_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+        "CLEF_CONV_QKV_TILE": "32",
+        "CLEF_GDN_CONV_QKV": "1",
+        "CLEF_JOINT_FUSED_ATTN": "1",
+        "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+      },
+      "config": "s1",
+      "concurrencies": [
+        1
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-model-len",
+        "16384",
+        "--max-num-batched-tokens",
+        "16384",
+        "--limit-mm-per-prompt",
+        "{\"image\":16,\"video\":0}",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ]
+    }
+  },
+  "historical_sources": {
+    "logs/tuning/20261114-013000-fix4/opendecisions/all2352.json": {
+      "path": "/workspace/yangchen/logs/tuning/20261114-013000-fix4/opendecisions/all2352.json",
+      "bytes": 3065545,
+      "sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141"
+    },
+    "datasets/clef-full-20261112/full-data/open-decisions2352.jsonl": {
+      "path": "/workspace/yangchen/datasets/clef-full-20261112/full-data/open-decisions2352.jsonl",
+      "bytes": 4931936,
+      "sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6"
+    },
+    "logs/opendecisions-baseline-20261113-1600/author-score.py": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.py",
+      "bytes": 11463,
+      "sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377"
+    },
+    "logs/opendecisions-baseline-20261113-1600/author-score.json": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/author-score.json",
+      "bytes": 568,
+      "sha256": "9160cce30a22886230abed168d517450fd882adfc10484171b464dad07157a68"
+    },
+    "logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl": {
+      "path": "/workspace/yangchen/logs/opendecisions-baseline-20261113-1600/evalscope/predictions/clef/clef_open_decisions_full2352_default.jsonl",
+      "bytes": 14186091,
+      "sha256": "29fe80b8062b9966277f0d34b1aed76d8ef80ac260eed3c53f2bd0a83f25e915"
+    },
+    "datasets/erqa-official-20261114/manifest.json": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/manifest.json",
+      "bytes": 26600,
+      "sha256": "a3e9cd3e4449141e252c35b347c32fea410a65fe1e3b98b52ff2af5f57577bfb"
+    },
+    "datasets/erqa-official-20261114/samples.jsonl": {
+      "path": "/workspace/yangchen/datasets/erqa-official-20261114/samples.jsonl",
+      "bytes": 326276,
+      "sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af"
+    },
+    "work/src/ERQA/data/erqa.tfrecord": {
+      "path": "/workspace/yangchen/work/src/ERQA/data/erqa.tfrecord",
+      "bytes": 91402921,
+      "sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2"
+    },
+    "logs/erqa-baseline-20261114/full/summary.json": {
+      "path": "/workspace/yangchen/logs/erqa-baseline-20261114/full/summary.json",
+      "bytes": 4015,
+      "sha256": "5f4187ac043cf17e96e48d3341032d7fc3f7f8cbade980c1a54f6d4424a29539"
+    },
+    "Clef-27B/start.sh": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh",
+      "bytes": 404,
+      "sha256": "d880a01ea1e4625388317b9cd617470fc11c11db8900fa390c82133e0ea46b02"
+    },
+    "Clef-27B/inference.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/inference.py",
+      "bytes": 39757,
+      "sha256": "081b56235fca53f9787e1e13a5667167f62e2dd09cdee2309c4f0936f7e4dfc4"
+    },
+    "scripts/activate_env.sh": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+      "bytes": 1670,
+      "sha256": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
+    },
+    "runtime/od_full_benchmark.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/runtime/od_full_benchmark.py",
+      "bytes": 6725,
+      "sha256": "0508030d5054b889fd57df40a3e4cfa50ec3297e930881e34874b0fd9f785f04"
+    },
+    "runtime/od_raw_acceptance.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/runtime/od_raw_acceptance.py",
+      "bytes": 11744,
+      "sha256": "8d8f7c0e7cbcaf40cb16d111e8b4d6b66c6a2c26240ce36d8bb9a3b5502df4d3"
+    },
+    "scripts/official_eval/erqa_baseline.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_baseline.py",
+      "bytes": 14022,
+      "sha256": "1af2154a271c2ab10c8363ad6dc3d02948eec766ca3dcea736828f8877594f10"
+    },
+    "scripts/official_eval/erqa_protocol.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_protocol.py",
+      "bytes": 6731,
+      "sha256": "be64042328795ccd5d199d4c5699130fe8ab00ad76426b84f3b1df807b27c757"
+    },
+    "scripts/official_eval/erqa_score.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_score.py",
+      "bytes": 5548,
+      "sha256": "0628d31a13ae8a18567bb9da7340f4a1d61db018182fcf0e817cbcce83b4c9e2"
+    },
+    "runtime/apply_joint_single_field_patch.py": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/runtime/apply_joint_single_field_patch.py",
+      "bytes": 4679,
+      "sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
+    },
+    "Clef-27B/logs/model_manifest.json": {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/logs/model_manifest.json",
+      "bytes": 15903,
+      "sha256": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"
+    },
+    "launch.sh": {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+      "bytes": 567,
+      "sha256": "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321"
+    },
+    "wait.sh": {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh",
+      "bytes": 289,
+      "sha256": "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0"
+    },
+    "stop": {
+      "path": "/tmp/d0cc/d0_stop.py",
+      "bytes": 8163,
+      "sha256": "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
+    }
+  },
+  "source_files": [
+    {
+      "path": "/workspace/yangchen/work/src/vllm/requirements/common.txt",
+      "bytes": 3400,
+      "sha256": "705ab413c217587a152a8e1060e569df6c92532e12bd5c64beda303a21cda79e"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/generate/structured_decisions/api_router.py",
+      "bytes": 4355,
+      "sha256": "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/openai/decisions/strategies.py",
+      "bytes": 64967,
+      "sha256": "0ddd92b44b38ae7a64d6057cacb205b5164b47dfeb330ea3fcab2bf2f2198a4c"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/entrypoints/serve/instrumentator/health.py",
+      "bytes": 1342,
+      "sha256": "4c9f301fe7d7f7fe01b45a4014d11662393dce6d8bf5d910033981bff8a749f5"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/model_loader/default_loader.py",
+      "bytes": 26950,
+      "sha256": "3c73945368487d3b6d241d47f9c2227e5605eb4be1729fede45e9fee3aedcedb"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+      "bytes": 16395,
+      "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/device/device_op.py",
+      "bytes": 88219,
+      "sha256": "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn.py",
+      "bytes": 56487,
+      "sha256": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn_attn_builder.py",
+      "bytes": 64187,
+      "sha256": "f81eeefa957790398adbbde35fd3e7b2c5aaf3eeac9273400c7412f753ba4a8a"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/vocab_parallel_embedding.py",
+      "bytes": 25235,
+      "sha256": "73cfbecc1ecfcc51be4c31e4043f5414f2d56de414f2fc5dbfa30f1840f0ae0d"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/patch/worker/patch_qwen3_5.py",
+      "bytes": 11599,
+      "sha256": "a4de9b4ecc576b83074b50f8c500b8f9419354081b8ce50193240522129155a4"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend/vllm_ascend/ops/gdn_decision_flags.py",
+      "bytes": 9962,
+      "sha256": "3c9cb53a34a4ef4c2b88ce0e283a1343a9268c578aeab1c506645f3d79147287"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/framework/tensorflow/npu_supported_ops.json",
+      "bytes": 195,
+      "sha256": "180af87a9b2918cb9a99914041002edce2af788e6121dc8425f49e21b8cb92a0"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/include/aclnn_clef_gdn_qkv_norm.h",
+      "bytes": 1151,
+      "sha256": "b5f9418f759d4c5dc46478a42b662519a03ffa6b7935ee426ee44124b6f80c58"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib/libcust_opapi.so",
+      "bytes": 14392,
+      "sha256": "4d2440a32bfabcfd95bc670e02aa005a8a5261a023aee2cf7cd3c6fc561c2c98"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/config/ascend910_93/aic-ascend910_93-ops-info.json",
+      "bytes": 1746,
+      "sha256": "2477c66e1580292cebf0303319b7b98b088477a24a8764b0fc2459acc3f777e8"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/customize_impl/dynamic/clef_gdn_qkv_norm.cpp",
+      "bytes": 6683,
+      "sha256": "7d8d8b6945f7088e9c62fe8d76b45877f35bc32f5792917ad01f791fe31dcac6"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/customize_impl/dynamic/clef_gdn_qkv_norm.py",
+      "bytes": 11274,
+      "sha256": "fb2d7bff38c04ab4462691835ad0924dd163cc97b967ea586659f91d5498fa22"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/customize_impl/dynamic/clef_gdn_qkv_norm_tiling.h",
+      "bytes": 302,
+      "sha256": "4185b7677735e26e699d05da71d1739abcb615879b64e98a39671d1b1dd13e28"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910_93/clef_gdn_qkv_norm/ClefGdnQkvNorm_fe6f697ef920ae060c8ba1c5c8df7010.json",
+      "bytes": 2413,
+      "sha256": "45e58201301979caeab3a4cbe51084f06535ba1aa7838993f785a9ffbcb4cf41"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/kernel/ascend910_93/clef_gdn_qkv_norm/ClefGdnQkvNorm_fe6f697ef920ae060c8ba1c5c8df7010.o",
+      "bytes": 14056,
+      "sha256": "e0ca1454d550a11f7937d4dc688e67766308acc44f3389d799c8a046a17e21d2"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/kernel/config/ascend910_93/binary_info_config.json",
+      "bytes": 1442,
+      "sha256": "73c0ddae83238d2f2f7dfcf13edceb20655aa434e5fb88aa6bea2e40278299e1"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/kernel/config/ascend910_93/clef_gdn_qkv_norm.json",
+      "bytes": 2014,
+      "sha256": "9b6d480f2de11cc918fce9caf9a3f66d14d5f0562184b86ec25f7cbb2a0c0520"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so",
+      "bytes": 182224,
+      "sha256": "8f8c3dbbe72c99366bef0f44670b06a6288608fecdfb853aa1357a024060dcd3"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/op_tiling/liboptiling.so",
+      "bytes": 182224,
+      "sha256": "8f8c3dbbe72c99366bef0f44670b06a6288608fecdfb853aa1357a024060dcd3"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_proto/inc/op_proto.h",
+      "bytes": 386,
+      "sha256": "21a3d9da510256264b60a59d9c967f58bdcafad53af13e024eb1f85d822f5ff2"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_proto/lib/linux/aarch64/libcust_opsproto_rt2.0.so",
+      "bytes": 190416,
+      "sha256": "64b5dda797c432da78a4b211311303d37843c80aeecc5170e140573e723cb95b"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/version.info",
+      "bytes": 34,
+      "sha256": "0718fa82b283051068b67c873caac96f75689c4dae62d16321cf56b0c5398327"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/framework/tensorflow/npu_supported_ops.json",
+      "bytes": 195,
+      "sha256": "53065e0f82226e3d447bc3fee418dae977a7197cf5e483d654c4d50a2a2e6ba7"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/include/aclnn_clef_gdn_conv_qkv.h",
+      "bytes": 1250,
+      "sha256": "f7b6db70f1b8f55b3d985c422981a78a21b3473a6cc01bed5e9f64c443438733"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib/libcust_opapi.so",
+      "bytes": 14400,
+      "sha256": "2185231c7f78b0a14fdfdd2cbca8cb8482b91655453eea15ce7fdde7ead71321"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/clef_conv_qkv_impl/dynamic/clef_gdn_conv_qkv.cpp",
+      "bytes": 7468,
+      "sha256": "f6bf66830118bc7a898286b8644b758e6ef42e8ef5e8fb1d89446f4a968c195f"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/clef_conv_qkv_impl/dynamic/clef_gdn_conv_qkv.py",
+      "bytes": 11739,
+      "sha256": "9aaf648253e72d01dd4ff8540217c0a5535a58aba94f4e9b4b5c55533037c256"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/clef_conv_qkv_impl/dynamic/clef_gdn_conv_qkv_tiling.h",
+      "bytes": 301,
+      "sha256": "13db96349c7fea19272c2f854accceab8b3143319997b6a4681c1d5270a38e50"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/config/ascend910_93/aic-ascend910_93-ops-info.json",
+      "bytes": 2106,
+      "sha256": "2190fb5ee278441ffc215d3376d21650b608822e80dd883d309a1cbc0e8b30fa"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/kernel/ascend910_93/clef_gdn_conv_qkv/ClefGdnConvQkv_09a5b8667f12645f5bd92434a03247e3.json",
+      "bytes": 2709,
+      "sha256": "43d3c1f5fd1b1fcb27bc1a16c584e56fe1e66e2b3eb0a908be23a6da83e0fa4f"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/kernel/ascend910_93/clef_gdn_conv_qkv/ClefGdnConvQkv_09a5b8667f12645f5bd92434a03247e3.o",
+      "bytes": 14000,
+      "sha256": "19c89bc15eb3c10ba7fb843e97a03ae9f6eba29783729e5262d07a4c3ec2aee7"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/kernel/config/ascend910_93/binary_info_config.json",
+      "bytes": 1666,
+      "sha256": "93dccfe585c1b2c87c1ad4e76e378a973936239fe9e36aff97f4527ead2707b2"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/kernel/config/ascend910_93/clef_gdn_conv_qkv.json",
+      "bytes": 2395,
+      "sha256": "32f31f1bb0796ab3ff3431ea0077775bd123c19fe0c3c60ea486589b3af73534"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so",
+      "bytes": 186344,
+      "sha256": "b8e60b5cd13358bcf97c1d86a2702e55216c7efb0dcb4de76ce5dbddcd2a6f24"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/op_tiling/liboptiling.so",
+      "bytes": 186344,
+      "sha256": "b8e60b5cd13358bcf97c1d86a2702e55216c7efb0dcb4de76ce5dbddcd2a6f24"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_proto/inc/op_proto.h",
+      "bytes": 465,
+      "sha256": "4f4383d25e84b3046d24295a722360f26f9f1c914bd1df922b3841c212b864ec"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_proto/lib/linux/aarch64/libcust_opsproto_rt2.0.so",
+      "bytes": 190440,
+      "sha256": "25063307e6221c7bdecdd8771947956c455033e7d87ed6ab23bc946933bd1a5b"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/version.info",
+      "bytes": 34,
+      "sha256": "0718fa82b283051068b67c873caac96f75689c4dae62d16321cf56b0c5398327"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh",
+      "bytes": 404,
+      "sha256": "d880a01ea1e4625388317b9cd617470fc11c11db8900fa390c82133e0ea46b02"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/inference.py",
+      "bytes": 39757,
+      "sha256": "081b56235fca53f9787e1e13a5667167f62e2dd09cdee2309c4f0936f7e4dfc4"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+      "bytes": 1670,
+      "sha256": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/runtime/apply_joint_single_field_patch.py",
+      "bytes": 4679,
+      "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
+    }
+  ],
+  "model_manifest": {
+    "path": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/logs/model_manifest.json",
+    "bytes": 15903,
+    "sha256": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"
+  },
+  "model_expected_files": [
+    {
+      "CommitMessage": "Add safeagents judge bench v2 results (#17)",
+      "CommittedDate": 1794399555,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "16384",
+      "Name": ".eval_results",
+      "Path": ".eval_results",
+      "Revision": "e270f402c14759b0c722265a5a29b9824bebc7c1",
+      "Sha256": "",
+      "Size": 0,
+      "Type": "tree"
+    },
+    {
+      "CommitMessage": "Add Typed Decisions benchmark eval results (#12)",
+      "CommittedDate": 1792498139,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "Cloudflare__clef.yaml",
+      "Path": ".eval_results/Cloudflare__clef.yaml",
+      "Revision": "a4753c52b940c3c6580dfd97b721090da4fadf7a",
+      "Sha256": "7dc4aa93f7d8475e9817cd1568eeb8c32520596eea9c8586a90ae1d976cfaff1",
+      "Size": 1112,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Add safeagents judge bench v2 results (#17)",
+      "CommittedDate": 1794399555,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "safeagents-judge-bench.yaml",
+      "Path": ".eval_results/safeagents-judge-bench.yaml",
+      "Revision": "e270f402c14759b0c722265a5a29b9824bebc7c1",
+      "Sha256": "0feaa30b604c521afc0235f65aca3ebe814cc0d6f16f487b50430d7ab87e2fd5",
+      "Size": 1187,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 13/13)",
+      "CommittedDate": 1791343535,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": ".gitattributes",
+      "Path": ".gitattributes",
+      "Revision": "e78072b112ee5c8dc8e39413992fbaef61150ef9",
+      "Sha256": "f13a51f55827863060167338d1e88fd8a2ff2e9c576be4bd3a2596f42d55501b",
+      "Size": 2129,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 1/13)",
+      "CommittedDate": 1791343094,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "LICENSE",
+      "Path": "LICENSE",
+      "Revision": "a1a021bb448eacf20098d9ee956d3b78a16a3eac",
+      "Sha256": "50cbab8a892c5f2993b8c7351a99182507472def3b1374558308605d99b86b32",
+      "Size": 11343,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Add SGLang cookbook and launch command to model card (batch 1/1)",
+      "CommittedDate": 1791634068,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "README.md",
+      "Path": "README.md",
+      "Revision": "6a255262956dbaa27b070d96170a1de652ea4606",
+      "Sha256": "16ee04d296b1ef5edcdb3c4d3d3cd369acdc627fb5d255b34264a73e224d821a",
+      "Size": 11105,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 2/13)",
+      "CommittedDate": 1791343101,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "chat_template.jinja",
+      "Path": "chat_template.jinja",
+      "Revision": "73df7d13fb99f29babdfa0e9867c51edf242e26d",
+      "Sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+      "Size": 8952,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 3/13)",
+      "CommittedDate": 1791343111,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "config.json",
+      "Path": "config.json",
+      "Revision": "376d4f769702b0e3eaa3c4d0fc52634dc40a7a07",
+      "Sha256": "c42e88892bd3fd84e8276b2ad90df58c1c3b797676ea161035006a72ad468c58",
+      "Size": 3688,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 3/13)",
+      "CommittedDate": 1791343111,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "configuration.json",
+      "Path": "configuration.json",
+      "Revision": "376d4f769702b0e3eaa3c4d0fc52634dc40a7a07",
+      "Sha256": "7f5e4dab8f262b1731914cb110764c86dbfc0459a136de7cc3ae4ae375edc828",
+      "Size": 76,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 4/13)",
+      "CommittedDate": 1791343122,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "generation_config.json",
+      "Path": "generation_config.json",
+      "Revision": "8e3c843a9b2c9a91174c2f2e8d15d66f771fa428",
+      "Sha256": "dc36854b2b25176764cfeeda32a3d80fb4fcffbef2b00d55c6614079bf21eb9f",
+      "Size": 214,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 4/13)",
+      "CommittedDate": 1791343122,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "joint_head.safetensors",
+      "Path": "joint_head.safetensors",
+      "Revision": "8e3c843a9b2c9a91174c2f2e8d15d66f771fa428",
+      "Sha256": "a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953",
+      "Size": 256125024,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 5/13)",
+      "CommittedDate": 1791343134,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "joint_head_config.json",
+      "Path": "joint_head_config.json",
+      "Revision": "914024da85793772dee1a8f53a182b97c49b44eb",
+      "Sha256": "890be585d75b981201eb96a35f98a9967afe37bc8d220cfdea2e72d56507534f",
+      "Size": 119,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 5/13)",
+      "CommittedDate": 1791343134,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "joint_schema_model.py",
+      "Path": "joint_schema_model.py",
+      "Revision": "914024da85793772dee1a8f53a182b97c49b44eb",
+      "Sha256": "0e304cf7c6500e8bb59bef7e2afd2c6373f82596dfb3b57d1aa93c175e2dc3a3",
+      "Size": 23263,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 6/13)",
+      "CommittedDate": 1791343448,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00001-of-00012.safetensors",
+      "Path": "model-00001-of-00012.safetensors",
+      "Revision": "358bf933caa3db698cbe6a36590753ef3599e447",
+      "Sha256": "54d83c1d36631de231876217a8e0c2483eccee8746369a482b79442bdfc5d958",
+      "Size": 2542796928,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 6/13)",
+      "CommittedDate": 1791343448,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00002-of-00012.safetensors",
+      "Path": "model-00002-of-00012.safetensors",
+      "Revision": "358bf933caa3db698cbe6a36590753ef3599e447",
+      "Sha256": "464086af08be8e2ec14960a4dcff083ebc39974ade00d79d35497385f960ab3a",
+      "Size": 4842451920,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 7/13)",
+      "CommittedDate": 1791343491,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00003-of-00012.safetensors",
+      "Path": "model-00003-of-00012.safetensors",
+      "Revision": "0c35f8ed3f6429a5324aadf109d9e99ab90e89c8",
+      "Sha256": "092212d3a02fafacd6424723eda59d60e5282d2068d68f0e37cb891f63bbb658",
+      "Size": 4965227944,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 7/13)",
+      "CommittedDate": 1791343491,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00004-of-00012.safetensors",
+      "Path": "model-00004-of-00012.safetensors",
+      "Revision": "0c35f8ed3f6429a5324aadf109d9e99ab90e89c8",
+      "Sha256": "d06ff197668c782145fafa74bba61bbc296fb27e39afb15fd522918ce3514dc5",
+      "Size": 4912819264,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 8/13)",
+      "CommittedDate": 1791343492,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00005-of-00012.safetensors",
+      "Path": "model-00005-of-00012.safetensors",
+      "Revision": "c52325f472dd48aad5e850aa22716ffb4b71bafd",
+      "Sha256": "cc693b8829614a72e0c2be303fb290cf05dbb4d7ded872a817b97bb222a78427",
+      "Size": 4986198544,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 8/13)",
+      "CommittedDate": 1791343492,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00006-of-00012.safetensors",
+      "Path": "model-00006-of-00012.safetensors",
+      "Revision": "c52325f472dd48aad5e850aa22716ffb4b71bafd",
+      "Sha256": "e7cce15da2443cb8b84aaed66a9a71f0c87dc9d043f83b5f58f4a89f64ba60ad",
+      "Size": 4912819320,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 9/13)",
+      "CommittedDate": 1791343494,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00007-of-00012.safetensors",
+      "Path": "model-00007-of-00012.safetensors",
+      "Revision": "a05dfde5e09624fe7b6f53d8ae1686417575108a",
+      "Sha256": "75fc7e76b57d5d17a5d85fff3e879d07dd33edc885a8ee04ad437a899bcd5307",
+      "Size": 4932703272,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 9/13)",
+      "CommittedDate": 1791343494,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00008-of-00012.safetensors",
+      "Path": "model-00008-of-00012.safetensors",
+      "Revision": "a05dfde5e09624fe7b6f53d8ae1686417575108a",
+      "Sha256": "189b15cb6b1af48d5f118951446e15639bfeaf76081d5f20aed1f1b4253afe1d",
+      "Size": 4966314576,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 10/13)",
+      "CommittedDate": 1791343523,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00009-of-00012.safetensors",
+      "Path": "model-00009-of-00012.safetensors",
+      "Revision": "5dff1c238276b9d565f5e4b0c08335ae1ce9c62c",
+      "Sha256": "8101e2664bb14684fc7051f2e1f84903dbdf5489b17cae3212ac08a0af744a60",
+      "Size": 4964162248,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 10/13)",
+      "CommittedDate": 1791343523,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00010-of-00012.safetensors",
+      "Path": "model-00010-of-00012.safetensors",
+      "Revision": "5dff1c238276b9d565f5e4b0c08335ae1ce9c62c",
+      "Sha256": "a8e69016a1a8dab1c9ce8dd151c0d3224412ab864cf06d3a5e2b8a5775cfdfb8",
+      "Size": 4933789824,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 11/13)",
+      "CommittedDate": 1791343530,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00011-of-00012.safetensors",
+      "Path": "model-00011-of-00012.safetensors",
+      "Revision": "a2cf03170a99db2a80a187e77d51c46bfc67ad3d",
+      "Sha256": "b328d21c36ab384696e40a30ac86a95aaf6dd82da89438ba009cb97d87c1d6b9",
+      "Size": 4965228032,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 11/13)",
+      "CommittedDate": 1791343530,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "model-00012-of-00012.safetensors",
+      "Path": "model-00012-of-00012.safetensors",
+      "Revision": "a2cf03170a99db2a80a187e77d51c46bfc67ad3d",
+      "Sha256": "7505eed910a84ea18e66953572476f8a8a6a6ef54192a6643d6e9cd21a3bb978",
+      "Size": 2789094896,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 12/13)",
+      "CommittedDate": 1791343533,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "model.safetensors.index.json",
+      "Path": "model.safetensors.index.json",
+      "Revision": "e770680cd7a53aefc3acf69d238f99d18aee8e0e",
+      "Sha256": "a600c6626eb1eb653a3f078ab3dd1c7a8fab2e71185c7ef3aa923a39aaa637be",
+      "Size": 111110,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 12/13)",
+      "CommittedDate": 1791343533,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "processor_config.json",
+      "Path": "processor_config.json",
+      "Revision": "e770680cd7a53aefc3acf69d238f99d18aee8e0e",
+      "Sha256": "d89ef49ce9cd37fbf510158e13c1ef063d9286411c1ec9049932dbe0487143b1",
+      "Size": 1191,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 13/13)",
+      "CommittedDate": 1791343535,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": true,
+      "Mode": "33188",
+      "Name": "tokenizer.json",
+      "Path": "tokenizer.json",
+      "Revision": "e78072b112ee5c8dc8e39413992fbaef61150ef9",
+      "Sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "Size": 19989325,
+      "Type": "blob"
+    },
+    {
+      "CommitMessage": "Upload folder using ModelScope SDK (batch 13/13)",
+      "CommittedDate": 1791343535,
+      "CommitterName": "systemd",
+      "InCheck": false,
+      "IsLFS": false,
+      "Mode": "33188",
+      "Name": "tokenizer_config.json",
+      "Path": "tokenizer_config.json",
+      "Revision": "e78072b112ee5c8dc8e39413992fbaef61150ef9",
+      "Sha256": "91a08f825d370d085d692e04cf117cdd7faad7bf18e996f1e6031b6dab03db72",
+      "Size": 1075,
+      "Type": "blob"
+    }
+  ],
+  "model_hash_verification": "23 runtime model files exist with expected sizes; all 10 non-safetensors files rehashed read-only on 2026-11-19 CST and match the pinned manifest. 13 safetensors weight files use prior verified manifest SHA provenance and fresh sizes; full weight contents not rehashed in this CPU-only preparation.",
+  "protocol": {
+    "od": {
+      "samples": 2352,
+      "warmup": 0,
+      "timeout_seconds": 300,
+      "attempts": 1,
+      "rounds_s1_minimum": 3,
+      "percentile": "linear (n-1)*q; per round; median across >=3 complete round p95s",
+      "request_order": "frozen all2352 order; each index once; concurrency queues all futures",
+      "throughput": "successful responses / measurement wall seconds; includes client scheduling/serialization",
+      "journal": "additive completed-request persistence; wall includes disk persistence; interrupted run incomplete"
+    },
+    "erqa": {
+      "samples": 400,
+      "warmup": 0,
+      "timeout_seconds": 600,
+      "attempts_max": 3,
+      "retry_interval_seconds": 5,
+      "concurrency": 1,
+      "resume": false,
+      "denominator": "fixed 400; failures incorrect",
+      "images": 630,
+      "max_images": 16,
+      "max_tokens_observed": 10294
+    }
+  },
+  "source_selection": {
+    "production_head_sha": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "guard_sha": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "candidate_head_sha": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "winner": "pending_owner_freeze",
+    "candidate_note": "aa3e flag0 shares routing KV; final total gain requires f810 control. Update audited source hashes and environment before candidate acceptance; do not bypass checks."
+  },
+  "lifecycle": {
+    "owner": "clef-27b-ascend-27",
+    "automatic_service_mutation": false,
+    "launch": {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+      "bytes": 567,
+      "sha256": "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321"
+    },
+    "wait": {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh",
+      "bytes": 289,
+      "sha256": "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0"
+    },
+    "stop": {
+      "path": "/tmp/d0cc/d0_stop.py",
+      "bytes": 8163,
+      "sha256": "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
+    },
+    "stop_timeout_seconds": 120,
+    "wait_timeout_seconds": 600,
+    "identity_fields": [
+      "pid",
+      "ppid",
+      "pgid",
+      "starttime",
+      "boot_id",
+      "cmdline"
+    ],
+    "required_final_evidence": [
+      "fresh full /proc scan",
+      "ready after exec identity continuity",
+      "unique label/api.pid",
+      "port connect_ex:0=open,111=closed,other=unknown blocks",
+      "NPU physical7 chips0,1 process tree",
+      "restored chosen source and original guard",
+      "health/text/image/worker returncodes and ok"
+    ],
+    "client_supervision": "Owner27 must bind runner+children process group and phase deadline in existing supervisor; no internal total timeout/signal forwarding. Confirm all client descendants exited before service switch/restore."
+  },
+  "pending": [
+    "winner and final audited candidate source/environment if adopted",
+    "owner fresh ready identities + matching launch manifest + resource mapping before every phase",
+    "owner selected final S2 reporting point; retain all scan points",
+    "final restoration evidence and >=3 S1, S2, OD2352, ERQA400 actual runs"
+  ],
+  "runner_files": {
+    "runtime/od_full_benchmark.py": {
+      "sha256": "af304965c6c745045006571657145e81c5dcfad93dfbd2c7454e4c3805bb791a",
+      "production_original": {
+        "path": "/workspace/yangchen/Clef-27B-ascend/runtime/od_full_benchmark.py",
+        "bytes": 6725,
+        "sha256": "0508030d5054b889fd57df40a3e4cfa50ec3297e930881e34874b0fd9f785f04"
+      }
+    },
+    "runtime/od_raw_acceptance.py": {
+      "sha256": "8d8f7c0e7cbcaf40cb16d111e8b4d6b66c6a2c26240ce36d8bb9a3b5502df4d3",
+      "production_original": {
+        "path": "/workspace/yangchen/Clef-27B-ascend/runtime/od_raw_acceptance.py",
+        "bytes": 11744,
+        "sha256": "8d8f7c0e7cbcaf40cb16d111e8b4d6b66c6a2c26240ce36d8bb9a3b5502df4d3"
+      }
+    },
+    "scripts/official_eval/erqa_baseline.py": {
+      "sha256": "8d0632825ca5bf58e33427510f5d297b3080b00cce84959f736c72e974b2755a",
+      "production_original": {
+        "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_baseline.py",
+        "bytes": 14022,
+        "sha256": "1af2154a271c2ab10c8363ad6dc3d02948eec766ca3dcea736828f8877594f10"
+      }
+    },
+    "scripts/official_eval/erqa_score.py": {
+      "sha256": "0628d31a13ae8a18567bb9da7340f4a1d61db018182fcf0e817cbcce83b4c9e2",
+      "production_original": {
+        "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_score.py",
+        "bytes": 5548,
+        "sha256": "0628d31a13ae8a18567bb9da7340f4a1d61db018182fcf0e817cbcce83b4c9e2"
+      }
+    },
+    "scripts/official_eval/erqa_protocol.py": {
+      "sha256": "be64042328795ccd5d199d4c5699130fe8ab00ad76426b84f3b1df807b27c757",
+      "production_original": {
+        "path": "/workspace/yangchen/Clef-27B-ascend/scripts/official_eval/erqa_protocol.py",
+        "bytes": 6731,
+        "sha256": "be64042328795ccd5d199d4c5699130fe8ab00ad76426b84f3b1df807b27c757"
+      }
+    },
+    "runtime/final_acceptance.py": {
+      "sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+    }
+  },
+  "required_model_files": [
+    "config.json",
+    "joint_head.safetensors",
+    "joint_head_config.json",
+    "model.safetensors.index.json",
+    "tokenizer_config.json",
+    "model-00001-of-00012.safetensors",
+    "model-00002-of-00012.safetensors",
+    "model-00003-of-00012.safetensors",
+    "model-00004-of-00012.safetensors",
+    "model-00005-of-00012.safetensors",
+    "model-00006-of-00012.safetensors",
+    "model-00007-of-00012.safetensors",
+    "model-00008-of-00012.safetensors",
+    "model-00009-of-00012.safetensors",
+    "model-00010-of-00012.safetensors",
+    "model-00011-of-00012.safetensors",
+    "model-00012-of-00012.safetensors",
+    "chat_template.jinja",
+    "configuration.json",
+    "generation_config.json",
+    "joint_schema_model.py",
+    "processor_config.json",
+    "tokenizer.json"
+  ],
+  "forbidden_environment": [
+    "CLEF_JOINT_SMALLQ",
+    "CLEF_JOINT_SMALLQ_KERNEL",
+    "CLEF_GDN_FLAG_FILE",
+    "CLEF_PROFILE_MARKERS",
+    "CLEF_JOINT_TIMING",
+    "CLEF_PROFILE_OBSERVE_DIR",
+    "CLEF_PROFILE_SCOPE_FILTER",
+    "CLEF_GDN_NORM_BLOCK_M"
+  ],
+  "s2_scan_provenance": {
+    "source": "docs/batching-seqs8-16-2026-11-16.md sections 2/6; docs/perf-wave2-20261118.md sections 3/7",
+    "points": [
+      [
+        8,
+        8192,
+        8
+      ],
+      [
+        8,
+        8192,
+        16
+      ],
+      [
+        16,
+        16384,
+        32
+      ],
+      [
+        16,
+        16384,
+        64
+      ]
+    ],
+    "final_reporting_point": "pending owner / competition validity rule",
+    "historical_other_points": "B4C8/C16; B10C20; B12C24; B32C128 retained in repository evidence; no fabricated current measurements"
+  },
+  "distributions": {
+    "torch": "2.10.0+cpu",
+    "torch-npu": "2.10.0.post7",
+    "triton-ascend": "3.6.0.post2",
+    "transformers": "5.19.0",
+    "torchvision": "0.25.0+cpu",
+    "torchaudio": "2.10.0+cpu",
+    "flash-linear-attention-npu-a3": "26.9.1",
+    "flash-attn-npu": "0.5.0"
+  },
+  "software_repositories": [
+    {
+      "path": "/workspace/yangchen/work/src/vllm",
+      "head": "24420b7a341af37a9bc3186e6fc6062512e0aa58"
+    },
+    {
+      "path": "/workspace/yangchen/work/src/vllm-ascend",
+      "head": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"
+    }
+  ],
+  "candidate_interface": {
+    "status": "internal_ab_complete_production_adoption_pending",
+    "source": "24 result commit 61199e2 including23 independent review; 28 read-only verification of original ab.json/restore.json/raw coverage and local CPU recomputation",
+    "ab_commit": "c0a176d14d66836226202fbb2602b510776d103a",
+    "ab_runner_sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648",
+    "staging": "/workspace/yangchen/work/scratch-24/joint-fused-service-ab-c0a176d",
+    "schema": "joint-fused-service-ab/1",
+    "installer_sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406",
+    "guardadapter_installer_sha256": "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c",
+    "guard_post_sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "guard_env": {
+      "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+    },
+    "guard_mode": "check-only",
+    "fixed_input_ab_result": {
+      "scope": "aa3e internal CLEF_JOINT_FUSED_ATTN=0/1 only; final production adoption pending f810 control and full acceptance",
+      "execution_owner": 27,
+      "run_dir": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first",
+      "runner_commit": "c0a176d14d66836226202fbb2602b510776d103a",
+      "runner_sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648",
+      "source_document": {
+        "commit": "61199e2765a843fe6e2f716fa12ff6cca163167e",
+        "path": "docs/joint-fused-service-ab-result-2026-11-19.md",
+        "sha256": "f56ec125e23711e5c04397afd8c735b88a92837b45c748312a1d159b35717c54"
+      },
+      "source_files": {
+        "ab.json": {
+          "path": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first/ab.json",
+          "bytes": 294790,
+          "sha256": "c160c95074acd679f72501eda5f9d6e132aa99cb5d836e37b5368faa90d9d003"
+        },
+        "restore.json": {
+          "path": "/workspace/yangchen/logs/joint-fused-service-ab-27-c0a176d-first/restore.json",
+          "bytes": 5375,
+          "sha256": "fe08de720b3fef8dd61fbbe6dd0cc07e06aa8ea2e20edcb3cfb055d40919080f"
+        }
+      },
+      "started_utc": "2026-11-18T18:52:21Z",
+      "finished_utc": "2026-11-18T19:07:03Z",
+      "finished_cst": "2026-11-19T03:07:03+08:00",
+      "overall_rc": 0,
+      "rounds": 4,
+      "order": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "reps_per_arm_per_input": 5,
+      "warmup_per_arm_per_input": 3,
+      "fixed_input_results": {
+        "od-0105": {
+          "paired_round_delta_ms": [
+            2.3751002736389637,
+            -2.722729928791523,
+            6.033820100128651,
+            -2.2391099482774734
+          ],
+          "paired_median_delta_ms": 0.06799516268074512,
+          "paired_median_percent": 0.06561341716666558,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        },
+        "od-1534": {
+          "paired_round_delta_ms": [
+            -1.1120797134935856,
+            -2.668249886482954,
+            -0.6079399026930332,
+            -0.9678499773144722
+          ],
+          "paired_median_delta_ms": -1.039964845404029,
+          "paired_median_percent": -0.6681686361449168,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        },
+        "erqa-0000": {
+          "paired_round_delta_ms": [
+            -1.0884799994528294,
+            -0.9437301196157932,
+            -0.6969398818910122,
+            9.19842952862382
+          ],
+          "paired_median_delta_ms": -0.8203350007534027,
+          "paired_median_percent": -0.7506303674524539,
+          "nonwarmup_per_arm": {
+            "0": 20,
+            "1": 20
+          },
+          "unique_answer_signatures_per_arm": {
+            "0": 1,
+            "1": 1
+          },
+          "answer_signatures_equal": true,
+          "max_numeric_abs_diff": 0.0
+        }
+      },
+      "restore": {
+        "label": "d0-restore-20261118T190530Z-150b9178",
+        "verify_ok": true,
+        "steps_ok": {
+          "initial_stop": true,
+          "apply": true,
+          "service_check_apply": true,
+          "revert": true,
+          "service_check_revert": true,
+          "restore": true
+        },
+        "checks": {
+          "health": {
+            "rc": 0,
+            "ok": true
+          },
+          "workers": {
+            "rc": 0,
+            "ok": true
+          },
+          "text": {
+            "rc": 0,
+            "ok": true
+          },
+          "image": {
+            "rc": 0,
+            "ok": true
+          }
+        },
+        "historical_service_pids": [
+          1212699,
+          1212822,
+          1212823,
+          1212859,
+          1212860
+        ],
+        "identity_use": "historical evidence; obtain fresh root and descendants before execution"
+      },
+      "raw_coverage": {
+        "files": 24,
+        "rows": 192,
+        "formal": 120,
+        "warmup": 72,
+        "all_valid": true,
+        "verification": "28 read-only recount; 23 independent bodySHA, finite and 8-arm answer/probability equality checks documented in source_document"
+      }
+    }
+  },
+  "clean_launch_environment": {
+    "status": "cpu_readonly_verified_no_service_launch",
+    "seed": {
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "CLEF_LAUNCH_CONFIG": "s1"
+    },
+    "evidence": {
+      "source_sha256": "081b56235fca53f9787e1e13a5667167f62e2dd09cdee2309c4f0936f7e4dfc4",
+      "activation_env": {
+        "PATH": "/workspace/yangchen/venvs/clef-py312/bin:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/bin:/usr/local/Ascend/cann-9.2.1/bin:/usr/local/Ascend/cann-9.2.1/tools/ccec_compiler/bin:/usr/local/Ascend/cann-9.2.1/tools/profiler/bin:/usr/local/Ascend/cann-9.2.1/tools/ascend_system_advisor/asys:/usr/local/Ascend/cann-9.2.1/tools/show_kernel_debug_data:/usr/local/Ascend/cann-9.2.1/tools/msobjdump:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+        "PYTHONPATH": "/usr/local/Ascend/cann-9.2.1/python/site-packages:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe:",
+        "LD_LIBRARY_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "ATB_HOME_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1",
+        "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.1",
+        "CLEF_LAUNCH_CONFIG": "s1"
+      },
+      "qkv_function_output": {
+        "CLEF_QKV_NORM_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize",
+        "CLEF_GDN_QKV_NORM_MAX_TOKENS": "1600",
+        "ASCEND_CUSTOM_OPP_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer:/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib",
+        "LD_LIBRARY_PATH": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib:/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/customize/op_api/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/cann-9.2.1/lib64:/usr/local/Ascend/cann-9.2.1/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.1/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver",
+        "CLEF_CONV_QKV_VENDOR": "/workspace/yangchen/Clef-27B-ascend/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+        "CLEF_CONV_QKV_TILE": "32",
+        "CLEF_GDN_CONV_QKV": "1"
+      },
+      "historical_match": {
+        "s1-final-r1": {
+          "ASCEND_CUSTOM_OPP_PATH": {
+            "match": true,
+            "expected_entries": 9,
+            "actual_entries": 9
+          },
+          "LD_LIBRARY_PATH": {
+            "match": true,
+            "expected_entries": 12,
+            "actual_entries": 12
+          }
+        },
+        "s2-b8-c16": {
+          "ASCEND_CUSTOM_OPP_PATH": {
+            "match": true,
+            "expected_entries": 9,
+            "actual_entries": 9
+          },
+          "LD_LIBRARY_PATH": {
+            "match": true,
+            "expected_entries": 12,
+            "actual_entries": 12
+          }
+        },
+        "s2-b16-c64": {
+          "ASCEND_CUSTOM_OPP_PATH": {
+            "match": true,
+            "expected_entries": 9,
+            "actual_entries": 9
+          },
+          "LD_LIBRARY_PATH": {
+            "match": true,
+            "expected_entries": 12,
+            "actual_entries": 12
+          }
+        },
+        "erqa-final": {
+          "ASCEND_CUSTOM_OPP_PATH": {
+            "match": true,
+            "expected_entries": 9,
+            "actual_entries": 9
+          },
+          "LD_LIBRARY_PATH": {
+            "match": true,
+            "expected_entries": 12,
+            "actual_entries": 12
+          }
+        }
+      },
+      "forbidden_modules_loaded": [],
+      "clean_parent_environment": {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+        "CLEF_LAUNCH_CONFIG": "s1"
+      },
+      "scripts": [
+        {
+          "path": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+          "sha256": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
+        },
+        {
+          "path": "/usr/local/Ascend/cann/set_env.sh",
+          "sha256": "f466fc67747b725dd4748ebfd551b72a9503c308e7213544c83ee147aa47dc63"
+        },
+        {
+          "path": "/usr/local/Ascend/nnal/atb/set_env.sh",
+          "sha256": "3817caee385be3591592bc96bba1e20686964c3d8346400cfff56338a3c5eba7"
+        },
+        {
+          "path": "/workspace/yangchen/venvs/clef-py312/bin/activate",
+          "sha256": "a9aa483aebf493ed8ab2b565eb5993a2ca73d2e24ffebe36dcf861c8a485fb40"
+        },
+        {
+          "path": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu_opp_env.py",
+          "sha256": "260ca2ad62152c55bbb23cb0d74b4f1422d704ea10c4e48428faf30034f130e9"
+        }
+      ]
+    },
+    "live_mismatch_source": "/workspace/yangchen/logs/final-acceptance-preflight-27-20261118T192040Z/selected-env-mismatch.json",
+    "owner_action": "Only at next legitimate service transition; use seed as complete subprocess env, original launcher activates once; strict expected env remains unchanged."
+  },
+  "baseline_round1": {
+    "status": "plan_not_executed",
+    "phase": "s1",
+    "flag": "--single-baseline-round",
+    "rounds_to_execute": 1,
+    "required_final_rounds": 3,
+    "source_sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "output_scope": "baseline_single_round",
+    "final_s1_complete": false,
+    "commands": "exact first two commands of standard s1 plan; benchmark then author scorer",
+    "expected_outputs": [
+      "c1-r1.json",
+      "c1-r1.jsonl",
+      "c1-r1-quality.json",
+      "acceptance.json",
+      "execution.json",
+      "expected-inputs.json"
+    ],
+    "sample_sha256": "74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141",
+    "benchmark_sha256": "af304965c6c745045006571657145e81c5dcfad93dfbd2c7454e4c3805bb791a",
+    "author_scorer_sha256": "478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377",
+    "quality_wrapper_sha256": "8d8f7c0e7cbcaf40cb16d111e8b4d6b66c6a2c26240ce36d8bb9a3b5502df4d3",
+    "supervisor_requirement": "owner27 forwards flag explicitly and pins new runner hash; client lifecycle unchanged"
+  }
+}

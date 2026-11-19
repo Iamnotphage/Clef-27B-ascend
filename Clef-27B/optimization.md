@@ -137,7 +137,7 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **质量**：OD Capability **74.2476**、accuracy 1904/2352、Score MAE 0.402615；ERQA **216/400 = 0.5400**；S2 B8 C16 **16.727 dec/s**、p95 1768.9、Capability 73.8426、accuracy 1905。全部在 2PP 内。
 - **逐题漂移**：3 条 choice 变化、`max_prob_diff` 0.360、46 条 >0.03、24 条 >0.05；项目内部 0.03/0.05 门槛不达标，用户确认按官方 2PP 口径采纳。
 
-## 2026-11-18 Wave 2 复核（未新增默认改动）
+## 2026-11-18 Wave 2 复核（历史：f810 口径，未新增默认改动）
 
 完整报告见 [docs/perf-wave2-20261118.md](../docs/perf-wave2-20261118.md)。
 
@@ -147,3 +147,14 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **joint head**：门控打点显示 967 token 下 pooler 5.90–6.25 ms，head 4.78–5.05（decoder 2.23–2.33、routing 1.09–1.18、final 0.62–0.67），全部是小算子下发；CPU 卸载不划算（`memory_projection` 10.1 GFLOP 必须留 NPU），不采用。
 - **prefix caching**：Mamba 前缀缓存要求 chunked prefill（关闭态启动即断言失败），且 chunked prefill 会关闭决策快速路径；不启用。
 - **最终验证**：S1 五轮 **8.646 / 8.705 / 8.849 / 8.983 / 9.035 dec/s**、p95 **156.81 / 157.50 / 155.85 / 155.86 / 155.72 ms**，中位 **8.849 dec/s / 155.86 ms**（2352/2352）；全量 OpenDecisions 重评 Cap **74.2476**、Int 66.0840、Cal 82.4112、accuracy 1904/2352、MAE 0.40261，与既有证据逐位一致；ERQA 独立复跑 **216/400**（400/400、0 重试、请求哈希校验通过）。
+
+## 2026-11-19 aa3e fused 选定版本（最终提交）
+
+以上 2026-11-17/18 各节保留为历史与底层优化记录（其中 conv+QKV、chunk128、BIC、MLP NZ、aclnn cache 均被选定版本继承）。最终提交在同窗口内以 **aa3e fused** 取代 f810 single-field 头：
+
+- **配置**：TP2 / BF16 / eager / max len 4096、S1 seqs1 / batched 4096，`CLEF_JOINT_FUSED_ATTN=1`、`CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e1758…`、`CLEF_JOINT_SINGLE_FIELD=1`；服务 OPP 9 / LD 12 与冻结 clean expected 逐字节一致。
+- **同窗口对照（aa3e vs f810）**：S1 p95 中位 **156.4417 vs 156.4051 ms**（Δ+0.0366，逐轮 2 快 1 慢，156.888/156.442/156.116）；S2 B8 C8 **14.7832 vs 14.7148**、C16 **16.9037 vs 16.8259**；B16 C32 **17.6572 vs 17.5432**、C64 **17.7047 vs 17.5996** dec/s；ERQA **216/400 与 f810 逐题 0 差异、acceptance 文件字节相同**。
+- **质量（aa3e）**：OD S1 Cal 82.411344 / Int 66.084076 / Cap 74.247710 / accuracy 1904/2352 / MAE 0.402612；S2 四点 Cap 74.253107 / 73.825010 / 74.146850 / 74.141828；相对本轮 f810 同点 ΔCap −0.0259 / −0.0223 / +0.0070 / +0.0007 pp；相对 11-13 适配 baseline 最大 −0.6005 pp，全部 2PP 内。
+- **口径**：只使用官方 JSON benchmark 的 `decisions_per_second`（successful/wall_seconds）；journal span（首 start→末 finish）重算仅作交叉核对，末位差单注。
+- **证据**：[主记录](../docs/overnight-owner27-2026-11-19.md)、`logs/final-aa3e-20261119/`、提交 `934fff0` / `da5a6d1` / `dd2f513`；官方 `start.sh` 入口验证与最终 aa3e/s1 服务见该目录的入口记录（待官方入口 tuple 冻结后补链）。
+

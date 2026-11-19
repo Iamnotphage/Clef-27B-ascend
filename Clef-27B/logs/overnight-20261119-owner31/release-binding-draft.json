@@ -1,0 +1,68 @@
+{
+ "schema": "owner31-release-binding/1",
+ "status": "draft_pending_official_entry",
+ "selected_profile": {
+  "arm": "aa3eON",
+  "config": "s1",
+  "launch": {"max_model_len": 4096, "max_num_seqs": 1, "max_num_batched_tokens": 4096, "tensor_parallel_size": 2, "dtype": "bfloat16", "enforce_eager": true, "prefix_cache": false, "limit_mm_per_prompt": {"image": 1, "video": 1}},
+  "joint_env": {"CLEF_JOINT_FUSED_ATTN": "1", "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503", "CLEF_JOINT_SINGLE_FIELD": "1"},
+  "service_env_bytes": {"ASCEND_CUSTOM_OPP_PATH_entries": 9, "ASCEND_CUSTOM_OPP_PATH_sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1", "LD_LIBRARY_PATH_entries": 12, "LD_LIBRARY_PATH_sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c", "expected_manifest": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json", "expected_manifest_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"}
+ },
+ "assets": {
+  "head_aa3e": {"path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py", "role": "selected aa3e runtime head", "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"},
+  "single_field_f810_source": {"path": "runtime/joint_fused_attention/clef_joint_schema.py (bundle)", "role": "f810 single-field source used by fused installer", "sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"},
+  "fused_installer": {"path": "runtime/apply_joint_fused_attention.py (bundle)", "role": "audited fused source installer", "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"},
+  "guard_official_fused": {"path": "runtime/apply_joint_single_field_patch_fused.py", "role": "official aa3e fused guard (new entry reads this path)", "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"},
+  "guard_legacy_single_field": {"path": "runtime/apply_joint_single_field_patch.py", "role": "legacy f810 single-field guard; preserved unchanged; aa3e runtime does not read it", "sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"},
+  "candidate_manifest": {"path": "runtime/final_acceptance_candidate_manifest.json", "role": "frozen candidate acceptance manifest", "sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4"},
+  "typed_entry_measured": {"path": "runtime/candidate_service_phase_typed.py", "role": "entry used for measured typed S2/ERQA chain", "sha256": "abb7c383deee092ff6037d09400735981b6550cd8f761d92dcb1d901715b1bc5"},
+  "typed_stage_manifest": {"sha256": "644be6b4e7ce2ebd091160fcb5ef663791ebdd96c7d35a2b2052585849738860"},
+  "combo": {"sha256": "d72e79579e11d54cefd86ab881d55149b858ecf0630f0ade43aab6c624774f7d"},
+  "frozen_entry_a1ca": {"sha256": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44"},
+  "phase_v3": {"sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"},
+  "supervisor_v5": {"sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"},
+  "cc7_runner": {"sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"},
+  "cc7_manifest": {"sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2"},
+  "model": {"dir": "/workspace/yangchen/models/Clef-27B", "revision": "local-65e5a3c5ffb6", "manifest_sha256": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"},
+  "existing_chain_assets": ["GDN conv+QKV vendor (ClefGdnConvQkv)", "GDN chunk128 default", "MLP BF16 NZ (CLEF_MLP_BF16_NZ=1)", "ACLNN_CACHE_LIMIT=1000000", "BIC decision prefill", "GDN decision prefill"]
+ },
+ "inheritance_map": {
+  "A_reused_measured": [
+   "aa3e head + fused installer b09cd602 + official guard 36eaff44 + single-field f810 source: numeric assets and behavior measured in typed B8/B16/ERQA",
+   "service numbers under aa3e + FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1: S1 156.4417, B8 14.7832/16.9037, B16 17.6572/17.7047, ERQA 216/400",
+   "acceptance protocol/scoring gate: candidate manifest 31202d27, author scorer 478d14ae..., 2PP, S2 concurrency points, ERQA 400 denominator"
+  ],
+  "B_must_measure_new_entry": [
+   "new official start.sh/inference entry file SHAs and any new assets (single-listed in new tuple)",
+   "cold-start state machine on real installer fixtures (197863d5 -> guard -> f810 -> fused -> aa3e; f810 -> fused; aa3e no-op x2; unknown/SHA mismatch fail-closed without vllm)",
+   "idempotent restarts: tree stays aa3e, latter starts no-op, no duplicate trees/residual processes",
+   "path resolution via same-interpreter vllm.__file__, independent backup dirs, atomic manifest, fail-closed on unwritable targets",
+   "real bash start.sh with relative and absolute model/output params; health/info/port/five PIDs/card7 two workers/four checks",
+   "live env OPP9/LD12 byte-exact, joint keys exactly FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1, source=aa3e, official guard=36eaff44",
+   "3 fixed requests (od-0105/od-1534/erqa-0000) with same body SHA vs typed aa3e same-index records: answer + max prob diff (interface cross-check only)"
+  ]
+ },
+ "measured_acceptance_bindings": {
+  "s1_candidate": {"acceptance": "604a68b4858da30037154872c20e37ed89153f0378c6caf4925be08fb91af970", "supervision": "a0f78be918dc1982e075862dea72fefabb0a9c37d2bb70102fbe2fb83c2cc884", "p95_median_ms": 156.44167428836226},
+  "s2_b8": {"acceptance": "c54c09580fa6dd6650ae1580d0d45ec43cf8d7519ee98887876881e547018ab2", "supervision": "70b1834f828394638d53fb5153dc0a0f2d645930926be0045114cab6300feeac"},
+  "s2_b16": {"acceptance": "8f90bddd5bd7dd1f5592498437e8f97569605a15ab7f3fc9c3604e6910ee70eb", "supervision": "700361dfbb07dc77fb9501a38a2eef07a8cac5e399a8832074aea3049f0f7127"},
+  "erqa": {"acceptance": "1f119678767f83b8bbfdf53a894c573de4661e5512a58f07983af33f0f482538", "supervision": "5ec2942e4fd58b815d80882477c5b904449ad6ae8f2cb10ec4a3694f0a27a1b1"},
+  "final_f810_baseline_service": {"label": "d0-restore-20261119T020614Z-b57139dc", "restore": "a61bdf3177e99708d0de3b36a6246a0258565d6f799f18748896ead5df254717"}
+ },
+ "reporting": {
+  "metric": "official benchmark JSON decisions_per_second = successful / wall_seconds",
+  "cross_check_only": "journal span (first start -> last finish) recomputed; last-digit differences noted only",
+  "profile_labels": "all selected profile metrics labeled aa3e: S1=156.4417 ms, S2=17.7047 dec/s @ B16 C64 (concurrency 64), OD/ERQA same version",
+  "no_mixing": "do not mix f810 S1 numbers into the aa3e selected profile"
+ },
+ "freeze_requirements": [
+  "official entry/inference/stage manifest/new asset SHAs from 35 tuple and independent review",
+  "remote release stage byte-verified by 32",
+  "cold-start/idempotency/fail-closed fixture records",
+  "real start.sh evidence (relative and absolute params) with env/argv/source/load-path equivalence",
+  "3-request interface cross-check records",
+  "release manifest binding the above and measured acceptance SHAs",
+  "final service = aa3e/s1 healthy, clients empty, no stray processes"
+ ],
+ "frozen_unchanged": ["765 legacy guard", "a1ca entry", "31202d27 manifest", "phase 888a8d7f", "v5 172c2838", "cc7 runner 7d32e5c3/manifest 0338f87b", "all previous stage directories in place"]
+}
