@@ -27,6 +27,15 @@ abi11 caller and body windows, all libccl `2281deca`.
   exact text is unknown until the minimal dump below. The guard's **default level
   semantics are likewise unproven**; the operands are reported exactly, without
   assuming which configuration enables them.
+- Proven level-type mapping (cf9f1d6, same CANN 9.2.1 installation text) applies to
+  the **global env variables only**: `ASCEND_GLOBAL_LOG_LEVEL` 0=DEBUG, 1=INFO,
+  2=WARNING, 3=ERROR, 4=NULL; `ASCEND_GLOBAL_EVENT_ENABLE` 0/1;
+  `ASCEND_PROCESS_LOG_PATH` is a directory path. `HcclCheckLogLevel`/`DlogRecord`
+  operands are raw and there is no evidence they use that global enum directly
+  (they may be a bitmask or another enum), so the w0/w1 values in this table are
+  **not** mapped to 0–4. Module-level format and the `HCCL_DEBUG_CONFIG` bit
+  semantics are unproven; the empty env and `HCCL_DEBUG_CONFIG=0x0` in the finished
+  cells remain a default-configuration fact, not evidence that logging is off.
 
 ## Marker kinds
 
