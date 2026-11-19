@@ -1,0 +1,30 @@
+范围：仅 .text 内 BL/B 到两个 PLT stub 地址；不扫描间接/vtable/dlsym；不扩整库证明。
+源 SHA256=2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c。
+
+站点（6）
+1) 0x762228 BL TryRun@plt（0x29c040），所在 RunAicpuRpcSrvLaunch+0xea8（函数内之前有 Dlog w4=488/fmt 0x14ee4a0 块）。
+   紧邻分支：0x76222c cmp w0,#0；0x762230 ccmp w0,#0x16,#0x4,ne；0x762234 b.ne 0x761fe8；
+   0x762238 cmp w0,#0x16；0x76223c b.ne 0x7619ac；w0==22 时进入 0x762240 起 log gate
+   HcclCheckLogLevel(w0=1,w1=0x01000003)@0x76224c。
+2) 0x7c7e38 BL CheckRcv@plt（0x297570），所在 RunRpcServerTwoStageWait+0x8c。
+   32 指令窗口内为栈初始化/清零，x0/x1/x2 实参在窗口之前设定（未覆盖）；调用后 x0=x19、
+   CheckAivIsEnd(w1=0)@0x7c7e44，tbz→0x7c8100，否则 ldr w3,[x20,#352]+1 后 ReadWorkMsg。
+3) 0x7c7edc BL CheckRcv@plt，所在 RunRpcServerTwoStageWait+0x130。
+   实参：x2=0@0x7c7ed0、x1=x21@0x7c7ed4、x0=x19@0x7c7ed8；调用后 CheckAivIsEnd(0)，
+   tbz→0x7c7fdc，否则 AicpuCcOpExe(x0=x21,x1=0,x2=x20)→WaitMainStreamFinish。
+4) 0x7c98b4 BL CheckRcv@plt，所在 RunRpcServerOneStageWait+0xf4。
+   实参：x2=0@0x7c98a4、x1=x23=sp+0x20@0x7c98a8、x0=x19@0x7c98b0；
+   调用前 0x7c989c-0x7c98a0 调 CallMC2MaintenanceThread(x20)；调用后 CheckAivIsEnd(0)。
+5) 0x7c9a14 BL CheckRcv@plt，所在 RunRpcServerOneStageWait+0x254。
+   实参：x2=0@0x7c9a08、x1=x24=sp+0x328@0x7c9a0c、x0=x19@0x7c9a10；
+   调用前 0x7c99e8 AicpuCcOpExe；调用后 CheckAivIsEnd(0)，tbz→0x7c9b10，否则再 AicpuCcOpExe。
+6) 0x7cb6d8 BL CheckRcv@plt，所在 AICPU_RpcServerUnfoldStageWait+0x118。
+   实参：x2=0@0x7cb6d4、x1=x27=sp+0x90@0x7cb6cc、x0=x24@0x7cb6c8；
+   紧邻分支：w25 的 switch（cmp #2/#3/#4）后进入 w25==0 路径；调用后 ldr w0,[sp,#144]、
+   strb w1(#1),[x26,#433]、hash insert 等。
+
+结论（仅本覆盖）
+- 两个 stub 各有直接 BL：TryRun 1 处（RunAicpuRpcSrvLaunch），CheckRcv 5 处
+  （TwoStage×2、OneStage×2、Unfold×1）。这解释了此前“函数入口直接 BL/B 为 0”的遗漏：
+  跨编译单元调用经 PLT stub，而不是直接到函数体。
+- 未枚举间接/vtable/dlsym 调用；0/命中均不外推全库无/有调用。
