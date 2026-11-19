@@ -1508,7 +1508,7 @@ env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='   # 启动前自检
 cd /workspace/yangchen/Clef-27B-ascend
 source scripts/activate_env.sh
 
-python runtime/grouped_mmar/supervised_probe_window.py \
+/workspace/yangchen/venvs/clef-py312/bin/python runtime/grouped_mmar/supervised_probe_window.py \
   --execute \
   --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1 \
   --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json \
@@ -1528,6 +1528,7 @@ python runtime/grouped_mmar/supervised_probe_window.py \
   --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
   --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
 ```
+- **plan-only 复核（不改任何参数，只去掉 `--execute`）**：同一命令去掉 `--execute`，输出重定向到 `/tmp/plan-check-h11-observe-v1.json`；`sha256sum` 应为 `c95ae5c3…`（若路径/顺序一致）。该步只写 plan，不启动 child/服务。
 - `--port 18143`、`--clean-env-expect`、`--expect-stop-sha d6d49d…`、`--stop-timeout 120`、`--restore-timeout 900`、`--python` 用默认。
 - `--official-start/--activate/--service-root/--model-dir` 由 restore_argv 推得，31 预检确认实路径。
 
@@ -1582,9 +1583,12 @@ test -w "$LOGDIR" && echo "LOGDIR writable"
 sha256sum /tmp/d0cc/d0_stop.py /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py \
   /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
   /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json \
-  /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/{supervised_probe_window.py,run_probe.py,probe_adapter.so,binding_probe.cpp,manifest.json}
+  /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/{supervised_probe_window.py,run_probe.py,probe_adapter.so,binding_probe.cpp,manifest.json,test_probe_cpu.py}
+python3 -c "import socket; [(lambda h: (lambda s: (s.bind((h,29531)), print('tcp',h,'FREE'), s.close()))(socket.socket()))(h) for h in ('127.0.0.1','0.0.0.0')]"
+ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运行前应无本计划 child
 ```
-- 任一 identity/boot/starttime/五 PID/health/29531/目录/权限/SHA 不符 → **停止，不执行**；记录到 `meta/pre-exec.txt`。
+- 健康/信息：`curl -s /health`、`/v1/decide/info`；clients 按 31 既有恢复检查脚本读取（不新增接口）。
+- 任一 identity/boot/starttime/五 PID/health/29531/目录/权限/SHA 不符，或运行前已有本计划 torchrun/run_probe → **停止，不执行**；记录到 `meta/pre-exec.txt`。
 - 服务未重启判据：starttime 仍 `400405818`、boot_id 不变；restore 前不重启服务。
 
 **当前不执行、无 GO；以上交 31 补齐实路径/既有采集脚本后由 20/32 审。**
