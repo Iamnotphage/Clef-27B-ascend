@@ -1,0 +1,16 @@
+== case1 good identity ==
+rc=0 identity_bytes=888
+pid 1347086 start 401212026 boot 393ecc15
+0
+== case2 starttime mismatch ==
+rc=1 identity_present=no
+identity mismatch on starttime: saved=1 live=401212026
+MISSING REQUIRED: identity capture failed (SRC_ID=/tmp/h11-begin-smoke/bad-start.json)
+== case3 exited pid ==
+rc=1 identity_present=no
+identity capture failed: [Errno 2] No such file or directory: '/proc/999999/stat'
+MISSING REQUIRED: identity capture failed (SRC_ID=/tmp/h11-begin-smoke/bad-pid.json)
+== case4 invalid plan status ==
+rc=1 identity_bytes=888
+INVALID REQUIRED META: plan status
+smoke_done

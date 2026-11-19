@@ -71,7 +71,8 @@ rc=0（帮助日志写入 `<CELL>/cpu-prep/rescan-torchrun-help.log`，与观测
 - window-launch-template.txt：含 env 三步、A（plan-only）与 B（v2 GO 后 execute；唯一支持路径为
   run-h11-observe-v2.sh wrapper）。
 - run-h11-observe-v2.sh：单一 wrapper，同一 shell 内完成 env→caller torchrun 校验→preflight(rc0)
-  →exec window --execute；禁止未授权运行。
+  →collect-raw begin（ARCH=…-attempt2，identity/metadata 有效）→exec window --execute；
+  任一步失败即中止，禁止未授权运行。
 - validation-caller-bare-fail.txt / validation-prepared-pass.txt：caller 强制检查的负/正证据
   （裸 shell 预扫必须 FAIL；activate+PATH 后必须 ALL PASS）。
 - helper-v2-fixture-check.txt：v2 helper 的 CPU fixture 证据（默认 run-h11-observe-v2、--run 覆盖、
@@ -83,6 +84,10 @@ rc=0（帮助日志写入 `<CELL>/cpu-prep/rescan-torchrun-help.log`，与观测
   pid/starttime/boot 与 /proc 一致；identity 生成失败或 begin/end 校验不符均 FAIL/非零。
 - collect-identity-fix-check.txt：identity 修复的 CPU fixture 证据（好 identity begin/end rc0；
   坏/空 identity begin/end 均 rc1 fail-closed）。
+- collect-begin-smoke-check.txt：begin 的 CPU 正/负 smoke（好 identity、starttime 不符、已退出 pid、
+  plan 状态非法），覆盖 identity 与 health/info/port/plan/sidecar/body 的 fail-closed。
+- prestart1 快照：远端 archive-h11-observe-v2-prestart1（旧 0B identity 原件复制 + SUMS），
+  本目录 ../h11-observe-v2-prestart1/ 存事实与 0B identity 副本；canonical 采集用 attempt2。
 - rank-env-read.py（v2 绑定版）：默认 CELL=v2、RUN=<CELL>/run-h11-observe-v2；支持 --run 覆盖；
   descendants `entries` + /proc pgid；ranks 存活期读三键，空/缺失=缺测。
 - preflight-rescan.sh：上述预扫（含 torchrun）。

@@ -42,8 +42,14 @@ B. v2 授权后 execute（仅在 20 另发 v2 明确 GO 后；本包从未执行
 ---------------------------------------------------------------
 **唯一支持路径**：`bash /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/run-h11-observe-v2.sh`
 该 wrapper 在同一 shell/进程环境内依次完成：source activate_env.sh → PATH 前置 → caller
-`command -v torchrun`/SHA/`--help` → preflight-rescan（rc0）→ `exec window ... --execute`。
-不要手抄 argv、不要拆 shell；手抄路径必须自行保证“调用方 shell”已通过预扫的 caller 检查。
+`command -v torchrun`/SHA/`--help` → preflight-rescan（rc0）→ **collect-raw begin**
+（ARCH=…/archive-h11-observe-v2-attempt2，rc0 且 identity/metadata 有效）→
+`exec window ... --execute`。任一步失败即中止，绝不进入 stop/window。
+不要手抄 argv、不要拆 shell；手抄路径必须自行保证上述全部前置条件。
+
+restore 完成后在同一 shell/同一 ARCH 执行收尾：
+  ARCH=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/archive-h11-observe-v2-attempt2 \
+    bash /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/collect-raw.sh end
 
 （等价 argv：与 A 完全相同，仅在末尾追加顶层 `--execute`；完整数组见 window-execute-argv.json。）
 

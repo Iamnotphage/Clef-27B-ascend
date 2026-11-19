@@ -39,6 +39,13 @@ need_dir() {
   FAIL=1
   return 1
 }
+need_json() {  # path label
+  if ! python3 -I -c 'import json,sys; json.load(open(sys.argv[1]))' "$1" >/dev/null 2>&1; then
+    echo "INVALID REQUIRED JSON: $2 ($1)" >&2
+    FAIL=1; return 1
+  fi
+  return 0
+}
 need_identity() {  # identity.json 非空、可解析、且与 SRC_ID 的 pid/starttime/boot 一致
   if [ ! -s "$ARCH/meta/identity.json" ]; then
     echo "MISSING REQUIRED FILE: identity.json (empty or absent)" >&2
@@ -120,6 +127,26 @@ PY
       cp -p "$pair" "$ARCH/meta/" && record_src "$pair" "meta/$name"
     fi
   done
+  # 必需 metadata 的解析/取值校验（失败即 FAIL，begin 非零）
+  need_json "$ARCH/meta/health.json" health || true
+  python3 -I -c 'import json,sys;d=json.load(open(sys.argv[1]));sys.exit(0 if d.get("status")=="ready" and d.get("model")=="clef" else 1)' \
+    "$ARCH/meta/health.json" >/dev/null 2>&1 \
+    || { echo "INVALID REQUIRED META: health status/model" >&2; FAIL=1; }
+  need_json "$ARCH/meta/info.json" info || true
+  python3 -I -c 'import json,sys;d=json.load(open(sys.argv[1]));sys.exit(0 if d.get("config")=="s1" else 1)' \
+    "$ARCH/meta/info.json" >/dev/null 2>&1 \
+    || { echo "INVALID REQUIRED META: info config!=s1" >&2; FAIL=1; }
+  python3 -I -c 'import sys;l=open(sys.argv[1]).read().splitlines();sys.exit(0 if len(l)==4 and all("FREE" in x for x in l) else 1)' \
+    "$ARCH/meta/port-29531.txt" >/dev/null 2>&1 \
+    || { echo "INVALID REQUIRED META: port-29531 not all FREE" >&2; FAIL=1; }
+  need_json "$ARCH/meta/plan-h11-observe-v2.json" plan || true
+  python3 -I -c 'import json,sys;d=json.load(open(sys.argv[1]));sys.exit(0 if d.get("status")=="plan_not_executed" else 1)' \
+    "$ARCH/meta/plan-h11-observe-v2.json" >/dev/null 2>&1 \
+    || { echo "INVALID REQUIRED META: plan status" >&2; FAIL=1; }
+  need_json "$ARCH/meta/env-sidecar-h11-observe-v2.json" env-sidecar || true
+  need_json "$ARCH/meta/text-body.json" text-body || true
+  need_json "$ARCH/meta/image-body.json" image-body || true
+
   touch "$ARCH/meta/START"
   start_epoch=$(cut -d. -f1 "$ARCH/meta/start-epoch.txt")
   touch -d "@$((start_epoch - 300))" "$ARCH/meta/START_SLACK" 2>/dev/null || touch "$ARCH/meta/START_SLACK"
