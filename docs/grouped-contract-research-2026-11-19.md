@@ -1929,3 +1929,17 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 2. identity 生成失败或校验不符 → FAIL/exit 非零；
 3. **begin 与 end 都把 identity.json 纳入必需校验**（非空、可解析、与 SRC_ID 一致）；
 4. 重建 SUMS/commit 得新固定包，20 另发新 GO；空 archive 留证。
+
+## 108. v2 修复重冻 4cbe23a / 8f4bca74（23/23）：collect identity fail-closed
+
+**包**：commit `4cbe23a`，SUMS `8f4bca74…`（23 行），本地 `shasum -c` **rc=0，23/23 OK**；远端 execution-v2 同步 23/23（31 报）。`991c21c` 仅作前一候选；旧空 archive `archive-h11-observe-v2` 保留证据。
+
+**修复（collect-raw）**：
+- identity 不再硬编码 pid：从 `$SRC_ID`（`CELL/root-identity-h11-observe-v2.json`，pid 1347086/starttime 401212026/boot 393ecc15）读取，并与 `/proc` 实时校验 pid/starttime/boot；不一致即失败。
+- 生成先写 `identity.tmp`，成功才 `mv` 为 `identity.json`；**begin 与 end 都调用 `need_identity`**，校验非空、可解析、与 SRC_ID 一致；任一不符 FAIL + 非零退出。
+- CPU fixture `collect-identity-fix-check.txt`：good begin rc0、identity 888B（pid 1347086/start 401212026/boot 393ecc15）、end rc0；starttime 不匹配 begin **rc1**；identity 清空 end **rc1**；fixture 已清理。
+- 其余不变：plan `9c2936c2`、identity 1347086/401212026、argv 60/61、helper `68dc9e2c`、冻结 e38b541/8e308804/1f780bf8/101660f8/d181b15a。
+
+**GO/现场**：上一条 GO 停在 collect begin 的 prestart 校验，**未启动 wrapper/window、无 stop/torchrun/NPU**；服务 root 1347086 health ready，run/probe/restore 仍 ABSENT。原 GO **挂起、不自动续跑**；31 封存 prestart1 后完成 collector 修复与 CPU 正负 smoke。**无算子/分派证据**，本格记“采集准备失败”，不排除支路。
+
+**状态**：32/35 独立复审新包；20 之后对尚未发生的单次 window 给明确续行；操作仍只引用 31 包；**无新 GO/设备动作**；root cause 待真正 v2 实测。
