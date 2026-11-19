@@ -1,0 +1,57 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000763108 <RunAicpuKfcSrvLaunch@@Base>:
+  763108:	d10383ff 	sub	sp, sp, #0xe0
+  76310c:	90008dc1 	adrp	x1, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  763110:	f9444421 	ldr	x1, [x1, #2184]
+  763114:	a9097bfd 	stp	x29, x30, [sp, #144]
+  763118:	910243fd 	add	x29, sp, #0x90
+  76311c:	a90a53f3 	stp	x19, x20, [sp, #160]
+  763120:	aa0003f3 	mov	x19, x0
+  763124:	a90d6bf9 	stp	x25, x26, [sp, #208]
+  763128:	f9400020 	ldr	x0, [x1]
+  76312c:	f90047e0 	str	x0, [sp, #136]
+  763130:	d2800000 	mov	x0, #0x0                   	// #0
+  763134:	b4001ed3 	cbz	x19, 76350c <RunAicpuKfcSrvLaunch@@Base+0x404>
+  763138:	a90b5bf5 	stp	x21, x22, [sp, #176]
+  76313c:	910023f5 	add	x21, sp, #0x8
+  763140:	aa1503e0 	mov	x0, x21
+  763144:	f9400261 	ldr	x1, [x19]
+  763148:	f90007e1 	str	x1, [sp, #8]
+  76314c:	97ec890d 	bl	285580 <_ZN13AicpuKfcUtils22PrintHcclCommParamDescERKN7HcclApi16CommKfcParamDescE@plt>
+  763150:	f94007e1 	ldr	x1, [sp, #8]
+  763154:	92400c20 	and	x0, x1, #0xf
+  763158:	f100081f 	cmp	x0, #0x2
+  76315c:	54002000 	b.eq	76355c <RunAicpuKfcSrvLaunch@@Base+0x454>  // b.none
+  763160:	d3493c21 	ubfx	x1, x1, #9, #7
+  763164:	f8617a74 	ldr	x20, [x19, x1, lsl #3]
+  763168:	b4002194 	cbz	x20, 763598 <RunAicpuKfcSrvLaunch@@Base+0x490>
+  76316c:	910043f6 	add	x22, sp, #0x10
+  763170:	a90c63f7 	stp	x23, x24, [sp, #192]
+  763174:	910013f7 	add	x23, sp, #0x4
+  763178:	aa1603e0 	mov	x0, x22
+  76317c:	aa1703e1 	mov	x1, x23
+  763180:	b90007ff 	str	wzr, [sp, #4]
+  763184:	f9000bff 	str	xzr, [sp, #16]
+  763188:	97ecdce6 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  76318c:	b94007e0 	ldr	w0, [sp, #4]
+  763190:	d2866204 	mov	x4, #0x3310                	// #13072
+  763194:	d2800003 	mov	x3, #0x0                   	// #0
+  763198:	52800002 	mov	w2, #0x0                   	// #0
+  76319c:	52800025 	mov	w5, #0x1                   	// #1
+  7631a0:	f2a001e4 	movk	x4, #0xf, lsl #16
+  7631a4:	34000140 	cbz	w0, 7631cc <RunAicpuKfcSrvLaunch@@Base+0xc4>
+  7631a8:	f9400be1 	ldr	x1, [sp, #16]
+  7631ac:	11000442 	add	w2, w2, #0x1
+  7631b0:	8b030021 	add	x1, x1, x3
+  7631b4:	8b040063 	add	x3, x3, x4
+  7631b8:	9143cc21 	add	x1, x1, #0xf3, lsl #12
+  7631bc:	3909c025 	strb	w5, [x1, #624]
+  7631c0:	b94007e0 	ldr	w0, [sp, #4]
+  7631c4:	6b00005f 	cmp	w2, w0
+  7631c8:	54ffff03 	b.cc	7631a8 <RunAicpuKfcSrvLaunch@@Base+0xa0>  // b.lo, b.ul, b.last
+  7631cc:	97ecb63d 	bl	290ac0 <_ZN3dfx16ProfilingManager10IsProfL1OnEv@plt>

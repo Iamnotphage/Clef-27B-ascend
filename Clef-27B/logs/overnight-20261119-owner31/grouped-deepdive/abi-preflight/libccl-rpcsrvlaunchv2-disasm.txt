@@ -1,0 +1,51 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007547a0 <RunAicpuRpcSrvLaunchV2@@Base>:
+  7547a0:	d10243ff 	sub	sp, sp, #0x90
+  7547a4:	f0008e21 	adrp	x1, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7547a8:	f9444421 	ldr	x1, [x1, #2184]
+  7547ac:	a9047bfd 	stp	x29, x30, [sp, #64]
+  7547b0:	910103fd 	add	x29, sp, #0x40
+  7547b4:	a90553f3 	stp	x19, x20, [sp, #80]
+  7547b8:	aa0003f3 	mov	x19, x0
+  7547bc:	a9065bf5 	stp	x21, x22, [sp, #96]
+  7547c0:	f9400020 	ldr	x0, [x1]
+  7547c4:	f9001fe0 	str	x0, [sp, #56]
+  7547c8:	d2800000 	mov	x0, #0x0                   	// #0
+  7547cc:	b4001c93 	cbz	x19, 754b5c <RunAicpuRpcSrvLaunchV2@@Base+0x3bc>
+  7547d0:	b1002274 	adds	x20, x19, #0x8
+  7547d4:	54002020 	b.eq	754bd8 <RunAicpuRpcSrvLaunchV2@@Base+0x438>  // b.none
+  7547d8:	3948e280 	ldrb	w0, [x20, #568]
+  7547dc:	51003800 	sub	w0, w0, #0xe
+  7547e0:	7100041f 	cmp	w0, #0x1
+  7547e4:	540010c9 	b.ls	7549fc <RunAicpuRpcSrvLaunchV2@@Base+0x25c>  // b.plast
+  7547e8:	f9400275 	ldr	x21, [x19]
+  7547ec:	b4000c95 	cbz	x21, 75497c <RunAicpuRpcSrvLaunchV2@@Base+0x1dc>
+  7547f0:	52800061 	mov	w1, #0x3                   	// #3
+  7547f4:	52800020 	mov	w0, #0x1                   	// #1
+  7547f8:	a90763f7 	stp	x23, x24, [sp, #112]
+  7547fc:	f90043f9 	str	x25, [sp, #128]
+  754800:	97ecdfb4 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  754804:	37002c80 	tbnz	w0, #0, 754d94 <RunAicpuRpcSrvLaunchV2@@Base+0x5f4>
+  754808:	9100c2b6 	add	x22, x21, #0x30
+  75480c:	9100a3f8 	add	x24, sp, #0x28
+  754810:	f9000ff8 	str	x24, [sp, #24]
+  754814:	aa1603e0 	mov	x0, x22
+  754818:	97ecbb56 	bl	283570 <strlen@plt>
+  75481c:	f9000be0 	str	x0, [sp, #16]
+  754820:	aa0003f3 	mov	x19, x0
+  754824:	f1003c1f 	cmp	x0, #0xf
+  754828:	54001588 	b.hi	754ad8 <RunAicpuRpcSrvLaunchV2@@Base+0x338>  // b.pmore
+  75482c:	f100041f 	cmp	x0, #0x1
+  754830:	54001000 	b.eq	754a30 <RunAicpuRpcSrvLaunchV2@@Base+0x290>  // b.none
+  754834:	aa1803e0 	mov	x0, x24
+  754838:	910063f9 	add	x25, sp, #0x18
+  75483c:	b50015f3 	cbnz	x19, 754af8 <RunAicpuRpcSrvLaunchV2@@Base+0x358>
+  754840:	f90013f3 	str	x19, [sp, #32]
+  754844:	3833681f 	strb	wzr, [x0, x19]
+  754848:	aa1903e0 	mov	x0, x25
+  75484c:	97ecd9c1 	bl	28af50 <_ZN16AicpuHcclProcess19AicpuGetCommbyGroupERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@plt>
