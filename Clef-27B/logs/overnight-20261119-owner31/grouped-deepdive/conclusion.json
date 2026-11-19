@@ -1,6 +1,6 @@
 {
  "schema": "owner31-grouped-conclusion/1",
- "status": "confirmed_environment_blocked",
+ "status": "suspected_environment_blockage_pending_dependency_control",
  "a12_cell": {
   "window": "51d6bc0c3b9e307ae9cab51d338d8c73e67f8b06f3da25414694bbefcf0895d3",
   "manifest": "e55eac00b5844365911e94dbb87c80705f88ef0c4d4de33ee8213b27e23d6cd4",
@@ -38,7 +38,8 @@
  "actions": {
   "device_arms": "all grouped arms paused (H6/H7/H12/A8/A13); A13 staged only after 20/32 authorization",
   "service": "kept online as aa3e/s1 (root 1301295), no further stop",
-  "entry_metrics": "unchanged; no PR; grouped path recorded as environment-blocked; official aa3e delivery remains default"
+  "entry_metrics": "unchanged; no PR; grouped path recorded as environment-blocked; official aa3e delivery remains default",
+  "status": "device arms paused; service aa3e/s1 root 1301295 online; A14 (MatmulReduceScatter V1) only after 33 support check and 32 protocol readiness, then stage/build/plan and single device control on GO"
  },
  "evidence_locations": {
   "a12_cell": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/a12-cell (10 files, sha256sums 10/10)",
@@ -71,5 +72,18 @@
    "35": "commit 5738295 / manifest 8f2f4bec",
    "33": "commit 87ffb96 (research record sections 9-11)"
   }
- }
+ },
+ "revision_trail": [
+  {
+   "at": "2026-11-19T06:45Z",
+   "from": "confirmed_environment_blocked",
+   "to": "suspected_environment_blockage_pending_dependency_control",
+   "reason": "20 clarified no final closure was approved; proven facts are loader skip + native timeout; still to prove whether grouped depends on the rejected mc2_server or on another libccl_kernel KFC implementation; 35 zero-init A12 derivation and 33 dependency control pending"
+  }
+ ],
+ "open_questions": [
+  "does GroupedMatMulAllReduce actually dispatch to libmc2_server KFC kernels, or to libccl_kernel KFC (RunAicpuKfcResInit/SrvLaunch) which is loaded?",
+  "which op-info/binary_info entry binds GroupedMatMulAllReduce to an AICPU kernel library on A3?",
+  "can a zero-initialized workspace A12 derivation return without pending (35 derivation, pending 32 review)?"
+ ]
 }
