@@ -255,6 +255,19 @@
 - **A12 构建 preflight**：source `6c1a90ab…`（官方原字节）、glue `22edb89f…`（manifest 明确为 derived CMake glue，官方 examples/CMakeLists 不在冻结包）、binary `37929ec4…`/204,744 B；ldd 链 libascendcl/libnnopbase/libopapi_math/libopapi_transformer/libhccl/libhcomm/libstdc++；FP16 原样、成功=rc0+sync 返回（无数值参考）；deltas/provider_delta 已记录。**pending-1**：本地归档 stage-manifest SHA `088f05f6…` 与 31 报文 `1d529ca8…` 不一致，待指明权威。**pending-2**：本地归档仅 ldd.log+stage-manifest.json，缺 glue CMakeLists/cmake.log/make.log/source/binary 副本，待补齐加 SHA256SUMS。
 - 首批 readiness：包+A12 接近 ready；35 的 A8/A0(M=128)/H1/H2 仍待；两 pending 解决后合并 preflight，31 按恢复门停服执行。
 
+## 8.17 Grouped 深挖：原生 review 未运行 + fallback 有限审查（NO-GO）
+
+- **原生 review 未运行**：对 35 研究分支 `REVIEW_INVALID`（无关联 PR、gh 不在 PATH）；按 20 决定不为此新建 PR。以下是**本地静态 + CPU 临时夹具的有限审查，明确不视为 PASS**。
+- **冻结件**：首包 commit `ced48f3`（binding_probe 8ec3642d、run_probe b27a954e、compile_probe 53e518db、fixed_gate 041a66aa 未改、snapshot_contract a954e1a0、validate_snapshot 81737532、test_probe_cpu a8426375、README 375c1673、BUILD_NOTE d606aa22、A12 源 6c1a90ab）；监督冻结 commit `abfe38a`（window `e55fcc00` = draft 同字节、manifest `0ef5005c`、cell_supervisor `6473a011`、README `8ef3da00`）。**CPU 独立复跑 27/27**（11+8+8），但测试 mock `win.run`/用会退出的假 restore，不覆盖前台 start.sh。
+- **NO-GO（P0）**：
+  1. `start.sh` 末尾 `exec python inference.py` 前台常驻；window `run(restore_argv, timeout=900)` 用 `subprocess.run` → 阻塞 900 s 并**杀掉刚恢复的服务**；`cell_supervisor.run_aux` 同样等 rc。必须 Popen 分离、不等待、wait_health、从 launch-manifest 读身份。
+  2. restore 只在 child try/finally 内；stop rc!=0、停后端口/PGID/NPU 检查失败、d0_stop 异常都在其之前 `return 1` → **不恢复**。必须顶层 finally 覆盖 stop 之后的全部路径。
+  3. A12 样例 `ACL_CHECK` 在线程内 `return retcode` 且打印 `[ERROR] ... retcode: N`，std::thread 忽略返回值，main 可能 rc0；window 只判 program rc，未解析日志、未捕获 launch_rc/sync_rc。
+  4. A12 独立二进制的实际 maps（opapi_math/transformer/hccl_fwk 等）未采集；probe 的 library_evidence 只读 Python 进程。
+  5. restore_output 非 fresh，可能读旧 launch-manifest/joint-record。
+- **P1**：binding_probe 的 KEEP_* 保留整个 RunState（含 workspace）→ H1/H3 与 H2 混淆；run_probe 默认 arm-timeout 60 s（协议 240）；recovery 文案仍写 “aa3e-noop or f810->fused”；stop-script SHA 检查条件化且 d0_stop CLI 未证；env_expect 未 gate 冻结 fcbdcbf1；protected 未含 supervisor pid；finally 中 rc 可能未初始化。
+- **当前状态**：NO-GO 已发 31/35/20；服务 aa3e/s1 保持在线未动；修复后重冻结（新 window/manifest SHA）再 preflight。A12 body（text a7dd3f64/image f3229f5c）与 identity 需 31 提供本地副本/SHA256SUMS 方可核。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
