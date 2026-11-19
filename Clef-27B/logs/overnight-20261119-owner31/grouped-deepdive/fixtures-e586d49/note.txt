@@ -1,0 +1,3 @@
+Two Linux runs of test_probe_cpu on e586d49:
+1) without sourcing activate_env.sh: torch import triggers the torch_npu device-backend autoload and fails with the triton TORCH_LIBRARY double-registration error, then the process segfaults (exit 139). Venv torch auto-loads torch_npu, so the CANN env is required even for CPU-only tensor tests.
+2) with activate_env.sh sourced (no NPU calls made): Ran 30 tests, 29 OK, 1 FAIL test_tensor_stats_match_the_list_helper: relative_l2 1.8708287477493286 (torch float32 path) != 1.8708286933869707 (double list helper), delta ~5.4e-8. Test asserts exact equality; needs a tolerance or a double computation in the comparison.

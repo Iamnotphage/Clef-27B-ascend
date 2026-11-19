@@ -1,0 +1,107 @@
+test_a15_rows127_pad_gather_crop_with_stubs (test_probe_cpu.A15FlowTest.test_a15_rows127_pad_gather_crop_with_stubs) ... ok
+test_missing_reference_is_fail_closed (test_probe_cpu.A15RecordTest.test_missing_reference_is_fail_closed) ... ok
+test_record_contains_equivalence_and_diagnostic (test_probe_cpu.A15RecordTest.test_record_contains_equivalence_and_diagnostic) ... ok
+test_relative_l2_zero_denominator_rule (test_probe_cpu.A15RecordTest.test_relative_l2_zero_denominator_rule) ... ok
+test_wrong_shape_is_fail_closed (test_probe_cpu.A15RecordTest.test_wrong_shape_is_fail_closed) ... ok
+test_zero_reference_records_finite_neutral_rule (test_probe_cpu.A15RecordTest.test_zero_reference_records_finite_neutral_rule) ... ok
+test_checker_catches_an_undefined_name (test_probe_cpu.F821Test.test_checker_catches_an_undefined_name) ... ok
+test_checker_catches_the_old_a15_pad_line (test_probe_cpu.F821Test.test_checker_catches_the_old_a15_pad_line) ... ok
+test_probe_and_window_have_no_undefined_names (test_probe_cpu.F821Test.test_probe_and_window_have_no_undefined_names) ... ok
+test_gate_bytes_unchanged (test_probe_cpu.FrozenAssetsTest.test_gate_bytes_unchanged) ... ok
+test_a13_plan_is_native_mmar_control (test_probe_cpu.PlanTest.test_a13_plan_is_native_mmar_control) ... ok
+test_a14_plan_is_native_reduce_scatter_control (test_probe_cpu.PlanTest.test_a14_plan_is_native_reduce_scatter_control) ... ok
+test_a15_padding_row_blocks_and_bias_free_plan (test_probe_cpu.PlanTest.test_a15_padding_row_blocks_and_bias_free_plan) ... ok
+test_arm_output_keeps_a14_and_crops_a15 (test_probe_cpu.PlanTest.test_arm_output_keeps_a14_and_crops_a15) ... ok
+test_first_matrix_and_flags (test_probe_cpu.PlanTest.test_first_matrix_and_flags) ... ok
+test_h4k_h5k_keep_all_discriminators (test_probe_cpu.PlanTest.test_h4k_h5k_keep_all_discriminators) ... ok
+test_matrix_contains_a12_and_keepalive_arms (test_probe_cpu.PlanTest.test_matrix_contains_a12_and_keepalive_arms) ... ok
+test_out_dir_shared_by_two_ranks (test_probe_cpu.PlanTest.test_out_dir_shared_by_two_ranks) ... ok
+test_plan_mode_does_not_import_torch (test_probe_cpu.PlanTest.test_plan_mode_does_not_import_torch) ... ok
+test_relative_paths_rejected (test_probe_cpu.PlanTest.test_relative_paths_rejected) ... ok
+test_weight_requires_sha (test_probe_cpu.PlanTest.test_weight_requires_sha) ... ok
+test_call_release_records_error_without_aborting (test_probe_cpu.ReleaseOrderingTest.test_call_release_records_error_without_aborting) ... ok
+test_release_only_after_sync_and_only_with_keep (test_probe_cpu.ReleaseOrderingTest.test_release_only_after_sync_and_only_with_keep) ... ok
+test_sync_failure_skips_release (test_probe_cpu.ReleaseOrderingTest.test_sync_failure_skips_release) ... ok
+test_missing_field (test_probe_cpu.SnapshotTest.test_missing_field) ... ok
+test_valid_and_mismatch (test_probe_cpu.SnapshotTest.test_valid_and_mismatch) ... ok
+test_tensor_none_and_wrong_shape_fail_closed (test_probe_cpu.TensorErrorStatsTest.test_tensor_none_and_wrong_shape_fail_closed) ... ERROR
+test_tensor_stats_match_the_list_helper (test_probe_cpu.TensorErrorStatsTest.test_tensor_stats_match_the_list_helper) ... ERROR
+test_tensor_zero_reference_rule (test_probe_cpu.TensorErrorStatsTest.test_tensor_zero_reference_rule) ... ERROR
+test_watchdog_exits_124_and_writes_marker (test_probe_cpu.WatchdogTest.test_watchdog_exits_124_and_writes_marker) ... ok
+
+======================================================================
+ERROR: test_tensor_none_and_wrong_shape_fail_closed (test_probe_cpu.TensorErrorStatsTest.test_tensor_none_and_wrong_shape_fail_closed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2935, in _import_device_backends
+    entrypoint = backend_extension.load()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/importlib/metadata/__init__.py", line 205, in load
+    module = import_module(match.group('module'))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/__init__.py", line 40, in <module>
+    import torch_npu.utils.patch_getenv
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/utils/__init__.py", line 12, in <module>
+    from torch_npu.npu.utils import get_cann_version
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/npu/__init__.py", line 164, in <module>
+    from .utils import (obfuscation_initialize, obfuscation_calculate, obfuscation_finalize,
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/npu/utils.py", line 8, in <module>
+    import torch_npu._C
+ImportError: libhccl.so: cannot open shared object file: No such file or directory
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-e586d49/runtime/grouped_mmar/test_probe_cpu.py", line 304, in setUp
+    import torch
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2980, in <module>
+    _import_device_backends()
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2939, in _import_device_backends
+    raise RuntimeError(
+RuntimeError: Failed to load the backend extension: torch_npu. You can disable extension auto-loading with TORCH_DEVICE_BACKEND_AUTOLOAD=0.
+
+======================================================================
+ERROR: test_tensor_stats_match_the_list_helper (test_probe_cpu.TensorErrorStatsTest.test_tensor_stats_match_the_list_helper)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-e586d49/runtime/grouped_mmar/test_probe_cpu.py", line 304, in setUp
+    import torch
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2804, in <module>
+    class _TritonLibrary:
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2805, in _TritonLibrary
+    lib = torch.library.Library("triton", "DEF")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/library.py", line 101, in __init__
+    self.m: Any | None = torch._C._dispatch_library(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Only a single TORCH_LIBRARY can be used to register the namespace triton; please put all of your definitions in a single TORCH_LIBRARY block.  If you were trying to specify implementations, consider using TORCH_LIBRARY_IMPL (which can be duplicated).  If you really intended to define operators for a single namespace in a distributed way, you can use TORCH_LIBRARY_FRAGMENT to explicitly indicate this.  Previous registration of TORCH_LIBRARY was registered at /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py:2805; latest registration was registered at /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py:2805
+
+======================================================================
+ERROR: test_tensor_zero_reference_rule (test_probe_cpu.TensorErrorStatsTest.test_tensor_zero_reference_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-e586d49/runtime/grouped_mmar/test_probe_cpu.py", line 304, in setUp
+    import torch
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2804, in <module>
+    class _TritonLibrary:
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py", line 2805, in _TritonLibrary
+    lib = torch.library.Library("triton", "DEF")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/library.py", line 101, in __init__
+    self.m: Any | None = torch._C._dispatch_library(
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Only a single TORCH_LIBRARY can be used to register the namespace triton; please put all of your definitions in a single TORCH_LIBRARY block.  If you were trying to specify implementations, consider using TORCH_LIBRARY_IMPL (which can be duplicated).  If you really intended to define operators for a single namespace in a distributed way, you can use TORCH_LIBRARY_FRAGMENT to explicitly indicate this.  Previous registration of TORCH_LIBRARY was registered at /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py:2805; latest registration was registered at /workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/__init__.py:2805
+
+----------------------------------------------------------------------
+Ran 30 tests in 1.566s
+
+FAILED (errors=3)
