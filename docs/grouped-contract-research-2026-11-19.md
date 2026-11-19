@@ -2048,3 +2048,25 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 
 **下一最小只读请求（31，一次合并）**：从远端 attempt2 archive 92 文件 grep 并按文件/时间/device/rank 回传命中（无命中则明确 0）：
 `start to read the`、`AicpuKfcRpcServer::Init addr`、`reset valid value`、`ReadValidMsg[`、`ReadValidMsg timeout 6s`、`Check msg equal failed`、`Post finishedTurnCnt`、`Run rpc error`、`NsRecovery][MC2`、`KFCtaskAndTiling`、`AivAicpuOpParam`、`RunAicpuKfcSrvLaunch`、`ReadAddrMsg`、`TwoStage`、`PostMsg`、`507046`、`stream_id=47`、`task_id=`。若命中，复制对应 plog/device 文件入证据；不新增运行/开关/设备。
+
+## 114. attempt2 cleanup/gate 归因边界与最小 CPU 方案（80c73d9/56a99868）
+
+**exit/state 证据（31 补，只读）**：
+- rank-env 44 samples（14:48:59–14:52:35Z，5 s 间隔）对 torchrun 1354277 与 ranks 1354310/1354311 **全部 alive=True**；最后样本早于 SIGTERM，**未覆盖退出时刻**。
+- SIGTERM：14:52:59.631Z torchrun 收 15，14:52:59.633Z 向两 rank 发 SIGTERM。
+- gate：window finished_monotonic_ns 4016963762768790（≈14:53:01，SIGTERM 后 1.4–4.4 s）仍见 probe_residual/attributed_survivors 两 pid；之后一次只读扫描 residual_count=3（无 pid/state 明细），restore 前（≈14:55:5x）均已 gone。
+- **精确退出时刻无原件；/proc state 无原件**（child.identity state=R 属 torchrun 启动时，不是两 rank）→ **D-state/不可杀不能断言**，exit_delay 不能精确到秒。
+
+**35 代码边界（window 1f780bf8）**：
+- 超时分支 951 调 cleanup_final（最后一次 signal）；`child.wait` 返回 rc0 后，exception(981)/finally(998) 仅在 `child.poll() is None` 时再 cleanup → **torchrun 已退出，finally 跳过**；随后 1022 recovery_gate **立即**看到仍存活的 rank → `blocked_probe_residual`，**无 post-exit 等待/重扫**。
+- 本格**不是 signal 集合不足**（unknown/drift 空），而是 **parent 先退出 + 固定等待结束后的即时 gate**；仍活原因可能是退出延迟/僵尸-reap/采样时序，D-state 未证。
+
+**最小 CPU 方案（不改 unknown/drift 身份逻辑；待 20 决定）**：
+1. child 退出后（无论 poll 是否非 None）总是对注册 descendants 做一次最终 cleanup，并进入有界等待/重扫（≤60–120 s，0.5–1 s 间隔），每次用**同一份 scan/reader 快照**。
+2. 仅**连续两次空 residual**判 clean；期间 `_reap` adopted 子进程，Z 不计残留。
+3. 每次重扫记录每 pid `/proc/<pid>/stat` state+starttime；仅 `D` 标 D-state，否则 `exit_delay`/`residual_alive` 写入 gate context。
+4. 稳定空后仍只走既有唯一 `begin_restore`；survivors 错误分 `exit_delay`（等待后清空）与 `residual_alive`（截止仍非 Z，记 state），不立即 RuntimeError。
+5. 不改 signal 目标集合、不做 unknown/drift 升级。
+- CPU fixtures F1 parent-exit-first、F2 exit-delay、F3 zombie、F4 sampling race、F5 persistent non-Z、F6 protected/baseline/PID-reuse + 唯一 restore。
+
+**状态**：cleanup 属 harness 恢复门问题，不是算子根因证据；D-state 未证；32/35 结论一致。标记 grep 仍待 31；无设备/产品改动/新 GO。
