@@ -1,0 +1,9 @@
+All invocations were wrapped in `timeout 15`; no collector was started, no attach, no device list, no
+process/service/18143 access, no torch import, no build/test.
+1) find/ls of 9.2.1 bin/tools/profiler and tools/msopprof (read-only).
+2) msprof --version  (without activate): rc127, libascendalog.so missing (not counted as tool result).
+3) source activate_env.sh; timeout 15 msprof --version: rc255, "unrecognized option '--version'"
+   (usage printed; recorded in tool-paths-and-versions.txt).
+4) source activate_env.sh; timeout 15 msprof --help > msprof-help.txt: rc0, 85 lines (full file included).
+5) source activate_env.sh; timeout 15 msprof op --help > msopprof-op-help.txt: rc0, 41 lines (full file).
+6) msopprof -V and msprof op -V: rc0, version text as recorded.
