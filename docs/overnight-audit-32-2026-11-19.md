@@ -176,6 +176,14 @@
 - 指标口径：只用官方 benchmark JSON `decisions_per_second`（successful/wall_seconds）；journal span（首 start→末 finish）重算仅交叉核对、末位差单注。
 - 收口：新 tuple 文件/SHA、冷启动/幂等/失败证据、服务身份与 env、selected profile 全 aa3e（不拼 f810 数字）、最终服务为所选 aa3e/s1、clients 全空、旧 f810 资产未改。我负责新 tuple 逐 SHA 与运行等价门；实施代码由 20 触发原生 review。
 
+## 8.9 官方入口准备：197863d5 fixture、等价口径与 review 替代
+
+- **197863d5 原始 preimage 已交付**：远端只读来源 `/workspace/yangchen/logs/tuning/20261114-013000-fix4/clef_joint_schema.py.pre-trace`（cat 取回、本地复算 SHA 命中）；本地只读副本 `/Users/chenclay/.ao/data/artifacts/clef-27b-ascend-32/original-joint-schema-197863d5/`（14144 B、SHA `197863d5…2bf4be`、SHA256SUMS、README），供 35 本地临时 tree 三起点测试，不写提交树/生产。
+- **guard 口径（20）**：新官方入口使用独立 `runtime/apply_joint_single_field_patch_fused.py`=36eaff44；旧 `runtime/apply_joint_single_field_patch.py`=76595657 保留冻结；aa3e 运行期不读 guard；新 tuple 分别记录官方 36 与旧验收 765 的角色，不以旧路径必须为 36 作为官方启动成功门。
+- **数值等价口径（20）**：3 个固定 smoke 请求仅作接口交叉佐证；全量质量/性能继承的门是完整运行 recipe 逐项等价（aa3e/b09/36 资产、FLAG/ALLOW/SINGLE_FIELD、s1 argv、OPP9/LD12、模型/tokenizer/配置与加载路径、既有 GDN/QKV/chunk128/NZ/custom .so）；recipe 差异项须补对应全量验收，不得用旧 manifest 掩盖新入口 SHA。
+- **31 计划调整**：真实官方入口仅覆盖 f810→fused 起点，197863d5 起点由 CPU 临时夹具覆盖（真实冷启动如需额外生产 revert 须 20 授权）；Release tuple 需单列新 entry/inference/stage/资产 SHA、两条 guard、selected profile 全 aa3e、A 继承/B 新测清单与冻结资产零改动 diff。
+- **review 替代**：原生 review 无关联 PR 且 gh 不可用 → REVIEW_INVALID；按无 PR 范围不新建 PR。我将在新 tuple 交付后做直接本地冻结 diff + 真实夹具独立审查（重点 rev3 全部门与 35 新增分支），记录该替代及局限，finding 发 35、不改其代码。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
