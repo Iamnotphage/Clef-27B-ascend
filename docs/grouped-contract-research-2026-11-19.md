@@ -2264,3 +2264,39 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 边界：不从文件名“Deprecated”判弃用/分支；不因一个直接 xref 全局排路；不把 host MC2 与 device V1 入口当互斥。
 
 **缺口（交 20，合并 35/33 精确范围，不新增取件）**：若后续要钉 OneStageWait 的响应写点，需要 ① `TryRunRpcServerOneStageWait` 的 CFG/尾部调用（是否调用 `WriteFinish/WriteTurnCnt/PostMsg` 或仅 SQE）；② Init 参数数据流（y/j/T）与 `ctx+0xF3208` 写者；③ response 区只读快照（候选 `0x12c09bc20040..007f`）。当前不请求，root cause 仍 unresolved。
+
+## 119. §118 对象身份边界、窗口实参值与 abi15 待接项
+
+**依据**：31 包 `7b99846`（SUMS `ecca3248`、4/4 OK、ELF `2281deca`）+ 32 独立复核 + 35 数据流核对。无新取件/设备。
+
+### 119.1 三处绑定的窗口实参（值已证、对象名待序言）
+
+| line | 窗口数据流 | 运行值 | 对象身份边界 |
+| --- | --- | --- | --- |
+| 298 `CheckRcvAddrMsg+0x120` | `0x7d83ec ldr x1,[x19,#816]` → `0x7d8404 ldr w6,[x1,#80]` | `*(*(x19+816)+80)=1` | x19=this/server 是序言假设（窗口从 +0xd8 起） |
+| 121 `RcvMsg+0x130` | `x6=[x0+800]+1`；`x7=[[x0+816]+80]` | 0 命中，无值 | `[sp,#40]=this/server` 待 0x7d8000–0x7d80f0 序言 |
+| 551 `TryRunRpcServerOneStageWait+0xa4` | `0x7ca2b0 add x1,x21,#0xf0,lsl#12` → `0x7ca2c8 ldr w6,[x1,#12808]` | `*(x21+0xF3208)=0` | x21=ctx 是序言假设（窗口从 +0x60 起） |
+
+- 因此 §118 的措辞修正为：`round@x21+0xF3208`（不是已证的 `ctx+0xF3208`）；`server+816` 实为 `x19+816`；121 的 `[sp,#40]` 身份未证。
+- `roundF3208` 的值 0 与 `phaseF31BC`、`ctx+0x160` 是不同偏移的独立字段，不能互相赋值或合成“轮次=0”。
+
+### 119.2 唯一性与覆盖边界（随结论保留）
+
+- `mov w4,#298` 全库 56 个 site、`#551` 24 个；绑定唯一性只在“fmt `0x1614250`/`0x14fa9c0` + file `0x1613cc8`/`0x14fa618` + 同一窗口”内成立，不是全局唯一。
+- xref 仅覆盖 .text 内 ADRP+ADD/ADR 直接物化；未枚举 .plt/间接/函数指针/dlsym；0 直接匹配不推全库无调用。
+- 上层未证：哪个 caller 选择 `TryRunRpcServerOneStageWait`（0x762228 仅候选）、round 循环/日志前分支、`CheckRcvAddrMsg` 进入 0x7d83e4 的分支条件、`RcvMsg` line 121 的 gate/路径（零命中仅缺测，w1=0 vs 1 只是 guard 差异）。
+
+### 119.3 三层分离（不合并成单一 claim）
+
+1. **已证日志点层**：298 由 `CheckRcvAddrMsg` 发出（值 1）、551 由 `TryRunRpcServerOneStageWait` 发出（round 0）；它们只证明“到达该函数/该 Dlog”，不证明上层谓词或整条路径。
+2. **workspace/内核等待候选层**：`workSpace=0x12c09bc00000`（低32=Init `0x9BC00000`，16 MiB，两 rank）、`y+j`/`y+j+64T`、`TurnWait` 轮询 `rcvCnt` 仍是**候选静态链**；y==workSpace、j=notifyOff、T=1 均未运行绑定。
+3. **task13 绑定层**：正证只有“H13 已提交/展开、无 TaskFinished、3 min pendingNum=1”；AICORE 等待变量与 AICPU→AICORE 的 `rcvCnt` 回写**仍缺测**。不得用 1/2 层推导“AICPU 一定没写 rcvCnt”；它只是最强候选。
+
+### 119.4 abi15 待接（已授权 31；不重复请求）
+
+- 范围：`TryRunRpcServerOneStageWait` 入口→+0x150、`CheckRcvAddrMsg` 入口→+0x1a0、`RcvMsg` 0x7d8000–0x7d80f0 序言 + 旧 log 窗口连接、nm 边界/直接 caller 覆盖范围（handle `h11-abi15-cfg31-20261120-1`）。
+- 可解：x21/x19/this 身份、551/298 的局部谓词与 round 循环入口；返回路径超窗记“未覆盖”。
+- 不能解（或需另请）：OneStageWait 尾部是否调用 `WriteFinish/WriteTurnCnt/PostMsg`、response 区 `rcvCnt` 的实际写点、Init `y/j/T` 数据流。若 abi15 显示尾部无 response 写，则“缺失 rcvCnt 回写”升级为强候选；若显示有写，则缺口转到写值/可见性/守卫。
+- 到包后：35 核入口/条件，32 只审新 claims，33 并入 §117 表；当前不加设备/快照/GO。
+
+**状态**：root cause unresolved；本轮仅整合 §118 对象边界与窗口实参值，无新取件/设备；abi15 包未到前不推进设备问题。
