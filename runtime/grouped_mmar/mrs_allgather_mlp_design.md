@@ -377,9 +377,13 @@ temporary), 4 * 19,804,160 = 79,216,640 B = 75.55 MiB, plus BF16 `full` 9,912,32
 and BF16 `reference` 9,902,080 B = 18.90 MiB, a **lower bound of 94.44 MiB**.
 `y` (BF16 [484,5120], 4,956,160 B) is part of the per-call **retained** ledger, not
 the transient set. An alternative "simultaneously live tensor total" reading that adds
-it once is 99,031,040 + 4,956,160 = 103,987,200 B = **99.17 MiB**; this is **not
-additive** to the per-call retained sum (do not double count y). Small shape is above
-1 MiB. The benchmark
+it once is 99,031,040 + 4,956,160 = 103,987,200 B = **99.17 MiB (about 104 MB)**;
+this is **not additive** to the per-call retained sum (do not double count y). If
+this alternative total (including y once) is used in the peak estimate instead of
+the 94.44 MiB lower bound, W1/N4 is about 861.5 MiB, still under 1 GiB; the two peak
+readings are alternatives and are never summed. Any earlier wording that added y
+both to retained and to the transient total was conservative by about 4.7 MiB.
+Small shape is above 1 MiB. The benchmark
 must not append per-iteration outputs to a list; any such retention is additional.
 Freed temporaries may remain in the caching allocator, so the benchmark must record
 `memory_allocated` and `memory_reserved` (or call `empty_cache` outside the timed
