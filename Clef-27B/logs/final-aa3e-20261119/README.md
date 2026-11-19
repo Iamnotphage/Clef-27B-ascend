@@ -35,7 +35,7 @@ ERQA 216/400。所有质量差在 2PP 内（相对 11-13 适配 baseline 最大 
 - `s1/`：候选 S1 三轮的 acceptance/execution/quality/performance JSON + `c1-r*.jsonl.gz`（逐题 raw）+ supervision
 - `b8/`、`b16/`：typed 候选 B8/B16 两点的同结构原件
 - `erqa/`：ERQA400 acceptance/summary/erqa-score、`predictions.jsonl.gz`、expected-inputs、supervision
-- `restore/`：最终 restore 的 complete/restore/envcompare/actual/expected/ready-identities，及 B8/B16 中间 restore 记录
+- `restore/`：最终 restore 的 complete/restore/envcompare/actual/expected/restored-identities，以及 B8/B16 中间 restore 的 complete/envcompare/actual/expected/restored-identities
 
 远端原件路径（执行机）：
 - S1：`/workspace/yangchen/logs/owner31-candidate-s1-20261119T0059Z/`

@@ -7,7 +7,7 @@
 - 2026-11-12 已从 ModelScope 下载完整模型，共 28 个文件，54,989,897,681 字节（约 55.0 GB）。所有文件的 SHA-256、主干权重索引和 safetensors 头部边界检查通过。校验明细见 [logs/download_verification.json](logs/download_verification.json)，权重检查见 [logs/model_inspection.json](logs/model_inspection.json)。
 - 早期实例为 CANN 9.0.0、驱动 26.1.1、Python 3.10.12，当时推理依赖待配置；保留该次环境来源与采集记录。[早期环境调查](../docs/environment.md)
 
-## 当前 A3 baseline，2026-11-12
+## 历史 A3 baseline，2026-11-12
 
 新机器 `199.88.54.221` 使用现有 CANN / A3 Ops / ATB 9.2.1，独立 CPython 3.12.16、torch 2.10.0+cpu、torch_npu 2.10.0.post7。固定 vLLM / Ascend 源码、依赖、构建日志、最终 `pip check` 和 78 个自定义算子导入均已记录。[安装记录](../docs/installation-2026-11-12.md)
 
