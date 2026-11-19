@@ -2710,3 +2710,32 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 33 不实现/不部署；无新设备/GO。
 
 **状态**：release 候选 source/static PASS，运行/构建/部署未证；root cause unresolved；与 sync 挂起因果分离。
+
+## 132. 35 文档检索交接与 OneStage/task13 最小支持观测问题
+
+**口径**：20 已把官方文档 contract 检索交 35（ascendc-docs-search，**9.2.1 优先**；9.0 技能默认环境不适用）。33 不重复本地阴性查找/在线查询；27/31/32 继续 release 候选源码/CPU/审核；无设备新 GO/操作包变化。
+
+### 132.1 给 35 的本地材料边界
+
+| 类别 | 路径/SHA | 边界 |
+| --- | --- | --- |
+| **同版 9.2.1** | MRS v1 `a14-preflight/aclnn_matmul_reduce_scatter.h` `ad8f98b4…`；v2 `055d0ec7…`；level2 `a377b21b…`/`7b0745e3…` | 只有两段式签名/参数注释；**无** executor 生命周期/auto-release/queuekeepalive、**无** aclCreateTensor/List 拷贝语义 |
+| **非同版** | Grouped docs `31333c59…`（上游 f5703e4）；sample `6c1a90ab…`；compile doc `c591f0e3…` | 可作两段式/样例参考；**不是 9.2.1 合同**；A3 支持表述自相矛盾（产品表不支持 vs 样例必须 A3 vs op_host 注册 910_93），不作裁决 |
+| **探针** | `binding_probe.cpp` keepalive 字段（35 的 H1/H2） | 探针设计，非官方合同 |
+
+**请 35 用 9.2.1 官方文档核**：①`aclCreateTensor`/`aclCreateTensorList` 是否复制 shape/stride/member 数组；②第二段 API 后 `aclOpExecutor` 是否 auto-release、queuekeepalive 条文；③9.2.1 对 Grouped/A3 的支持声明；④MC2 native resource（executor/stream/descriptor/native handle）生命周期。若 9.2.1 文档无对应条文，保留缺口。
+
+### 132.2 OneStage/task13 当前整合（不变）
+
+- 路径：`RunAicpuKfcSrvLaunch` → `RunAicpuRpcSrvLaunch` V1 → `TryRunRpcServerOneStageWait`（包装器）→ `RunRpcServerOneStageWait`（worker）→ Check#1（领先候选）→ AicpuCcOpExe → CheckAivIsEnd → 结束路径 `WaitTaskFinish(ctx,1)` → `WaitMainStreamFinish` 返回（head11/tail11、25/652 µs）。
+- 已证/有支持：selector 边已证；OneStage 日志；Check#1 领先候选；本地主 stream 等待返回；worker 无 `[x19]` response 直接 store。
+- 未证：AICORE `TurnWait(rcvCnt)` 的实际等待/写点；task13（host s47/t13）无 TaskFinished、3 min pending 是唯一正证；AICPU 本地排空 ≠ AllReduce/task13 完成。
+
+### 132.3 最小支持观测问题（交 20 决定；当前不请求）
+
+1. **response 区只读快照**：候选 `0x12c09bc20040..0x12c09bc2007f`（`rcvCnt` 候选 `0x12c09bc20073`；依赖 y=workSpace、notifyOff=131072、T=1）。能判 `valid/rcvCnt` 是否推进；需 20 授权未来只读快照，当前无设备。
+2. **AICORE 侧证据**：task13/32781-47 的 AICORE trace/exception/dump 或内核等待点。能判 kernel 是否启动、停在何处；属设备侧能力/新窗口，需 20 决定。
+3. **tiling 常量**：本机 `notifyOff/j/T`、`kfcNotifyId`、`workspaceOff`（9.2.1 config/文档）；能钉死 response 地址与 AICORE 等待源；静态/安装包读取，非设备。
+4. **param 判别**：Check#1 用 `sp+0x20`、Check#2 用 `sp+0x328`；若两者内容/填充路径有可判别差异，可把“领先候选”升级/否决；需 worker 两 param 的填充/CFG（小静态片段）。
+
+**状态**：root cause unresolved；OneStage/task13 整合维持条件式；最小观测问题已列，待 20 决定；无新取件/设备/GO；release 候选（698ba3d）由 27/31/32 继续，与本线分开。
