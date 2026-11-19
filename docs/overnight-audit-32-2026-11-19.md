@@ -286,6 +286,17 @@
 - **skip 语义决定**：接受“旧服务活+端口 open+health ready → skip 且判失败”；不接受旧 root 活时因 port==111 启动第二棵树（必须 blocked/停报）。A12 inputs/identity/plan/clean_expect 已 PASS；完成①②③后重冻结再核。
 - **对 31“安全门已存在”的复核**：`needs_restore=(stopped or port==111 or not old_alive)` 只覆盖 old_alive+port open；**old_alive+port111（partial）仍 Popen**，且 Popen 前未检查旧 PGID/探针残留/source。要求：old_alive=True 绝不 Popen（health ready+port open→skip+fail；否则 blocked 停报）；old_alive=False 时 Popen 前再门 port==111/旧 PGID 非 Z 空/无 child-probe 残留/source==aa3e；任一不满足→blocked。A12 maps 需 per-PID `{pid,cmdline,libs[]}` 并识别实际 binary（a12_grouped_mmar/timeout），记录 opapi_math/transformer/hccl_fwk/hcomm/ascendcl/nnopbase 实际 loaded/absent；硬门保持 libhccl+opapi_math/transformer（hccl_fwk 未链上不硬门，hcomm 记录）。CPU 真实前台 fixture（Popen+health+进程存活+清理；old_alive+port111→blocked 无 Popen）仍必须补。
 
+## 8.20 A12 增量复核与 GO（4653278）
+
+- **冻结件**：window `51d6bc0c…`、manifest `e55eac00…`；binding/run_probe/cell 与 7e1cf51 相同（未回归）。
+- **增量核对**：
+  - `recovery_gate`：old_alive 先判且**绝不 Popen**；health ready+port open→`skipped_service_alive_healthy`（context 含 health/identity/port/old_pgid/residual/source）；port111/unknown/health 非 ready→`old_root_alive_partial` blocked；old_root gone 才进入 Popen，前门 port==111/旧 PGID 非 Z 空/无 child-probe 残留/无 runner 残留/source==aa3e；skip/blocked 写 window.json 返回 1。测试 `started==[]` 证不 Popen；healthy skip 记录 health。
+  - maps：per-PID `{pid,cmdline,libs[path,sha256,soname]}`；map_coverage 7 类 loaded/absent；binary_processes 识别 a12_grouped_mmar/timeout；硬门 libhccl+opapi_math/transformer，hccl_fwk/hcomm 仅记录。stop-script 在 build_plan 强制 is_file。
+  - 真实前台 fixture：单测 OK，window.json ok=True/gate=restore/branch=aa3e-noop/pid=87508，restore.log 0 字节（预期），proxy 用 ProxyHandler({}) 绕过；测试末 killpg(pid)。ResourceWarning 为 Popen 未 wait 的 cosmetic。
+  - CPU 独立 **11+9+20=40/40**。
+- **A12 preflight 本地 7/7**：plan `063e794b…`；stage-identity：commit 4653278/window 51d6bc0c/manifest e55eac00/binding 11baa2c6/run_probe c7e0410e/cell 3daa1455/adapter a9b01fd9/A12 binary 37929ec4/glue 22edb89f/bodies a7dd3f64+f3229f5c/clean_env fcbdcbf1。
+- **GO**：已下发 31 单格 A12（d0_stop→A12≤240s→精确清理→官方 aa3e-noop 恢复；fresh run/restore dirs；skip/blocked/restore 失败停报且绝不双启）。回传 window.json/stop.json/child stdout+stderr/restore.log/per-PID maps/launch-manifest+joint-record/final identity/plog/A12 rc+error+costtime。判定仅当 ok=true+A12 证据+maps 硬门+branch aa3e-noop+五 PID/双 worker/四检/env/joint/clients。**A12 仅 liveness/通路正对照，不外推 BF16 精度、不单因归因**；production restore（setsid）设备首次真实执行，异常按门停报。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
