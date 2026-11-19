@@ -2,6 +2,10 @@
 
 Status: **CPU review evidence, device not executed**. Self-contained for independent audit by 32. 31 remains the only service owner. Frozen f810 entry (`final_service_phase.py` `888a8d7f…`, supervisor `172c2838…`, cc7 runner/manifest) is untouched.
 
+## rev4.1 addendum (32 request)
+
+The unit `build_deps` regression now also asserts `deps.ab.prod_env == {}`; unit test SHA is `53d984ec043518e50bde24f60a55446b0a4807703feb7e0c6b91dbae40c16d96`. Entry (`a1ca26cf…`), manifest (`31202d27…`), execution stage `00e3bdb8…` and all device-facing bytes are unchanged. The 18 unit tests still pass; the 4 real-method integration tests cover `restore_prod` with `prod_env={}` end to end.
+
 ## 0. Frozen identities (rev4)
 
 | Object | Path | SHA-256 |

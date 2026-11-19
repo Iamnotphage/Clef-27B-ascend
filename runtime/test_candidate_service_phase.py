@@ -473,6 +473,7 @@ class BuildDepsTest(unittest.TestCase):
             self.assertEqual(deps.ab.state, {'schema': 'joint-fused-source-control/1', 'at': 'T',
                                              'args': {}, 'rounds': [], 'steps': {},
                                              'source_switches': [], 'overall_rc': 1})
+            self.assertEqual(deps.ab.prod_env, {})
             deps.ab.switch_source('aa3e', 'fixture')
             self.assertEqual(deps.ab.state['source_switches'],
                              [{'target': 'aa3e', 'tag': 'fixture'}])
