@@ -392,6 +392,8 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **安全含义**：外层 `killpg(child.pid)`/survivors 枚举覆盖不到 rank 自己的 PGID；rank 生命周期依赖 torchrun/elastic agent 的 worker 清理，window 未独立验证。若 torchrun 在 SIGTERM/SIGKILL 下未能回收 worker，rank 组可能残留；当前 H4K 无 post-run rank 组枚举，故“无残留”只能确认 child PGID，不能确认两 rank 组。**A14 large fac2d948 尚未启动**（plan_not_executed），按 20 暂缓其核验；若启动，沿用同一 window 时需补独立 rank 组清理/枚举。此报告不进行进程操作。
 
+**最小修复建议（供 35/32/20）**：window 的 cleanup/survivors 应以 **child.pid 的 PPID 子树**为目标（启动后及超时前重新 scan，记录每个 rank 的 pid/ppid/pgid/starttime/boot_id），对每个独立 PGID 先校验 leader 身份（PID+start+boot 匹配）再 `killpg`；survivors 覆盖这些组；不伤未知/复用 PID 成员。H4K/H11/H5K 的历史 window 记录仍只证明 child PGID；修复需新 window SHA 并由 32/33 复核，A14 large 等安全修复后再按原授权继续。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
