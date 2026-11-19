@@ -342,8 +342,8 @@
       "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven"
     ],
     "pending": [
-      "A14 small v2 (identity 1305145, plan 18fdf185, KEEP_ALL) awaiting 32 GO",
-      "A14 large M968/K8704/N5120 after small result"
+      "A14 small GO executing (plan 18fdf185, identity 1305145, KEEP_ALL)",
+      "A14 large after small result/new identity/32 review"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -399,7 +399,7 @@
     }
   },
   "a14_control": {
-    "status": "small_v2_plan_ready_pending_32_go",
+    "status": "small_go_executing",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -444,12 +444,14 @@
     "compile_fix": "MMAR/MRS V1 take const aclTensor*; Lists.add_single owns single descriptors; grouped keeps aclTensorList",
     "flags": "KEEP_ALL (full state kept until sync/release; no early-release confound)",
     "old_plans_invalid": [
-      "d9b9070b (old run_probe 331f9929 flags=0)",
-      "8cdbebd5 (old run_probe 331f9929 flags=0)"
+      "d9b9070b",
+      "8cdbebd5",
+      "2ee38a28",
+      "bc1efa2d"
     ],
     "rebuild_required": "31 re-stage e0b06df (binding 101660f8, run_probe 6ae866b1 KEEP_ALL, window 2202165e), recompile/log, new identity after H6 recovery, new small plan M128/K256/N512",
     "small_go": "after 32 reviews 101660f8+6ae866b1 and the new plan/binary/identity",
-    "large": "M968/K8704/N5120 after small result and 32 limited review",
+    "large": "M968/K8704/N5120 after small + new root identity + 32 limited review",
     "small_v2": {
       "identity": "1305145/start 398845277 (file 4ace4a79)",
       "plan_sha256": "18fdf185",
@@ -470,6 +472,16 @@
       },
       "sums_sha256": "2e1086eb (13/13)"
     },
-    "go": "32 reviews identity/plan then gives small GO; no user/20 second permission needed"
+    "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
+    "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
+    "evidence_required": [
+      "rank result.json (api/sync/finite/both/pass, reduced max_abs/bit_equal, group/world/versions)",
+      "rank traces",
+      "child logs",
+      "window.json/per-PID maps",
+      "plog",
+      "restore identity/branch/four-check"
+    ],
+    "gate": "run_probe pass + window child_ok (adapter/libhccl/ascendcl maps); hang records stream47/mc2_server"
   }
 }
