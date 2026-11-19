@@ -1098,7 +1098,7 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 | RpcSrvLaunch 的 `PrintTilingData`/`PrintMC2AicpuContext` | **共享 helper/前置必经**（分支前） | RpcSrvLaunch 0x7618a4/0x7618b0，所有子分支共用 | 是 | 说明进入 RpcSrvLaunch（相对 MC2/CommKfc），**不区分子分支** | 否（共享标记） | 0x7618a4/0x7618b0 |
 | `ATRACE ... create object KFCtaskAndTilingTraceData/AivAicpuOpParam` | **共享 KFC 路径标记**（对象创建） | KFC task/param 区被使用；Grouped/A12/H11/H4K 有，A14/A15 无 | 是（现有 cell 已见） | KFC 路径（vs MRS） | 否：ATRACE 配置/默认级别与对象创建时机未证；不能分 API/TwoStage/MC2 | 现有 device 日志 |
 | `ae_so_manager ... Get api RunAicpuKfcSrvLaunch ... success` | **共享入口**（KFC kernel 取 API） | 任意 KFC 启动 | 是（现有 cell 已见） | KFC kernel 启动，不区分子分支 | 否 | 现有 device 日志 |
-| OneStage/Unfold 入口/错误 Dlog | 待 35 格式串 | 进入对应分支/错误 | 待定 | 若唯一，指向对应分支 | 待定 | 35 rodata |
+| OneStage/Unfold 入口/错误 Dlog | 本轮 10 段内**无唯一归属串**（§78） | 进入对应分支/错误 | 待定 | 无现有标记；§77 #7 的 OneStage 归因已撤回 | 不适用 | abi12 rodata |
 | MC2TraceUtils/CommKfc 标记 | 待 35 格式串 | MC2/CommKfc 提交 | 待定 | 指向 MC2/CommKfc | 待定 | 35 rodata |
 
 **缺失归因限缩**：历史 cell 的 plog 只证明 `ASCEND_GLOBAL_LOG_LEVEL`/`ASCEND_GLOBAL_EVENT_ENABLE`/`ASCEND_MODULE_LOG_LEVEL` 为空、`HCCL_DEBUG_CONFIG=0x0`；这**只能证明未采到/按默认配置运行**，默认级别值与标记自身级别尚缺（31 文档检索归档另交）。因此**“日志级别未开”不作为已证事实**；标记缺失不能单独排除任何路径，除非前提（超时/失败）与采集级别都被证明满足。
@@ -1187,3 +1187,54 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 | ATRACE KFC 对象 | KFC vs MRS | 不分子分支 |
 
 **若 #1/#4/#3 均未出现**：不能排除 API/TwoStage（可能 gate 匹配、消息到达、等待满足或采集未生效）；只能记录“无正向标记”，下一步才是 host launch 日志或代码埋点（需单独授权）。**当前不执行**；无设备 GO。
+
+## 78. abi12 rodata 文本结果（33a2226/dcc6a107）：标记判别更新
+
+**来源**：`libccl_kernel.so` 2281deca；31 按 .rodata VMA/文件偏移直读 10 段（332 行 dump，未截断）；段内 NUL 串完整。
+
+### 78.1 实际字符串（与 §76 地址对应）
+
+| 段 | 地址 | 原文 | 归属/站点 | 类型 |
+| --- | --- | --- | --- | --- |
+| 1 | 0x1613b80 | `[%s:%d] [%u][MC2] Check msg equal failed, rMsg:%s msg:%s` | ReadApiValidMsg gate 不匹配（0x7d6fec 区） | **API 条件失败** |
+| 1 | 0x1613bd0 | `[%s:%d] [%u][%s]call trace: hcclRet -> %d` | ReadApiValidMsg 0x7d6fec/0x7d70b8 | API 条件失败（TraceProfSubmit rc） |
+| 1 | 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | 0x7d7074 | API 条件失败 |
+| 1 | 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | ReadApiValidMsg 0x7d71bc；x6=[slot+48] | **API 消费成功标记**（打印写后的 valid） |
+| 2 | 0x1613f20 | `[%s:%d] [%u]AicpuKfcRpcServer::Init addr:%u` | Init4 0x7d67cc；x6=y | **RpcSrvLaunch Init4 入口**（共享，打印 y 低 32 位） |
+| 2 | 0x1613f58 | `[%s:%d] [%u]Post finishedTurnCnt[%u].cnt = %lu.` | 段内相邻；站点未给 | 候选 stage-wait 完成/轮次标记（待站点） |
+| 3 | 0x1614060 | `[%s:%d] [%u]ErrToWarn: ReadValidMsg timeout 6s... ` | CheckRcvWorkMsg 0x7d744c | **TwoStage 等待超时**（6 s） |
+| 3 | 0x1614098 | `[%s:%d] [%u]ReadValidMsg timeout 6s... ` | 0x7d744c 非 ErrToWarn 变体 | 同上 |
+| 4 | 0x1614408 | `[%s:%d] [%u][AicpuKfcRpcServer][ReadAddrMsg] ReadValidMsg[%u] timeout %lus` | ReadAddrMsg 0x7d8d20；x6=turn、x7=20 | **API 无消息超时**（20/40/80/160 s） |
+| 5 | 0x14eb1b0 | `[%s:%d] [%u]ErrToWarn: args is null.` | RunAicpuRpcSrvLaunch arg0 NULL | 共享错误 |
+| 6 | 0x14edee8 | `aicpu_kfc_interface.cc` | 共享 file 串 | 共享 |
+| 7 | 0x14ee650 | `[%s:%d] [%u][NsRecovery][MC2] Suspending` | 0x762280 | **MC2/Suspending**（非 OneStage；§77 #7 归因撤回） |
+| 7 | 0x14ee680 | `[%s:%d] [%u]ErrToWarn: Run rpc error, opIdx:%u, sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d` | 站点未给 | 候选 **字段型** stage-wait 错误（sndCnt/rcvCnt 四值）；待站点 |
+| 8 | 0x14ee728 | `[%s:%d] [%u]ErrToWarn: Failed to run aicpu server, MC2 opIdx:%u` | 0x7620e8 | **MC2 错误** |
+| 9 | 0x14f7160 | `[%s:%d] [%u]Query sqe info failed, stream:%u, id:%u` | site 待核（35 标 0x7b3a24，但同址另有 #10） | 不确定 |
+| 10 | 0x14f8280 | `RunRpcServerApi` | 0x7b3a24 区 | 函数名串 |
+| 10 | 0x14f8290 | `[%s:%d] [%u]start to read the [%u] msg` | RunRpcServerApi 0x7b3a24；x6=[ctx+12756]=ctx+0xf31d4(turn) | **API 每轮入口**（打印 turn） |
+| 10 | 0x14f82b8 | `[%s:%d] [%u]ErrToWarn: fail to get addr msg, msgPos %u` | 0x7b3a24 区 | API 失败标记 |
+
+### 78.2 修正后的正向标记
+
+- **API 路径（最强）**：`start to read the [%u] msg`（每轮，打印 turn）→ 直接证明 RunRpcServerApi；`reset valid value %u` → gate 匹配并消费；`Check msg equal failed` → gate 不匹配；`ReadValidMsg[%u] timeout %lus` → 无消息超时（20/40/80/160 s）。
+- **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg 等待失败）；`Post finishedTurnCnt[%u].cnt = %lu.` 与 `Run rpc error ... sndCnt ... rcvCnt ...` 是候选，站点未确认前不单独判路。
+- **共享入口**：`AicpuKfcRpcServer::Init addr:%u`（Init4 每次，打印 y 低 32 位）可作“日志在目标 AICPU 生效”的必经标记。
+- **MC2**：`[NsRecovery][MC2] Suspending`、`Failed to run aicpu server, MC2 opIdx:%u`。
+- **OneStage/Unfold**：本轮 10 段内**没有**可唯一归属的入口串；§77 的 #7 OneStage 归因撤回，保持“无现有标记”。
+- **ATRACE KFC 对象**仍只分 KFC vs MRS。
+
+### 78.3 级别/守卫边界
+
+35 给出 guard 原始操作数（如 (2,3)、(0,3)、(1,3)、(3,3)）与 DlogRecord w0/w1；**没有证据表明这些操作数直接取 `ASCEND_GLOBAL_LOG_LEVEL` 的 0–4 枚举**（可能是 bitmask/另一枚举）。因此：
+- 不把“设 GLOBAL=0”写成“一定能打开这些标记”；
+- 观测有效性仍以“看到 `Init addr:%u` 等必经标记”为准；
+- `MODULE_LOG_LEVEL`/`HCCL_DEBUG_CONFIG` 语义仍未证。
+
+### 78.4 更新后的最小观测计划
+
+1. 候选配置同 §77（GLOBAL=0 + PROCESS_LOG_PATH；候选，未执行）。
+2. 采到日志后先验 `AicpuKfcRpcServer::Init addr:%u`；无它 → 配置未生效/未进 RpcSrvLaunch，缺测。
+3. 有 `start to read the [%u] msg` / `reset valid value` → API 路径；有 `ReadValidMsg timeout 6s` → TwoStage 等待失败；两者都无 → 不排除，需看候选 `Post finishedTurnCnt`/`Run rpc error` 站点后再定。
+4. 若出现 `MC2` 串 → 该路径非 API/TwoStage（但同一进程可能多阶段，需按时间序列）。
+5. 仍无设备 GO/SSH；字段值（turn 等）仅在上述标记打印参数中出现，属日志 payload，不是内存读取。
