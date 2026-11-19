@@ -104,14 +104,18 @@ inside `CopyAndCheckApiMsg`.
 
 Because the guard semantics are unproven, **absence of a marker is not evidence
 until the configuration is shown to be effective on the target AICPU**. The
-positive controls are the K-entry markers:
+positive control must be a K-entry marker **applicable to the actual path**:
 
-- Init4 Dlog 0x7d67cc, line 27 (per Init4 call), and
-- ForApi Dlog 0x7b3a24, line 1715 (per turn).
+- ForApi / `RunRpcServerApi` path: the per-turn Dlog 0x7b3a24, line 1715.
+- The Init4 path: the per-Init Dlog 0x7d67cc, line 27.
+- If the actual path is `Init(y)` / MC2 / TwoStage and has no K-entry marker in the
+  audited set, there is no positive control for that path; its missing logs are
+  "missing measurement", not a branch exclusion. Do **not** require Init4 when the
+  path does not call it.
 
-If at least one of these appears, the guard path is live on that AICPU and the
-presence/absence columns in the table above can be used. If neither appears, the
-run has "missing measurement", not "branch excluded". 33's §77 candidate setting
+If the applicable marker appears, the guard path is live on that AICPU and the
+presence/absence columns above can be used. If it does not, the run has missing
+measurement, not "branch excluded". 33's §77 candidate setting
 (`ASCEND_GLOBAL_LOG_LEVEL=0` + `ASCEND_PROCESS_LOG_PATH=<dir>`) is exactly what this
 positive control is meant to validate; this note does not assert that it works.
 ATRACE KFC objects only separate KFC vs MRS and do not distinguish API / TwoStage /
