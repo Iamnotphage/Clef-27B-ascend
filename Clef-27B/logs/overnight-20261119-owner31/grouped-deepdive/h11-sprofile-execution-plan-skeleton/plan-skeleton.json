@@ -68,11 +68,11 @@
   "note": "same-source template only; output-dir replaced with the fresh restore path"
  },
  "pending": [
-  "$PENDING_WINDOW_PATH (supervisor d2576c63 bytes; path-only pin)",
+  "$PENDING_27_SUPERVISOR_SHA (27 minimal configurable settle, default 30; new frozen bytes)",
+  "$PENDING_WINDOW_PATH (resolved from the new supervisor)",
   "$PENDING_FRESH_IDENTITY_FILE (capture at execution time; 1355077 snapshot is informational, not final)",
-  "$PENDING_WRAPPER_PATH / $PENDING_COLLECT_PATH / $PENDING_PREFLIGHT_PATH (new-cell copies; source SHAs recorded)",
-  "35 revised collector/plan/test/README and integrity manifest SHAs",
-  "corresponding Linux incremental originals for the revised suite",
+  "$PENDING_WRAPPER_PATH / $PENDING_COLLECT_PATH / $PENDING_PREFLIGHT_PATH (new-cell copies)",
+  "35 helper observation/task-end integration SHAs + integrity manifest + Linux incrementals",
   "final pre-execution rescan (identity/boot/ppid/pgid/29531/residue/fresh dirs)"
  ],
  "not_executed": "no real msprof, torch import, device, service stop; skeleton only",
@@ -198,7 +198,7 @@
   "supervisor": {
    "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
    "path": "$PENDING_WINDOW_PATH",
-   "status": "8f4b843 bytes; path-only placement"
+   "status": "historical baseline d2576c63; final will pin 27-modified supervisor SHA (no longer bytes-frozen)"
   },
   "binding": {
    "sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
@@ -237,14 +237,18 @@
  "window_argv_mode": "generated_from_child_argv_json",
  "window_argv_generator": "build_window_argv.py (asserts equality if a window argv is supplied)",
  "settle_budget_s": {
+  "decision": "settle_300",
   "requested": 300,
   "supported_by_pinned_supervisor": false,
-  "current_default": 30,
   "requires_new_frozen_supervisor": true,
-  "not_implemented_here": true,
-  "blocker_if_300_required": true,
-  "reason": "d2576c63 argparse has no settle option; settle_after_cleanup calls settle_attributed without deadline",
-  "old_exit_delay_coverage": "unproven",
+  "new_supervisor_sha256": "$PENDING_27_SUPERVISOR_SHA",
+  "current_pinned_supervisor": {
+   "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+   "status": "historical_baseline_not_bytes_frozen"
+  },
+  "cli_change_owner": "27 (minimal configurable CLI from 8f4b843; default stays 30; two-empty/kill/single-restore unchanged)",
+  "blocker_until_new_supervisor": true,
+  "old_exit_delay_coverage": "unproven; 300 s is a conservative bound, not proof",
   "fail_closed_on_deadline": true,
   "evidence_fields": "kill_time, per-round same-snapshot state/pid/starttime, first_empty_time, two_empty_time, deadline_hit"
  },
@@ -267,6 +271,9 @@
    "app arm timeout 240 s equals child budget",
    "comm 90 s inside child"
   ],
-  "note": "300 s is a conservative bound only if a new frozen supervisor adds it; no historical coverage proof"
+  "note": "1800 s is the component sum with 300 s settle; child-internal collector/app/comm are not added again; add 300 s explicit margin for launch/parse/collection",
+  "total_with_settle300": 1800,
+  "margin_s": 300,
+  "outer_deadline_s": 2100
  }
 }

@@ -29,13 +29,13 @@ Fresh layout (all paths planned, none created)
 Budgets and gates (machine-readable in plan-skeleton.json)
 - stop 120 s, child 240 s, comm 90 s, restore 900 s; supervisor settle default 30 s — explicitly noted
   as NOT proving coverage of the old exit delay (attempt2 residual behaviour).
-- settle is NOT configurable by the pinned supervisor: machine fields settle_budget_s record requested 300 s,
-  supported_by_pinned_supervisor=false, current_default=30 s, requires_new_frozen_supervisor=true, and
-  blocker_if_300_required=true. Actual plan uses 30 s; old exit delay remains unproven. If 300 s is required,
-  a new frozen supervisor must add it (not implemented here).
-- wall_clock_budget_s: preflight 60 + collect begin 60 + stop 120 + child 240 + settle 30 (or 300 only with
-  new supervisor) + restore 900 + collect end 120 = about 1530 s current / 1800 s with 300 s settle; collector
-  observation 10+120 s and app arm 240 s/comm 90 s are inside child. Lifecycle evidence must keep kill time,
+- settle decision is 300 s: settle_budget_s records requested 300, supported_by_pinned_supervisor=false,
+  requires_new_frozen_supervisor=true, new supervisor SHA pending (27 minimal CLI; default stays 30;
+  two-empty/kill/single-restore unchanged). d2576c63 is now a historical baseline, not bytes-frozen.
+  300 s is a conservative bound only; old exit delay remains unproven. This blocks the final package until pinned.
+- wall_clock_budget_s: preflight 60 + collect begin 60 + stop 120 + child 240 + settle 300 + restore 900 +
+  collect end 120 = 1800 s, plus 300 s explicit margin => outer deadline 2100 s; collector observation
+  10+120 s and app arm 240 s/comm 90 s are inside child and not added again. Lifecycle evidence must keep kill time,
   per-round same-snapshot state/pid/starttime, first-empty/two-empty times and deadline_hit.
 - pre_stop_gates (ordered): caller_env -> preflight_ALL_PASS -> collect_begin_rc0; stop_after collect_begin_rc0.
   preflight/collect/wrapper new-cell copies are pending (constructor paths), with source SHAs recorded
@@ -59,3 +59,6 @@ Files
 - pending.txt: unresolved pins (revised 35 files/integrity/Linux incremental, fresh identity, adapter pin).
 
 No real msprof / torch / device / service stop / deployment occurred while preparing this skeleton.
+Note: the 7fcba47 Linux 34/34 run was executed under 32 incremental A BEFORE the settle-300 decision
+(evidence commit 6eca211); it is an intermediate result, superseded, and NOT readiness. No further runs of
+that intermediate source are permitted; wait for the integrated 27+35 fixed source.
