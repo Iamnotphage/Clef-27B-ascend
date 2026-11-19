@@ -1972,3 +1972,12 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **审查注意（顺序口径）**：32/35 的最小修复措辞为“preflight **之前**同 shell begin rc0 硬门”；当前 wrapper 实际顺序是 **preflight → begin → exec**（仍在 stop/window 前，begin 失败 exit6）。若要求字面“begin before preflight”，需 31 调整顺序；若只要求“停服前 begin 成功”，当前满足。请 32/35 明确口径后决定是否需再改。
 
 **状态**：A/B 实质修复已落盘；旧 GO 挂起，20 需对尚未发生的单次 window 发绑定新包的明确续行；**无新 GO/设备**；root cause 待真 v2 实测。
+
+### 110.1 35 identity 独立验证与 A/B 版本对齐
+
+- 35 从 **4cbe23a** 原字节抽取 identity 捕获块与 `need_identity` 做 CPU mock：好 identity rc0（pid/start/boot/cmdline）、starttime 不符 rc4、/proc 缺 pid rc3、need_identity mismatch/空 rc1+FAIL=1；end 只比较快照与 SRC_ID、不访问 /proc、不要求旧 pid 存活。**identity 逻辑 PASS**。
+- **版本对齐**：35 的“A wrapper 未调用 begin / B 旧 archive 复用”对应 **4cbe23a**；当前 **3c4bdc5/SUMS 7f24f88b（24/24）** 已实现：
+  - wrapper line 21 `collect-raw.sh begin || exit 6`，ARCH=`archive-h11-observe-v2-attempt2`，在 exec/stop 前；
+  - prestart1 原目录未删未改，独立快照 `archive-h11-observe-v2-prestart1`（SUMS 4c370713…），仓库证据 `h11-observe-v2-prestart1/`（SUMS 73963a05…）；canonical 改 attempt2。
+- 仅剩顺序口径：32/35 措辞“preflight 之前 begin”，当前 **preflight→begin**（仍 stop/window 前、begin 失败 exit6）。若要求字面顺序需 31 再调；否则 A/B 已满足。identity 结论不受影响。
+- 无设备动作；旧 GO 仍挂起，attempt-2 GO 待 20 明确。
