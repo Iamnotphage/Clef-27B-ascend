@@ -1,0 +1,15 @@
+{
+ "schema": "h11-stage-identity/1",
+ "commit": "f3e76cc",
+ "manifest_sha256": "5531e1045ed4062c09ab3848329baee20d53b9a56612424f7dcc586beb49da85",
+ "run_probe_sha256": "0f90fd23f06fbe4221eaa646b897460144a93d2bc92c6e000bc9cce68bc9e0b9",
+ "binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+ "window_sha256": "2202165ef6c9f08bb1cc7168b457c5466a63f20ba0c6168ca63cacade81a03c5",
+ "probe_adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+ "h11_arm": "flags=KEEP_ALL; torch.ops.clef_mmar_probe.run(x,w,bias FP32 zeros,group,flags); reference=matmul+all_reduce; single group_name_0",
+ "matched_differences_vs_a14": ["bias null vs FP32 zero", "output reduce_scatter vs all_reduce", "op MRS vs GroupedMatMulAllReduce"],
+ "preconditions": {"master_port_29531": "free at plan time (ss -ltn)"},
+ "root_identity": {"pid": 1311514, "starttime": "399079056", "file": "root-identity.json", "sha256": "9802c32200b0b3097400a3c12fda0450745e84dc1fbf9def31f016ec99cb1c3d"},
+ "plan": {"file": "plan-h11.json", "sha256": "68cc5a799636c90284c95d4546641e58d056ee190b63fb2ea9ecad3942b08c71", "rows": 128, "k": 256, "n": 512, "out": "probe-out-h11", "run_dir": "run-h11", "restore_dir": "restore-h11", "status": "plan_not_executed"},
+ "status": "H11 CPU-only preflight ready; awaiting 32/33/35 contract check and GO"
+}
