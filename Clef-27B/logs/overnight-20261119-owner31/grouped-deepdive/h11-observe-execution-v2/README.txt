@@ -46,6 +46,16 @@ h11-observe-execution-v2 — H11 观测 v2 执行命令包（CPU-only 准备；�
 - 若改用绝对路径 torchrun 写入 child_argv，需通过 `--child-argv` 完整重建 argv（与 `--arm` 冲突），
   并在预扫中校验该路径 SHA 与 `--help` rc0；本包采用同 shell PATH 方案。
 
+rank env 观测命令（v2，ranks 存活期运行）
+------------------------------------------
+必须显式给 v2 CELL（helper 默认 CELL 已是 v2，但仍建议显式）：
+  /workspace/yangchen/venvs/clef-py312/bin/python -I \
+    /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/rank-env-read.py \
+    /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2 --watch 180 \
+    > /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/rank-env-h11-observe-v2.jsonl
+读取 `<CELL>/run-h11-observe-v2/descendants.json` 的 `entries` + /proc pgid 扫描；空/缺失 entries =
+缺测（不是无 rank/排除路径），死 PID 记 alive=false/MISSING(not_alive)。可用 `--run <dir>` 覆盖 run 目录。
+
 预扫（preflight-rescan.sh）
 ---------------------------
 执行前只读检查：identity/boot/ppid/pgid/sid/starttime、精确五 PID、health/info、clients、29531
@@ -64,13 +74,17 @@ rc=0（帮助日志写入 `<CELL>/cpu-prep/rescan-torchrun-help.log`，与观测
   →exec window --execute；禁止未授权运行。
 - validation-caller-bare-fail.txt / validation-prepared-pass.txt：caller 强制检查的负/正证据
   （裸 shell 预扫必须 FAIL；activate+PATH 后必须 ALL PASS）。
+- helper-v2-fixture-check.txt：v2 helper 的 CPU fixture 证据（默认 run-h11-observe-v2、--run 覆盖、
+  死 PID MISSING(not_alive)、活进程三键缺测）。
 - plan-h11-observe-v2.json、planonly-rerun.txt、planonly-rerun-output.json：plan 与复核证据。
 - root-identity-h11-observe-v2.json / env-sidecar-h11-observe-v2.json：新身份与两项 env sidecar。
 - collect-raw.sh：v2 raw 采集（CELL/ARCHIVE 绝对、markers、fresh logs + /root/ascend/log 时间窗、
   不按 PID、sources.txt、SUMS、correlation）。
-- rank-env-read.py：与 v1 同 blob（a4b76676），descendants `entries` + /proc pgid，ranks 存活期读三键。
+- rank-env-read.py（v2 绑定版）：默认 CELL=v2、RUN=<CELL>/run-h11-observe-v2；支持 --run 覆盖；
+  descendants `entries` + /proc pgid；ranks 存活期读三键，空/缺失=缺测。
 - preflight-rescan.sh：上述预扫（含 torchrun）。
 - restore-and-failure.txt：唯一 restore argv（v2 restore 输出）与失败留现场条件。
+- stage-identity-h11-observe-v2.json：冻结 SHA、identity、activation/torchrun 元数据与 plan 指纹。
 - cpu-prep-baseline-which.txt / cpu-prep-effective-torchrun-help.log /
   cpu-prep-rescan-torchrun-help.log / cpu-prep-torchrun-metadata.txt：CPU 准备证据；
   帮助日志不混入观测日志（远端 rescan 版本在 <CELL>/cpu-prep/rescan-torchrun-help.log）。

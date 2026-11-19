@@ -1,25 +1,44 @@
 #!/usr/bin/env python3
-"""H11-observe-v1 rank env 三白名单读取（doc-only；只读 /proc）。
+"""H11-observe-v2 rank env 三白名单读取（doc-only；只读 /proc）。
 
-用法： python3 -I rank-env-read.py [CELL] [--watch seconds]
-- PID 来源（rank 存活期即可取得）：
-  1) CELL/run-h11-observe-v1/descendants.json 的 `entries`（窗口运行中周期写入）；
+用法（v2，必须在 ranks 存活期运行）：
+  python3 -I rank-env-read.py [CELL] [--run RUN_DIR] [--watch SECONDS]
+  默认 CELL=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2
+  默认 RUN=CELL/run-h11-observe-v2
+  --run 可显式覆盖 run 目录（其内需有 descendants.json）；不得依赖 v1 路径。
+
+PID 来源（rank 存活期即可取得）：
+  1) RUN/descendants.json 的 `entries`（窗口运行中周期写入）；
   2) /proc 扫描：pgid == descendants.root_pid 的进程（含 torchrun rank 子进程）。
-- 读取 /proc/<pid>/environ 的 ASCEND_GLOBAL_LOG_LEVEL / ASCEND_PROCESS_LOG_PATH /
-  CLEF_WINDOW_OWNER；缺失输出 MISSING，不推断。
-- 不触发 NPU、不停止/恢复服务；只读 /proc。
+读取 /proc/<pid>/environ 的 ASCEND_GLOBAL_LOG_LEVEL / ASCEND_PROCESS_LOG_PATH /
+CLEF_WINDOW_OWNER；缺失输出 MISSING，不推断。空/缺失 entries = 缺测，不代表无 rank。
+不触发 NPU、不停止/恢复服务；只读 /proc。
 """
 import json
 import os
 import sys
 import time
 
-CELL = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") \
-    else "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe"
-RUN = os.path.join(CELL, "run-h11-observe-v1")
-WATCH = 0
-if "--watch" in sys.argv:
-    WATCH = float(sys.argv[sys.argv.index("--watch") + 1])
+DEFAULT_CELL = "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2"
+DEFAULT_RUN_NAME = "run-h11-observe-v2"
+
+args = sys.argv[1:]
+CELL = DEFAULT_CELL
+RUN = None
+WATCH = 0.0
+i = 0
+while i < len(args):
+    a = args[i]
+    if a == "--watch":
+        WATCH = float(args[i + 1]); i += 2
+    elif a == "--run":
+        RUN = args[i + 1]; i += 2
+    elif a.startswith("--"):
+        raise SystemExit(f"unknown option: {a}")
+    else:
+        CELL = a; i += 1
+if RUN is None:
+    RUN = os.path.join(CELL, DEFAULT_RUN_NAME)
 
 KEYS = ("ASCEND_GLOBAL_LOG_LEVEL", "ASCEND_PROCESS_LOG_PATH", "CLEF_WINDOW_OWNER")
 
@@ -86,13 +105,13 @@ def snapshot():
         except (OSError, ValueError):
             pass
         out.append(row)
-    return {"root_pid": root_pid, "entries": len(entries), "rows": out}
+    return {"cell": CELL, "run": RUN, "root_pid": root_pid,
+            "entries": len(entries), "rows": out}
 
 
 deadline = time.time() + WATCH
 while True:
-    doc = snapshot()
-    print(json.dumps(doc, indent=1))
+    print(json.dumps(snapshot(), indent=1))
     if WATCH <= 0 or time.time() >= deadline:
         break
     time.sleep(1.0)

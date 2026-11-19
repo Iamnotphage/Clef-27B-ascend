@@ -47,6 +47,15 @@ B. v2 授权后 execute（仅在 20 另发 v2 明确 GO 后；本包从未执行
 
 （等价 argv：与 A 完全相同，仅在末尾追加顶层 `--execute`；完整数组见 window-execute-argv.json。）
 
+C. rank env 观测（ranks 存活期；独立只读）
+------------------------------------------
+/workspace/yangchen/venvs/clef-py312/bin/python -I \
+  /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/rank-env-read.py \
+  /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2 --watch 180 \
+  > /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/rank-env-h11-observe-v2.jsonl
+读取 <CELL>/run-h11-observe-v2/descendants.json 的 entries；空/缺失=缺测；可用 --run 覆盖 run 目录。
+必须在 ranks 存活期运行（window 启动后另开只读 shell 即可，不影响 window 环境）。
+
 说明
 ----
 - plan JSON 是输出不是输入；不要传 --child-argv（会覆盖 --arm）。
