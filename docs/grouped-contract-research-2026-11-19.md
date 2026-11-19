@@ -7,6 +7,7 @@
 - **本机 9.2.1 安装证据**：31 只读 API 包 `/tmp/aa3e-grouped-api-pack-20261119`（tar SHA `685d9a33…`）：头文件、op-info、binary_info_config、两个 A3 kernel `.o`、libopapi/libnnopbase/libhccl/libascendcl/libtorch_npu、version.info、platform ini、torch_npu HCCL 头与符号。
 - **上游固定参考**：`hicann/ops-transformer` commit `f5703e415b9be16a2af7ba85564c37414592fc03` 的 op_api 源、op_host 源、kernel 源、docs 与 examples。**不是本机安装版同版本真值**。
 - **A12 冻结样例**：`/Users/chenclay/.ao/data/artifacts/clef-27b-ascend-33/grouped-a12-sample/`（repo example SHA `6c1a90ab…`；文档参考 `31333c59…`；编译配方 `c591f0e3…`）。
+  官方仓库 f5703e4 的 `examples/` 目录只有 `test_aclnn_grouped_mat_mul_all_reduce.cpp`，**不存在 `examples/CMakeLists.txt`**（GitHub 目录实读；raw 404）；op 级 `CMakeLists.txt`（SHA `53888501…`，1230 B）不含 example target。因此 A12 只能标注为“官方样例源 + 派生 CMake 构建”，31 的 stage-manifest `088f05f6…` 已如此记录（source `6c1a90ab…`、glue `22edb89f…`、binary `37929ec4…`、ldd 0 missing、provider delta 已记）。
 
 ## 1. 支持矩阵（逐项对应旧 v4r1）
 
