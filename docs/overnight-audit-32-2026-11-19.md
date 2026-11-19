@@ -405,6 +405,8 @@
 - **解释**：Grouped 仍 507046/stream47；A14 可用 → 差异转向 Grouped-specific（op/kernel/tiling/rac_server 协议/上下文）与 H12/依赖证据；**仍不单独裁决 mc2_server 依赖（supported_but_unproven）**。H6 限定结论、A13 不执行不变；服务恢复 aa3e。
 - **35 记录核（7bb4dd8）**：run_probe `b7f255cb…`、manifest `6517c34c…`、cpu_tests **14/14+9/9+22/22=45/45**（与 32 独立跑一致）；v2 invalid/旧 plan superseded 记录正确。**但 a14 状态仍写 “small_v3_plan_8782537a_pending_32_review”**，与已执行的 v3 不符（liveness pass + release harness crash；新 root 1308632）——已请 35 改为 `small_v3_executed_liveness_pass_release_harness_crash; numeric rerun pending release fix` 并保留 trace/原始日志引用。
 - **release 修复**：schema 占位 token tensor 或 fallback；先 flush result 再 release；try/except；重冻 run_probe 新 SHA；31 完成 1308632 恢复回传后以新 root 重建 identity/plan、fresh out（v4）、port 预检，重跑同小格取完整 result.json；large 等完整 small + 32 有限核。
+- **v3 cell 原件核验（a14-small-v3-cell 16/16）**：rank0/1 trace prepare_rc0/executor、workspace 17,170,432、launch_rc0、handler cleanup0/sync0、sync_ms 18.66017/8.16125；无 stream47/507046；result.json api/sync=true、finite/pass=false（stub）、error 为 release 零 Tensor dispatch；window ok=false/child rc1；恢复 root **1308632**/start 398926792、五 PID、aa3e-noop、四检/env/joint/source/clients 全 true。33 独立核一致（trace/plog/result/window/restore）。
+- **release 修复（33 细化）**：① schema 占位 Tensor 或 fallback；② **先完整计算 reduced/reference/bit_equal/finite/versions 并原子落盘 result，再 release**；release 包 try/except 记录 release_rc/error 后重 flush；③ 重冻 run_probe 新 SHA/stage identity；31 用 1308632 重建 identity/plan v4、fresh out、port 29531 预检，重跑同小格取完整结果；large 等完整 small + 32 有限核。H6/A13/official 不变；服务 aa3e root 1308632。
 
 ## 9. 本地核对副本
 
