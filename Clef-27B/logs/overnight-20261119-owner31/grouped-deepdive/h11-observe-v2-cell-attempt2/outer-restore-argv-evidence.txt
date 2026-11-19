@@ -1,0 +1,15 @@
+== wrapper /proc cmdline (outer argv evidence, sampled 2026-11-19T15:09:22.210186+00:00) ==
+bash -c C=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2; env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c "cd /workspace/yangchen/Clef-27B-ascend && source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2" > $C/restore-exec-v2.log 2>&1; echo restore_exec_rc=$? >> $C/restore-exec-v2.log
+
+== normalized comparison (shell wrapper/redirect stripped; inner -c quoted string re-joined) ==
+head[0:7] == plan[0:7]: True
+inner joined == plan[7]: True
+overall semantic match: True
+
+normalized inner -c string:
+cd /workspace/yangchen/Clef-27B-ascend && source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2
+
+plan inner -c string:
+cd /workspace/yangchen/Clef-27B-ascend && source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2
+
+NOTE: historical launch script is the ssh command itself; no separate credential-bearing file exists. /proc cmdline of wrapper 1355076 is the available trace; normalization only strips the shell wrapper/redirection and re-joins the shlex-split inner -c string. No fabrication.

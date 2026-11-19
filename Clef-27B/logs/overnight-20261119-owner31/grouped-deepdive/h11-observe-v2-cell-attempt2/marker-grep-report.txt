@@ -1,0 +1,73 @@
+attempt2 archive 标记 grep 报告（只读；archive SUMS 52d145ee，92 文件）
+=====================================================================
+
+范围
+- archive：/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/archive-h11-observe-v2-attempt2
+- 文件数 92；archive SHA256SUMS=52d145ee6d21ef3b093c3b6d61becb6f8f0f4aa2b56af39ea4bcbaea641005a3
+- 方法：`grep -r -a -F -c/-l` 全量扫描；完整命中原文见 marker-grep-full.txt（1264 行，未截断）。
+- 说明：0 命中 = “无标记/缺测”，不表示路径被排除；device 日志时间戳似为本地 +8h（如 22:49），plog 为 UTC（14:49），两者同刻。
+
+逐 marker 计数（行数 / 文件数）
+--------------------------------
+| marker | lines | files |
+|---|---|---|
+| start to read the | 0 | 0 |
+| AicpuKfcRpcServer::Init addr | 2 | 2 |
+| reset valid value | 0 | 0 |
+| ReadValidMsg[ | 0 | 0 |
+| ReadValidMsg timeout 6s | 0 | 0 |
+| Check msg equal failed | 0 | 0 |
+| Post finishedTurnCnt | 0 | 0 |
+| Run rpc error | 0 | 0 |
+| NsRecovery][MC2 | 0 | 0 |
+| KFCtaskAndTiling | 4 | 4 |
+| AivAicpuOpParam | 4 | 4 |
+| RunAicpuKfcSrvLaunch | 8 | 6 |
+| ReadAddrMsg | 0 | 0 |
+| TwoStage | 0 | 0 |
+| PostMsg | 0 | 0 |
+| 507046 | 0 | 0 |
+| stream_id=47 | 451 | 8 |
+| task_id= | 761 | 8 |
+
+命中文件（按合并计数；相对 archive 路径）
+------------------------------------------
+- 429 fresh-logs/debug/plog/plog-1354310_20261119144905063.log（rank0）
+- 464 fresh-logs/debug/plog/plog-1354311_20261119144905075.log（rank1）
+- 111 fresh-logs/debug/plog/plog-1354310_20261119144901074.log
+- 70  fresh-logs/debug/plog/plog-1354311_20261119144901065.log
+- 70  fresh-logs/debug/plog/plog-1354311_20261119144905927.log
+- 66  fresh-logs/debug/plog/plog-1354310_20261119144906023.log
+- 5   fresh-logs/debug/device-0/device-1354310_20261119144903834.log
+- 5   fresh-logs/debug/device-1/device-1354311_20261119144903832.log
+- 3   fresh-logs/run/device-0/device-1354310_20261119144907631.log
+- 3   fresh-logs/run/device-1/device-1354311_20261119144907631.log
+- 2   fresh-logs/run/plog/plog-1354310_20261119144901276.log
+- 2   fresh-logs/run/plog/plog-1354311_20261119144901267.log
+
+关键命中（rank/时间/原文摘要）
+------------------------------
+- AicpuKfcRpcServer::Init addr：各 1 行，rank0=debug/device-0 pid1354310 于 22:49:06.259；rank1=debug/device-1 pid1354311 于 22:49:06.258（device 本地时间）。
+- KFCtaskAndTiling / AivAicpuOpParam：各 4 行，覆盖 debug device-0/1 与 run device-0/1，时间 22:49:06.25x。
+- RunAicpuKfcSrvLaunch：8 行/6 文件；plog 首行见
+  `[INFO] OP(1354311,python):2026-11-19-14:49:06.285.921 [indv_mc2...]`；device 行见 22:49:06.255。
+- stream_id=47：451 行/8 文件；plog 时间跨度 first 14:49:05.110.184 → last 14:52:06.287.354
+  （覆盖 child 生命周期并延续到超时前的最后活动）。
+- task_id=：761 行/8 文件；首末时间同为 14:49:05.110.001 → 14:52:06.287.354。
+- 完整的命中行（含行号与原文）见 marker-grep-full.txt；命中文件副本在 archive-marker-hits/（相对路径保留）：
+  小文件原样，>5MB 的 6 个 debug plog 以 .gz 存储；原始 SHA256 与解压校验见 MANIFEST.txt（12/12 OK）。
+
+未命中（0）与解释边界
+----------------------
+- `start to read the`、`reset valid value`、`ReadValidMsg[`、`ReadValidMsg timeout 6s`、
+  `Check msg equal failed`、`Post finishedTurnCnt`、`Run rpc error`、`NsRecovery][MC2`、
+  `ReadAddrMsg`、`TwoStage`、`PostMsg`、`507046` 在 92 文件全量 grep 中均为 0。
+- 0 命中表示“该级别/该路径未打印此标记”，不能据此排除路径存在；本报告不做日志关闭推断。
+- `stream_id=47` 有大量命中而 `507046` 为 0：本 archive 的 plog 未出现 retcode 507046 字样；
+  以 stream/task 活动本身记录事实，不将其外推为 retcode。
+
+语义备注（待 32 最终核验，不在本报告下定论）
+--------------------------------------------
+- 两 rank trace 含 python `api_return`(workspace/run_id) 并在其后 `sync_enter`；冻结 run_probe 8e308804
+  仅在启动与 sync 返回后 flush result.json，因此 SIGTERM 时刻 result.json 的 api_returned=false
+  可能是**初始快照**，不能直接推成“API 未返回”。本报告保持原始 result/trace 不变，等 32 统一结论。

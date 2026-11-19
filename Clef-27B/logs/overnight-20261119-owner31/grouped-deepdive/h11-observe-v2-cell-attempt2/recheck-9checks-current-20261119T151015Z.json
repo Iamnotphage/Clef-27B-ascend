@@ -1,0 +1,163 @@
+{
+ "schema": "h11-restore-recheck/1",
+ "note": "CURRENT-MOMENT recheck; NOT the historical restore-instant sample. Same verification functions as window 1f780bf8.",
+ "sampled_at_utc": "2026-11-19T15:09:22.210186+00:00",
+ "sampled_at_epoch": 1795100962.210186,
+ "root": {
+  "pid": 1355077,
+  "ppid": 1355076,
+  "pgid": 1355077,
+  "sid": 1355077,
+  "starttime": "401718579",
+  "state": "S",
+  "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
+ },
+ "wrapper": {
+  "pid": 1355076,
+  "cmdline": "bash -c C=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2; env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c \"cd /workspace/yangchen/Clef-27B-ascend && source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2\" > $C/restore-exec-v2.log 2>&1; echo restore_exec_rc=$? >> $C/restore-exec-v2.log"
+ },
+ "pids": [
+  1355077,
+  1355208,
+  1355209,
+  1355231,
+  1355232
+ ],
+ "checks": {
+  "health": true,
+  "info": true,
+  "workers": true,
+  "text": true,
+  "image": true,
+  "env": true,
+  "joint_env": true,
+  "source": true,
+  "clients": true
+ },
+ "health": {
+  "status": "ready",
+  "model": "clef",
+  "revision": "local-65e5a3c5ffb6"
+ },
+ "info": {
+  "model": "clef",
+  "revision": "local-65e5a3c5ffb6",
+  "model_dir": "/workspace/yangchen/models/Clef-27B",
+  "protocol_version": "2026-11-13",
+  "config": "s1",
+  "tasks": [
+   "choice",
+   "noul",
+   "score"
+  ],
+  "modalities": [
+   "text",
+   "image",
+   "video"
+  ],
+  "joint": "default",
+  "max_model_len": 4096,
+  "tensor_parallel_size": 2,
+  "cache": {
+   "prefix_caching": false,
+   "chunked_prefill": false,
+   "schema_token_cache": false,
+   "schema_token_cache_version": 0
+  }
+ },
+ "text_status": 200,
+ "text": {
+  "id": "decision-adc42601129cf32a",
+  "object": "structured_decision",
+  "created": 1795100962,
+  "model": "clef",
+  "answers": {
+   "answer": {
+    "type": "score",
+    "score": 1.6712538078427315,
+    "legend": {
+     "0": "No service credit.",
+     "1": "A 5% service credit.",
+     "2": "A 10% service credit.",
+     "3": "A 25% service credit."
+    },
+    "probabilities": {
+     "0": 0.04837258532643318,
+     "1": 0.3117540180683136,
+     "2": 0.5601205229759216,
+     "3": 0.07975291460752487
+    },
+    "confidence": 0.5601205229759216
+   }
+  },
+  "usage": {
+   "input_tokens": 967,
+   "output_tokens": 0
+  },
+  "diagnostics": {
+   "answer": {
+    "label_mass": 1.0,
+    "argmax_is_label": true
+   }
+  },
+  "joint": null
+ },
+ "image_status": 200,
+ "image": {
+  "id": "decision-89cacc8bd65681a9",
+  "object": "structured_decision",
+  "created": 1795100962,
+  "model": "clef",
+  "answers": {
+   "answer": {
+    "type": "choice",
+    "choice": "B",
+    "probabilities": {
+     "A": 0.10778900980949402,
+     "B": 0.3718374967575073,
+     "C": 0.3534265458583832,
+     "D": 0.1669468879699707
+    },
+    "confidence": 0.3718374967575073
+   }
+  },
+  "usage": {
+   "input_tokens": 342,
+   "output_tokens": 0
+  },
+  "diagnostics": {
+   "answer": {
+    "label_mass": 1.0,
+    "argmax_is_label": true
+   }
+  },
+  "joint": null
+ },
+ "env": {
+  "clean_expect_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230",
+  "checks": {
+   "ASCEND_CUSTOM_OPP_PATH": {
+    "match": true,
+    "count": 9,
+    "expected_count": 9
+   },
+   "LD_LIBRARY_PATH": {
+    "match": true,
+    "count": 12,
+    "expected_count": 12
+   }
+  },
+  "match": true
+ },
+ "joint_env": {
+  "keys": {
+   "CLEF_JOINT_FUSED_ATTN": true,
+   "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": true,
+   "CLEF_JOINT_SINGLE_FIELD": true
+  },
+  "forbidden_absent": true,
+  "ok": true
+ },
+ "clients": [],
+ "source_after_restore": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+}
