@@ -116,3 +116,24 @@
 - 降级：H1（组名复制）、H4（primary context）、H5（stream 一致）、H11（executor 泄漏且 attr 复制）。
 - 保持/上升：H2（workspace 在 sync 前释放）、H3（descriptor 早销毁）、H6（workspace 初值）、H12（多进程 torch comm vs 样例单进程 `HcclCommInitAll`）与 MC2 上下文/AICPU 绑定；H7 仍低（无 128 倍数约束）。
 - 首批实验仍按 A8→A12→A0→A9→A2/A3→A6→A12b 推进；A1 保留但降为确认项。
+
+## 9. A12 决定性结果与 mc2_server 线索（2026-11-19 追加）
+
+A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a90ab…`）在 A3 上**复现同一失败**：
+
+- `child.stdout`：两 rank `hcom name` 对称、`gmm_allreduce workspaceSize = 16777216`（与 v4r1 相同）；`test_aclnn_grouped_mat_mul_all_reduce.cpp:383 retcode 507046` + `TestCall execute AICPU failed`。
+- `plog-debug`：两 device `Stream synchronize timeout, stream_id=47, timeout=10000ms`；`current task is type_name=KERNEL_AICORE, task_id=1`；`ErrCode=507046 InnerCode=0x7030010`；随后 `HCCL DestroyAicpuComm` 50s 超时两次。
+- `plog-run` **决定性线索**：`insert package:mc2_server.tar.gz config`；随后两 device 均 `current device chip:5 does not support package:mc2_server.tar.gz` → `does not need to load`；`cann-tsch-compat.tar.gz` 同被 chip:5 拒绝。AICPU scheduler 日志止于 KFC `RunAicpuKfcResInit/RunAicpuKfcSrvLaunch` API 加载，无任务处理进展。
+- 归档核验：`a12-cell` 10 文件、SHA256SUMS 10/10；恢复 `branch=aa3e-noop`、target aa3e、guard `36eaff44…`、pid 1301295、五 PID/四检/env/joint 全过（32 独立核一致）。
+
+意义：A12 保持组名/workspace/descriptor 到 sync 后、显式 per-rank context/stream、单进程 `HcclCommInitAll`，仍复现 stream 47/AICORE pending → **H1/H2/H3/H11 以及 H4/H5 对“挂起”被决定性削弱；H7（对齐）与 H12（单进程 vs 多进程 comm）亦削弱**。`mc2_server.tar.gz` 在 chip:5 被拒绝加载，与 kernel `HcclServer`/KFC 等待、AICPU 销毁超时一致——**MC2 AICPU/KFC 公共路径缺失**成为首要方向。
+
+## 10. A13 控制臂重设计（MatMulAllReduce 不可用于 A3）
+
+- `aclnnMatmulAllReduce`（V1/V2/V3）**文档产品表：Atlas A3 不支持**；本机 9.2.1 A3 op-info 只注册 `AllGatherMatmul`、`AllGatherMatmulV2`、`MatmulReduceScatter`、`MatmulReduceScatterV2`，**无任何 MatMulAllReduce 变体** → A13 原设计在 A3 会 op 查找失败（161001 类），不能区分 MC2 路径。
+- 头文件事实（31 pack）：V1 `(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`；V2 增 `x3`；V3 增 `x3` 与 `commMode`；bias 注释 f16/bf16、streamMode 注释 0/1（实现仍以 docs/二进制为准）。
+- **替代控制对**（文档均 A3 支持，且本机 A3 op-info 已注册）：
+  - **A13a `aclnnMatmulReduceScatter` V1**：A3 文档“仅支持 AI CPU 通信”（KFC/mc2_server 路径）；示例 `mc2/matmul_reduce_scatter/examples/test_aclnn_matmul_reduce_scatter.cpp`，SHA `0996d6f4…`，8,873 B；A3 上 bias 暂不支持非 0。
+  - **A13b `aclnnMatmulReduceScatterV2` commMode="aiv"**：A3 文档仅支持 `aiv` 且通信缓冲区 ≥200MB（plog 默认 `HCCL_BUFFSIZE=200M`）；示例 `mc2/matmul_reduce_scatter_v2/examples/test_aclnn_matmul_reduce_scatter_v2.cpp`，SHA `83aa3286…`，10,461 B。
+  - 判定：A13a hang + A13b 成功 → `mc2_server`/KFC 路径在 chip:5 不可用，Grouped（仅 AICPU 路径）为环境阻塞；A13a 成功 → Grouped op/kernel 特定问题。
+- 待 31 只读提供：`/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/aicpu/kernel/mc2_server.tar.gz` 与其 support 配置/README、同目录清单、`cann-tsch-compat.tar.gz` 配置，以及 A13a/A13b kernel 路由文件；若确认 chip:5 不在 mc2_server 支持列表，则 Grouped 路径记为环境阻塞，停止 H6/H7/H12 设备臂，不改变 aa3e/f810 默认。
