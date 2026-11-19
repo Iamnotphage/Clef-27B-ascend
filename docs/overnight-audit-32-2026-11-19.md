@@ -226,6 +226,17 @@
 - **后续**：restore 桥接+norm → 真实 967 行 shape/权重（生产 NZ 参考、原门、240 s 上限与 clean 恢复）；性能仅正确后同窗 ABBA≥4（最慢 rank、sync 后 wall/event、含分配/host/通信/后置 norm；冷启动单列；局部 native 不外推服务）。若采纳再全量 S1≥3/S2/OD2352/ERQA400，2PP 不变。
 - 证据包：31 提供只读本地副本+SHA256SUMS（snapshot/bundle/plan/trace/result/bins/gate/cleanup/recovery/命令 rc/时间/boot/clock）；32 逐项核原件。
 
+## 8.14 Grouped binding 代码级生命周期（v4r1 binding.cpp 5db40ef9，本地只读复核）
+
+- 文件 SHA 与 33 本地副本一致（5db40ef9…）；run_probe.py `dde68f34…`。
+- **H1（组名）**：handler lambda **不捕获 group**；`group.c_str()` 仅传入同步 `prepare`。Python 侧 `group` 为 `get_hccl_comm_name(rank)` str，binding 签名 `const std::string&` → pybind 每次调用生成**临时 std::string**，调用返回即释放。若 executor 保存该指针，生产路径即悬垂；A1 的保留对象必须是 C++ static/global string、在 prepare 前创建并直接传其 c_str、保活到 sync 后（同时是候选修复形态）。
+- **H3（descriptor/list，强候选）**：handler 在 `launch()` 入队后**立即 `lists->close()`**（销毁 aclTensorList 及成员描述符），随后 handler 返回、Python 才 sync；异步 MC2 若仍引用描述符可能挂起。A3=close 延后到 sync 后，记录 lists/descriptor/executor 地址与存活区间。
+- **H2（workspace，候选）**：workspace tensor 为 C++ 局部、被 lambda 按值捕获；binding 返回的只是 int64 字节数；handler 返回后 tensor 释放（sync 前）。A2=static/global 保活到 sync 后并记录 data_ptr。
+- **H5/H4**：stream 在 prepare 后、dispatch 前捕获一次，handler 用该 stream；Python sync 用自己的 current stream；handler 线程/context 与 prepare 不同。A9 每臂记录 prepare/handler/sync stream id、thread id、aclrtContext/device、`/proc/self/maps` 实际加载库路径+SONAME+SHA、group 指针/字节。
+- **H11（tiling host buffer）**：executor 从未销毁（泄漏），tiling 非“被释放”，H11 降级；除非头文件说明 executor 引用调用方描述符（并入 H3）。
+- **现有证据**：baseline（F.linear+all_reduce）与 nd_native（matmul+all_reduce）首调用均成功，仅 candidate（原生 MMAR）挂起 → comm/组健康已间接证明；A8 仅作显式基线。
+- 首批顺序建议：A9 instrumentation 随每臂 + A0 小 M(128) → A1(static string) → A3(close 延后) → A2(workspace 保活) → H4/H5 诊断 → H7 sweep；H6/H11 诊断项后置。每臂双 rank/240 s/fresh/固定 seed；成功=API rc0+两 rank sync 返回+finite；首包还须附 aclnn 头文件/op-info/binary config/kernel .o/version/platform/torch_npu HCCL 符号的只读副本。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
