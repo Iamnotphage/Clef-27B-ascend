@@ -322,7 +322,8 @@
       "33_commit": "87ffb96",
       "31_conclusion_revision": "8133e16 (file bfef1c02; suspected_environment_blockage_pending_dependency_control)",
       "31_dependency_analysis": "d8d4050 / 31f8f1ee (dependency_status=supported_but_unproven)",
-      "31_a14_preflight_sums": "21dcae08... (header ad8f98b4, libccl 2281deca, MRS kernel HCCL/KFC, no Mc2Server/RacServer)"
+      "31_a14_preflight_sums": "21dcae08... (header ad8f98b4, libccl 2281deca, MRS kernel HCCL/KFC, no Mc2Server/RacServer)",
+      "33_a14_commit": "013b9a0"
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
     "decision": "status narrowed; A12-H6 workspace-init and A14 MatmulReduceScatter V1 controls are pending; no all-MC2 generalization",
@@ -341,8 +342,8 @@
       "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
     ],
     "pending": [
-      "A12-H6 compiled/plan-only; awaiting 32 review and 20 scheduling",
-      "A14 CPU-only stage/compile/plan recommended; awaiting 32/20 approval"
+      "A12-H6 compiled/plan-only; 32 review + 20 scheduling",
+      "A14 CPU-only stage/compile/plan recommended; 32/20 approval; device only after GO"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -379,7 +380,7 @@
     }
   },
   "a14_control": {
-    "status": "cpu_stage_compile_plan_recommended_pending_32_20",
+    "status": "a3_legal_kfc_control_confirmed_pending_cpu_stage_plan_and_go",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -412,7 +413,14 @@
     "libccl_symbols": "RunAicpuKfc*, HcclKernelEntrance, HcomMc2AiCpuStreamAllocAndGet, HcclMc2Com*; Mc2Server/RacServer count 0",
     "mrs_kernel_symbols": "HCCL/KFC family (AssembleHcclMsg/HcclMsg/g_hcclContextReserved); no Mc2Server/RacServer",
     "aicpu_kernel_dir": "6 entries only; no other mc2* variant; mc2_server 71263835",
-    "loadsysopkernel_note": "cannot find aicpu packages also appears in the healthy service startup; common line, not failure-specific",
-    "preflight_sums_sha256": "21dcae087a84e78281ce7dbebb124ec66740245e543b4e2d695c7a12621d28ae"
+    "loadsysopkernel_note": "common line also in healthy service; removed from suspicion",
+    "preflight_sums_sha256": "21dcae087a84e78281ce7dbebb124ec66740245e543b4e2d695c7a12621d28ae",
+    "a3_legal_control": "33/31: A3 op-info + local header ad8f98b4 + libccl 2281deca + MRS kernel objects (b4819757/da0cf9db) confirm a legal AICPU/KFC control",
+    "mrs_kernel_objects": [
+      "b4819757",
+      "da0cf9db"
+    ],
+    "dependency_note": "Grouped/A14 both show HCCL/KFC family and no Mc2Server/RacServer; dependency on the refused mc2_server remains supported_but_unproven; A14 alone cannot decide it",
+    "execution_gate": "33 013b9a0: CPU-only stage/compile/plan by 31; 32 ready; 20 GO; then small M128/K256/N512, then v4r1-like M968/K8704/N5120 (output 484x5120)"
   }
 }
