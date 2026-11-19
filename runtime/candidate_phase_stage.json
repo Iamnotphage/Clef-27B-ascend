@@ -1,0 +1,258 @@
+{
+  "schema": "candidate-typed-phase-stage/1",
+  "status": "cpu_prepared_device_not_executed",
+  "base_stage": {
+    "commit": "00e3bdb8e916e339e875a56f1feadd95ee4dab11",
+    "entry_sha256": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44",
+    "candidate_manifest_sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "note": "running S1 stage; not modified or restaged by this packet"
+  },
+  "files": {
+    "runtime/candidate_service_phase.py": {
+      "role": "frozen S1 entry (a1ca, unchanged)",
+      "sha256": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44"
+    },
+    "runtime/test_candidate_service_phase.py": {
+      "role": "frozen S1 entry tests (unchanged)",
+      "sha256": "53d984ec043518e50bde24f60a55446b0a4807703feb7e0c6b91dbae40c16d96"
+    },
+    "runtime/final_acceptance_candidate_manifest.json": {
+      "role": "candidate manifest (unchanged)",
+      "sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4"
+    },
+    "runtime/candidate_manifest.py": {
+      "role": "manifest generator",
+      "sha256": "6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5"
+    },
+    "runtime/test_candidate_manifest.py": {
+      "role": "manifest tests",
+      "sha256": "8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a"
+    },
+    "runtime/candidate_service_phase_typed.py": {
+      "role": "typed S2/ERQA entry (new)",
+      "sha256": "d93ee93463454db56673a3aefe261d1b598b52acd588dff67216c430370588d6"
+    },
+    "runtime/test_candidate_phase_typed.py": {
+      "role": "typed unit tests (new)",
+      "sha256": "245fdc5cc693c49d5e3b19f996a97f4a8b2c04d8b2de842399e31ed86bb38e9a"
+    },
+    "runtime/test_candidate_phase_typed_integration.py": {
+      "role": "typed real-method integration (new)",
+      "sha256": "cfda281d694afc1d6f09c0b7bba4b7e6dd6045ce586e9de42faaa266d32ebb76"
+    },
+    "runtime/run_typed_phase_evidence.py": {
+      "role": "local evidence harness (new)",
+      "sha256": "25735efbf988a406f4df2555a25288112d2fb3b155c802bc8dcd91285785dd3c"
+    },
+    "runtime/candidate_phase_cpu_evidence.json": {
+      "role": "local CPU evidence (new)",
+      "sha256": "4a74fee85d864c11b20ea2e42ad9b9504b6166a2857d57d17efcd67706140c9e"
+    },
+    "runtime/candidate_phase_variant.diff": {
+      "role": "typed-vs-a1ca minimal diff (new)",
+      "sha256": "cae4dfb5e75813dead8a01e6589d1422b0f433727a4260f566d87a8cd489781b"
+    },
+    "docs/candidate-s2-erqa-phases-2026-11-19.md": {
+      "role": "review packet (new)",
+      "sha256": "41dbe33d0e805e5a97b8f005fe81a4d765c2c08d9e31f36d195430a6f6a9318c"
+    },
+    "runtime/final_service_phase.py": {
+      "role": "frozen phase v3 (unchanged)",
+      "sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"
+    },
+    "runtime/final_acceptance_supervisor.py": {
+      "role": "frozen v5 supervisor (unchanged)",
+      "sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"
+    }
+  },
+  "phase_matrix": {
+    "s1": {
+      "config": "s1",
+      "concurrencies": [
+        1
+      ],
+      "rounds": 3,
+      "launch_overrides": [],
+      "expected_argv_sha256": "cd1d9145896213c076255284570a368869615f40e94466eea0e102250331b43d"
+    },
+    "s2_b8": {
+      "config": "s1",
+      "concurrencies": [
+        8,
+        16
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-num-seqs",
+        "8",
+        "--max-num-batched-tokens",
+        "8192"
+      ],
+      "expected_argv_sha256": "9c5829b2aa49a4d8ec5ef08df7cac8c85891540fb89591fa153005715cf4b34f"
+    },
+    "s2_b16": {
+      "config": "s1",
+      "concurrencies": [
+        32,
+        64
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-num-seqs",
+        "16",
+        "--max-num-batched-tokens",
+        "16384"
+      ],
+      "expected_argv_sha256": "83cecca9da675442ef792cc6b5ed85811e3cddc3ca7aa7a626b6d6078149f4ae"
+    },
+    "erqa": {
+      "config": "s1",
+      "concurrencies": [
+        1
+      ],
+      "rounds": 1,
+      "launch_overrides": [
+        "--max-model-len",
+        "16384",
+        "--max-num-batched-tokens",
+        "16384",
+        "--limit-mm-per-prompt",
+        "{\"image\":16,\"video\":0}",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ],
+      "expected_argv_sha256": "af360a6e68e8377a1911b798ba92329692c9c624661a795303e5abaa2a9d36e0"
+    }
+  },
+  "cycle": "fresh f810 s1 (four-check, f810 head, guard pre) -> deploy one phase -> same-phase v5 client -> restore clean f810 s1 -> next phase",
+  "candidate_phases": [
+    "s2_b8",
+    "s2_b16",
+    "erqa"
+  ],
+  "typed_cycle_contract": {
+    "deploy_from_phase": "s1 only",
+    "phase_bindings": "manifest launch_overrides == phase v3 OVERRIDES per item; expected_argv/effective/config/concurrencies/rounds equal frozen base; only two env keys differ",
+    "record_binding": [
+      "label",
+      "root",
+      "manifest",
+      "manifest_sha",
+      "phase",
+      "identities",
+      "launch_manifest",
+      "owner_evidence"
+    ],
+    "prior_supervision_binding": [
+      "clients_exited=true",
+      "argv --phase",
+      "argv --manifest",
+      "argv --identities",
+      "argv --launch-manifest",
+      "argv --owner-evidence",
+      "protected root not in observed"
+    ],
+    "restore_closure": [
+      "d0 restore.json four-check rc/ok",
+      "service_discovery.api_identity.pid == new root",
+      "OPP/LD match=true",
+      "current_restore + current_restore_sha emitted"
+    ]
+  },
+  "cpu_evidence": {
+    "path": "runtime/candidate_phase_cpu_evidence.json",
+    "sha256": "4a74fee85d864c11b20ea2e42ad9b9504b6166a2857d57d17efcd67706140c9e",
+    "suites": {
+      "a1ca_unit": 18,
+      "manifest": 8,
+      "typed_unit": 58,
+      "a1ca_real_integration": 4,
+      "typed_real_integration": 6
+    },
+    "skipped": 0,
+    "real_records": {
+      "dir_name": "typed-fixtures-20261119",
+      "manifest_sha256": "590ec04c88d7043a2081b887da137637775a8da65be5ac3455b526adf4e3fa41",
+      "sha256sums_sha256": "1242319da380bfe39990a3570fa294cad2a486eb7ec6bc63452f89789e2b9540",
+      "files_verified": 17
+    }
+  },
+  "commands": {
+    "deploy": [
+      "${PY}",
+      "${STAGE}/runtime/candidate_service_phase_typed.py",
+      "--action",
+      "deploy",
+      "--code",
+      "${CC7}",
+      "--owner-code",
+      "${OWNER27}",
+      "--ab-code",
+      "${BUNDLE}/runtime",
+      "--repo",
+      "${BUNDLE}",
+      "--manifest",
+      "${STAGE}/runtime/final_acceptance_candidate_manifest.json",
+      "--manifest-sha",
+      "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+      "--base-manifest",
+      "${CC7}/runtime/final_acceptance_manifest.json",
+      "--run-dir",
+      "${DEPLOY_RUN}",
+      "--phase",
+      "${PHASE}",
+      "--from-phase",
+      "s1",
+      "--current-restore",
+      "${F810_RESTORE}",
+      "--current-restore-sha",
+      "${F810_RESTORE_SHA}",
+      "--prior-client-record",
+      "${LAST_SUPERVISION}"
+    ],
+    "client": "same v5 argv as the f810 combo with --manifest/--manifest-sha replaced by the candidate manifest and 31202d27; --phase equals the deployed phase; identities/launch-manifest/owner-evidence from the phase complete.json",
+    "restore": [
+      "${PY}",
+      "${STAGE}/runtime/candidate_service_phase_typed.py",
+      "--action",
+      "restore",
+      "--code",
+      "${CC7}",
+      "--owner-code",
+      "${OWNER27}",
+      "--ab-code",
+      "${BUNDLE}/runtime",
+      "--repo",
+      "${BUNDLE}",
+      "--manifest",
+      "${STAGE}/runtime/final_acceptance_candidate_manifest.json",
+      "--manifest-sha",
+      "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+      "--base-manifest",
+      "${CC7}/runtime/final_acceptance_manifest.json",
+      "--run-dir",
+      "${RESTORE_RUN}",
+      "--from-phase",
+      "${PHASE}",
+      "--deploy-record",
+      "${DEPLOY_RUN}/complete.json",
+      "--deploy-record-sha",
+      "${DEPLOY_COMPLETE_SHA}",
+      "--prior-client-record",
+      "${CLIENT_RECORDS}/supervision.json"
+    ]
+  },
+  "invariants": [
+    "a1ca entry, its tests, candidate manifest 31202d27, phase v3, v5, cc7 runner/manifest bytes unchanged",
+    "original d0_stop.py unchanged and only stop entry",
+    "no candidate-to-candidate source transition",
+    "no new scan points, data, denominator, scorer or 2pp gate changes",
+    "all device actions are existing audited primitives; no new signal/stop/installer parameter",
+    "device execution only by 31; this packet is CPU-only"
+  ],
+  "pending_device": [
+    "31 stages this commit under a new /workspace/yangchen/work/final-acceptance-cc34-<commit>/ dir and verifies every file SHA",
+    "31 runs each phase plan-only first, then --execute; per-phase deploy/v5/restore with fresh dirs and deadlines",
+    "32 re-checks the first typed complete.json for manifest/current_restore/current_restore_sha fields"
+  ]
+}

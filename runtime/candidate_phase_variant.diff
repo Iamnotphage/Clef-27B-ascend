@@ -1,0 +1,296 @@
+--- runtime/candidate_service_phase.py	2026-11-19 09:23:40
++++ runtime/candidate_service_phase_typed.py	2026-11-19 09:26:23
+@@ -1,26 +1,26 @@
+ #!/usr/bin/env python3
+-"""Owner-side deploy/restore of the exact aa3e candidate acceptance service.
++"""Typed S2/ERQA phase variant of the frozen a1ca candidate entry.
+ 
+-Default is plan-only.  This is the minimal compatibility entry for the candidate
+-arm of the final acceptance; production f810 keeps using the frozen
+-`final_service_phase.py` unchanged.  It adds no stop, signal, source-install or
+-guard logic of its own: every device action is an already-audited primitive.
++Derived from `candidate_service_phase.py` (SHA a1ca26cf..., required beside
++this file at build time).  Only the typed phase cycle is added:
+ 
+-  stop            /tmp/d0cc/d0_stop.py through the frozen phase gates
+-  guard adapter   audited apply_joint_service_check.py (preimage/postimage pinned)
+-  source switch   audited apply_joint_fused_attention.py with an owned manifest
+-  launch/wait     original perf-wave2 launch.sh / wait.sh, clean two-key parent
+-                  plus only CLEF_JOINT_FUSED_ATTN=1 and the exact allow SHA
+-  verification    cc7 final_acceptance.service_check with the derived candidate
+-                  manifest, then the original d0 four-check and NPU card gate
+-  restore         audited adapter revert -> f810 source -> clean production
+-                  launch -> four-check -> byte compare of OPP/LD against the
+-                  frozen clean-launch manifest
++  fresh f810 s1 (four-checked, f810 head + guard preimage)
++    -> deploy one candidate phase (s2_b8 | s2_b16 | erqa)
++    -> frozen v5 supervisor with the same `--phase`
++    -> restore to the same clean f810 s1 (four-check + OPP/LD byte compare)
+ 
+-Any error after the old service was proven stopped goes through an explicit
+-recovery gate: port closed, no pending client runners, known source/guard state.
+-Only then is the audited restore attempted; otherwise the run is recorded as
+-blocked and nothing is signalled or launched.
++No candidate-to-candidate source transition is accepted.  Deployment start is
++pinned to f810/guard-pre/s1 argv; launch overrides must equal the frozen phase
++table and the candidate manifest may differ from the frozen f810 manifest only
++in the two candidate environment keys.  The restore's prior supervision must
++bind the same protected root/label/identities/manifest/phase as this deploy.
++
++Default is plan-only.  Production f810 keeps using the frozen
++`final_service_phase.py` unchanged.  Every device action is an already-audited
++primitive: original d0 stop, original launcher/wait, audited guard adapter and
++source installer, cc7 service_check, d0 four-check, phase-v3 PGID/client/port/
++NPU gates.  Any error after the old service was proven stopped goes through the
++explicit recovery gate; otherwise nothing is signalled or launched.
+ """
+ from __future__ import annotations
+ 
+@@ -48,6 +48,7 @@
+ WINDOW_SHA = '700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473'
+ MANIFEST_SHA = '31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4'
+ BASE_MANIFEST_SHA = '0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2'
++BASE_ENTRY_SHA = 'a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44'
+ FLAG_ENV = 'CLEF_JOINT_FUSED_ATTN'
+ ALLOW_ENV = 'CLEF_JOINT_ALLOWED_POSTIMAGE_SHA'
+ PATH_KEYS = ('PATH', 'CLEF_LAUNCH_CONFIG')
+@@ -58,6 +59,12 @@
+     ALLOW_ENV: AA3E_HEAD,
+ }
+ PHASES = ('s1', 's2_b8', 's2_b16', 'erqa')
++CANDIDATE_PHASES = ('s2_b8', 's2_b16', 'erqa')
++FOUR_CHECKS = ('health', 'workers', 'text', 'image')
++MANIFEST_PHASE_KEYS = ('expected_argv', 'effective', 'config', 'concurrencies', 'rounds')
++RECORD_BINDINGS = (('--identities', 'identities'),
++                   ('--launch-manifest', 'launch_manifest'),
++                   ('--owner-evidence', 'owner_evidence'))
+ 
+ 
+ def utc_stamp() -> str:
+@@ -109,8 +116,50 @@
+             'rounds': [], 'steps': {}, 'source_switches': [], 'overall_rc': 1}
+ 
+ 
++def verify_phase_bindings(manifest, base_manifest, phase):
++    """The candidate manifest may differ from frozen f810 only in the two
++    candidate environment keys; argv, scoring, concurrency and rounds stay
++    byte-identical.  Launch overrides must equal the frozen phase table."""
++    require(set(manifest.get('phases', {})) == set(PHASES) == set(base_manifest.get('phases', {})),
++            'phase set mismatch')
++    require(tuple(phase.OVERRIDES) == PHASES, 'frozen phase override table mismatch')
++    for name in PHASES:
++        got = manifest['phases'][name]
++        ref = base_manifest['phases'][name]
++        require(got.get('launch_overrides') == phase.OVERRIDES[name],
++                f'{name} launch overrides differ from the frozen phase table')
++        for key in MANIFEST_PHASE_KEYS:
++            require(got.get(key) == ref.get(key),
++                    f'{name}.{key} differs from the frozen f810 manifest')
++        env = dict(got.get('service_environment', {}))
++        ref_env = dict(ref.get('service_environment', {}))
++        require(env.pop(FLAG_ENV, None) == '1', f'{name} lacks the fused flag')
++        require(env.pop(ALLOW_ENV, None) == AA3E_HEAD, f'{name} lacks the exact allow SHA')
++        require(env == ref_env, f'{name} service environment drift outside the two candidate keys')
++    require(manifest.get('forbidden_environment') ==
++            [key for key in base_manifest.get('forbidden_environment', []) if key != FLAG_ENV],
++            'forbidden environment drift outside the fused flag')
++
++
++def record_label(record):
++    """Exact service label of a restore/deploy record."""
++    label = record.get('label')
++    alias = record.get('service_label')
++    require(not (label and alias and label != alias), 'record carries two different labels')
++    label = label or alias
++    require(isinstance(label, str) and label and Path(label).name == label,
++            'record lacks its exact service label')
++    return label
++
++
++def argv_value(argv, flag):
++    return argv[argv.index(flag) + 1] if flag in argv else None
++
++
+ def build_deps(a):
+     owner = a.owner_code.resolve()
++    require(sha(Path(__file__).with_name('candidate_service_phase.py')) == BASE_ENTRY_SHA,
++            'frozen a1ca S1 entry missing or changed beside this variant')
+     require(sha(owner / 'final_acceptance_supervisor.py') == SUPERVISOR_SHA, 'supervisor SHA mismatch')
+     require(sha(owner / 'final_service_phase.py') == PHASE_SHA, 'phase module SHA mismatch')
+     require(sha(a.code / 'runtime/final_acceptance.py') == RUNNER_SHA, 'acceptance runner SHA mismatch')
+@@ -150,8 +199,10 @@
+     # service_check_applied, attribution_unknown and cleanup_unconfirmed.
+     ab.state = initial_state(sc_mod.base)
+     ab.prod_env = {}
++    manifest, base_manifest = read(a.manifest), read(a.base_manifest)
++    verify_phase_bindings(manifest, base_manifest, phase)
+     return SimpleNamespace(strict=strict, phase=phase, ab=ab, acceptance=acceptance,
+-                           manifest=read(a.manifest), base_manifest=read(a.base_manifest))
++                           manifest=manifest, base_manifest=base_manifest)
+ 
+ 
+ def verify_old_service(deps, old, from_phase):
+@@ -159,6 +210,10 @@
+     strict, require_ = deps.strict, require
+     saved = old['service_discovery']['api_identity']
+     root = saved['pid']
++    label = record_label(old)
++    pid_file = Path(deps.ab.args.service_log_root) / label / 'api.pid'
++    require_(pid_file.is_file(), 'old label api.pid missing')
++    require_(int(pid_file.read_text().strip()) == root, 'old label api.pid mismatch')
+     table = strict.scan()
+     live = table.get(root)
+     require_(live and live['state'] != 'Z' and live['pgid'] == root and live['ppid'] == 1,
+@@ -295,18 +350,29 @@
+ def deploy(a, deps):
+     run_dir = a.run_dir.resolve()
+     require(not run_dir.exists(), 'new run directory required')
++    require(a.phase in CANDIDATE_PHASES or a.phase == 's1',
++            'unknown candidate phase')
++    require(a.from_phase == 's1',
++            'every candidate phase deploys from the restored f810 s1 service')
++    require(sha(deps.phase.TARGET) == F810_HEAD, 'deploy start source is not f810')
++    require(sha(deps.phase.GUARD) == GUARD_PRE, 'deploy start guard is not the preimage')
+     require(sha(a.current_restore) == a.current_restore_sha, 'old restore SHA mismatch')
+     old = read(a.current_restore)
+-    require(all(old[k]['rc'] == 0 and old[k]['ok'] for k in ('health', 'workers', 'text', 'image')),
++    require(all(old[k]['rc'] == 0 and old[k]['ok'] for k in FOUR_CHECKS),
+             'old restore not complete')
+-    old['_from_phase'] = a.from_phase or 's1'
++    old_label = record_label(old)
++    old['_from_phase'] = a.from_phase
+     label = f'd0-cand-{utc_stamp()}-{uuid.uuid4().hex[:8]}'
+-    plan = dict(action='deploy', label=label, run_dir=str(run_dir),
++    manifest = str(a.manifest.resolve())
++    plan = dict(action='deploy', phase=a.phase, label=label, run_dir=str(run_dir),
+                 current_restore=str(a.current_restore), current_restore_sha=a.current_restore_sha,
+-                manifest_sha=a.manifest_sha, source=AA3E_HEAD, guard=GUARD_POST,
++                current_restore_label=old_label,
++                manifest=manifest, manifest_sha=a.manifest_sha,
++                source=F810_HEAD, source_after=AA3E_HEAD, guard=GUARD_PRE, guard_after=GUARD_POST,
+                 launch=['/bin/bash', str(deps.ab.args.launch), label,
+                         *deps.phase.OVERRIDES[a.phase]],
+-                launch_env=dict(CANDIDATE_ENV), from_phase=old['_from_phase'],
++                overrides=list(deps.phase.OVERRIDES[a.phase]),
++                launch_env=dict(CANDIDATE_ENV), from_phase=a.from_phase,
+                 client_gate=('prior:' + str(a.prior_client_record)) if a.prior_client_record
+                 else 'first-phase-no-client')
+     if not a.execute:
+@@ -332,7 +398,8 @@
+                       identities=str(run_dir / 'ready-identities.json'),
+                       launch_manifest=str(launch_manifest),
+                       owner_evidence=str(run_dir / 'restore.json'),
+-                      manifest_sha=a.manifest_sha)
++                      manifest=manifest, manifest_sha=a.manifest_sha,
++                      from_phase=a.from_phase, overrides=list(deps.phase.OVERRIDES[a.phase]))
+         write(run_dir / 'complete.json', result)
+         return result
+     except BaseException:
+@@ -340,6 +407,25 @@
+         if stop_state.get('stopped'):
+             recover(deps, run_dir, a.prior_client_record)
+         raise
++
++
++def verify_prior_supervision(record, record_rows, prior):
++    """The prior supervision must be the last client group of exactly this
++    candidate deploy: same protected root/label/identities/manifest/phase."""
++    argv = prior.get('argv') or []
++    require(isinstance(argv, list) and argv, 'prior client record lacks its argv')
++    require(prior.get('clients_exited') is True, 'prior client supervision did not exit')
++    require(argv_value(argv, '--phase') == record['phase'],
++            'prior client supervision is not this candidate phase')
++    require(Path(argv_value(argv, '--manifest') or '').resolve() == Path(record['manifest']).resolve(),
++            'prior client supervision manifest mismatch')
++    for flag, key in RECORD_BINDINGS:
++        require(Path(argv_value(argv, flag) or '').resolve() == Path(record[key]).resolve(),
++                f'prior client supervision {key} mismatch')
++    root = record_rows[0]['pid']
++    require(record.get('root') == root, 'deploy record root mismatch')
++    observed = {str(key) for key in (prior.get('observed') or {})}
++    require(str(root) not in observed, 'protected root appears in the prior client group')
+ 
+ 
+ def restore(a, deps):
+@@ -351,16 +437,24 @@
+             'not a successful candidate deploy record')
+     require(record.get('source') == AA3E_HEAD and record.get('guard') == GUARD_POST,
+             'deploy record is not the aa3e candidate')
+-    require(record.get('phase') == a.from_phase,
++    require(record.get('phase') in PHASES and record.get('phase') == a.from_phase,
+             'restore from-phase must equal the deployed candidate phase')
++    manifest = str(a.manifest.resolve())
++    require(record.get('manifest') == manifest and record.get('manifest_sha') == a.manifest_sha,
++            'deploy record manifest binding mismatch')
++    record_label(record)
+     require(a.prior_client_record is not None, 'restore requires the last candidate client record')
+     ids_file = Path(record['identities'])
+     require(ids_file.is_file(), 'deployed ready identities missing')
+     ids = read(ids_file)
+     rows = [ids['root'], *ids['descendants']]
++    prior = read(a.prior_client_record)
++    verify_prior_supervision(record, rows, prior)
+     label = f'd0-restore-{utc_stamp()}-{uuid.uuid4().hex[:8]}'
+-    plan = dict(action='restore', label=label, run_dir=str(run_dir),
++    plan = dict(action='restore', phase=a.from_phase, label=label, run_dir=str(run_dir),
+                 deploy_record=str(a.deploy_record), deploy_record_sha=a.deploy_record_sha,
++                deploy_label=record['label'], deploy_root=record['root'],
++                manifest=manifest, manifest_sha=a.manifest_sha,
+                 ready_pids=[row['pid'] for row in rows], source=F810_HEAD, guard=GUARD_PRE,
+                 client_gate='prior:' + str(a.prior_client_record))
+     if not a.execute:
+@@ -368,7 +462,8 @@
+     run_dir.mkdir(parents=True, exist_ok=False)
+     write(run_dir / 'plan.json', plan)
+     stop_state = {}
+-    old = dict(service_discovery={'api_identity': ids['root']}, _from_phase=a.from_phase)
++    old = dict(label=record['label'],
++               service_discovery={'api_identity': ids['root']}, _from_phase=a.from_phase)
+     try:
+         deps.ab.stage_d0()
+         deps.ab.stage_candidate()
+@@ -381,6 +476,8 @@
+         require(sha(deps.phase.TARGET) == F810_HEAD, 'f810 source not restored')
+         deps.acceptance.frozen_check(deps.base_manifest)
+         restored = deps.ab.restore_prod()
++        require(restored.get('restore_env', {}).get('match') is True,
++                'clean restore OPP/LD compare not matched')
+         label_dir = Path(deps.ab.args.service_log_root) / restored['label']
+         pid = int((label_dir / 'api.pid').read_text())
+         table = deps.strict.scan()
+@@ -391,12 +488,24 @@
+             deps.base_manifest, 's1', run_dir / 'restored-identities.json',
+             label_dir / 'launch-manifest.json')
+         write(run_dir / 'service-check.json', check)
+-        result = dict(ok=True, action='restore', label=restored['label'],
++        record_path = run_dir / 'restore.json'
++        require(record_path.is_file(), 'clean restore record missing')
++        restore_record = read(record_path)
++        require(all(restore_record.get(k, {}).get('rc') == 0 and
++                    restore_record[k].get('ok') is True for k in FOUR_CHECKS),
++                'clean restore four-check incomplete')
++        require(restore_record.get('service_discovery', {}).get('api_identity', {}).get('pid') == pid,
++                'clean restore record root mismatch')
++        result = dict(ok=True, action='restore', phase=a.from_phase, label=restored['label'],
+                       source=F810_HEAD, guard=GUARD_PRE, deploy_record=str(a.deploy_record),
++                      deploy_label=record['label'], deploy_root=record['root'],
++                      manifest=manifest, manifest_sha=a.manifest_sha,
+                       restore_env=restored.get('restore_env'),
+                       identities=str(run_dir / 'restored-identities.json'),
+                       launch_manifest=str(label_dir / 'launch-manifest.json'),
+-                      owner_evidence=str(run_dir / 'restore.json'))
++                      owner_evidence=str(record_path),
++                      current_restore=str(record_path),
++                      current_restore_sha=sha(record_path))
+         write(run_dir / 'complete.json', result)
+         return result
+     except BaseException:
+@@ -441,6 +550,8 @@
+     p.add_argument('--execute', action='store_true')
+     a = p.parse_args(argv)
+     if a.action == 'deploy':
++        require(a.from_phase == 's1',
++                'every candidate phase deploys from the restored f810 s1 service')
+         require(bool(a.current_restore) == bool(a.current_restore_sha),
+                 'deploy requires --current-restore and --current-restore-sha')
+         require(a.current_restore is not None, 'deploy requires the current verified restore record')

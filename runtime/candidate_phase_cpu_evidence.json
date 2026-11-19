@@ -1,0 +1,137 @@
+{
+  "schema": "candidate-typed-phase-cpu-evidence/1",
+  "ok": true,
+  "fixture_root_schema": "mkdtemp; all test work confined under it",
+  "no_network_no_npu": true,
+  "pending": {},
+  "objects": {
+    "a1ca_entry": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44",
+    "typed_entry": "d93ee93463454db56673a3aefe261d1b598b52acd588dff67216c430370588d6",
+    "candidate_manifest": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "base_manifest": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2",
+    "f810_head": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "guard_preimage": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+    "clean_expected": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230",
+    "supervisor": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876",
+    "phase_module": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44",
+    "acceptance_runner": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+  },
+  "real_records": {
+    "dir_name": "typed-fixtures-20261119",
+    "sha256sums_sha256": "1242319da380bfe39990a3570fa294cad2a486eb7ec6bc63452f89789e2b9540",
+    "manifest_sha256": "590ec04c88d7043a2081b887da137637775a8da65be5ac3455b526adf4e3fa41",
+    "files_verified": 17
+  },
+  "suites": [
+    {
+      "name": "frozen a1ca unit",
+      "module": "test_candidate_service_phase",
+      "ok": true,
+      "returncode": 0,
+      "ran": "Ran 18 tests",
+      "skipped": 0,
+      "tail": [
+        "test_unattributed_pgid_member_blocks (test_candidate_service_phase.DeployTest.test_unattributed_pgid_member_blocks) ... ok",
+        "test_unknown_source_after_stop_blocks (test_candidate_service_phase.DeployTest.test_unknown_source_after_stop_blocks) ... ok",
+        "test_restore_adapter_failure_recovers_without_launch_when_unknown (test_candidate_service_phase.RestoreTest.test_restore_adapter_failure_recovers_without_launch_when_unknown) ... ok",
+        "test_restore_rejects_phase_mismatch (test_candidate_service_phase.RestoreTest.test_restore_rejects_phase_mismatch) ... ok",
+        "test_restore_rejects_wrong_record (test_candidate_service_phase.RestoreTest.test_restore_rejects_wrong_record) ... ok",
+        "test_restore_stop_failure_does_not_launch (test_candidate_service_phase.RestoreTest.test_restore_stop_failure_does_not_launch) ... ok",
+        "test_restore_success_returns_production (test_candidate_service_phase.RestoreTest.test_restore_success_returns_production) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 18 tests in 0.047s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "name": "candidate manifest",
+      "module": "test_candidate_manifest",
+      "ok": true,
+      "returncode": 0,
+      "ran": "Ran 8 tests",
+      "skipped": 0,
+      "tail": [
+        "test_base_must_be_f810 (test_candidate_manifest.DeriveTest.test_base_must_be_f810) ... ok",
+        "test_base_must_be_preimage_guard (test_candidate_manifest.DeriveTest.test_base_must_be_preimage_guard) ... ok",
+        "test_derive_binds_candidate_exactly (test_candidate_manifest.DeriveTest.test_derive_binds_candidate_exactly) ... ok",
+        "test_derive_is_deterministic (test_candidate_manifest.DeriveTest.test_derive_is_deterministic) ... ok",
+        "test_drift_outside_whitelist_rejected (test_candidate_manifest.DeriveTest.test_drift_outside_whitelist_rejected) ... ok",
+        "test_extra_phase_env_rejected (test_candidate_manifest.DeriveTest.test_extra_phase_env_rejected) ... ok",
+        "test_frozen_base_sha_and_candidate_sha (test_candidate_manifest.FrozenManifestTest.test_frozen_base_sha_and_candidate_sha) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 8 tests in 0.003s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "name": "typed unit",
+      "module": "test_candidate_phase_typed",
+      "ok": true,
+      "returncode": 0,
+      "ran": "Ran 58 tests",
+      "skipped": 0,
+      "tail": [
+        "test_restore_requires_supervision_exited (test_candidate_phase_typed.RestoreTest.test_restore_requires_supervision_exited) ... ok",
+        "test_restore_requires_supervision_identities (test_candidate_phase_typed.RestoreTest.test_restore_requires_supervision_identities) ... ok",
+        "test_restore_requires_supervision_launch_manifest (test_candidate_phase_typed.RestoreTest.test_restore_requires_supervision_launch_manifest) ... ok",
+        "test_restore_requires_supervision_manifest (test_candidate_phase_typed.RestoreTest.test_restore_requires_supervision_manifest) ... ok",
+        "test_restore_requires_supervision_phase (test_candidate_phase_typed.RestoreTest.test_restore_requires_supervision_phase) ... ok",
+        "test_restore_stop_failure_does_not_launch (test_candidate_phase_typed.RestoreTest.test_restore_stop_failure_does_not_launch) ... ok",
+        "test_restore_success_returns_production_and_handoff (test_candidate_phase_typed.RestoreTest.test_restore_success_returns_production_and_handoff) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 58 tests in 0.104s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "name": "frozen a1ca real-method integration",
+      "module": "test_candidate_service_integration",
+      "ok": true,
+      "returncode": 0,
+      "ran": "Ran 4 tests",
+      "skipped": 0,
+      "tail": [
+        "  \"owner_evidence\": \"/private/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef-real-integration-povvfctd/cli-run/restore.json\",",
+        "  \"manifest_sha\": \"31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4\"",
+        "}",
+        "test_deploy_success_uses_real_installers_and_state (test_candidate_service_integration.RealMethodsTest.test_deploy_success_uses_real_installers_and_state) ... ok",
+        "test_independent_restore_after_deploy (test_candidate_service_integration.RealMethodsTest.test_independent_restore_after_deploy) ... ok",
+        "test_main_deploy_cli_success (test_candidate_service_integration.RealMethodsTest.test_main_deploy_cli_success) ... ok",
+        "test_post_stop_switch_exception_recovers_and_restores (test_candidate_service_integration.RealMethodsTest.test_post_stop_switch_exception_recovers_and_restores) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 4 tests in 0.701s",
+        "",
+        "OK"
+      ]
+    },
+    {
+      "name": "typed real-method integration",
+      "module": "test_candidate_phase_typed_integration",
+      "ok": true,
+      "returncode": 0,
+      "ran": "Ran 6 tests",
+      "skipped": 0,
+      "tail": [
+        "test_deploy_s2_b16_uses_exact_phase_argv (test_candidate_phase_typed_integration.RealMethodsTest.test_deploy_s2_b16_uses_exact_phase_argv) ... ok",
+        "test_deploy_s2_b8_uses_real_installers_and_state (test_candidate_phase_typed_integration.RealMethodsTest.test_deploy_s2_b8_uses_real_installers_and_state) ... ok",
+        "test_main_cli_deploy_requires_explicit_fixture_paths (test_candidate_phase_typed_integration.RealMethodsTest.test_main_cli_deploy_requires_explicit_fixture_paths) ... ok",
+        "test_main_cli_without_explicit_paths_is_rejected_by_fixture_guard (test_candidate_phase_typed_integration.RealMethodsTest.test_main_cli_without_explicit_paths_is_rejected_by_fixture_guard)",
+        "The fixture wrapper refuses any default production path. ... ok",
+        "test_post_stop_switch_exception_recovers_to_f810 (test_candidate_phase_typed_integration.RealMethodsTest.test_post_stop_switch_exception_recovers_to_f810) ... ok",
+        "test_restore_and_chained_erqa_from_handoff (test_candidate_phase_typed_integration.RealMethodsTest.test_restore_and_chained_erqa_from_handoff) ... ok",
+        "",
+        "----------------------------------------------------------------------",
+        "Ran 6 tests in 0.948s",
+        "",
+        "OK"
+      ]
+    }
+  ]
+}
