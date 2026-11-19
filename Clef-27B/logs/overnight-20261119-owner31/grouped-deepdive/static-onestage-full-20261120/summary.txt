@@ -1,0 +1,49 @@
+源 SHA256=2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c（已核）
+nm：_ZN25AicpuKfcDeprecatedProcess24RunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer
+    地址 0x7c97c0，size 0xa60（end 0x7ca220）；PLT call 0x7c98b4 = +0xf4 与 nm 一致。
+范围：仅该单函数完整反汇编 + 直接 callee 列表；未扩 Try wrapper/其它函数/全库；未扫描间接/vtable/dlsym。
+
+序言/对象映射
+- x20 = arg0 (AicpuComContext*) @0x7c97d8；x19 = arg1 (AicpuKfcRpcServer*) @0x7c97e0。
+- 栈上构造上下文数组与多个 AivAicpuOpParam 缓冲（sp+0x10 计数/指针，sp+0x20 与 sp+0x328 两个 param，sp+0x630 等）。
+- 0x7c9854 AicpuGetAllComContext(sp+0x10, sp+0xC)：若计数非 0，0x7c9880-0x7c9898 循环对每个 ctx 写 [ctx+0xF31E0]=1（str x4=1,[x3,#12768]）。
+- 0x7c989c CallMC2MaintenanceThread(ctx)。
+
+两处 Check 的前驱/顺序
+1) 第一处 CheckRcvAddrMsg @0x7c98b4（= +0xf4）：
+   实参 x0=x19(RpcServer)@0x7c98b0、x1=x23=sp+0x20@0x7c98ac、w2=0@0x7c98a4；
+   紧随 0x7c98c4 CheckAivIsEnd(x19,w1=0)，0x7c98c8 `tbz w0,#0 → 0x7c9c5c`。
+   true 分支：0x7c98cc ldr w0,[sp,#32]；0x7c98d4 调 0x7c5820(hash 查找)；
+   0x7c98d8 `tbnz w0,#0 → 0x7c9b9c`（维护计数分支：w25=[ctx+0x3268]+1，0x7c9bd0-0x7c9bf0
+   对每个 ctx `str w25,[ctx+0x3268]`，再回 0x7c98dc）；否则继续 0x7c98dc。
+2) 第二处 CheckRcvAddrMsg @0x7c9a14（+0x254）位于循环内：
+   0x7c99d4 先置 [ctx+0xF31B1]=1；0x7c99e8 AicpuCcOpExe(x0=sp+0x20,x1=null,x2=ctx)；
+   成功后 0x7c9a00 CheckAivIsEnd(0)；0x7c9a04 `tbnz w0,#0 → 0x7c9a70`（结束路径）；
+   否则 0x7c9a0c x1=sp+0x328、0x7c9a14 CheckRcvAddrMsg(x0=x19,x1=sp+0x328,w2=0)；
+   0x7c9a20 CheckAivIsEnd(0)，0x7c9a28 `tbz w0,#0 → 0x7c9b10`（ReadAddrMsg+重试 AicpuCcOpExe）；
+   否则 0x7c9a34 AicpuCcOpExe(x0=sp+0x328,x1=0,x2=ctx)，GetActiveSqId/ActiveRecordMain，
+   交换 sp+0x20/sp+0x328 缓冲；0x7c9a68 CheckAivIsEnd(0)，0x7c9a6c `tbz w0,#0 → 0x7c9a08`，
+   即回到第二处 Check 形成循环，直到 CheckAivIsEnd 为真。
+- CheckAivIsEnd 共 4 处调用（0x7c98c4/0x7c9a00/0x7c9a20/0x7c9a68），**w1 均为 0**；本函数未见
+  isLast 的独立操作数或 w1=1 变体。
+
+结束/清理路径
+- 0x7c9a70：GetActiveSqId(ctx)/ActiveRecordMain(w0)；成功后 0x7c9a84 `strb wzr,[ctx+0xF31B1]`；
+  0x7c9a90 WaitTaskFinish(ctx, w1=1)；随后 0x7c9ab8-0x7c9af8 对每个 ctx 写 [ctx+0xF31E0]=2；
+  0x7c9b04 PrintBuffer(ctx, sp+0x20)；0x7c9c20 统一返回（canary 校验）。
+- **WaitMainStreamFinish 在本函数出现次数 0（未调用）**；本文件不出现该 callee。
+
+直接写（仅非栈 store；无 [x19] 写）
+- [ctx+0xF31E0]=1（0x7c9890，初始化，逐 ctx）与 =2（0x7c9af0，结束，逐 ctx）
+- [ctx+0xF326C] byte=1（0x7c99bc，逐 ctx 循环）
+- [ctx+0xF31B1] byte=1（0x7c99d4）/ 0（0x7c9a84）
+- [ctx+0xF3268]（12904）= w25（0x7c9be4，维护计数=旧值+1，逐 ctx）
+- shared_ptr 引用计数：[x0+8] ±（0x7c9924/0x7c996c），0x7c9e14 清零；其余为栈。
+- **没有对 x19（RpcServer 对象/response/turn/ack 字段）的直接 store**；这些内容若有写，只能经
+  callee（CheckRcvAddrMsg/ReadAddrMsg/AicpuCcOpExe/WaitTaskFinish 等，名单见 callees-and-stores.txt），
+  本包不追 callee 内部。
+
+直接 callee（BL/B 符号；计数见文件）
+syscall/DlogRecord/HcclCheckLogLevel/IsErrorToWarn；AicpuGetAllComContext；CallMC2MaintenanceThread；
+CheckRcvAddrMsg；CheckAivIsEnd；AicpuCcOpExe；ReadAddrMsg；WaitTaskFinish；GetActiveSqId；
+ActiveRecordMain；PrintBuffer；InitOpExecStatus；hash 查找/插入 helper；shared_ptr 释放；stack_chk；Unwind。
