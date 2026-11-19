@@ -7,8 +7,8 @@
   "files": {
     "runtime/grouped_mmar/binding_probe.cpp": {
       "role": "native MMAR binding with single-variable lifetime/thread/stream flags",
-      "sha256": "52287e3af43ab3d01a3290b58a5a51893f2fbd56e4b3e0b32633a2f1f8f71c49",
-      "bytes": 25679
+      "sha256": "cb4430de874b6f3a88045466ce309c3decc553edb6aa1b37b76b79b964afb75d",
+      "bytes": 33263
     },
     "runtime/grouped_mmar/probe_trace.h": {
       "role": "C++ CLOCK_MONOTONIC trace header",
@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "94f3b9a1940fdea00b9a655adbf47dfdab7507c87e35d27aa68c56860931f208",
-      "bytes": 19267
+      "sha256": "331f99290de23211e6a9ac0c7d9fed88d52734edc67ec1c9c4643bd9915c58ca",
+      "bytes": 20096
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
-      "sha256": "8e4d274193154d3dd512e57df929fcc9ee137f5e303d4c5b924893584b2ee8ef",
-      "bytes": 6765
+      "sha256": "6c9983ffb892823736fe02ee7c74fbc4790ed1f46ba509a3acc60698b004ed62",
+      "bytes": 7056
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -62,18 +62,18 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
-      "sha256": "706d802b14d9c83d787dbe5ffdd6209ce9992eff3bb361184be14a056fdde6c6",
-      "bytes": 31629
+      "sha256": "2202165ef6c9f08bb1cc7168b457c5466a63f20ba0c6168ca63cacade81a03c5",
+      "bytes": 31636
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
       "role": "CPU window control-flow tests (12)",
-      "sha256": "8d5ead78560061b9411fb2e8705bd963a493aa686aef2ed67fc8750373abd0d9",
-      "bytes": 19980
+      "sha256": "6d2ffc94b148fe8cd316bc53caaec3c22e31fda0fa21a17d13bfa2d3d5243aab",
+      "bytes": 20478
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "ce2ebaed2f691016182c1b94e2387134add7ed0d0e0faf93f5c2fd24f6e227fd",
-      "bytes": 19173
+      "sha256": "30bda69a5b5bfc2f5f8999ead54ca7cf387932ca83cbe3b4dde869cafac9a226",
+      "bytes": 20445
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -230,9 +230,9 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "12/12",
+      "test_probe_cpu.py": "13/13",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "21/21"
+      "test_supervised_window_cpu.py": "22/22"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -339,14 +339,14 @@
       "H12 MC2 context/AICPU binding"
     ],
     "pending": [
-      "A12-H6 workspace memset derivative (prepared, 33/32 contract)",
-      "A14 MatmulReduceScatter V1 control (A3 registered; header/sample pending 33)"
+      "A12-H6 workspace memset derivative (contract confirmed; pending 32/20)",
+      "A14 MatmulReduceScatter V1 control (implemented; pending local header/symbols and GO)"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "prepared_not_executed_pending_33_32_contract",
+    "status": "contract_confirmed_pending_32_20",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -358,6 +358,35 @@
     "falsification": "same 507046/stream47 -> H6 workspace-init hypothesis falsified for the hang, not a platform negative",
     "pending": "33 workspace convention (memset/sync) and 32 review before any execution",
     "api_check": "aclrtMemsetAsync declared at acl_rt.h:2563; exported by libascendcl; Async build valid (31)",
-    "static_preflight": "32: diff equals h6.diff, only 9 memset lines, same stream, single-variable holds"
+    "static_preflight": "32: diff equals h6.diff, only 9 memset lines, same stream, single-variable holds",
+    "workspace_contract": "33: GetWorkspaceSize returns size only; caller scratch; MC2 message area in GetHcclContext<0>()->WorkSpace; same-stream memset safe, no extra sync"
+  },
+  "a14_control": {
+    "status": "prepared_pending_local_header_and_go",
+    "op": "aclnnMatmulReduceScatter V1",
+    "header_sha256": "6e49c20f (3158 B upstream)",
+    "sample_sha256": "0996d6f4 (8873 B)",
+    "shapes": {
+      "small": {
+        "M": 128,
+        "K": 256,
+        "N": 512
+      },
+      "v4r1_like": {
+        "M": 968,
+        "K": 8704,
+        "N": 5120,
+        "output": [
+          484,
+          5120
+        ]
+      }
+    },
+    "bias": "nullptr (A2/A3 non-zero bias unsupported)",
+    "output": "m/rank_size,n",
+    "constraints": "m % rank_size == 0; commTurn 0; streamMode 1; reduceOp sum",
+    "binding": "run_mrs",
+    "pending": "31 local header copy/SHA; libccl_kernel and MatmulReduceScatter kernel symbols; 32/20 GO",
+    "success": "A12-equivalent gate"
   }
 }

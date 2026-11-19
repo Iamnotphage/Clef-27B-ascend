@@ -74,6 +74,13 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan['n'], 5120)
         self.assertEqual(plan['flags'], 0)
 
+    def test_a14_plan_is_native_reduce_scatter_control(self):
+        a = run_probe.parse_args(plan_args(self.root, 'A14'))
+        plan = run_probe.build_plan(a)
+        self.assertTrue(plan['native'])
+        self.assertEqual(plan['rows'], 128)
+        self.assertEqual(plan['flags'], 0)
+
     def test_weight_requires_sha(self):
         weight = self.root / 'w.bin'
         weight.write_bytes(b'x')

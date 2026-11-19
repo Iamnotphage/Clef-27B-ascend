@@ -81,6 +81,13 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 - 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
 - **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
 
+## A14 MatmulReduceScatter V1 控制（已实现，pending 本机头/未执行）
+
+- 33 契约：上游头 `aclnn_matmul_reduce_scatter.h` SHA `6e49c20f…`（3,158 B），`GetWorkspaceSize(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`；bias 可空（A2/A3 非 0 bias 不支持，用 nullptr）；output `(m/rank_size,n)`；x1 `(m,k)`、x2 `(k,n)`；reduceOp 仅 sum、commTurn 0、streamMode 1；**m 必须 rank_size 整数倍**；样例 `test_aclnn_matmul_reduce_scatter.cpp` SHA `0996d6f4…`（8,873 B）。A3 ops-info 已注册 `MatmulReduceScatter`/`V2`；符号在 libopapi.so；是否依赖 mc2_server 未证。
+- 本包：binding 新增 `run_mrs(x,w,group,rank_size,flags)`（bias nullptr，keep/workspace/descriptor/release 同 grouped）；run_probe `A14`（默认 M=128/K=256/N=512 小臂，`--rows 968 --k 8704 --n 5120` v4r1-like；output 484×5120）；window choices 增加 A14。
+- 待 31 提供本机 `include/aclnnop/aclnn_matmul_reduce_scatter.h` 本地副本/SHA 与 libccl_kernel/MatmulReduceScatter kernel 符号；编译前不得执行。
+- CLI：`--arm A14 --adapter <so> --rows 128 --k 256 --n 512 --seed 20261119`（先 plan 后 --execute）；成功=A12 同门（rc0+两 rank sync+finite+maps+无错误行+完成标记）。
+
 ## A12-H6 workspace 初值最小派生（已准备，未执行）
 
 - 父源官方冻结 `a12/test_aclnn_grouped_mat_mul_all_reduce.cpp` `6c1a90ab…`；派生 `a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp` SHA `4b8e6e2a…`，唯一差异 `a12_h6/h6.diff` SHA `754e2f24…`：`GetWorkspaceSize`/`aclrtMalloc` 之后、launch 之前对同一 workspace 执行 `aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream)` 并打印/校验 rc。

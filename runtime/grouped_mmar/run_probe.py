@@ -57,6 +57,8 @@ ARMS = {
            'title': 'M sweep 128/256/1024/967 (stage 2)'},
     'A13': {'flags': 0, 'native': True, 'rows': 967,
             'title': 'MatMulAllReduce (non-grouped MC2) control with torch multi-process comm'},
+    'A14': {'flags': 0, 'native': True, 'rows': 128,
+            'title': 'MatmulReduceScatter V1 AICPU MC2 control (A3-registered)'},
 }
 A12 = {
     'title': 'official A3 sample positive control (separate binary, fixed source from 33)',
@@ -286,22 +288,27 @@ def execute(a, plan):
         else:
             gen_r = torch.Generator(device='cpu').manual_seed(a.seed + rank)
             weight = torch.randn(a.k, a.n, generator=gen_r).to(torch.bfloat16)
-        bias_dtype = torch.bfloat16 if a.arm == 'A13' else torch.float32
-        bias = torch.zeros(a.n, dtype=bias_dtype)
+        bias = None
+        if a.arm != 'A14':
+            bias_dtype = torch.bfloat16 if a.arm == 'A13' else torch.float32
+            bias = torch.zeros(a.n, dtype=bias_dtype)
         meta['inputs'] = {
             'x': {'shape': list(x.shape), 'dtype': str(x.dtype),
                   'sha256': hashlib.sha256(x.contiguous().view(torch.uint8).numpy().tobytes()).hexdigest()},
             'weight': {'shape': list(weight.shape), 'dtype': str(weight.dtype),
                        'sha256': hashlib.sha256(weight.contiguous().view(torch.uint8).numpy().tobytes()).hexdigest()},
-            'bias': {'shape': list(bias.shape), 'dtype': str(bias.dtype), 'value': 'zero'},
         }
+        if bias is not None:
+            meta['inputs']['bias'] = {'shape': list(bias.shape), 'dtype': str(bias.dtype),
+                                      'value': 'zero'}
         if a.adapter is not None:
             if not a.adapter.is_file():
                 raise RuntimeError(f'adapter missing: {a.adapter}')
             meta['adapter'] = {'path': str(a.adapter), 'sha256': sha256(a.adapter)}
             torch.ops.load_library(str(a.adapter))
             meta['provider'] = torch.ops.clef_mmar_probe.provider()
-        x_n, w_n, bias_n = x.npu(), weight.npu(), bias.npu()
+        x_n, w_n = x.npu(), weight.npu()
+        bias_n = bias.npu() if bias is not None else None
         residual_n, gamma_n = residual.npu(), gamma.npu()
         torch.npu.synchronize()
         meta['libraries'] = library_evidence(a.adapter)
@@ -321,9 +328,13 @@ def execute(a, plan):
             run_id = 0
         else:
             trace.emit('arm_enter', flags=plan['flags'])
-            op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
-                  else torch.ops.clef_mmar_probe.run)
-            y, workspace_bytes, run_id = op(x_n, w_n, bias_n, group, plan['flags'])
+            if a.arm == 'A14':
+                y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
+                    x_n, w_n, group, world, plan['flags'])
+            else:
+                op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
+                      else torch.ops.clef_mmar_probe.run)
+                y, workspace_bytes, run_id = op(x_n, w_n, bias_n, group, plan['flags'])
             trace.emit('api_return', workspace_bytes=workspace_bytes, run_id=run_id)
             meta['api_returned'] = True
             meta['workspace_bytes'] = workspace_bytes
@@ -339,8 +350,14 @@ def execute(a, plan):
                                                                    KEEP_DESCRIPTORS | KEEP_ALL))
             meta['release_rc'] = release_rc
             trace.emit('release_return', rc=release_rc)
-            reference = torch.matmul(x_n, w_n)
-            dist.all_reduce(reference, op=dist.ReduceOp.SUM)
+            reduced = torch.matmul(x_n, w_n)
+            if a.arm == 'A14':
+                reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
+                                        device=reduced.device)
+                dist.reduce_scatter_tensor(reference, reduced, op=dist.ReduceOp.SUM)
+            else:
+                reference = reduced
+                dist.all_reduce(reference, op=dist.ReduceOp.SUM)
             torch.npu.synchronize()
             output = y
         if a.norm:
