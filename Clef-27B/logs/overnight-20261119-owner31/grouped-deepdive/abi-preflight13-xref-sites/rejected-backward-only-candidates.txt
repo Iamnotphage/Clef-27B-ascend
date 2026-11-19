@@ -1,0 +1,19 @@
+scan2 (ADRP+ADD backward-only) candidates for 0x14f7160 that scan5 rejected by liveness:
+===== 0x14f7160 lo12=0x160 page=0x14f7000 [requested] Query sqe info failed, stream:%u, id:%u
+ADD imm12 candidates: 3646; validated: 9; unvalidated: 3637
+  VALID  add@0x7aa1f4 (adrp@0x7aa1ec, +0x8)  func _ZN13MC2TraceUtils18SubmitBatchSqeInfoEv+0x1b4
+  VALID  add@0x7aa42c (adrp@0x7aa3ac, +0x80)  func _ZN13MC2TraceUtils18SubmitBatchSqeInfoEv+0x3ec
+  VALID  add@0x7aa824 (adrp@0x7aa3ac, +0x478)  func _ZN13MC2TraceUtils6SubmitI12SqeBatchInfoEE10HcclResultPKT_+0x304
+  VALID  add@0x105d79c (adrp@0x105d6fc, +0xa0)  func _ZN4Hccl15DataTypeSizeGetENS_8DataTypeE+0x71c
+  VALID  add@0x108286c (adrp@0x10827b4, +0xb8)  func _ZN4Hccl22DataTypeToHcclDataTypeENS_8DataTypeE+0x60c
+  VALID  add@0x1353fa8 (adrp@0x13537c8, +0x7e0)  func _ZN4Hccl24InsBatchSendRecvExecutorINS_20TopoMatchPartialMeshEE14CalcRecvSlicesEy+0xbe8
+  VALID  add@0x1354be8 (adrp@0x1354408, +0x7e0)  func _ZN4Hccl24InsBatchSendRecvExecutorINS_20TopoMatchPartialMeshEE14CalcSendSlicesEy+0xbe8
+  VALID  add@0x13d0284 (adrp@0x13d0258, +0x2c)  func _ZNK4Hccl19UbTransportLiteImpl26FillDbSqeProfInfoReducePubEPvS1_yRKNS_8ReduceInERNS_13DbSqeProfInfoE+0x604
+  VALID  add@0x146d5a0 (adrp@0x146d164, +0x43c)  func _ZNK4Hccl9RankGraph21CreateSubNetInstancesESt6vectorIiSaIiEERS1_ISt13unordered_mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt10shared_ptrINS_11NetInstanceEESt4hashISA_ESt8equal_toISA_ESaISt4pairIKSA_SD_EEESaISM_EERS4_IiSB_INSC_4PeerEESE_IiESG_IiESaISI_IKiSR_EEEPS0_+0xb80
+  unval  add@0x29ef04 rn=x0 rd=x0 no-adrp  func _Z8Finalizev+0x144
+  unval  add@0x29fc94 rn=x19 rd=x0 no-adrp  func _Z8Finalizev+0xed4
+
+Rejection example 0x105d79c (see site-windows.txt):
+  0x105d6fc adrp x0,0x14f7000 ; 0x105d700 add x0,x0,#0x6e0  (first use, throw_out_of_range)
+  ... x0 overwritten ... 0x105d798 adrp x0,0x14eb000 ; 0x105d79c add x0,x0,#0x160 -> 0x14eb160
+  So the add at 0x105d79c does NOT use page 0x14f7000; scan2 backward match was a false positive.
