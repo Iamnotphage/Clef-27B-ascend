@@ -929,6 +929,14 @@
 - **证据缺口（明确标注）**：①9/9 检查与五 PID 仅见 `manual-restore-record.txt` 引用 JSON，无独立原件；②实际外层 `env -i/setsid` argv 无独立 capture，只有 plan 原件+记录引用+launch-manifest 内层一致性；③两 rank 的 gate 时刻 `/proc` state 与精确退出时刻无原件；manual restore 启动前“两 rank 已消失”为 31 只读扫描陈述，包内无快照；④92 文件仅 SUMS 入 commit，payload 未随 commit；⑤`steps.child.maps_ok=false`（maps 覆盖 opapi/hccl 等为 false）为启动早期采样，非库缺失结论；⑥AICPU 生效正标记仍缺测。
 - **验收结论**：window 的 restore **未发起**（fail-closed，原件）；人工第一次且唯一 restore 按 plan argv 来源执行，**服务恢复健康（9/9/source 三段/clients 空/端口 free 均为记录引用）**，但存在 ppid≠1 偏差与上述证据缺口，**不能等同 window 自动 restore 成功口径**；archive 为 **rc1 不完整**；本次为 **H11 sync 挂起复现**，无 H11 数值结论、无 A/B 结论、无第二 window/restore 痕迹。无新 GO、无设备动作、包未改。
 
+## 8.122 cleanup 归因收窄：parent-exit-first + 即时 gate（2026-11-19，无 GO）
+
+- **31 补证（只读）**：rank-env 44 samples 覆盖 14:48:59–14:52:35Z、5 s 间隔，torchrun/两 rank 全部 alive=True；最后样本早于 SIGTERM，**未覆盖退出时刻**。gate 之后一次残留扫描 residual_count=3，但无 pid/state/时间戳原件；restore 前复核（≈14:55:5x）三 PID 均已 gone。**精确退出时刻与 `/proc` state 无原件，D-state 不可断言**。
+- **35 代码路径（1f780bf8）**：超时分支 951 调 cleanup_final；`child.wait` 返回 rc0 后，exception(981)/finally(998) 仅在 `child.poll() is None` 时再 cleanup → torchrun 已退出，**finally 跳过**；1022 的 recovery_gate 立即读取，仍见两 rank 存活 → `blocked_probe_residual`，**无 post-exit 等待/重扫**。
+- **收窄后的归因**：本格不是 signal 集合不足（unknown/drift 空，两 PGID 均 killpg SIGTERM/SIGKILL），而是 **parent 先退出 + 固定等待结束后即时 gate**；退出延迟/僵尸-reap/采样时序仍可能，D-state 未证。
+- **32 结论不变**：window restore 未发起；人工唯一 restore 按人工口径闭合但带 ppid 偏差与引用型证据缺口；archive rc1 不完整；H11 为 sync 挂起复现；`result.json api_returned=false` 仍按初始快照解释（8.121）。
+- F1–F6 CPU 修复方案属 20 决策项；当前无产品/包改动、无设备、无新 GO。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
