@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "8cdccaf30230f76451160c0f3e324ae637937e19df312eb663c45575bf751c6b",
-      "bytes": 32834
+      "sha256": "984eaf2986f78c10a6a20036169f04819290fcb65ad416e1495be953c0b0ac90",
+      "bytes": 33243
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -677,7 +677,16 @@
       ],
       "service_manual": "root 1323589/start 399707126, ppid1/pgid/sid self, five PIDs, branch aa3e-noop, OPP9 7b79c5db, LD12 ca27dbb7, health/info/text/image/clients all pass",
       "evidence": "a14-large-cell SUMS 19/19 (a560be11, 31 commit 4372c7f)",
-      "next": "v3 plan efb6fb19 is ready on stage-identity-v4 (window 1f780bf8, run_probe d54584b7, identity 1323589/399707126, M968/K8704/N5120 KEEP_ALL, fresh a14-large-v3 out, port 29531 FREE); 32/33 increment review then one GO. Actual reduced max_abs/bit_equal is required, not just finite"
+      "v3_result": {
+        "status": "executed; support/workspace/sync pass; numeric completed with a large actual diff; not an accuracy pass",
+        "tuple": "6d09515 / manifest f82f44ad / run_probe d54584b7 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan efb6fb19 / identity 1323589/399707126",
+        "numeric": "both ranks numeric_pass/pass true, finite/both_finite true; reduced.max_abs=2.0, mean_abs=5.446e-05 (rank0) / 4.804e-05 (rank1), bit_equal=false; workspace 115,818,496 B; sync ~9.97 ms; wall 432/457 ms",
+        "interpretation": "MRS V1 large support, workspace and sync are established. The pre-registered 0.03125 absolute diagnostic was derived from small-magnitude probes and is not scale-invariant; at this shape the output magnitude is far larger, so max_abs=2.0 is a few BF16 ulps rather than automatically a correctness failure. Accuracy is NOT claimed: the tensor diagnostic is not met in absolute terms and the model-level 2PP gate has not been measured",
+        "window": "child rc0, timed_out false, survivors []; cleanup_final killed=true with empty members/groups/singles/unknown/drift; ok=false only from the maps sampling artifact",
+        "restore": "branch aa3e-noop, root 1326845/399871182, five PIDs, health/info/text/image/env/joint/source/clients true; subreaper_original=0, cleared=true, final_restored=true, final=0; no second tree",
+        "evidence": "a14-large-v3-cell SUMS 18/18 (774bbdf5, 31 commit 691a826); window 5002417d, descendants 80b47430, rank0 result e50be663/trace 250ed152, rank1 result 22238683/trace aa350079, restore 55a0704b/c7134f6b",
+        "next": "32/33 interpret the actual diff and decide whether a relative/ulp or model-level gate is required; the MRS+all_gather alternative must not be described as accuracy-passing on this cell"
+      }
     },
     "release_fix": {
       "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
