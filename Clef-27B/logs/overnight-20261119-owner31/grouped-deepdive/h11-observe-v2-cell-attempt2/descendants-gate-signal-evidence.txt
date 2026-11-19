@@ -1,0 +1,69 @@
+== recovery_gate ==
+{
+ "allow": false,
+ "attributed_survivors": [
+  1354310,
+  1354311
+ ],
+ "health": null,
+ "old_identity": null,
+ "old_pgid_members": [],
+ "port": 111,
+ "probe_residual": [
+  1354310,
+  1354311
+ ],
+ "reason": "blocked_probe_residual",
+ "runner_residual": [],
+ "source_after": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+}
+
+== restore_block ==
+{
+ "attributed_survivors": [
+  1354310,
+  1354311
+ ],
+ "blocked": true,
+ "health": null,
+ "old_identity": null,
+ "old_pgid_members": [],
+ "port": 111,
+ "probe_residual": [
+  1354310,
+  1354311
+ ],
+ "reason": "blocked_probe_residual",
+ "runner_residual": [],
+ "skipped": true,
+ "source_after": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+}
+
+== descendants entries (pid/pgid/starttime/cmdline) ==
+pid=1354277 ppid=1353934 pgid=1354277 sid=1354277 starttime=401671734 first=4016717351166000 last=4016958748522380
+  cmd: /workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/venvs/clef-py312/bin/torchrun --nproc_per_node=2 --master_port 29531 /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/run_probe.py --arm H11 --temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --arm-timeout 240.0 --comm-timeout 90.0 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --execute
+pid=1354310 ppid=1354277 pgid=1354310 sid=1354310 starttime=401671979 first=4016719991136060 last=4016958748522380
+  cmd: /workspace/yangchen/venvs/clef-py312/bin/python -u /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/run_probe.py --arm H11 --temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --arm-timeout 240.0 --comm-timeout 90.0 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --execute
+pid=1354311 ppid=1354277 pgid=1354311 sid=1354311 starttime=401671979 first=4016719991136060 last=4016958748522380
+  cmd: /workspace/yangchen/venvs/clef-py312/bin/python -u /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/run_probe.py --arm H11 --temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --arm-timeout 240.0 --comm-timeout 90.0 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --execute
+
+== stop.json ==
+started: "2026-11-19T14:48:54+00:00"
+finished: "2026-11-19T14:48:56+00:00"
+killed: []
+refused: []
+termed: [1347086, 1347229, 1347230, 1347258, 1347259]
+survivors: []
+unavailable: [{"pid": 1347086, "reason": "unavailable: already gone"}, {"pid": 1347229, "reason": "unavailable: already gone"}, {"pid": 1347230, "reason": "unavailable: already gone"}, {"pid": 1347258, "reason": "unavailable: already gone"}, {"pid": 1347259, "reason": "unavailable: already gone"}]
+
+== child.stderr signal lines ==
+W1119 14:52:59.631000 1354277 torch/distributed/elastic/agent/server/api.py:739] Received 15 death signal, shutting down workers
+W1119 14:52:59.633000 1354277 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1354310 closing signal SIGTERM
+W1119 14:52:59.633000 1354277 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1354311 closing signal SIGTERM
+
+== CLEF_WINDOW_OWNER observed per PID (from rank-env samples) ==
+pid=1354277 pgid=1354277 starttime=401671734 owner=28d13222735a956d1ef2e22c0156f848 glog=0 plog=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/logs-h11-observe-v2
+pid=1354310 pgid=1354310 starttime=401671979 owner=28d13222735a956d1ef2e22c0156f848 glog=0 plog=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/logs-h11-observe-v2
+pid=1354311 pgid=1354311 starttime=401671979 owner=28d13222735a956d1ef2e22c0156f848 glog=0 plog=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/logs-h11-observe-v2
+
+NOTE(provisional): 35 只读发现 window cleanup 支持 verified 独立 PGID；真正边界可能是 unknown/drift 不被 signal 但会阻断 gate。本文件不做最终因果判断，仅保留原件与逐 PID 证据。

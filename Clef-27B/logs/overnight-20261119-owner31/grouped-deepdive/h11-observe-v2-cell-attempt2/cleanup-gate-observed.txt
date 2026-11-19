@@ -1,0 +1,50 @@
+== cleanup (child_started/child) ==
+{"drift": [], "groups": [1354310, 1354311], "killed": true, "members": [1354310, 1354311], "reason": null, "singles": [], "unknown": []}
+{"drift": [], "groups": [1354310, 1354311], "killed": true, "members": [1354310, 1354311], "reason": null, "singles": [], "unknown": []}
+
+== recovery_gate ==
+{
+ "allow": false,
+ "attributed_survivors": [
+  1354310,
+  1354311
+ ],
+ "health": null,
+ "old_identity": null,
+ "old_pgid_members": [],
+ "port": 111,
+ "probe_residual": [
+  1354310,
+  1354311
+ ],
+ "reason": "blocked_probe_residual",
+ "runner_residual": [],
+ "source_after": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+}
+
+== restore block ==
+{
+ "attributed_survivors": [
+  1354310,
+  1354311
+ ],
+ "blocked": true,
+ "health": null,
+ "old_identity": null,
+ "old_pgid_members": [],
+ "port": 111,
+ "probe_residual": [
+  1354310,
+  1354311
+ ],
+ "reason": "blocked_probe_residual",
+ "runner_residual": [],
+ "skipped": true,
+ "source_after": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+}
+
+== 事实与边界（不作最终因果结论） ==
+- cleanup groups=[1354310,1354311] killed=true，drift=[]，unknown=[]，singles=[]；两独立 PGID 均被处理。
+- recovery_gate allow=false reason=blocked_probe_residual，probe_residual/attributed_survivors=[1354310,1354311]。
+- 即：cleanup 已 signal 且记录 killed=true，但 gate 时刻两 PID 仍被判定存活/残留，restore 被阻断；稍后两 PID 均退出。
+- 该现象与 35 的边界假设（unknown/drift 不 signal 而阻断 gate）不完全一致：本次 drift/unknown 为空；本文件保留事实，不给定论。
