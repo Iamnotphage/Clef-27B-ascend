@@ -313,7 +313,7 @@ class TensorErrorStatsTest(unittest.TestCase):
         for key in ('max_abs', 'mean_abs', 'ref_abs_max', 'out_abs_max',
                     'max_error_reference', 'max_error_output', 'max_rel_abs',
                     'relative_l2', 'relative_l2_denominator'):
-            self.assertAlmostEqual(stats[key], expected[key], delta=1e-5, msg=key)
+            self.assertAlmostEqual(stats[key], expected[key], delta=1e-6, msg=key)
         for key in ('diff_nonzero_count', 'diff_total_count', 'max_error_index'):
             self.assertEqual(stats[key], expected[key], key)
         self.assertEqual(stats['max_error_position'], [1, 1])
