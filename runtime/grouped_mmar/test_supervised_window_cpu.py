@@ -792,17 +792,17 @@ class AttributedProcessTest(unittest.TestCase):
                 'restore_output': str(restore_output)}
         result = {}
         calls = []
-        original = win.start_restore
+        original_start = win.start_restore
 
         def counted(*args, **kwargs):
             calls.append(1)
-            return original(*args, **kwargs)
+            return original_start(*args, **kwargs)
 
         pid = None
         try:
             self.assertTrue(win.set_subreaper(True))
-            original = win.get_subreaper()
-            self.assertEqual(original, 1)
+            original_flag = win.get_subreaper()
+            self.assertEqual(original_flag, 1)
             with mock.patch.object(win, 'start_restore', side_effect=counted):
                 self.assertTrue(win.begin_restore(plan, run_dir, result))
             self.assertTrue(result['subreaper_cleared_for_restore'])
@@ -817,7 +817,7 @@ class AttributedProcessTest(unittest.TestCase):
             self.assertIsNotNone(live)
             self.assertEqual(live['ppid'], 1)
             self.assertEqual(live['pgid'], pid)
-            self.assertTrue(win.restore_subreaper(original))
+            self.assertTrue(win.restore_subreaper(original_flag))
             self.assertEqual(win.get_subreaper(), 1)
         finally:
             if pid is not None:
