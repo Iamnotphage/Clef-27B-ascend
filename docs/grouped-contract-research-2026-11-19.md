@@ -1882,3 +1882,19 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 不变：plan `9c2936c2…3137`（plan_not_executed）、identity `1347086/401212026` 五 PID、argv 60/61、冻结 e38b541/8e308804/1f780bf8/101660f8/d181b15a；v1/attempt-1 未改。
 
 **状态**：E（SUMS/helper 不一致）与 B/C/D 残留全部闭合；A 沿用脚本级 caller 门。**仍待 35 对新 helper `68dc9e2c` 做真实路径绑定回归**（显式 v2 CELL→`run-h11-observe-v2/descendants.json`、rows 2002 不见 2001、默认→v2 run、新 SHA 18/18）；PASS 后 32 给最终 readiness。**无 v2 GO/设备动作**；root cause 待 v2 实测。
+
+## 106. v2 最终 readiness（991c21c / 6075c4c0；32 快照 PASS + 35 回归 PASS）
+
+**固定包**：commit `991c21c`、SUMS `6075c4c0…`（**22/22**）、helper `68dc9e2c…`；32 按 `git show` 固定快照 PASS（delta 仅 README/SUMS/stage-identity；A/D/argv/plan/identity/frozen 复用 PASS；v1 未改）。操作来源**仅此包**。
+
+**35 调用绑定回归（artifact `h11-rank-env-v2-callbinding-2026-11-19.md` SHA `d3a0787a…`，3,584 B）**：
+- 显式 v2 CELL（README 形式，`--watch 0`）→ 实际打开 `<CELL>/run-h11-observe-v2/descendants.json`；rows 仅 pid 2002、不见 2001、无 v1 路径；snapshot cell/run 均 v2。
+- 默认模式 → `…h11-observe-v2/run-h11-observe-v2/descendants.json`；无 v1。
+- `--run <alt>` → `<CELL>/alt-run/descendants.json`（pid 3001）；无 v1。
+- 旧 `a4b76676` 负控保留为历史（显式 v2 CELL 仍读 v1 run，pid 2001），v2 已修复。
+- 新 SHA 逻辑 **13/13 PASS**：entries 独立 PGID、缺键/退出 MISSING、fallback 仅 root pgid、三白名单/canary 不泄漏、无 kill/signal/subprocess/torch、snapshot.run 以 `run-h11-observe-v2` 结尾。
+- 边界：CPU mock /proc；空/缺失 entries = 缺测，不代表无 rank；无设备。
+
+**一致性**：包内唯一 `a4b76676` 是 README 第 11 行历史对照“非 v1”，stage-identity 已是 68dc9e2c；C/D 已闭（collect 注释 84c9edb2/2474b487/9c2936c2；README 索引含 wrapper/validation/stage/helper fixture）。
+
+**状态**：v2 CPU 准备/包/回归**闭合**；仍无 v2 GO/未执行 cell；下一单次 v2 设备步骤待 20 在既有 scope 内明确授权。执行前仍需 fresh `preflight-rescan`；AICPU env/guard/正向标记为观测条件；静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 待 v2 实测。
