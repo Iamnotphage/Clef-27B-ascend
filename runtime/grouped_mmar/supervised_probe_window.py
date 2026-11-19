@@ -819,8 +819,8 @@ def wait_restored_root(pid, timeout=30.0, interval=0.5):
 def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=None,
                   table=None, settle=None):
     """Never start a second tree while the original root is alive."""
+    settle_table = table
     table = scan() if table is None else table
-    reader = table.get
     live = table.get(saved['pid'])
     old_alive = bool(live and live['state'] != 'Z' and same_identity(saved, live))
     try:
@@ -833,7 +833,13 @@ def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=Non
             health = http_json(f'http://127.0.0.1:{a.port}', '/health')
         except Exception as exc:  # noqa: BLE001
             health = {'error': f'{type(exc).__name__}: {exc}'}
-    attributed = attributed_survivors(registry, child_pid, table=table, reader=reader)
+    if settle_table is not None:
+        attributed = attributed_survivors(registry, child_pid, table=settle_table,
+                                          reader=settle_table.get)
+    else:
+        # A mocked scan() is for the service table only; attribution must use
+        # the real /proc reader so a live descendant cannot be hidden by it.
+        attributed = attributed_survivors(registry, child_pid)
     residual = sorted({p for p, row in table.items()
                        if child_pid and row['pgid'] == child_pid and row['state'] != 'Z'} |
                       set(attributed))

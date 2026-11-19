@@ -762,6 +762,53 @@ class AttributedTargetsTest(unittest.TestCase):
         self.assertTrue(win.cleanup_blocks_restore({'reason': 'protected_overlap'}))
         self.assertFalse(win.cleanup_blocks_restore({'reason': None}))
 
+    def test_gate_without_settle_uses_real_proc_attribution(self):
+        entry = {'pid': 777, 'ppid': 1, 'pgid': 777, 'sid': 777,
+                 'starttime': '10', 'boot_id': 'b'}
+        row = {'pid': 777, 'ppid': 1, 'pgid': 777, 'sid': 777, 'state': 'S',
+               'starttime': '10', 'boot_id': 'b', 'cmdline': []}
+
+        class FakeRegistry:
+            def snapshot(self):
+                return [dict(entry)]
+
+        args = types.SimpleNamespace(port=1, expected_source_sha='x')
+        saved = {'pid': 2 ** 22, 'starttime': '1', 'boot_id': 'x', 'pgid': 2 ** 22}
+        with mock.patch.object(win, 'scan', return_value={}), \
+                mock.patch.object(win, 'port_open', return_value=111), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, '_scan_direct', return_value={777: row}), \
+                mock.patch.object(win, '_read_proc',
+                                  side_effect=lambda pid: row if pid == 777 else None):
+            allow, reason, context = win.recovery_gate(
+                args, {}, saved, True, 9000, 'x', FakeRegistry())
+        self.assertFalse(allow)
+        self.assertEqual(reason, 'blocked_probe_residual')
+        self.assertIn(777, context['attributed_survivors'])
+
+    def test_gate_with_settle_table_uses_snapshot_without_real_read(self):
+        entry = {'pid': 777, 'ppid': 1, 'pgid': 777, 'sid': 777,
+                 'starttime': '10', 'boot_id': 'b'}
+
+        class FakeRegistry:
+            def snapshot(self):
+                return [dict(entry)]
+
+        args = types.SimpleNamespace(port=1, expected_source_sha='x')
+        saved = {'pid': 2 ** 22, 'starttime': '1', 'boot_id': 'x', 'pgid': 2 ** 22}
+        with mock.patch.object(win, 'scan', return_value={}), \
+                mock.patch.object(win, 'port_open', return_value=111), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, '_scan_direct',
+                                  side_effect=AssertionError('must not read')), \
+                mock.patch.object(win, '_read_proc',
+                                  side_effect=AssertionError('must not read')):
+            allow, reason, context = win.recovery_gate(
+                args, {}, saved, True, 9000, 'x', FakeRegistry(),
+                table={}, settle={'clean': True})
+        self.assertTrue(allow)
+        self.assertEqual(reason, 'restore')
+
     def test_unknown_group_member_is_not_group_killed(self):
         entry = {'pid': 88, 'starttime': '10', 'boot_id': 'b', 'pgid': 88, 'sid': 88}
         table = {
@@ -966,6 +1013,17 @@ class AttributedProcessTest(unittest.TestCase):
             proc.wait(timeout=10)
             return pid
 
+        def kill_exact(pid):
+            # The printed pid is the grandchild; its PGID is the setsid child's
+            # pid, so killpg(pid) can miss it. Kill only this exact pid.
+            live = win._read_proc(pid)
+            if live is not None:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            win._reap([{'pid': pid}])
+
         first = spawn()
         try:
             deadline = time.time() + 5
@@ -978,11 +1036,7 @@ class AttributedProcessTest(unittest.TestCase):
             self.assertIsNotNone(live)
             self.assertEqual(live['ppid'], os.getpid())
         finally:
-            try:
-                os.killpg(first, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            win._reap([{'pid': first}])
+            kill_exact(first)
 
         self.assertTrue(win.disable_subreaper())
         second = spawn()
@@ -997,10 +1051,7 @@ class AttributedProcessTest(unittest.TestCase):
             self.assertIsNotNone(live)
             self.assertNotEqual(live['ppid'], os.getpid())
         finally:
-            try:
-                os.killpg(second, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            kill_exact(second)
             win.enable_subreaper()
 
     def test_fake_restore_reaches_pid1_after_disable(self):

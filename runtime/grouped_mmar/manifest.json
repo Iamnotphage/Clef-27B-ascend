@@ -61,14 +61,16 @@
       "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K; settle candidate adds a single-snapshot bounded post-SIGKILL wait/rescan (not adopted)",
-      "sha256": "5bbda3ccbe066bec674f92b7c5aea19028aca58a73166f3250312a732913333b",
-      "bytes": 52752
+      "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K; candidate branch bytes add the single-snapshot bounded post-SIGKILL settle (adopted remote baseline is window 1f780bf8)",
+      "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+      "bytes": 53078,
+      "candidate": true
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (48; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle/original-restore, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures, settle exit-delay/persistent/Z/single-snapshot/state/one-restore)",
-      "sha256": "8336a663756060cd128d5c067ca30e35219a0aa735b43da26a250dba5d7a19fd",
-      "bytes": 51814
+      "role": "CPU window control-flow tests (50; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle/original-restore, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures, settle exit-delay/persistent/Z/single-snapshot/state/one-restore, gate no-settle/settle-table regressions; adopted remote baseline 228150e4)",
+      "sha256": "5840a0d3cbefedf6ec7128ffd65d967d5d1c9a16a05909e0bd6ab5ea61fdfd17",
+      "bytes": 54483,
+      "candidate": true
     },
     "runtime/grouped_mmar/readaddrm_msg_timing.md": {
       "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
@@ -97,8 +99,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "e79ca80c8deca8e374ef9f9c25dc0b132aa3d889a318801dc1bee1a356c9310b",
-      "bytes": 48368
+      "sha256": "56b94eb369d2d79b1e97fcea20700bd053660ebafccb3733c3216de68d028b29",
+      "bytes": 48997
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -428,19 +430,27 @@
     }
   },
   "settle_candidate_20261119": {
-    "status": "CPU candidate implemented and tested on macOS; NOT adopted; the v2 package still pins window 1f780bf8/test 228150e4; no device/NPU",
+    "status": "CPU lifecycle candidate implemented and tested on macOS and Linux; NOT adopted and NOT deployed; the remote v2/stage historical frozen baseline is window 1f780bf8/test 228150e4; no device/NPU",
     "base_window_sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
     "base_test_sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
-    "window_sha256": "5bbda3ccbe066bec674f92b7c5aea19028aca58a73166f3250312a732913333b",
-    "test_sha256": "8336a663756060cd128d5c067ca30e35219a0aa735b43da26a250dba5d7a19fd",
-    "window_bytes": 52752,
-    "test_bytes": 51814,
+    "frozen_baseline": "1f780bf8/228150e4 are the remote v2/stage historical frozen baseline, not adopted; this branch records its own new bytes below",
+    "window_sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+    "test_sha256": "5840a0d3cbefedf6ec7128ffd65d967d5d1c9a16a05909e0bd6ab5ea61fdfd17",
+    "window_bytes": 53078,
+    "test_bytes": 54483,
+    "diff_vs_base": "supervised_probe_window.py +107/-10; test_supervised_window_cpu.py +294/-9; no other files",
+    "increment_vs_7d371a1": "supervised_probe_window.py +8/-2; test_supervised_window_cpu.py +60/-9 (gate reader fix, daemon exact-PID cleanup, two gate regressions)",
     "scope": "after the final SIGKILL cleanup, one consistent /proc snapshot per round, bounded settle (default 30 s total), two consecutive empty rounds to clear, per-pid starttime/state recorded (no state -> unknown), deadline fail-closed, gate reuses the same settle table and the unique begin_restore; verified/protected/unknown/drift/PID-reuse signal rules unchanged",
     "trigger": "attempt2 raw 80c73d9: cleanup groups=[1354310,1354311], killed=true, unknown/drift empty; the gate still saw both pids at about SIGTERM+1.4-4.4 s; exact exit time and /proc state were not captured (D-state not asserted); parent torchrun exited rc0 and the old exception/finally cleanup is skipped when child.poll() is not None",
-    "diff_vs_base": "supervised_probe_window.py +111/-10; test_supervised_window_cpu.py +234; no other files",
-    "tests": "48/48 (41 passed + 7 skipped Linux-only) on macOS; new: exit delay, persistent non-Z deadline, Z/reap, single-snapshot/no _read_proc, missing state -> unknown, baseline not mis-signaled, parent-exits-then-delayed-clear with one restore, persistent residual bounded/no restore",
-    "unrun": ["Linux real-process fixtures (7) not run on macOS; hand to 31 for CPU-only Linux verification", "no device/NPU; not adopted by the v2 package"],
-    "notes": "settle runs once per window (settle_outcome reused by exception/finally/gate, no per-path 30 s accumulation); child timed_out/rc/trace facts are preserved and the timeout experiment is not reclassified as success"
+    "tests": "50/50 on macOS (43 passed + 7 skipped Linux-only); new gate tests: no-settle -> real _scan_direct attribution blocks, settle table -> snapshot only/no real read; plus exit-delay, persistent, Z/reap, single-snapshot, missing state, baseline, parent-exit/one-restore",
+    "linux_failure_evidence": "31 e72b967 / SUMS e6a36fe387bf78d94849466fa89b03178ba2d348c378d27dbb06e57c90337d5f: 48 tests 47 pass/1 fail/0 skip; AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned L840 assertFalse(allow) got True, stable 3/3",
+    "linux_fix": "recovery_gate uses the passed settle table only when explicitly provided; without it, attributed_survivors(registry, child_pid) keeps the base real _scan_direct path so a mocked scan() cannot hide a live descendant; daemon fixture kills the exact grandchild PID after identity read instead of killpg(pid) whose PGID is the setsid child; no assertion or identity/protected/gate rule relaxed",
+    "attempt2_caveat": "the default 30 s settle may not cover attempt2's exit delay (observed >1.4 s, upper bound about 174 s, exact unknown); if the residual persists past 30 s the gate remains fail-closed; the candidate is not claimed to fix attempt2",
+    "unrun": [
+      "31 to rerun the Linux real-process regression (orphan + daemon + new gate tests, or full 50/43+7) on the new candidate",
+      "no device/NPU; not adopted by the v2 package"
+    ],
+    "notes": "settle runs once per window (settle_outcome reused by exception/finally/gate, no per-path 30 s accumulation); child timed_out/rc/trace facts are preserved and the timeout experiment is not reclassified as success; the two daemon residue processes observed by 31 (1361942/1361945) are addressed by the exact-PID cleanup"
   },
   "process_cleanup": {
     "status": "implemented and Linux-validated on window 9a31091b (34/34 + F2/F3); awaiting 32/33 result review; device cells paused",
