@@ -245,6 +245,7 @@
 - **头文件契约**：`aclnnGroupedMatMulAllReduceGetWorkspaceSize(..., const char *group, ...)`、launch=(workspace,size,executor,stream)，未声明 group 生命周期/是否拷贝 → H1 开放；官方样例保活 hcom_name 到 sync 之后（33 C1）支持 H1 高优先。A12（官方 A3 样例）为分层正对照，不能单独作为 C1 单因证据。
 - **设备/注册**：Ascend910_9382（cube24/vector48/L2 192MB/HBM 65.8GB）、driver 26.1.1 fw 9.0.0.9.220、CANN 9.2.1；ops-info a16b41d0 与两 Grouped kernel .o 存在仅证注册；platform 无 910_93.ini、公开文档 A3 支持自相矛盾——如实保留，A12 实测裁决。
 - **首批 ready 要求**：A8/A12/A0 + 必要 A9 埋点 + H1(A1)/H2(A2) 即可 preflight，不要求全 11 假设；A3/A4/A5 随后；每臂双 rank/240 s/fresh/固定 seed；成功=rc0+两 rank sync 返回+finite；A9 记录 stream/thread/context/group 指针/maps 实际库。
+- **A12 官方样例包（33 交付，本地已核）**：`/Users/chenclay/.ao/data/artifacts/clef-27b-ascend-33/grouped-a12-sample/`，SHA256SUMS **5/5 OK**；源 `test_aclnn_grouped_mat_mul_all_reduce.cpp` SHA `6c1a90ab…`（21,723 B，f5703e4）；行号核对：aclInit L163、hcom_name 栈 L355-356、GetWorkspaceSize L370、launch L380、`aclrtSynchronizeStreamWithTimeout(…,10000)` L383、aclrtFree L385、rank 线程 context L423-424、finally sync L452/461；FP16 默认/2 group（x0[256,256]/x1[1024,256] 等，data_size 10485760）。**pending（具体）**：包内无官方 examples/CMakeLists.txt（compile 文档为通用 FlashAttentionScore 模板）；主张“官方原样”须补 f5703e4 的 CMakeLists 及 SHA，否则 A12 标注为“官方样例源+重建 CMake（派生构建）”。A12 无数值参考答案 → 成功判据=API rc0+sync 返回（liveness/通路控制），不单因证明 C1；A12b（BF16+FP32 bias、v4r1-like shape）仅作派生 delta；编译/加载 provider 差异（libopapi_math/transformer+hccl vs dlopen libopapi/libnnopbase）须记录。
 
 ## 9. 本地核对副本
 
