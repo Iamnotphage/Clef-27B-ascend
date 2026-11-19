@@ -631,11 +631,11 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 - **未证**：Grouped/A12 运行期的 `desc`、`idx`、`sub` 值；因此不能确定走 RpcSrvLaunch、MC2 RPC 还是 CommKfcDispatcher。
 
 **B. RpcSrvLaunch 初始化与分支 `0x761380`**：
-- `ctx=AicpuGetComContext()`；要求 `[task+24]`、`[task+40]` 非空；要求 **`ctx+0xf31d2` bit0=1**；`strcmp(ctx, [task+24]+0x220)==0`（组名/上下文匹配），否则错误返回。
+- `ctx=AicpuGetComContext()`；要求 `[task+24]`、`[task+40]` 非空；要求 **`ctx+0xf31b2` bit0=1**；`strcmp(ctx, [task+24]+0x220)==0`（组名/上下文匹配），否则错误返回。
 - `mode=*(u32*)[task+40]`，`mode>1` 报错；写入 **`ctx+0xf31d0`**（0x761820）；随后清零 **`ctx+0xf31d4`**（0x761880）、**`ctx+0xf31d8`**（0x761884）、**`ctx+0xf32d8`**（0x7618a0）。
 - `GetSendCnt(ctx)` → **`ctx+0xf3240`**、`GetRecvCnt(ctx)` → **`ctx+0xf3250`**（0x761888/0x761894）；再 `PrintTilingData`/`PrintMC2AicpuContext`（与 device 日志 `KFCtaskAndTilingTraceData`/`AivAicpuOpParam` 的出现时机一致，但无字符串 xref 证明同一处）。
 - `AicpuKfcRpcServer::Init(ctx+184, ctx+192, u16 ctx+196, task)`（0x76192c）。
-- 分支（0x761954-0x761994）：`GetPreparePosition()==1` → **`RunRpcServerApi(ctx,server,0)`**（0x761f80）；否则 `GetTaskType()==6` → **`AICPU_RpcServerUnfoldStageWait`**（0x7622e4）；否则 **`ctx+0xf31dc & ~2 == 1`** → `RunRpcServerTwoStageWait`（0x761994），不满足 → `TryRunRpcServerOneStageWait`（0x762228）。
+- 分支（0x761954-0x761994）：`GetPreparePosition()==1` → **`RunRpcServerApi(ctx,server,0)`**（0x761f80）；否则 `GetTaskType()==6` → **`AICPU_RpcServerUnfoldStageWait`**（0x7622e4）；否则 **`ctx+0xf31bc & ~2 == 1`** → `RunRpcServerTwoStageWait`（0x761994），不满足 → `TryRunRpcServerOneStageWait`（0x762228）。
 - 返回后再次 `GetSendCnt` → **`ctx+0xf324c`**、`GetRecvCnt` → **`ctx+0xf325c`**（0x7619b0/0x7619bc），随后 `DealReturnValue`。
 
 **C. ReadWorkMsg `0x7d71cc`**：`ctx=*(void**)(this+16)`；校验 **`ctx+44==0x5cdf123a`**，不等则**立即返回 0**；相等则 `memcpy(opParam,ctx,0x306=774)`、`dsb st`，返回 **`opParam[50] >= arg3`**（u8），arg2 未使用。
@@ -644,7 +644,7 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 
 **E. AddTaskForHcclMsg `0x7b2800`**：`count=msg[52]`；循环下标在 **`ctx+0xf31d8`**（u8，每轮 +1 后写回）；每轮调 `AicpuCcOpExe(opParam,NULL,ctx)`，再 `TaskOrchestrator::ActiveRecordMain(GetActiveSqId)`。当 `msg[0]==6` 且 `(msg[40]&~8)==3` 时，先调 **`CheckRcvAddrMsg(msg_local, [ctx+0xf31d4]+1)`**（0x7b2e80-0x7b2e98；此处 `ctx+0xf31d4` 是 **turn 计数**，见 59.2）；成功后才 `HcclMsg2AicAicpuOpParam` 并比对 msg/opParam 的 type 与 opcode。`msg[0]==7` 且 `msg[32] < msg[52]*msg[24]` → 错误 1646 并返回 1。调试日志（0x7b2f9c-0x7b3028）分别打印 `opParam` 的 **+44、+48、+49、+50、+51、+52、+53、+54、+56**。
 
-**F. AicpuCcOpExe `0x7b21d0`**：写 `ctx+156`（dtype size）、`ctx+160`（count×size）、`ctx+144/148`（type/subtype）；读取 **`ctx+0xf31d9`** 与 **`ctx+0xf31dc`**；校验字节量 ≤0x3ffff 或 ≤0xfffff、2 的幂；把 `opParam+54/+55/+56` 写入 `ctx+4452/+200/+208`；调 **`TaskOrchestrator::RunConcreteAlgorithm(opParam, workspace, ctx)`**（0x7b247c）；成功后按 `ctx+352` 与 `ctx+4452` 比较，必要时 **`AicpuDispatcher::AddAllEndTaskOnMainStream(GetActiveSqId(ctx))`**（0x7b24c8）释放 AICore；rc=0x14 走特殊日志。
+**F. AicpuCcOpExe `0x7b21d0`**：写 `ctx+156`（dtype size）、`ctx+160`（count×size）、`ctx+144/148`（type/subtype）；读取 **`ctx+0xf31d9`** 与 **`ctx+0xf31bc`**；校验字节量 ≤0x3ffff 或 ≤0xfffff、2 的幂；把 `opParam+54/+55/+56` 写入 `ctx+4452/+200/+208`；调 **`TaskOrchestrator::RunConcreteAlgorithm(opParam, workspace, ctx)`**（0x7b247c）；成功后按 `ctx+352` 与 `ctx+4452` 比较，必要时 **`AicpuDispatcher::AddAllEndTaskOnMainStream(GetActiveSqId(ctx))`**（0x7b24c8）释放 AICore；rc=0x14 走特殊日志。
 
 ### 59.2 sendCnt/rcvCnt 的真实字段（abi-preflight4 指令级，SUMS d29e80eb）
 
@@ -663,7 +663,7 @@ return *(u8*)(base + 51);
 - **仍缺写者**：abi5 时已交付函数没有**独立** `+50/+51` 写指令；abi6 的 `GenMsgByTaskParam` 以 `u16 0x1234` 覆盖 `+50..+51`（常量初始化），整字/整块拷贝也覆盖这些字节。普通递增写者仍可能在未交付函数或 host/runtime/TS 侧写共享工作区（后者不能由 libccl 反汇编证否）；**不能以字面 store 偏移搜索断言全 libccl 唯一写者**。
 
 **`RunRpcServerApi` 0x7b3704（API 路径主循环）**：
-- 入口要求 **`ctx+0xf31dc == 2`**，否则返回 1；清零 `ctx+0xf31d4`；`w=ctx+0xf31f8+1` 写入所有 context 的 `+0xf31f8`（epoch）；置 `ctx+0xf31d1=1`、`ctx+0xf326c=1`。
+- 入口要求 **`ctx+0xf31bc == 2`**，否则返回 1；清零 `ctx+0xf31d4`；`w=ctx+0xf3268+1` 写入所有 context 的 `+0xf3268`（epoch）；置 `ctx+0xf31d1=1`、`ctx+0xf326c=1`。
 - 循环 0x7b3918：`ReadAddrMsg(server, msg, turn=ctx+0xf31d4)`；返回 false → `PrintAllHcclMsgArea` + `PrintTimeOutSqInfo`，**返回 9**。
 - 返回 true：按类型字节拷贝 40/64 字节；`msg.type==0x12` → `HandleBatchWriteOperation`；否则 `HcclMsg2AicAicpuOpParam` + 校验 + **`AddTaskForHcclMsg(ctx,server,msg,opParam,x24)`**。
 - 成功后：`WriteTurnCnt(server,turn)`；`turn=(turn+1)&0x3f` 写回；继续循环。
@@ -674,7 +674,7 @@ return *(u8*)(base + 51);
 
 - `ReadWorkMsg/CheckRcvWorkMsg` 属于 **deprecated stage-wait 路径**（OneStageWait/TwoStageWait/UnfoldStageWait），不是 RunRpcServerApi 的循环；把“sendCnt 轮询”直接套到 Grouped 上不成立。
 - `RunRpcServerApi` 的超时是 `ReadAddrMsg` 返回 false → 返回 9，不是无限等待；Grouped 240 s 不返回更可能停在 `ReadAddrMsg` 内部长等待、`AddTaskForHcclMsg`/`AicpuCcOpExe` 的算法执行，或 `WaitTaskFinish`。
-- 若 `GetTaskType()==6` 或 `ctx+0xf31dc` 模式不同，则走 `UnfoldStageWait/TwoStageWait/OneStageWait`，这些仍可能用 sendCnt 轮询；与 #822 的 cust-KFC 握手只是形式相似，`GetTaskType()`（0..6）≠ TS `kernel_type` 5/6。
+- 若 `GetTaskType()==6` 或 `ctx+0xf31bc` 模式不同，则走 `UnfoldStageWait/TwoStageWait/OneStageWait`，这些仍可能用 sendCnt 轮询；与 #822 的 cust-KFC 握手只是形式相似，`GetTaskType()`（0..6）≠ TS `kernel_type` 5/6。
 - 若 sub==2：走 `AicpuRunRpcServerForMC2(V2)`，同样可能不返回；现有 plog 无法区分。
 - A14（MRS V1）未出现 `KFCtaskAndTilingTraceData/AivAicpuOpParam` 且小/大形状均返回，提示其 launch 路径不同，但这不是对 Grouped 分支的证明。
 
@@ -819,7 +819,7 @@ return *(u8*)(base + 51);
 | OP3 | Init 分支与 j/T | 零/非零分支读 `u32[*(task+40)]`；j/T 写者 0x76182c/0x761834 | KFCTask 偏移 40/96/100 的类型/语义；host 填充值 | zero 分支（S 未设）/nonzero（S=y）；j 大小；T=rank 数？ | host tiling 代码/二进制站点；**安装头文件无 KFCTask/CommKfcParamDesc，offsetof 不可得** |
 | OP4 | HcclMsg valid 生产者 | gate +48=0x5CDF123A、consume 0xA320EDC5；GenMsg 写 AivParam +44；**新候选 0x7d6850 `str w4,[x0,#44]`**（未导出局部函数 0x7d67f4-0x7d68ec） | 0x7d6850 的函数体、x0 对象/调用点；HcclMsg +48 写者；Grouped 是否用 API 区 | AivParam 初始化 / HcclMsg 转码 / API valid 发布；host 是否发布 API 消息 | 0x7d67f4-0x7d68ec 反汇编 + 直接 callers + 各 caller 的 x0 来源（abi8） |
 | OP5 | 轮询期望/实值 | turn=ctx+0xf31d4（0..63）；slot=server[8]+64*turn；~1280 s 条件上界 | 运行期 turn/slot/+48 | 无消息 / 错 turn / callee 阻塞 | 先 OP4；仅当仍不可判，未来授权窗口做一次 workspace 只读快照或入口日志 |
-| OP6 | AIV rcvCnt 路径 | **PostMsg 0x7d6800 在 TwoStageWait 写 +51（1 B，`ctx+352-1`/`ctx+352`）**；Init 零分支 `server+0x18=y+j+64T` 与 GetRecvCnt 条件式同字节；rac_server.h 的 TurnWait 清 rcvCnt；op-config 阴性 | Grouped 是否进入 TwoStageWait（`GetPreparePosition/GetTaskType/ctx+0xf31dc` 运行值）；`ctx+352` 递增者/上界 | stage-wait ack 路径 / API valid 路径 / MC2 | ①`ctx+352` 递增者小窗口；②GetPreparePosition/GetTaskType/ctx+0xf31dc 来源（Init 字段/host tiling）；不整段扫 |
+| OP6 | AIV rcvCnt 路径 | **PostMsg 0x7d6800 在 TwoStageWait 写 +51（1 B，`ctx+352-1`/`ctx+352`）**；Init 零分支 `server+0x18=y+j+64T` 与 GetRecvCnt 条件式同字节；rac_server.h 的 TurnWait 清 rcvCnt；op-config 阴性 | Grouped 是否进入 TwoStageWait（`GetPreparePosition/GetTaskType/ctx+0xf31bc` 运行值）；`ctx+352` 递增者/上界 | stage-wait ack 路径 / API valid 路径 / MC2 | ①`ctx+352` 递增者小窗口；②GetPreparePosition/GetTaskType/ctx+0xf31bc 来源（Init 字段/host tiling）；不整段扫 |
 
 **当前合并请求（交 31，全部静态、不重复已交付）**：
 1. `0x7d67f4-0x7d68ec`（0xf8 B）完整反汇编（若入口非 0x7d67f4，补入口/序言）。
@@ -935,15 +935,15 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 **u8 截断约束**：`PostMsg strb w1` 把 `ctx+352`/`ctx+352-1` 截为 8 位；`CheckRcvWorkMsg` 用 `u8 opParam[50]` 与 **u32 `ctx+352`** 比较。若 `ctx+352 > 255`，比较永不满足 → 每轮 6 s 超时后继续（不是死锁，但轮次协议失配）。`ctx+352` 的写入/递增在已交付段中**只有 RpcSrvLaunch 的 `str wzr,[ctx+352]`（0x76187c）**，未见递增者；可能在 `TaskOrchestrator::ActiveRecordMain` 或未交付函数 → **来源/上界未证**。
 
 **分派关系（静态已知，运行值未知）**：
-- `RpcSrvLaunch` 选 TwoStageWait 的条件：`GetPreparePosition()!=1`、`GetTaskType()!=6`、`ctx+0xf31dc & ~2 == 1`。
-- `RunRpcServerApi` 条件：`GetPreparePosition()==1`（且入口要求 `ctx+0xf31dc==2`）。
-- 因此 **AIV ack 支路（TwoStageWait/PostMsg）与 API valid 支路（HcclMsg+48）是互斥分派**；Grouped 的 `GetPreparePosition/GetTaskType/ctx+0xf31dc` 运行值未证。
+- `RpcSrvLaunch` 选 TwoStageWait 的条件：`GetPreparePosition()!=1`、`GetTaskType()!=6`、`ctx+0xf31bc & ~2 == 1`。
+- `RunRpcServerApi` 条件：`GetPreparePosition()==1`（且入口要求 `ctx+0xf31bc==2`）。
+- 因此 **AIV ack 支路（TwoStageWait/PostMsg）与 API valid 支路（HcclMsg+48）是互斥分派**；Grouped 的 `GetPreparePosition/GetTaskType/ctx+0xf31bc` 运行值未证。
 - `ForApi` 属 `RunAicpuKfcClearOpRes` 清理路径，server 0x22c7cf0；RpcSrvLaunch 正常路径 server 0x191fd10。静态全局地址不同**只证明对象地址不同，不区分其内部 workspace 值**；两者的 y/j/T 仍由 ctx[184]/[192]/[196] 与 Init 分支决定。
 
 **OP6 更新（静态写者已找到且条件式同址）**：
 - 已证：stage-wait 下 PostMsg 是 +51 的 1 B 写者（值 turn-1/turn），与 GetRecvCnt 条件式同字节；sendCnt +50 的等待者是 CheckRcvWorkMsg，但 +50 的写者仍未找到。
 - 未证：Grouped 是否进入 TwoStageWait（取决于上述分派运行值）；若走 API 路径则 PostMsg 不参与，gate 是 HcclMsg+48，生产者仍在 host 侧。
-- 下一最小证据（不新反汇编整段）：①`ctx+352` 的递增者/上界（TaskOrchestrator 或指定函数的小窗口）；②Grouped 的 `GetPreparePosition/GetTaskType/ctx+0xf31dc` 来源（Init 字段映射/host tiling）。仍无设备/SSH。
+- 下一最小证据（不新反汇编整段）：①`ctx+352` 的递增者/上界（TaskOrchestrator 或指定函数的小窗口）；②Grouped 的 `GetPreparePosition/GetTaskType/ctx+0xf31bc` 来源（Init 字段映射/host tiling）。仍无设备/SSH。
 
 ## 67. OP1/OP3/OP6 最小运行值字段表（为有限观测设计，不执行）
 
@@ -960,14 +960,14 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 | F7 | `ctx_R+0x160` turn u32 | `ctx_R = AicpuGetComContext()`（0x7615ac/5b0，x28）；`0x76187c str wzr,[x28,#352]` → `*(u32*)(ctx_R+0x160)=0`；TwoStageWait 以 `x20=ctx_R` 读 `[x20,#352]`（callsite 0x76198c/0x761994 证明同一对象） | TwoStageWait 的期望/ack 轮次；u8 截断上界 | 清零与三次读取（0x7c7f10/38/88） | **递增者/上界** | `TaskOrchestrator::ActiveRecordMain` 等小窗口（已向 31 请求） |
 | F8 | `GetPreparePosition` | server 字段（getter 0x7d7b60，0xc） | API 路径 vs TwoStageWait/Unfold | getter 地址；Init 写入字段未映射 | server 偏移与 Grouped 值 | getter 小窗口 + Init 字段映射（已请求） |
 | F9 | `GetTaskType` | server 字段（getter 0x7d7b30，0xc） | `==6` 走 UnfoldStageWait；否则 TwoStageWait/OneStageWait | getter 地址 | 同上 | 同上 |
-| F10 | `*(u32*)(ctx_R+0xf31dc)` mode | `x26=ctx_R+0xf0000`（0x761654）；`0x761848/0x761978 ldr w0,[x26,#12732]` → `ctx_R+0xf31dc`；`==2` 允许 RunRpcServerApi，`&~2==1` 走 TwoStageWait | 决定 API 是否可达 | 两条 `ldr [x26,#12732]`；`ctx_R` 同 F7 | **写入者/取值** | 定向 grep/小窗口（已请求） |
+| F10 | `*(u32*)(ctx_R+0xf31bc)` mode | `x26=ctx_R+0xf0000`（0x761654）；`0x761848/0x761978 ldr w0,[x26,#12732]` → `ctx_R+0xf31bc`；`==2` 允许 RunRpcServerApi，`&~2==1` 走 TwoStageWait | 决定 API 是否可达 | 两条 `ldr [x26,#12732]`；`ctx_R` 同 F7 | **写入者/取值** | 定向 grep/小窗口（已请求） |
 | F11 | `server_A` vs `server_B` | `server_A = ADRP(0x191f000)+0xd00+0x10`（Init 前 x23 未变；0x7620b4 的 `add x23,x23,#0xd00` 属 Init 后日志分支、无回边）；`server_B = ADRP(0x22c7000)+0xb50+0x1a0`（ForApi/ClearOpRes） | 正常 launch vs 清理路径 | adrp/add 指令与分支边 | 实际进入哪个 | 分派谓词（F1/F2/F8-F10）静态推导 |
 | F12 | `HcclMsg+48` valid 生产者 | gate 读 slot+48；PostMsg 写 AivParam+44，非同一结构 | API 路径是否有消息可读 | gate/consume、PostMsg/GenMsg | host 侧写者 | host 库指令立即数扫描（非数据字） |
 
-**观测设计建议（未来、需单独授权）**：若 F1–F10 的静态推导仍不能定支路，最小运行观测只需两组只读值：①launch 时 `desc/sub/P[0]/j/T`（host 或 KFC task 侧）；②server 的 `GetPreparePosition/GetTaskType` 与 `ctx+0xf31dc`、`ctx+352`。两组即可把四条路径区分开；不需要读 +50/+51 或做全量 workspace dump。
+**观测设计建议（未来、需单独授权）**：若 F1–F10 的静态推导仍不能定支路，最小运行观测只需两组只读值：①launch 时 `desc/sub/P[0]/j/T`（host 或 KFC task 侧）；②server 的 `GetPreparePosition/GetTaskType` 与 `ctx+0xf31bc`、`ctx+352`。两组即可把四条路径区分开；不需要读 +50/+51 或做全量 workspace dump。
 **当前不执行**：无 SSH/设备/新 GO；root cause 仍 unresolved。
 
-## 68. ctx+352 / ctx+0xf31dc / server_A 的原始指令与地址式复核（abi9 对齐）
+## 68. ctx+352 / ctx+0xf31bc / server_A 的原始指令与地址式复核（abi9 对齐）
 
 **目的**：回应 31 的“未以字面 store 复现”和 server 地址歧义；所有表达式给出函数内寄存器来源与 callsite，不跨函数拼同偏移。
 
@@ -975,19 +975,24 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 
 - `ctx_R`：`RunAicpuRpcSrvLaunch` 0x7615ac `bl AicpuGetComContext`；0x7615b0 `mov x28,x0`。本函数内 ctx 即 x28。
 - 原始写：0x76187c `b901639f str wzr,[x28,#352]` → `*(u32*)(ctx_R + 0x160) = 0`；完整地址 `ctx_R+352`，宽度 4 B，值 0。前驱为 0x761860-0x761878 的 `[x24]`/`[x25]` 字段处理，不改变 x28。
+- 第二处清零（31 更正）：0x7608c8 `str wzr,[x19,#352]`（`RunAicpuKfcClearOpRes`），x19 为该函数的 ctx 参数；同样是 4 B 清零。两处均为清零，**递增者仍未定位**。
 - 原始读：`RunRpcServerTwoStageWait` 0x7c7f10 `ldr w3,[x20,#352]`、0x7c7f38/0x7c7f88 `ldr w1,[x20,#352]`；`x20` 是该函数的 ctx 参数。
 - **同一性证据**：0x76198c `mov x0,x28`；0x761994 `bl RunRpcServerTwoStageWait`。即 TwoStageWait 的 ctx 参数就是 RpcSrvLaunch 的 ctx_R；跨函数同偏移成立有 callsite 依据，不是按偏移拼接。
 - 31 的字面检索未命中是**编码/范围问题**：该 store 用 `wzr`（非 wN）且偏移写作 `#352`，不是 `#0xf3,lsl#12` 形式；应能在 0x76187c 复现。**不据此推断另一 DSO**。
 - 仍缺：`ctx_R+352` 的递增者/上界；已交付段只有清零与三次读。
 
-### 68.2 `ctx_R + 0xf31dc`（mode）
+### 68.2 `ctx_R + 0xf31bc`（mode）
 
 - 基址：0x761654 `add x26,x28,#0xf0,lsl#12` → `x26 = ctx_R + 0xf0000`。
-- 原始读：0x761848 `ldr w0,[x26,#12732]` → `*(u32*)(ctx_R+0xf31dc)`；0x761850 `cmp w0,#0x2`（`!=2` 时取 task 字段覆盖）。
+- 原始读：0x761848 `ldr w0,[x26,#12732]` → `*(u32*)(ctx_R+0xf31bc)`；0x761850 `cmp w0,#0x2`（`!=2` 时取 task 字段覆盖）。
 - 原始读 2：0x761978 `ldr w0,[x26,#12732]`；0x761984 `and w0,w0,#0xfffffffd`；0x761988 `cmp w0,#0x1`；0x761990 `b.ne` → OneStageWait，否则 0x761994 TwoStageWait。
 - 关系：0x761820 `str w0,[x26,#12752]` 写 `ctx_R+0xf31d0`；0x761880 `str wzr,[x26,#12756]` 清零 `ctx_R+0xf31d4`。这些是同一 `ctx_R` 的不同字段，不与其他函数的同偏移混用。
-- 31 的 `#0xf3,lsl#12` 站点写 `ctx+0xf3270` 等，是 `ctx_R+0xf3000` 基址的另一组；`0xf31dc` 用的是 `ctx_R+0xf0000+12732` 编码，故定向 grep 需按 `#12732` 或 `x26=...+0xf0000` 查。
-- 仍缺：`ctx_R+0xf31dc` 的写入者/取值。
+- **f31bc 的写者（abi9 更正）**：
+  - 0x2ea7b8 `str w8,[x1,#12732]`（w8=9）；x1 是静态全局 `0x22ce888+0xf0000`，**不是 ctx_R** → 不能直接作为 ctx_R 的写者。
+  - 0x7edfc0 `str w5,[x7,#12732]` 位于 `AicpuHcclProcess::CopyCtxInfo`（起始 0x7edc20），`w5=[x23+12732]`：**从另一个 ctx 复制到目标 ctx**，不是计算/递增。同一函数还复制 +12728/+12744/+12752/+12756 等 KFC 块字段。
+  - 因此 f31bc 的来源是 **CopyCtxInfo 的源 ctx 及其取值**，当前未定位；无 +1/递增站点。
+- 31 的 `#0xf3,lsl#12` 站点写 `ctx+0xf3270` 等，是 `ctx_R+0xf3000` 基址的另一组；`0xf31bc` 用的是 `ctx_R+0xf0000+12732` 编码，故定向 grep 需按 `#12732` 或 `x26=...+0xf0000` 查。
+- 仍缺：`ctx_R+0xf31bc` 的写入者/取值。
 
 ### 68.3 `server_A` 算术
 
@@ -999,3 +1004,42 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 
 - F7 改为 `ctx_R+0x160` 表达式，附 callsite 同一性；F10 改为 `x26=ctx_R+0xf0000`、`[x26,#12732]`；F11 用 `server_A` 符号与分支边说明。
 - 31 的字面未命中只记检索范围/编码差异；不据此判断其他 DSO。仍无设备/SSH。
+
+## 69. 偏移算术审计：12732=0x31BC，撤回 f31dc 字段名
+
+- **十进制/十六进制核对**：12732 = **0x31BC**；12764 = 0x31DC；434 = 0x1B2；12904 = 0x3268。
+- 因此 `[x26,#12732]` 在 `x26=ctx_R+0xf0000` 时是 **`ctx_R+0xf31bc`**，不是 `ctx_R+0xf31dc`；要得到 f31dc 还需额外的 +0x20 基址偏移，而当前没有任何指令把 x26 设为 ctx_R+0xf0020。
+- 31 的定向检索也显示：交付段内**没有 `#476`/`#0x1dc` 的访问**；`ctx+0xf31dc` 是此前的转写错误，**撤回该字段名**，统一为 `x26+12732 (=ctx_R+0xf31bc)`。
+- 同类修正：`ctx+0xf31d2` → **`ctx+0xf31b2`**（`[x25,#434]`，x25=ctx_R+0xf3000）；epoch `[x19,#12904]` → **`ctx+0xf3268`**，不是 f31f8。`ctx+0xf31d0/f31d4/f31d8/f31d9/f31f0` 等按 12752/12756/472/473/12784 核对无误。
+- **CopyCtxInfo 的 base 各自独立**：源 `[x23+0x31bc]`、目标 `[x7+0x31bc]`；x23/x7 是两个 ctx 指针，不能把一个 ctx 的 +0x20 关系套到另一个。
+- **静态 global 写 9**：0x2ea7b8 `str w8,[x1,#12732]`，`x1 = ADRP(0x22ce000)+0x888+0xf0000`；地址式为 `x1+0x31bc`（表达式，不传播绝对地址）。它与 ctx_R 是不同对象，**不能把 9 直接赋给 ctx_R+0xf31bc**；只有 CopyCtxInfo 的源/目标与 AicpuGetComContext 返回对象身份连通后，才能推导运行取值。
+- 35 有独立地址审计；本节与其结果合并后再作为最终字段名。无新取数/设备动作。
+
+## 70. F1–F12 可执行取证表（现有载体/读取方式/已结束 cell 可得性）
+
+**总原则**：AICPU 设备侧对象（ctx/task/workspace/HcclMsg）在设备内存；host 进程只能看到 plan/argv/env 与自身日志。已结束 cell 没有这些字段的值日志时，明确标“缺测”，**不虚构 read-only 内存读取命令**。
+
+| 字段 | 载体/可见性 | 读取位置/命令（现有） | 已结束 cell 可得？ | 只读静态能证明 | 缺测项 |
+| --- | --- | --- | --- | --- | --- |
+| F1 `desc` | host 进程（KFCTask 构造）/设备 task | plan JSON 无该字段；device 日志仅 `get api RunAicpuKfcSrvLaunch` | **否** | SrvLaunch 分支谓词与位域位置 | 实际 `desc` 值（需 host 侧 launch 日志或反汇编 host 填充） |
+| F2 `sub` | 设备 task 内存 | 无 | **否** | `task[(desc>>9)&0x7f]` 首 u32 的 sub 分支 | 实际 sub |
+| F3 `P[0]` | 设备 task+40 | 无 | **否** | Init 零/非零分支判据 | `P` 类型与值 |
+| F4 `j` | 设备 KFCTask+96 → ctx+192 | 无；device Dlog 无该字段 | **否** | 写者 0x76182c、`param=y+j` 算术 | 实际 j/范围 |
+| F5 `T` | 设备 KFCTask+100 → ctx+196 | 无 | **否** | 写者 0x761834、`+64*T` 算术 | 实际 T |
+| F6 `y` | 设备 ctx+184（workspace 指针） | probe trace 记录 workspace_bytes，不记录指针值 | **部分/否** | 写者 0x7b9f50、base 算术 | 实际指针值（无现有日志） |
+| F7 `ctx_R+0x160` turn | 设备 ctx 内存 | 无；现有 device 日志无 turn | **否** | 0x7608c8/0x76187c 清零、TwoStageWait 三次读 | 递增者/上界/运行值 |
+| F8 `GetPreparePosition` | 设备 server 内存（[server+816]+0） | 无 | **否** | getter 0x7d7b60 偏移；Init 将 `KFCTask+40` 存 server+816 | 实际字段值与映射 |
+| F9 `GetTaskType` | 同上（+116） | 无 | **否** | getter 0x7d7b30 偏移 | 实际值 |
+| F10 `x26+12732` mode | 设备 ctx 内存 | 无 | **否** | 两条 ldr、cmp/and 分支；写者为 CopyCtxInfo/静态 global | 实际值/源 ctx |
+| F11 `server_A/B` | 设备静态全局 | 无 | **否** | adrp/add 地址式与分支前提 | 实际进入哪个对象 |
+| F12 `HcclMsg+48` | 设备共享 HcclMsg 区 | 无；现有 device 日志仅 ATRACE 对象创建（`KFCtaskAndTilingTraceData`/`AivAicpuOpParam` create），无字段值 | **否** | gate/consume、PostMsg/GenMsg 写的是 AivParam+44 | 生产者与实际 valid 值 |
+
+**设备 vs host 分离**：
+- Host 侧现有可见：plan JSON（rows/k/n/flags/seed/identity）、argv/env、service.log；**不含 KFC `desc/sub/P[0]/j/T`**。
+- Device 侧现有可见：device 日志（ATRACE 对象创建、Dlog 配置/错误行）、plog（stream/task/timeout）、probe trace（pad/workspace/sync/gather 时间）；**不含上表字段值**。
+- 因此 F1–F5、F7–F12 在已结束 cell 均为**缺测**；F6 仅有 `workspace_bytes`，无指针值。
+
+**最小有限观测设计（未来、需单独授权）**：
+1. Host 侧一处 launch 日志：打印 `desc` 的 nibble/sub/idx、`KFCTask+40` 首 u32、`+96/+100`（即 j/T）；只读、无设备格变更。
+2. Device 侧一处只读快照或 verbose Dlog：`server+816` 的 u32[0]/u8[116]、`ctx_R+0xf31bc`、`ctx_R+0x160`；这是区分四条路径的最少字段。
+- 两组都到位即可判定 API/TwoStageWait/MC2/CommKfc；**当前不执行**，不新增 GO/SSH/设备动作。
