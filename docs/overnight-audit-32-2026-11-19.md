@@ -268,6 +268,14 @@
 - **P1**：binding_probe 的 KEEP_* 保留整个 RunState（含 workspace）→ H1/H3 与 H2 混淆；run_probe 默认 arm-timeout 60 s（协议 240）；recovery 文案仍写 “aa3e-noop or f810->fused”；stop-script SHA 检查条件化且 d0_stop CLI 未证；env_expect 未 gate 冻结 fcbdcbf1；protected 未含 supervisor pid；finally 中 rc 可能未初始化。
 - **当前状态**：NO-GO 已发 31/35/20；服务 aa3e/s1 保持在线未动；修复后重冻结（新 window/manifest SHA）再 preflight。A12 body（text a7dd3f64/image f3229f5c）与 identity 需 31 提供本地副本/SHA256SUMS 方可核。
 
+## 8.18 A12 preflight 输入核验（31 本地副本）
+
+- **a12-preflight 目录**：SHA256SUMS **4/4 OK**；text-body `a7dd3f64…`（2,849 B，model/questions/state）、image-body `f3229f5c…`（22,570 B，images/model/questions/state）、root-identity `109795ae…`（pid 1287336/ppid1/pgid 1287336/start 397375124/boot 393ecc15，与 snapshot `39e52eb5…` 一致）、plan-a12 `97ae37df…`。
+- **plan**：child_timeout 240、port 18143、stop_argv=d0_stop --api-pid/--saved-identity/--out、child_argv=run_a12.sh+binary `37929ec4…`、restore_argv=env -i+activate+官方 start.sh（前台 exec，P0-1 仍成立）、success 含 child_rc0/not_timed_out/no_survivors/source aa3e/branch aa3e-noop/four/env/joint/two_workers/clients；status=plan_not_executed。
+- **仍未满足**：plan success 不含 A12 `[ERROR]`/retcode/线程完成日志门（P0-3），无实际 maps 要求（P0-4）；window `e55fcc00` 的 restore 仍 `subprocess.run`、stop 失败绕过 finally、restore_output 非 fresh（P0-1/2/5）——代码级，plan-only 不能证明修复。
+- **P1 新增**：clean_expect 仅比 OPP/LD 并记录路径；需 gate 其 service_environment == 冻结 `7b79c5db…`/`ca27dbb7…`（或提供该 launch-manifest 本地副本/SHA），否则可换文件放宽。
+- **GO=否**；等 35 修复版新 commit → 31 重 stage+plan-only → 32 核 diff/SHA、CPU 复跑、restore/A12 日志门/maps 后重给 GO。服务在线未动。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
