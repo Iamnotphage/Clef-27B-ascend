@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "0bd1fde8ac0c62d74c61e276df44cf6655e8f3a001d85911eacedfc06784cf72",
-      "bytes": 25617
+      "sha256": "d54584b76b8a8e5b4983e87ef73f02b92667da04fbcffe0705d9c7e6a47a9763",
+      "bytes": 25772
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot/A15 tests (17)",
-      "sha256": "1979bb23b0545a53cb96906c5cd2ee20fbde1d4d5aa5b9fa23b4a6f4293339c6",
-      "bytes": 10884
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15/arm_output tests (18)",
+      "sha256": "c11f4284c63c19a0df12a41e160367247bb13af5d9e9d20bcc2516951f3717ab",
+      "bytes": 11152
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -62,13 +62,13 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "9a31091b9583e1a479c90dcbe9a4cd9082ce91b9e64bf7623dbc3a0e1ba8ca92",
-      "bytes": 46020
+      "sha256": "52c10dce1a001980faa2810b59e8bfb6f7eedb992a385b9ae7583262e81f4354",
+      "bytes": 46518
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (34; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, Linux real-process fixtures)",
-      "sha256": "5fdc498ffdc17916df1fb651e7957006f2677fb9dc67d61595a4704c8fdd9b36",
-      "bytes": 34752
+      "role": "CPU window control-flow tests (36; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, Linux real-process fixtures)",
+      "sha256": "56185a93967ca24dcd44fb5365d233ea28343a700a28dd2cb2f3b9342b43460a",
+      "bytes": 35644
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "c7a47c4718f1a8e57ad388caba87294ece219d8fec25578c148c8c3be4629619",
-      "bytes": 30562
+      "sha256": "b85e6659d6e8c309b92a9ad35cc5a3728319582aa656f70af8fda7212b5caa72",
+      "bytes": 31422
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -240,9 +240,9 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "17/17",
+      "test_probe_cpu.py": "18/18",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "34/34 (5 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "36/36 (5 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "9a31091b", "test_supervised_window_cpu.py": "5fdc498f", "cpu": "60/60 (17+9+34; 5 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "52c10dce", "test_supervised_window_cpu.py": "56185a93", "cpu": "63/63 (18+9+36; 5 Linux-only skipped on macOS)"},
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
       "outcome": "34/34 window tests OK on Linux, including 5 real-process cases; F2/F3 probes pass",
@@ -651,6 +651,22 @@
         "restore_joint_sha256": "abdb1953"
       },
       "maps_gate_note": "result.libraries is actual in-process mapping evidence; the window.ok=false is an external sampling-timing artifact, not a missing load. A rank-local maps_self persistence is a future harness improvement only (20: no code change now)."
+    },
+    "large_run": {
+      "status": "device path/workspace/sync pass; numeric blocked by an A14 output bug; one rerun approved",
+      "tuple": "a00edad / manifest 778c37af / run_probe 0bd1fde8 / window 9a31091b / binding 101660f8 / adapter d181b15a / plan fac2d948 / identity 1319033/399382752",
+      "device": "both ranks prepare_rc0, executor nonnull, workspace_bytes 115,818,496 (110.5 MiB), launch_rc0, Python sync_return 36.62/9.46 ms, no stream47/507046",
+      "harness_bugs": [
+        "run_probe 0bd1fde8 assigned output only for non-A14/A15 arms, so the A14 large ranks raised UnboundLocalError before reduced/reference/bit_equal",
+        "window 9a31091b required restored root ppid==1/pgid==pid immediately after health; the setsid start.sh wrapper was still the parent, so it raised a false restored-root mismatch while the service was already healthy"
+      ],
+      "fixes": [
+        "arm_output() keeps y for A14/other arms and crops the all-gathered matrix only for A15",
+        "wait_restored_root() retries the ppid1/pgid-self identity until a bounded timeout instead of failing immediately"
+      ],
+      "service_manual": "root 1323589/start 399707126, ppid1/pgid/sid self, five PIDs, branch aa3e-noop, OPP9 7b79c5db, LD12 ca27dbb7, health/info/text/image/clients all pass",
+      "evidence": "a14-large-cell SUMS 19/19 (a560be11, 31 commit 4372c7f)",
+      "next": "32 approved one rerun on the fixed run_probe/window with fresh identity 1323589 and a new plan (fac2d948's 1319033 is stale); actual reduced max_abs/bit_equal is required, not just finite"
     },
     "release_fix": {
       "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",

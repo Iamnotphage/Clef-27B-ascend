@@ -115,6 +115,11 @@ class PlanTest(unittest.TestCase):
         self.assertIn('torch.ones((m_pad, k)', source)
         self.assertIn("'diagnostic_only_not_an_official_gate'", source)
 
+    def test_arm_output_keeps_a14_and_crops_a15(self):
+        self.assertEqual(run_probe.arm_output('A14', 'y'), 'y')
+        self.assertEqual(run_probe.arm_output('A11', 'y'), 'y')
+        self.assertEqual(run_probe.arm_output('A15', 'y', [0, 1, 2, 3], 2), [0, 1])
+
     def test_out_dir_shared_by_two_ranks(self):
         import threading
         out = self.root / 'shared-out'

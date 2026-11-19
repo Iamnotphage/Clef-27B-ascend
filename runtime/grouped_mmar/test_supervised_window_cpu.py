@@ -128,6 +128,22 @@ class WindowTest(unittest.TestCase):
             self.assertIn(arm, plan['child_argv'])
             self.assertIn('--adapter', plan['child_argv'])
 
+    def test_restored_root_waits_for_wrapper_exit(self):
+        wrapper = {'pid': 7, 'ppid': 8, 'pgid': 7, 'state': 'S',
+                   'starttime': '1', 'boot_id': 'b', 'cmdline': []}
+        root = {'pid': 7, 'ppid': 1, 'pgid': 7, 'state': 'S',
+                'starttime': '1', 'boot_id': 'b', 'cmdline': []}
+        with mock.patch.object(win, 'scan', side_effect=[{7: wrapper}, {7: root}]):
+            live = win.wait_restored_root(7, timeout=1, interval=0.01)
+        self.assertEqual(live['ppid'], 1)
+
+    def test_restored_root_timeout_returns_last(self):
+        wrapper = {'pid': 7, 'ppid': 8, 'pgid': 7, 'state': 'S',
+                   'starttime': '1', 'boot_id': 'b', 'cmdline': []}
+        with mock.patch.object(win, 'scan', return_value={7: wrapper}):
+            live = win.wait_restored_root(7, timeout=0.03, interval=0.01)
+        self.assertEqual(live['ppid'], 8)
+
     def test_plan_only_does_not_require_subreaper(self):
         import contextlib
         import io

@@ -698,6 +698,19 @@ def a12_evidence(stdout, stderr, rc):
             'ok': bool(rc == 0 and not errors and len(cost) >= 2)}
 
 
+def wait_restored_root(pid, timeout=30.0, interval=0.5):
+    """The setsid start.sh wrapper may still be the parent right after health."""
+    deadline = time.monotonic() + timeout
+    last = None
+    while True:
+        last = scan().get(pid)
+        if last and last['state'] != 'Z' and last['ppid'] == 1 and last['pgid'] == pid:
+            return last
+        if time.monotonic() >= deadline:
+            return last
+        time.sleep(interval)
+
+
 def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=None):
     """Never start a second tree while the original root is alive."""
     table = scan()
@@ -970,7 +983,7 @@ def execute(a, plan):
                 if Path(manifest.get('output_dir', '')).resolve() != Path(a.restore_output).resolve():
                     raise RuntimeError('restore output_dir mismatch')
                 pid = int(manifest['pid'])
-                live = scan().get(pid)
+                live = wait_restored_root(pid, timeout=min(30.0, a.restore_timeout))
                 if not live or live['ppid'] != 1 or live['pgid'] != pid:
                     raise RuntimeError('restored root identity mismatch')
                 pids = tree(scan(), pid)

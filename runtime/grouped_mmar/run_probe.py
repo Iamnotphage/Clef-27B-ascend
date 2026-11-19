@@ -275,6 +275,13 @@ def row_block(rank, rows, world):
     return rank * per, (rank + 1) * per
 
 
+def arm_output(arm, y, full=None, rows=None):
+    """A14 keeps the MRS output; A15 crops the all-gathered full matrix."""
+    if arm == 'A15':
+        return full[:rows]
+    return y
+
+
 def execute(a, plan):
     rank = int(os.environ.get('RANK', '-1'))
     world = int(os.environ.get('WORLD_SIZE', '-1'))
@@ -401,6 +408,7 @@ def execute(a, plan):
             torch.npu.synchronize()
             trace.emit('sync_return', sync_ms=(time.monotonic_ns() - sync_begin) / 1e6)
             meta['sync_returned'] = True
+            full = None
             reduced = torch.matmul(x_n, w_n)
             if a.arm == 'A14':
                 reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
@@ -415,15 +423,13 @@ def execute(a, plan):
                 torch.npu.synchronize()
                 meta['gather_ms'] = (time.monotonic_ns() - gather_begin) / 1e6
                 trace.emit('gather_return', gather_ms=meta['gather_ms'])
-                output = full[:rows]
                 reference = reduced
                 dist.all_reduce(reference, op=dist.ReduceOp.SUM)
             else:
                 reference = reduced
                 dist.all_reduce(reference, op=dist.ReduceOp.SUM)
             torch.npu.synchronize()
-            if a.arm not in ('A14', 'A15'):
-                output = y
+            output = arm_output(a.arm, y, full, rows)
         if a.norm:
             from fixed_gate import evaluate
             cand = dict(zip(('y', 'residual', 'rstd'),
