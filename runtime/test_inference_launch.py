@@ -147,12 +147,17 @@ class LaunchTests(unittest.TestCase):
     def test_chunk128_is_opt_in_and_dry_run_has_no_side_effect(self):
         self.assertFalse(self.launch("--config", "s1")["gdn_decision_prefill"]
                          ["gdn_chunk128_patch"]["requested"])
-        os.environ["CLEF_GDN_CHUNK128"] = "1"
-        with mock.patch.object(launcher.subprocess, "run") as run:
-            record = self.launch("--config", "s1")["gdn_decision_prefill"]
-            self.assertTrue(record["gdn_chunk128_patch"]["pending_install"])
-            run.assert_not_called()
-        self.assertFalse(launcher.gdn_chunk128_patch("custom")["requested"])
+        with mock.patch.object(launcher, "gdn_decision_prefill",
+                               return_value={"enabled": True}):
+            os.environ["CLEF_GDN_CHUNK128"] = "0"
+            self.assertFalse(self.launch("--config", "s1")["gdn_decision_prefill"]
+                             ["gdn_chunk128_patch"]["requested"])
+            os.environ["CLEF_GDN_CHUNK128"] = "1"
+            with mock.patch.object(launcher.subprocess, "run") as run:
+                record = self.launch("--config", "s1")["gdn_decision_prefill"]
+                self.assertTrue(record["gdn_chunk128_patch"]["pending_install"])
+                run.assert_not_called()
+        self.assertFalse(launcher.gdn_chunk128_patch("s1")["requested"])
 
     def test_chunk128_rejects_incomplete_ready_report(self):
         os.environ["CLEF_GDN_CHUNK128"] = "1"
@@ -160,7 +165,7 @@ class LaunchTests(unittest.TestCase):
             "ready": True, "files": {}}))
         with mock.patch.object(launcher.subprocess, "run", return_value=incomplete):
             with self.assertRaisesRegex(SystemExit, "incomplete"):
-                launcher.gdn_chunk128_patch("s1")
+                launcher.gdn_chunk128_patch("s1", decision_enabled=True)
 
     def test_custom_default_omits_mm_option(self):
         launch = self.launch("--config", "custom")

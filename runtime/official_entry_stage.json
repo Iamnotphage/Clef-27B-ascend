@@ -1,0 +1,161 @@
+{
+  "schema": "official-entry-aa3e-stage/1",
+  "status": "cpu_prepared_device_pending",
+  "decision": "2026-11-19 20 adopted aa3eON as the final submission default; no stable significant gain claimed",
+  "default": {
+    "config": "s1",
+    "head_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "guard_sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "flag_env": {
+      "CLEF_JOINT_FUSED_ATTN": "1"
+    },
+    "allow_env": {
+      "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+    },
+    "single_field_env": {
+      "CLEF_JOINT_SINGLE_FIELD": "1"
+    }
+  },
+  "files": {
+    "Clef-27B/inference.py": {
+      "role": "official entry (modified: aa3e default, fused branch)",
+      "sha256": "de5b0d1ea95194dcb7e039e65cb192c3fb6ad98e5c8217579040ecce309e7b29",
+      "bytes": 51019
+    },
+    "runtime/apply_joint_fused_attention.py": {
+      "role": "audited fused installer b09 (unchanged bytes)",
+      "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406",
+      "bytes": 5128
+    },
+    "runtime/joint_fused_attention/clef_joint_schema.py": {
+      "role": "aa3e head postimage (unchanged bytes)",
+      "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+      "bytes": 18220
+    },
+    "runtime/apply_joint_single_field_patch_fused.py": {
+      "role": "independent guard postimage 36 (unchanged bytes)",
+      "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+      "bytes": 5208
+    },
+    "runtime/apply_joint_service_check.py": {
+      "role": "audited service-check installer 1ed (audit/revert only)",
+      "sha256": "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c",
+      "bytes": 5254
+    },
+    "runtime/joint_service_check/apply_joint_single_field_patch.py": {
+      "role": "guard postimage 36 for 1ed SOURCE (audit)",
+      "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+      "bytes": 5208
+    },
+    "runtime/test_joint_fused_entry.py": {
+      "role": "real-installer entry tests (new)",
+      "sha256": "dcc545c50f626e2ce8b152bd36bc9676dae5ec3dd6c6bcee942944e788bd6b1e",
+      "bytes": 13351
+    },
+    "runtime/test_inference_launch.py": {
+      "role": "launcher regressions + chunk128 test-contract fix",
+      "sha256": "b4f18279bdaa12171ccd7319a04a33c75ede5ae4b78a437c39767f4f672860ec",
+      "bytes": 12046
+    },
+    "runtime/run_official_entry_evidence.py": {
+      "role": "local evidence harness (new)",
+      "sha256": "385b6324f3583e82e1db3d2d870c6856f68defb871143194f6335fc0acb02bf5",
+      "bytes": 4423
+    },
+    "runtime/official_entry_cpu_evidence.json": {
+      "role": "local CPU evidence (new)",
+      "sha256": "1cad8ba1d0074e6b9ac221d5b977467d73f2f7e6169e0d0172c595783c6a2c4d",
+      "bytes": 3406
+    },
+    "runtime/official_entry.diff": {
+      "role": "entry/test minimal diff (new)",
+      "sha256": "c40725a07040db0fc4eef69a10b16e5d29b7ef097d86a579043aad599060ef3f",
+      "bytes": 16982
+    },
+    "docs/official-entry-aa3e-2026-11-19.md": {
+      "role": "review packet (new)",
+      "sha256": "23ac3c2d5c87f5fa37c1c516e4271c93caac3168afa37fbf5b6fea645b01aeb5",
+      "bytes": 9821
+    }
+  },
+  "frozen_unchanged": {
+    "Clef-27B/start.sh": "d880a01ea1e4625388317b9cd617470fc11c11db8900fa390c82133e0ea46b02",
+    "runtime/apply_joint_single_field_patch.py": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+    "runtime/joint_single_field/clef_joint_schema.py": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+    "runtime/candidate_service_phase.py": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44",
+    "runtime/final_acceptance_candidate_manifest.json": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "runtime/final_service_phase.py": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44",
+    "runtime/final_acceptance_supervisor.py": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"
+  },
+  "source_provenance": {
+    "fused_installer": "ebca769 bundle runtime/apply_joint_fused_attention.py (b09cd602, byte copy)",
+    "aa3e_head": "ebca769 bundle runtime/joint_fused_attention/clef_joint_schema.py (aa3e1758, byte copy)",
+    "guard_postimage": "ebca769 bundle runtime/joint_service_check/apply_joint_single_field_patch.py (36eaff44, byte copy to the independent flat name)",
+    "service_check_installer": "ebca769 bundle runtime/apply_joint_service_check.py (1ed35f0a, byte copy)",
+    "original_preimage": "32 read-only copy original-joint-schema-197863d5 (197863d5); NOT in the submission tree"
+  },
+  "commands": {
+    "official": [
+      "bash",
+      "Clef-27B/start.sh",
+      "--model-dir",
+      "${MODEL_DIR}",
+      "--output-dir",
+      "${OUTPUT_DIR}"
+    ],
+    "dry_run": [
+      "python3",
+      "Clef-27B/inference.py",
+      "--model-dir",
+      "${MODEL_DIR}",
+      "--output-dir",
+      "${OUTPUT_DIR}",
+      "--dry-run"
+    ],
+    "evidence": [
+      "python3",
+      "runtime/run_official_entry_evidence.py",
+      "--original",
+      "${ORIGINAL_197863D5}",
+      "--out",
+      "runtime/official_entry_cpu_evidence.json"
+    ]
+  },
+  "startup_branches": {
+    "197863d5": {
+      "guard": "apply f810",
+      "fused": "apply aa3e",
+      "branch": "original->f810->fused"
+    },
+    "f810": {
+      "guard": "noop",
+      "fused": "apply aa3e",
+      "branch": "f810->fused"
+    },
+    "aa3e": {
+      "guard": "noop",
+      "fused": "noop",
+      "branch": "aa3e-noop"
+    }
+  },
+  "record": "<output>/joint-patch-record.json (atomic; includes no-op/failure/current SHA/branch/default config)",
+  "backups": [
+    "<output>/patch-backup/joint-single-field",
+    "<output>/patch-backup/joint-fused"
+  ],
+  "cpu_evidence": {
+    "path": "runtime/official_entry_cpu_evidence.json",
+    "sha256": "1cad8ba1d0074e6b9ac221d5b977467d73f2f7e6169e0d0172c595783c6a2c4d",
+    "suites": {
+      "test_joint_fused_entry": 11,
+      "test_inference_launch": 17
+    },
+    "skipped": 0
+  },
+  "device_pending": [
+    "31 stages this commit under a new independent stage and verifies every file SHA",
+    "31 runs the three-start/idempotence/fail-closed checks on device with fresh output dirs",
+    "31 verifies service health/info/env/four-check/two workers and official dps JSONs",
+    "32 re-checks bytes and the B/C checklist; no production writes by this worker"
+  ]
+}
