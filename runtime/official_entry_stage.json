@@ -74,8 +74,8 @@
     },
     "docs/official-entry-aa3e-2026-11-19.md": {
       "role": "review packet (new)",
-      "sha256": "23ac3c2d5c87f5fa37c1c516e4271c93caac3168afa37fbf5b6fea645b01aeb5",
-      "bytes": 9821
+      "sha256": "ba0e97e959454a4ba62ba188021e3b5f852beb75d2abb4fdcd873cb7e59cdd05",
+      "bytes": 10122
     }
   },
   "frozen_unchanged": {
@@ -157,5 +157,28 @@
     "31 runs the three-start/idempotence/fail-closed checks on device with fresh output dirs",
     "31 verifies service health/info/env/four-check/two workers and official dps JSONs",
     "32 re-checks bytes and the B/C checklist; no production writes by this worker"
-  ]
+  ],
+  "base_runtime_dependencies": {
+    "note": "frozen base runtime assets used by the official entry; bytes unchanged; duplicate vendor .so copies are byte-identical",
+    "files": {
+      "runtime/apply_gdn_decision_patch.py": "124884fb98fe8967fff2d0f3a9a6462fd752f782bc1614c9767eae752b037022",
+      "runtime/apply_qkv_norm_patch.py": "37b0698e46864a4ee828dd72de8fa7a9c874bda3365551677b798001fac26e27",
+      "runtime/apply_gdn_chunk128_patch.py": "f12832187ffc32c80d717c1b98f8ebbf49bc8f9bdc8c31333741fe4157164c28",
+      "runtime/apply_schema_cache_patch.py": "0d8d495c15be5155064eed330ea285e30f633b5ce57c8402e40a57619b7d2b8a",
+      "runtime/apply_joint_single_field_patch.py": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+      "runtime/joint_single_field/clef_joint_schema.py": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+      "scripts/activate_env.sh": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a",
+      "Clef-27B/start.sh": "d880a01ea1e4625388317b9cd617470fc11c11db8900fa390c82133e0ea46b02",
+      "Clef-27B/logs/model_manifest.json": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68",
+      "Clef-27B/src/ascendc/vendors/customize/op_api/lib/libcust_opapi.so": "4d2440a32bfabcfd95bc670e02aa005a8a5261a023aee2cf7cd3c6fc561c2c98",
+      "Clef-27B/src/ascendc/vendors/customize/op_proto/lib/linux/aarch64/libcust_opsproto_rt2.0.so": "64b5dda797c432da78a4b211311303d37843c80aeecc5170e140573e723cb95b",
+      "Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so": "8f8c3dbbe72c99366bef0f44670b06a6288608fecdfb853aa1357a024060dcd3",
+      "Clef-27B/src/ascendc/vendors/customize/op_impl/ai_core/tbe/op_tiling/liboptiling.so": "8f8c3dbbe72c99366bef0f44670b06a6288608fecdfb853aa1357a024060dcd3",
+      "Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_api/lib/libcust_opapi.so": "2185231c7f78b0a14fdfdd2cbca8cb8482b91655453eea15ce7fdde7ead71321",
+      "Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_proto/lib/linux/aarch64/libcust_opsproto_rt2.0.so": "25063307e6221c7bdecdd8771947956c455033e7d87ed6ab23bc946933bd1a5b",
+      "Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so": "b8e60b5cd13358bcf97c1d86a2702e55216c7efb0dcb4de76ce5dbddcd2a6f24",
+      "Clef-27B/src/ascendc/vendors/clef_conv_qkv/op_impl/ai_core/tbe/op_tiling/liboptiling.so": "b8e60b5cd13358bcf97c1d86a2702e55216c7efb0dcb4de76ce5dbddcd2a6f24"
+    },
+    "model_weights": "verified by Clef-27B/logs/model_manifest.json (98c104a9...), not committed"
+  }
 }

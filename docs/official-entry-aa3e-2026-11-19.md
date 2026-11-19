@@ -123,6 +123,10 @@ probe 的 rc/空输出/非 vllm/缺目标/不可写校验、资产 SHA 与无 sc
 | `runtime/official_entry_stage.json` | 提交后记录 |
 | 本文件 | 提交后记录 |
 
+基础运行依赖（GDN/QKV/chunk128/schema-cache 安装器、`scripts/activate_env.sh`、
+`Clef-27B/src/ascendc/vendors` 下的 vendor `.so`、`Clef-27B/logs/model_manifest.json`）
+逐项 SHA 见 `runtime/official_entry_stage.json` 的 `base_runtime_dependencies`；全部为现有冻结字节。
+
 冻结未改：`start.sh` `d880a01e…`、`runtime/apply_joint_single_field_patch.py` `76595657…`、
 `runtime/joint_single_field/clef_joint_schema.py` `f8101b98…`、a1ca `a1ca26cf…`、manifest `31202d27…`、
 phase v3 `888a8d7f…`、v5 `172c2838…`。
