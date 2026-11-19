@@ -66,6 +66,23 @@ abi11 caller and body windows, all libccl `2281deca`.
 | 11 | K-cond (6 s timeout) | `CheckRcvWorkMsg` budget expired with `sendCnt < turn` (e.g. turn > 255) | 0x7d744c | `HcclCheckLogLevel(3,3)` at 0x7d7410, `tbz -> 0x7d7450`, then `IsErrorToWarn` at 0x7d7418 | w0=0x01000003, w1=2, x2=0x1614060, x3=0x1613cc8, w4=285, x5=tid | shared method; called at 0x7c7f20 in TwoStageWait among others (caller set not enumerated) | 6 s per call; up to 30 events in 180 s if repeated | presence: the condition held for 6 s (the loop still reached the same continuation as the success jump); absence: no 6 s expiry, or guard failed. **Not a TwoStage entry marker; an empty log cannot exclude TwoStage** |
 | 12 | K-entry (per response, not Dlog) | `PostMsg` response; `AivAicpuOpParam::PrintMsg(dest, stack string)` | 0x7d6868 | none | x0=dest, x1=&stack string built from global 0x1613c90 +704 (u16) / +706 (u8) | abi8 reports only two direct PostMsg callers (0x7c7f44/0x7c7f90), both in TwoStageWait | every PostMsg call | presence/visibility unknown: PrintMsg's body (abi11, 0x7c24e0/0x654) does not write dest +24/+44/+51, but whether it emits a Dlog and at which level is not established here |
 
+## Positive-control rule for any observation run
+
+Because the guard semantics are unproven, **absence of a marker is not evidence
+until the configuration is shown to be effective on the target AICPU**. The
+positive controls are the K-entry markers:
+
+- Init4 Dlog 0x7d67cc, line 27 (per Init4 call), and
+- ForApi Dlog 0x7b3a24, line 1715 (per turn).
+
+If at least one of these appears, the guard path is live on that AICPU and the
+presence/absence columns in the table above can be used. If neither appears, the
+run has "missing measurement", not "branch excluded". 33's §77 candidate setting
+(`ASCEND_GLOBAL_LOG_LEVEL=0` + `ASCEND_PROCESS_LOG_PATH=<dir>`) is exactly what this
+positive control is meant to validate; this note does not assert that it works.
+ATRACE KFC objects only separate KFC vs MRS and do not distinguish API / TwoStage /
+MC2 (33 §73).
+
 ## What the four candidate paths have (and do not have)
 
 - **API / address wait**: #6 is a conditional timeout log (20 s first), not an entry
