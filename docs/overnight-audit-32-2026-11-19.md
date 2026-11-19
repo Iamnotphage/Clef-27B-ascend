@@ -378,6 +378,14 @@
 - **A14 small 判据**：run_probe pass（API rc0+两 rank sync+finite+both）+ window child_ok（rc0+maps adapter/libhccl/ascendcl）+ reference diff 记录；失败记录 stream47/mc2_server。minor：input metadata 记 bias zero 但 run_mrs 实际传 nullptr（op-info bias optional），参考无 bias，数值口径一致。
 - **解释**：A14 通过→KFC 路径可用（被拒包非普遍阻断）；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。A13 不执行；服务 aa3e。
 
+## 8.30 H6 结果（限定）与 A14 small GO（2026-11-19）
+
+- **H6 cell（a12-h6-cell 10/10，SUMS `e88d9d23…`）**：两 rank `h6 workspace memset api=aclrtMemsetAsync rc=0`；随后 h6.cpp:392 `507046` + `TestCall execute AICPU failed`；plog-debug 两 device `stream_id=47, KERNEL_AICORE, task_id=2, 10s, 0x7030010`；无 costtime；window ok=false、child rc0、maps_ok=true；恢复 root **1305145**/start 398845277、五 PID、aa3e-noop、四检/env/joint/source/clients 全 true。**结论限定**：user workspace 初值假设对该挂起被削弱/证伪；**HcclContext 的消息 workspace 属另一资源域，未被该格检验**；平台/服务包因果仍待 A14 与依赖证据，不外推。
+- **A14 small v2（plan-only）核验 PASS**：plan `18fdf185…`、identity `4ace4a79…`=1305145/398845277、stage-identity-v3 `50b659a6…`（e0b06df/manifest 1c8d2682/binding 101660f8/run_probe 6ae866b1 KEEP_ALL/window 2202165e/adapter d181b15a/compile 7ce25dad）、SUMS `2e1086eb…` 13/13；旧 1301295 plans 作废。**A14 small GO 已下发**。
+- **torchrun/PGID/安全窗语义**：window 以 `start_new_session=True` 启动 child=torchrun（session/PGID leader）；`--nproc_per_node=2` 两 rank 在同一 PGID；window 身份校验 `pgid==child.pid`、cleanup `killpg` 精确该组；probe 240 s watchdog + window 240 s child timeout；child rc0 需两 rank pass；window child_ok 加 maps（adapter+libhccl/ascendcl）；固定 `--master_port 29531` 为 torchrun rendezvous 端口——**31 执行前须预检其空闲**（有监听则 fail/记录，未获准不得改 plan 参数）；恢复门/identity/aa3e-noop 同前。
+- **证据**：成功/失败均保留 rank0/1 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）、trace、child 日志、window.json/per-PID maps、plog；结束完整恢复（五 PID/双 worker/四检/env/joint/clients/branch aa3e-noop）。
+- **解释**：A14 通过→KFC 路径可用、被拒包非普遍阻断；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。large M968/K8704/N5120 等 small 结果 + 32 有限核，且须用 small 恢复后的新 root identity 重建 plan。A13 不执行；服务 aa3e。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
