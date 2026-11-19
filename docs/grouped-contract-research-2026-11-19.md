@@ -1312,3 +1312,10 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - **可判**：出现 `start to read`/`reset valid` → API 路径；出现 6 s 单次超时 → TwoStage 等待失败（该次调用）；出现 MC2 串 → 该阶段 MC2；出现 Init4 但无任何分支标记 → 只证 RpcSrvLaunch Init4，不判子分支。
 - **不可判（缺测退出）**：无任何适用正向标记；或只有共享/候选标记；或日志未落盘/被 kill 截断。此时记录“缺测”，不排除任何路径，下一步才是 host launch 日志或代码埋点（需单独授权）。
 - **不执行**：本计划不运行设备、不自动 GO、不新增 arm；plan/identity/GO 由 31/32 按既有流程决定。
+
+## 80. `Check msg equal failed` 站点确认（35 3d26ea1）
+
+- 站点：Dlog **0x7d6e14**，函数 `AicpuKfcRpcServer::CopyAndCheckApiMsg(HcclMsg*,HcclMsg*)` **0x7d6ae4**；由 `ReadApiValidMsg` 在 **0x7d70e4** `bl CopyAndCheckApiMsg@plt` 调用。
+- 比较对象：`0x7d6d30 dsb ld`；`0x7d6d34 mov x2,#0x40`；`0x7d6d38/3c` 取两参；**`0x7d6d40 bl memcmp` 比较 64 B**；`0x7d6d48 b.eq 0x7d6e4c`（相等继续）。**不是 slot+48 魔数比较**。
+- 日志门：不等后 `0x7d6d4c` 取全局计数（`0x22ca000+0xe64`），`0x7d6d58-78` 判 `count % 10000 == 0`，仅余数为 0 进入；再过 `HcclCheckLogLevel(2,3)`@`0x7d6d88`。Dlog 参数 w0=3/w1=2/x2=0x1613b80/x3=0x1613cc8(line 207)/x5=tid/x6=GetMsgSimpleStr(rMsg)/x7=GetMsgSimpleStr(msg)。
+- 判读：出现=累计 64 B 不等达到 10000 的倍数（持续不一致）；缺席=累计不足 10000 或 guard 未开，**不排除**不一致；**非逐事件标记**，也不用于判 valid 魔数。
