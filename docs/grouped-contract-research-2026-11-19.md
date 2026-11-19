@@ -1833,3 +1833,24 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **C（仍未闭）**：`collect-raw.sh` 注释源 SHA 仍 v1（`de780872/a6a3c4a4/c95ae5c3`），v2 实际为 `84c9edb2/2474b487/9c2936c2`；路径已 -v2，需改注释。
 
 **修复（31）**：B（README 新 SHA/精确调用）、C（注释）、E（重生成 21 文件 SUMS 并 commit）；35 对新 helper 重核/等价证明；32 复审。**修好前 v2 未闭、无 GO/设备。**
+
+## 103. 5923f7e 本地/远端版本口径差异（需 31 统一）
+
+**33 本地实测（31 worktree 5923f7e）**：
+- `rank-env-read.py` 实际 SHA **68dc9e2c…**，代码含 `DEFAULT_CELL=...h11-observe-v2`、`DEFAULT_RUN_NAME=run-h11-observe-v2`、`--run`；**不再是硬编码 v1**。
+- `SHA256SUMS` 仍列 `a4b76676…` → `shasum -c` **20/21 OK、rank-env FAILED**。
+- `README.txt` 仍写“与 v1 同 blob（a4b76676）”，无精确 v2 调用；`collect-raw.sh` 注释源 SHA 仍 v1。
+
+**32 报告**：
+- A 已脚本级闭（caller 强制、bare FAIL/prepared PASS、wrapper）；D wrapper/validation 入 21 文件 SUMS 21/21 f5cf839e。
+- B 仍称 helper RUN 硬编码 v1、README 无调用；C 注释 v1。
+
+**差异结论**：32 看到的 helper 行为与本机 5923f7e 文件不一致（本机已含 v2 default/--run，但 SUMS/README 未同步），说明**本地与远端/审阅快照未统一**。在 31 发布单一固定树（helper 实际 SHA + 重生成 SUMS + README/模板精确 v2 调用 + collect 注释）并由 32/35 按同一 SHA 复审前，v2 不能视为固定包。
+
+**31 需做**：
+1. 确认最终 helper（保留 v2 default/--run；新 SHA 68dc9e2c 或重新冻结）；
+2. 重生成 21 文件 SUMS，确保 `shasum -c` 21/21；
+3. README/模板写精确 v2 调用与新 helper SHA，删除同 blob 描述；
+4. collect-raw 注释改 v2 源 SHA；
+5. 同步远端 execution-v2 并回报 remote/local 同一 SUMS。
+**35** 对新 helper 重跑/证明等价；**32** 按同一 commit/SUMS 复审；修好前无 GO/设备。
