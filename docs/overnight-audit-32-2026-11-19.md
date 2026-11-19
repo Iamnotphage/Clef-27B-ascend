@@ -323,6 +323,7 @@
 - **处置（与 35 一致）**：**不做设备执行**；mc2_server 在 TDT 启动阶段因 chip:5 被拒且与 op 无关，MatMulAllReduce 同属 MC2，A13 极可能同拒；为 A13 停掉健康 aa3e 无新根因信息。仅保留代码（未来平台/CANN 支持 A3 mc2_server 时首个控制臂）；CPU-only stage/plan 可选、不触设备。
 - **解释边界**：A13 仅 MC2 公共路径控制；返回→MatMulAllReduce 无 mc2_server 可用（隔离 Grouped）；同挂/同拒→平台 MC2 阻塞泛化；不外推精度、不单因。
 - **结案记录**：31 conclusion `d95a2d52…`（confirmed_environment_blocked，commit cb90bc3）；35 `98fc132`；32 `34ccde7`；服务 aa3e/s1 root 1301295 在线；入口/指标/默认/CSV 不变；无新设备臂。
+- **33 最终记录（已核）**：`docs/grouped-contract-research-2026-11-19.md` commit `87ffb96`、文件 SHA `f2326783…`，第 9–11 节确认 mc2_server/chip:5 证据与结案。**A13 更正**：`aclnnMatmulAllReduce`（V1/V2/V3）在 A3 文档不支持且本机 A3 op-info 未注册（仅 AllGatherMatmul/V2、MatmulReduceScatter/V2），运行会停在 op 查找（161001 类），不能作 MC2 路径控制；A13 代码保留未执行。若未来需要 A3 AICPU 控制，用 `aclnnMatmulReduceScatter` V1（A3 仅 AI CPU/KFC 路径，bias 非 0 不支持）与 V2 commMode="aiv"（A3 仅 aiv、通信缓冲 ≥200MB）；但 loader 直接拒绝证据已足够，当前不安排设备臂。
 
 ## 9. 本地核对副本
 
