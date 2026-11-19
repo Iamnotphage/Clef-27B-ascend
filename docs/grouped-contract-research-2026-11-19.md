@@ -1854,3 +1854,22 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 4. collect-raw 注释改 v2 源 SHA；
 5. 同步远端 execution-v2 并回报 remote/local 同一 SUMS。
 **35** 对新 helper 重跑/证明等价；**32** 按同一 commit/SUMS 复审；修好前无 GO/设备。
+
+## 104. v2 固定版 b04f8fe / dd5aac02（22/22）：B/C/D 闭合
+
+**包**：commit `b04f8fe`，SUMS `dd5aac02…`（22 行，本地 `shasum -c` **rc=0，22/22 OK**）；23 个目录项含 SUMS 自身；远端 execution-v2 22/22（31 报）。
+
+**B 已闭**：
+- v2 专用 `rank-env-read.py` 实际 SHA **68dc9e2c…**（不再称同 blob a4b76676）；默认 `CELL=...h11-observe-v2`、`RUN=<CELL>/run-h11-observe-v2`，支持 `--run` 覆盖；核心逻辑 entries+pgid+三键+alive/MISSING。
+- README/模板精确调用（显式 v2 CELL、ranks 存活期、另开只读 shell，不影响 window 环境）；fixture `helper-v2-fixture-check.txt`：默认读 v2 run、entries=2、root_pid=1347086、`--run alt-run` 生效、死 PID `alive=false/MISSING(not_alive)`、活进程三键=MISSING。
+- **35 负控**：旧 helper a4b76676 即使显式传 v2 CELL，仍打开 `cell-v2/run-h11-observe-v1/descendants.json`（rows 仅 2001），证明“仅传 v2 CELL 不够”；新 helper 需 35 做路径绑定回归（显式 v2 CELL→v2 run、rows 2002 不见 2001；默认模式→v2 run；新 SHA 重跑 18/18）。
+
+**C 已闭**：`collect-raw.sh` 标题改 `H11-observe-v2`，源注释 SHA 更新为 `84c9edb2/2474b487/9c2936c2`；功能路径 -v2。
+
+**D 已闭**：README 索引与实际文件一致；`run-h11-observe-v2.sh`、`validation-caller-bare-fail.txt`、`validation-prepared-pass.txt`、`helper-v2-fixture-check.txt`、`stage-identity` 等均在包内并入 SUMS；无 `validation-readonly-v2` 悬空引用。
+
+**A**：沿用 5923f7e 的脚本级 caller 门（bare FAIL/prepared PASS），不重开。
+
+**不变项**：plan `9c2936c2…3137`（plan_not_executed）、identity `1347086/401212026` 五 PID、argv 60/61、冻结 e38b541/8e308804/1f780bf8/101660f8/d181b15a；未重 stage/Linux40；v1/attempt-1 未改。
+
+**状态**：包内容 B/C/D 闭合；仍待 35 对新 helper 68dc9e2c 做 CPU 路径绑定回归、32 最终 readiness；**无 v2 GO/设备动作**；root cause 待 v2 实测。
