@@ -1088,18 +1088,22 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 - 设备日志现有内容：`ae_so_manager ... Get api RunAicpuKfcSrvLaunch ... success`、`ATRACE ... create object KFCtaskAndTilingTraceData/AivAicpuOpParam ...`（h11/a12/v4r1 有，a14/a15 无）、Dlog 配置/错误行。**没有任何分支选择、desc、j/T、server 字段、ctx 字段的值**；`RunAicpuRpcSrvLaunch` 字样只出现在 so 管理器取 API 行，不是分支标记。
 - Host 可见：plan JSON（rows/k/n/flags/seed/identity）、probe result（arm/flags/api_returned/sync_returned/workspace_bytes/run_id/libraries）、trace（pad/workspace/sync/gather 时间）；**无 KFC `desc/sub/P[0]/j/T`、无 server/ctx 字段**。
 
-### 73.2 四个分派路径的现有入口标记（候选，待 35 格式串确认）
+### 73.2 标记判别表（类型/前提/窗口可达/支持与排除）
 
-| 路径 | 现有标记/入口 | 触发条件 | 能排除 | 当前可用性 |
-| --- | --- | --- | --- | --- |
-| RpcSrvLaunch→RunRpcServerApi | `ReadAddrMsg` 超时路径：Dlog line 360 + `PrintAllHcclMsgArea` + `PrintTimeOutSqInfo`（0x7d8d24-0x7d8d9c） | 无有效 HcclMsg，20 s×w24 到期 | 若出现，排除 TwoStage/MC2，指向 API 路径且无消息 | 需日志级别开启；现有 cell 未见 |
-| RpcSrvLaunch→TwoStageWait | `CheckRcvWorkMsg` 超时日志（Dlog line 285，0x7d7408-0x7d7450）；PostMsg 内 `PrintMsg` | sendCnt < ctx+352 每 6 s；PostMsg 每次 | 若出现，指向 stage-wait ack 路径 | 需日志级别开启；现有 cell 未见 |
-| RpcSrvLaunch→OneStage/Unfold | 函数入口/错误 Dlog（格式串待 35）；Unfold 与 TaskType=6 相关 | 进入分支/错误 | 指向 OneStage/Unfold | 格式串/级别待 35 |
-| MC2 / CommKfc | `MC2TraceUtils::Submit` 的 ATRACE 对象；`CommKfcDispatcher` 日志 | MC2/CommKfc 提交 | 与 KFC API/stage-wait 区分 | ATRACE 对象名现有 cell 可见（KFCtaskAndTiling 仅 KFC 路径）；CommKfc 无现有命中 |
+| 标记 | 类型 | 调用者/前提 | 180/240 s 窗内可达？ | 出现支持 | 缺失能否排除 | 证据 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `ReadAddrMsg` 超时日志（line 360）+ `PrintAllHcclMsgArea`+`PrintTimeOutSqInfo` | **条件失败/超时**，非分支入口 | `RunRpcServerApi→ReadAddrMsg`；无有效 HcclMsg，`elapsed > w24*20 s` | **是**：阈值 20/40/80/160 s；180 s 窗含 20/40/80/160，240 s 同（320 s 未到）；1280 s 条件返回不在窗内 | API 路径被进入**且**在该时刻仍无有效消息（或 turn 不匹配） | **否**：消息到达后算法/`AddTask` 卡住不触发；日志被抑制也不触发；缺席不能排除 API 路径 | §62.2、0x7d8d24-0x7d8d9c |
+| `CheckRcvWorkMsg` 超时日志（line 285） | **条件失败/超时**，非分支入口 | `RunRpcServerTwoStageWait` 0x7c7f20；`sendCnt(+50) < ctx+352` 持续 10001 次/6 s | **是**：每 6 s 一次；条件满足则无日志 | TwoStageWait 被进入**且**等待条件未满足（`ctx+352>255` 时必现） | **否**：sendCnt 追平即无日志；缺席不能排除 TwoStageWait | §66.5、0x7d7408-0x7d7450 |
+| `PostMsg` 内 `AivAicpuOpParam::PrintMsg` | **分支内必经**（TwoStage 第一次 ack；第二次受 `GetRspPolicy` 条件） | TwoStageWait 0x7c7f44/0x7c7f90；第一次在 `ActiveRecordMain` 成功后无条件 | **通常可达**：CheckRcvWorkMsg 最长 6 s 后继续，随后执行/PostMsg；若算法本身阻塞则不可达 | TwoStageWait 被进入且执行到 ack | **否**：PrintMsg 是否有 Dlog 输出/级别未证；算法阻塞也会缺席 | §66.1、0x7d6800/0x7c24e0 |
+| RpcSrvLaunch 的 `PrintTilingData`/`PrintMC2AicpuContext` | **共享 helper/前置必经**（分支前） | RpcSrvLaunch 0x7618a4/0x7618b0，所有子分支共用 | 是 | 说明进入 RpcSrvLaunch（相对 MC2/CommKfc），**不区分子分支** | 否（共享标记） | 0x7618a4/0x7618b0 |
+| `ATRACE ... create object KFCtaskAndTilingTraceData/AivAicpuOpParam` | **共享 KFC 路径标记**（对象创建） | KFC task/param 区被使用；Grouped/A12/H11/H4K 有，A14/A15 无 | 是（现有 cell 已见） | KFC 路径（vs MRS） | 否：ATRACE 配置/默认级别与对象创建时机未证；不能分 API/TwoStage/MC2 | 现有 device 日志 |
+| `ae_so_manager ... Get api RunAicpuKfcSrvLaunch ... success` | **共享入口**（KFC kernel 取 API） | 任意 KFC 启动 | 是（现有 cell 已见） | KFC kernel 启动，不区分子分支 | 否 | 现有 device 日志 |
+| OneStage/Unfold 入口/错误 Dlog | 待 35 格式串 | 进入对应分支/错误 | 待定 | 若唯一，指向对应分支 | 待定 | 35 rodata |
+| MC2TraceUtils/CommKfc 标记 | 待 35 格式串 | MC2/CommKfc 提交 | 待定 | 指向 MC2/CommKfc | 待定 | 35 rodata |
 
-**已有可用的最小替代观测**：
-- KFC vs MRS：`KFCtaskAndTilingTraceData`/`AivAicpuOpParam` ATRACE 对象是否创建（Grouped/A12/H11/H4K 有，A14/A15 无）——只区分“KFC 路径 vs MRS”，**不区分 API/TwoStage/MC2**。
-- 若未来允许一次带日志级别的 cell：优先用上表 1/2 的超时日志区分 API 与 TwoStage；这两个标记不需要读设备内存。
+**缺失归因限缩**：历史 cell 的 plog 只证明 `ASCEND_GLOBAL_LOG_LEVEL`/`ASCEND_GLOBAL_EVENT_ENABLE`/`ASCEND_MODULE_LOG_LEVEL` 为空、`HCCL_DEBUG_CONFIG=0x0`；这**只能证明未采到/按默认配置运行**，默认级别值与标记自身级别尚缺（31 文档检索归档另交）。因此**“日志级别未开”不作为已证事实**；标记缺失不能单独排除任何路径，除非前提（超时/失败）与采集级别都被证明满足。
+
+**已有最小替代**：`KFCtaskAndTilingTraceData`/`AivAicpuOpParam` ATRACE 对象有/无只区分 KFC vs MRS，不能分 API/TwoStage/MC2。
 
 ### 73.3 精确开关/命令（只列有来源的）
 
@@ -1109,9 +1113,12 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 
 ### 73.4 最小有限观测设计（条件式，当前不执行）
 
-1. **静态可完成**：用 ATRACE 对象集合确认 KFC vs MRS（已完成）；用 F1/F8-F10 的分派谓词做假设表。
-2. **若未来授权一次带日志的 cell（非本任务）**：只开现有全局/模块日志变量（取值待 31 文档），采集 device/plog，按 73.2 的 1/2 标记判定 API vs TwoStage；若两者都无标记，再考虑 OneStage/Unfold 格式串。
-3. **若字段值必须直接读**：仅能通过新增 host 侧 launch 日志或设备侧代码埋点（均属代码变更，需单独授权），**不是现有接口**；不把“快照”写成可执行命令。
+1. **静态可完成**：ATRACE 对象集合确认 KFC vs MRS（已完成）；F1/F8-F10 分派谓词做假设表。
+2. **若未来授权一次带日志的 cell（非本任务）**：只开现有全局/模块日志变量（取值以 31 同版文档归档为准，当前不猜），按 73.2 的**正向标记**判定：
+   - API：20/40/80/160 s 超时日志（180/240 s 窗内可触发）；出现即支持 API 路径且当时无有效消息；
+   - TwoStage：`CheckRcvWorkMsg` 6 s 超时日志（等待未满足时）；或 `PostMsg` 的 `PrintMsg`（若格式串/级别证明有输出）；
+   - 若两者均无正向标记，**不得排除**任一（前提未满足或未采集）；再考虑 OneStage/Unfold 的格式串。
+3. **若字段值必须直接读**：仅能通过新增 host 侧 launch 日志或设备侧代码埋点（均属代码变更，需单独授权），**不是现有接口**；不把“快照”写成可执行命令。设备内存无受支持只读接口的部分继续缺测。
 - 当前无新 GO/SSH/设备动作；root cause 仍 unresolved。
 
 ## 74. abi-preflight11（88f9151，SUMS 50f82839）：P1/P4 补齐与 P3 范围
@@ -1129,6 +1136,7 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 ## 75. 观测方案优先级的当前状态
 
 - §73 的现有标记仍有效；当前优先“可用观测接口/开关/已有分支标记”，**不再为 P3 或 Write*/helper 追加穷尽反汇编**。
-- 35 正在整理日志路径标记表，并将给出**最小 rodata 请求**（分支 Dlog 格式串/级别）；收到后由 33 合并为一次 abi12 请求交 31，避免多头取数。
+- 35 已定位地址、正优先直接发**最小 rodata 地址清单**（不等文档归档）；收到后 33 立即合并为一次 abi12 交 31，字符串取证与报告并行。
+- 31 的同版版本/开关文档检索归档另交，不为此重复请求；在文档到位前不写精确 env/级别/bit 值。
 - 历史 cell 运行值缺测口径保持（F1–F12 无现成读取方式）；设备 AICPU 内存无可证只读接口；无新设备 GO/SSH。
-- 若 rodata 显示某路径无唯一标记，则明确记“无现有标记”，不把观测愿望写成命令。
+- 若 rodata 显示某路径无唯一标记，则明确记“无现有标记”，不把观测愿望写成命令；最小计划只选**已证可触发**的标记。
