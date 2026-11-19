@@ -1490,3 +1490,101 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - 无第二棵树/第二 restore；异常按 window 既有恢复门处理（31 owner）。
 
 **当前不执行、不发 GO、设备暂停**；本计划仅绑定真实 plan 的可审核步骤，待 20/32 审阅。
+
+## 86. 执行准备四项具体步骤（交 31 补齐；无 GO）
+
+**绑定**：plan `c95ae5c3…`（01e8631/SUMS cf59ed66）、`plan_not_executed`；窗口/runner/adapter 冻结不变；plan JSON **不是** window 的输入，window 由 argparse 重新生成 plan；`--execute` 才执行。
+
+### 86.1 完整 window --execute 模板（env 先导出）
+
+```bash
+LOGDIR=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/logs-h11-observe-v1
+mkdir -p "$LOGDIR"
+export ASCEND_GLOBAL_LOG_LEVEL=0
+export ASCEND_PROCESS_LOG_PATH="$LOGDIR"
+unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
+env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='   # 启动前自检
+
+cd /workspace/yangchen/Clef-27B-ascend
+source scripts/activate_env.sh
+
+python runtime/grouped_mmar/supervised_probe_window.py \
+  --execute \
+  --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1 \
+  --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json \
+  --stop-script /tmp/d0cc/d0_stop.py \
+  --arm H11 \
+  --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so \
+  --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-temp-h11-observe-v1 \
+  --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-out-h11-observe-v1 \
+  --k 256 --n 512 --rows 128 --seed 20261119 \
+  --master-port 29531 --comm-timeout 90 --child-timeout 240 \
+  --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py \
+  --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh \
+  --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh \
+  --service-root /workspace/yangchen/Clef-27B-ascend \
+  --model-dir /workspace/yangchen/models/Clef-27B \
+  --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v1 \
+  --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
+  --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
+```
+- `--port 18143`、`--clean-env-expect`、`--expect-stop-sha d6d49d…`、`--stop-timeout 120`、`--restore-timeout 900`、`--python` 用默认。
+- `--official-start/--activate/--service-root/--model-dir` 由 restore_argv 推得，31 预检确认实路径。
+
+### 86.2 raw 采集命令/时间关联/SUMS
+
+```bash
+START=$(date +%s); date -Is > meta/start-time.txt
+# 运行后（成功/超时/失败均执行）
+mkdir -p archive/{cann-plog,device,cell,meta}
+cp -a "$LOGDIR"/. archive/cann-plog/
+# device：沿用既有 cell 的 device 日志采集路径/脚本；按 START/END 时间窗复制**完整文件**，不按 PID 过滤
+find /root/ascend/log -type f -newermt "@$START" -print0 | tar --null -T - -cf archive/device/device-logs.tar
+cp -a run-h11-observe-v1/{window.json,descendants.json,child.stdout,child.stderr,stop.json,exec.log} archive/cell/ 2>/dev/null || true
+cp -a run-h11-observe-v1/*result*.json run-h11-observe-v1/*trace*.jsonl archive/cell/ 2>/dev/null || true
+cp -a plan-h11-observe-v1.json root-identity-h11-observe-v1.json env-sidecar-h11-observe-v1.json archive/meta/
+( cd archive && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS )
+```
+- device 路径以 31 既有采集脚本为准；`find` 仅列时间窗候选，复制完整文件；不按 PID 过滤。
+- `correlation.txt` 另存：rank/device、pid/tid、file:line、时间、stream/task/opIdx；未知标 unknown。
+
+### 86.3 rank env 3 白名单读取
+
+```bash
+# 从 window/descendants 取 torchrun/rank PID（不猜）
+python3 - <<'PY'
+import json
+d=json.load(open('run-h11-observe-v1/descendants.json'))
+print([x['pid'] for x in d.get('records',[]) if 'run_probe.py' in ' '.join(x.get('cmdline',[]))])
+PY
+for pid in <rank_pids>; do
+  echo "== $pid $(cat /proc/$pid/comm 2>/dev/null)"
+  tr '\0' '\n' < /proc/$pid/environ | grep -E '^(ASCEND_GLOBAL_LOG_LEVEL|ASCEND_PROCESS_LOG_PATH|CLEF_WINDOW_OWNER)='
+done > meta/rank-env.txt
+```
+- 只读 `/proc/<pid>/environ`，只取三键；缺失/不符 → `env_verify=missing/mismatch`，该次观测按缺测。
+- 不 dump 其他 env、不 attach、不发信号。
+
+### 86.4 执行前重扫清单
+
+```bash
+cat root-identity-h11-observe-v1.json
+ps -o pid,ppid,pgid,sid,stat,cmd -p 1337814,1337961,1337962,1337979,1337980
+curl -s http://127.0.0.1:18143/health; curl -s http://127.0.0.1:18143/v1/decide/info
+python3 - <<'PY'   # 29531 TCP FREE（无 ss 时）
+import socket
+s=socket.socket(); s.bind(('127.0.0.1',29531)); print('tcp 127.0.0.1 FREE'); s.close()
+PY
+for p in run-h11-observe-v1 probe-temp-h11-observe-v1 probe-out-h11-observe-v1 restore-h11-observe-v1; do
+  test ! -e "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/$p" && echo "ABSENT $p"
+done
+test -w "$LOGDIR" && echo "LOGDIR writable"
+sha256sum /tmp/d0cc/d0_stop.py /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py \
+  /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
+  /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json \
+  /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/{supervised_probe_window.py,run_probe.py,probe_adapter.so,binding_probe.cpp,manifest.json}
+```
+- 任一 identity/boot/starttime/五 PID/health/29531/目录/权限/SHA 不符 → **停止，不执行**；记录到 `meta/pre-exec.txt`。
+- 服务未重启判据：starttime 仍 `400405818`、boot_id 不变；restore 前不重启服务。
+
+**当前不执行、无 GO；以上交 31 补齐实路径/既有采集脚本后由 20/32 审。**
