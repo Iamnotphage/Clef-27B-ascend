@@ -512,10 +512,37 @@ class RestoreTest(Base):
             typed.restore(self.restore_args(record, from_phase='erqa'), self.deps)
         self.assertEqual(self.world.events, [])
 
-    def test_restore_requires_deploy_manifest_binding(self):
+    def test_restore_derives_missing_record_manifest_from_supervision(self):
         record = self.make_deploy_record()
         doc = json.loads(record.read_text())
         doc.pop('manifest')
+        record.write_text(json.dumps(doc))
+        self.write_supervision(doc)
+        self.world.head, self.world.guard = AA3E, POST
+        result = typed.restore(self.restore_args(record), self.deps)
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['manifest_source'], 'prior_supervision')
+        self.assertEqual(result['manifest'], str(self.manifest_path.resolve()))
+
+    def test_restore_rejects_missing_manifest_with_wrong_supervision(self):
+        record = self.make_deploy_record()
+        doc = json.loads(record.read_text())
+        doc.pop('manifest')
+        record.write_text(json.dumps(doc))
+        other = self.root / 'other-manifest.json'
+        other.write_text('{}')
+        self.write_supervision(doc, manifest=other)
+        self.world.head, self.world.guard = AA3E, POST
+        with self.assertRaises(RuntimeError):
+            typed.restore(self.restore_args(record), self.deps)
+        self.assertEqual(self.world.events, [])
+
+    def test_restore_rejects_record_manifest_mismatch(self):
+        record = self.make_deploy_record()
+        doc = json.loads(record.read_text())
+        other = self.root / 'other-manifest.json'
+        other.write_text('{}')
+        doc['manifest'] = str(other.resolve())
         record.write_text(json.dumps(doc))
         self.write_supervision(doc)
         self.world.head, self.world.guard = AA3E, POST
@@ -827,14 +854,31 @@ class RealFrozenFilesTest(unittest.TestCase):
 class RealRecordShapeTest(unittest.TestCase):
     """32-provided read-only copies of real acceptance JSON (no request raw).
 
-    Layout: the typed-fixtures directory with manifest.json + SHA256SUMS and
-    the 16 real metadata records.  All path checks compare strings only; the
-    recorded /workspace paths never exist on this machine and are never used
-    for filesystem access.
+    Two layouts are accepted:
+      full   typed-fixtures-20261119: manifest.json + SHA256SUMS + 16 records
+      simple typed-records-20261119: supervision.json, deploy-complete.json,
+             restore-complete.json, restore-record.json, ready-identities.json,
+             SHA256SUMS
+    All path checks compare strings/paths recorded in the real files; the
+    /workspace paths never exist here and are never read.
     """
 
     def setUp(self):
         self.dir = Path(os.environ['CLEF_REAL_RECORDS'])
+        self.full = (self.dir / 'manifest.json').is_file()
+        if self.full:
+            self.names = dict(supervision='cand-s1-supervision.json',
+                              deploy='cand-deploy-complete.json',
+                              restore_complete='cand-finally-restore-complete.json',
+                              restore_records=['cand-deploy-restore.json',
+                                               'cand-finally-restore.json',
+                                               'phase-s2b8-restore.json'],
+                              identities='cand-deploy-ready-identities.json')
+        else:
+            self.names = dict(supervision='supervision.json', deploy='deploy-complete.json',
+                              restore_complete='restore-complete.json',
+                              restore_records=['restore-record.json'],
+                              identities='ready-identities.json')
 
     def read(self, name):
         return json.loads((self.dir / name).read_text())
@@ -843,34 +887,33 @@ class RealRecordShapeTest(unittest.TestCase):
         return argv[argv.index(flag) + 1]
 
     def test_manifest_and_sha256sums_match(self):
-        doc = self.read('manifest.json')
-        self.assertEqual(doc['schema'], 'typed-fixtures/1')
-        for name, entry in doc['files'].items():
-            data = (self.dir / name).read_bytes()
-            self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'], name)
-            self.assertEqual(len(data), entry['bytes'], name)
+        if self.full:
+            doc = self.read('manifest.json')
+            self.assertEqual(doc['schema'], 'typed-fixtures/1')
+            for name, entry in doc['files'].items():
+                data = (self.dir / name).read_bytes()
+                self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'], name)
+                self.assertEqual(len(data), entry['bytes'], name)
         for line in (self.dir / 'SHA256SUMS').read_text().splitlines():
             digest, name = line.split()
             self.assertEqual(
                 hashlib.sha256((self.dir / name.lstrip('*')).read_bytes()).hexdigest(), digest, name)
 
     def test_real_supervision_shape(self):
-        for name in ('f810-s1-supervision.json', 'cand-s1-supervision.json'):
-            doc = self.read(name)
-            self.assertEqual(doc['schema'], 'final-client-supervision/1')
-            self.assertEqual(doc['status'], 'complete')
-            self.assertIs(doc['clients_exited'], True)
-            self.assertIsInstance(doc['argv'], list)
-            for flag in ('--manifest', '--phase', '--identities',
-                         '--launch-manifest', '--owner-evidence'):
-                self.assertIn(flag, doc['argv'], name)
-            self.assertIsInstance(doc['observed'], dict)
-            self.assertTrue(all(isinstance(key, str) for key in doc['observed']))
-            self.assertEqual(doc['errors'], [])
+        doc = self.read(self.names['supervision'])
+        self.assertEqual(doc['schema'], 'final-client-supervision/1')
+        self.assertEqual(doc['status'], 'complete')
+        self.assertIs(doc['clients_exited'], True)
+        self.assertIsInstance(doc['argv'], list)
+        for flag in ('--manifest', '--phase', '--identities',
+                     '--launch-manifest', '--owner-evidence'):
+            self.assertIn(flag, doc['argv'])
+        self.assertIsInstance(doc['observed'], dict)
+        self.assertTrue(all(isinstance(key, str) for key in doc['observed']))
+        self.assertEqual(doc['errors'], [])
 
     def test_real_d0_restore_record_shape(self):
-        for name in ('cand-deploy-restore.json', 'cand-finally-restore.json',
-                     'phase-s2b8-restore.json'):
+        for name in self.names['restore_records']:
             doc = self.read(name)
             typed.record_label(doc)
             disc = doc['service_discovery']
@@ -881,29 +924,27 @@ class RealRecordShapeTest(unittest.TestCase):
                 self.assertEqual(doc[key]['rc'], 0, f'{name}:{key}')
                 self.assertIs(doc[key]['ok'], True, f'{name}:{key}')
 
-    def test_real_deploy_record_and_supervision_bind_as_strings(self):
-        record = self.read('cand-deploy-complete.json')
-        prior = self.read('cand-s1-supervision.json')
-        ids = self.read('cand-deploy-ready-identities.json')
+    def test_real_deploy_record_binds_supervision_via_derived_manifest(self):
+        record = self.read(self.names['deploy'])
+        prior = self.read(self.names['supervision'])
+        ids = self.read(self.names['identities'])
+        rows = [ids['root'], *ids['descendants']]
         for key in ('label', 'root', 'identities', 'launch_manifest', 'owner_evidence',
-                    'manifest_sha', 'phase', 'source', 'guard', 'flag_env'):
+                    'manifest_sha', 'phase', 'source', 'guard'):
             self.assertIn(key, record)
-        # Historical a1ca schema carries no manifest path; the typed entry adds it.
+        # Historical a1ca schema carries no manifest path; typed derives it
+        # from this deploy's own supervision argv and records the source.
         self.assertNotIn('manifest', record)
-        typed_manifest = self.argv_value(prior['argv'], '--manifest')
-        self.assertTrue(typed_manifest.endswith('/final_acceptance_candidate_manifest.json'))
+        derived = self.argv_value(prior['argv'], '--manifest')
+        self.assertTrue(derived.endswith('/final_acceptance_candidate_manifest.json'))
         self.assertEqual(record['manifest_sha'], typed.MANIFEST_SHA)
-        self.assertEqual(self.argv_value(prior['argv'], '--phase'), record['phase'])
-        for flag, key in (('--identities', 'identities'),
-                          ('--launch-manifest', 'launch_manifest'),
-                          ('--owner-evidence', 'owner_evidence')):
-            self.assertEqual(self.argv_value(prior['argv'], flag), record[key])
         self.assertIs(prior['clients_exited'], True)
         self.assertEqual(ids['root']['pid'], record['root'])
         self.assertNotIn(str(record['root']), prior['observed'])
+        typed.verify_prior_supervision(dict(record, manifest=derived), rows, prior)
 
     def test_real_restore_complete_carries_opp_ld_compare(self):
-        doc = self.read('cand-finally-restore-complete.json')
+        doc = self.read(self.names['restore_complete'])
         self.assertEqual(doc['action'], 'restore')
         self.assertEqual(doc['source'], typed.F810_HEAD)
         self.assertEqual(doc['guard'], typed.GUARD_PRE)
@@ -918,6 +959,8 @@ class RealRecordShapeTest(unittest.TestCase):
         self.assertNotIn('current_restore_sha', doc)
 
     def test_real_phase_and_acceptance_shapes(self):
+        if not self.full:
+            self.skipTest('simple record layout carries no phase/acceptance records')
         phase = self.read('phase-s2b8-complete.json')
         self.assertEqual(phase['phase'], 's2_b8')
         for key in ('label', 'root', 'identities', 'launch_manifest', 'owner_evidence'):

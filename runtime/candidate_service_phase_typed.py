@@ -440,8 +440,8 @@ def restore(a, deps):
     require(record.get('phase') in PHASES and record.get('phase') == a.from_phase,
             'restore from-phase must equal the deployed candidate phase')
     manifest = str(a.manifest.resolve())
-    require(record.get('manifest') == manifest and record.get('manifest_sha') == a.manifest_sha,
-            'deploy record manifest binding mismatch')
+    require(record.get('manifest_sha') == a.manifest_sha,
+            'deploy record manifest SHA mismatch')
     record_label(record)
     require(a.prior_client_record is not None, 'restore requires the last candidate client record')
     ids_file = Path(record['identities'])
@@ -449,12 +449,18 @@ def restore(a, deps):
     ids = read(ids_file)
     rows = [ids['root'], *ids['descendants']]
     prior = read(a.prior_client_record)
-    verify_prior_supervision(record, rows, prior)
+    recorded = record.get('manifest')
+    bound = recorded if recorded is not None else argv_value(prior.get('argv') or [], '--manifest')
+    require(Path(bound or '').resolve() == Path(manifest),
+            'deploy record manifest binding mismatch')
+    manifest_source = 'deploy_record' if recorded is not None else 'prior_supervision'
+    verify_prior_supervision(dict(record, manifest=manifest), rows, prior)
     label = f'd0-restore-{utc_stamp()}-{uuid.uuid4().hex[:8]}'
     plan = dict(action='restore', phase=a.from_phase, label=label, run_dir=str(run_dir),
                 deploy_record=str(a.deploy_record), deploy_record_sha=a.deploy_record_sha,
                 deploy_label=record['label'], deploy_root=record['root'],
                 manifest=manifest, manifest_sha=a.manifest_sha,
+                manifest_source=manifest_source,
                 ready_pids=[row['pid'] for row in rows], source=F810_HEAD, guard=GUARD_PRE,
                 client_gate='prior:' + str(a.prior_client_record))
     if not a.execute:
@@ -500,6 +506,7 @@ def restore(a, deps):
                       source=F810_HEAD, guard=GUARD_PRE, deploy_record=str(a.deploy_record),
                       deploy_label=record['label'], deploy_root=record['root'],
                       manifest=manifest, manifest_sha=a.manifest_sha,
+                      manifest_source=manifest_source,
                       restore_env=restored.get('restore_env'),
                       identities=str(run_dir / 'restored-identities.json'),
                       launch_manifest=str(label_dir / 'launch-manifest.json'),

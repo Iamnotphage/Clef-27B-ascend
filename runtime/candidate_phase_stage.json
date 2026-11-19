@@ -30,11 +30,11 @@
     },
     "runtime/candidate_service_phase_typed.py": {
       "role": "typed S2/ERQA entry (new)",
-      "sha256": "d93ee93463454db56673a3aefe261d1b598b52acd588dff67216c430370588d6"
+      "sha256": "abb7c383deee092ff6037d09400735981b6550cd8f761d92dcb1d901715b1bc5"
     },
     "runtime/test_candidate_phase_typed.py": {
       "role": "typed unit tests (new)",
-      "sha256": "245fdc5cc693c49d5e3b19f996a97f4a8b2c04d8b2de842399e31ed86bb38e9a"
+      "sha256": "4681a7e10ad20f7f77e76b2c5f8a4275fb15acedacd5c1f98ef08c03e168c743"
     },
     "runtime/test_candidate_phase_typed_integration.py": {
       "role": "typed real-method integration (new)",
@@ -46,15 +46,15 @@
     },
     "runtime/candidate_phase_cpu_evidence.json": {
       "role": "local CPU evidence (new)",
-      "sha256": "4a74fee85d864c11b20ea2e42ad9b9504b6166a2857d57d17efcd67706140c9e"
+      "sha256": "a00cf2bceda15ac595133a485210fe11fbc290372356146ae8f31f4d91aa5861"
     },
     "runtime/candidate_phase_variant.diff": {
       "role": "typed-vs-a1ca minimal diff (new)",
-      "sha256": "cae4dfb5e75813dead8a01e6589d1422b0f433727a4260f566d87a8cd489781b"
+      "sha256": "8b96aa8935a6da91e3c791386542aec40b70cd737e39eab893d7f43e1775aca3"
     },
     "docs/candidate-s2-erqa-phases-2026-11-19.md": {
       "role": "review packet (new)",
-      "sha256": "41dbe33d0e805e5a97b8f005fe81a4d765c2c08d9e31f36d195430a6f6a9318c"
+      "sha256": "9191eaf21da3fd6fb31628714353ee8d7bc12bbeb2af0c1db9799d66c4f5bf67"
     },
     "runtime/final_service_phase.py": {
       "role": "frozen phase v3 (unchanged)",
@@ -136,7 +136,8 @@
     "record_binding": [
       "label",
       "root",
-      "manifest",
+      "manifest (record, else derived from this deploy supervision argv)",
+      "manifest_source",
       "manifest_sha",
       "phase",
       "identities",
@@ -161,17 +162,18 @@
   },
   "cpu_evidence": {
     "path": "runtime/candidate_phase_cpu_evidence.json",
-    "sha256": "4a74fee85d864c11b20ea2e42ad9b9504b6166a2857d57d17efcd67706140c9e",
+    "sha256": "a00cf2bceda15ac595133a485210fe11fbc290372356146ae8f31f4d91aa5861",
     "suites": {
       "a1ca_unit": 18,
       "manifest": 8,
-      "typed_unit": 58,
+      "typed_unit": 60,
       "a1ca_real_integration": 4,
       "typed_real_integration": 6
     },
     "skipped": 0,
     "real_records": {
-      "dir_name": "typed-fixtures-20261119",
+      "full_layout_dir_name": "typed-fixtures-20261119",
+      "simple_layout_dir_name": "typed-records-20261119",
       "manifest_sha256": "590ec04c88d7043a2081b887da137637775a8da65be5ac3455b526adf4e3fa41",
       "sha256sums_sha256": "1242319da380bfe39990a3570fa294cad2a486eb7ec6bc63452f89789e2b9540",
       "files_verified": 17
@@ -253,6 +255,6 @@
   "pending_device": [
     "31 stages this commit under a new /workspace/yangchen/work/final-acceptance-cc34-<commit>/ dir and verifies every file SHA",
     "31 runs each phase plan-only first, then --execute; per-phase deploy/v5/restore with fresh dirs and deadlines",
-    "32 re-checks the first typed complete.json for manifest/current_restore/current_restore_sha fields"
+    "32 re-checks the first typed complete.json for manifest/manifest_source/current_restore/current_restore_sha fields"
   ]
 }

@@ -36,10 +36,13 @@
    `current_restore` 必须 SHA 匹配、四检 `rc=0/ok=true`、label 与 `service_log_root/<label>/api.pid`
    等于该记录 root（兼容 d0 的 `label`/`service_label` 两种真实字段）。
 3. **restore 绑定**：deploy record 必须 `action=deploy/ok/source=aa3e/guard=post`，
-   `phase == from_phase`，`label` 精确，`manifest`+`manifest_sha` 等于本次入口参数，
-   `root` 等于 ready identities 的 root；`prior-client-record` 必须是**本次 deploy 的最后客户端组**：
-   `clients_exited=true`，argv 的 `--phase`、`--manifest`、`--identities`、`--launch-manifest`、
-   `--owner-evidence` 与 deploy record 逐一相等，且 protected root 不在 `observed` 中。
+   `phase == from_phase`，`label` 精确，`manifest_sha` 等于本次入口参数；`manifest` 路径优先取
+   deploy record 自身，历史 a1ca 记录缺失该字段时从**本次 prior supervision 的 `--manifest`** 推导，
+   两种来源都必须解析等于入口 manifest，并在 plan/complete 记录 `manifest_source`
+   （`deploy_record` / `prior_supervision`）；`root` 等于 ready identities 的 root；
+   `prior-client-record` 必须是**本次 deploy 的最后客户端组**：`clients_exited=true`，argv 的
+   `--phase`、`--manifest`、`--identities`、`--launch-manifest`、`--owner-evidence` 与 deploy record
+   逐一相等，且 protected root 不在 `observed` 中。
 4. **restore 收尾**：d0 `restore.json` 必须四检 `rc=0/ok=true`、`service_discovery.api_identity.pid`
    等于新 root；`restore_prod` 的 OPP/LD 比较必须 `match=true`；`complete.json` 输出
    `current_restore` + `current_restore_sha` 作为下一 phase 的 fresh f810 s1 记录。
@@ -57,12 +60,12 @@ deploy 旧服务的 prior client 允许来自之前完成的不同 phase，**不
 | 候选 manifest（不改） | `runtime/final_acceptance_candidate_manifest.json` | `31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4` |
 | manifest 生成器 | `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |
 | manifest 测试 | `runtime/test_candidate_manifest.py` | `8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a` |
-| **typed 入口（新增）** | `runtime/candidate_service_phase_typed.py` | `d93ee93463454db56673a3aefe261d1b598b52acd588dff67216c430370588d6` |
-| typed 单元测试（新增） | `runtime/test_candidate_phase_typed.py` | `245fdc5cc693c49d5e3b19f996a97f4a8b2c04d8b2de842399e31ed86bb38e9a` |
+| **typed 入口（新增）** | `runtime/candidate_service_phase_typed.py` | `abb7c383deee092ff6037d09400735981b6550cd8f761d92dcb1d901715b1bc5` |
+| typed 单元测试（新增） | `runtime/test_candidate_phase_typed.py` | `4681a7e10ad20f7f77e76b2c5f8a4275fb15acedacd5c1f98ef08c03e168c743` |
 | typed 真实方法集成（新增） | `runtime/test_candidate_phase_typed_integration.py` | `cfda281d694afc1d6f09c0b7bba4b7e6dd6045ce586e9de42faaa266d32ebb76` |
 | 本地证据 harness（新增） | `runtime/run_typed_phase_evidence.py` | `25735efbf988a406f4df2555a25288112d2fb3b155c802bc8dcd91285785dd3c` |
-| 本地 CPU 证据（新增） | `runtime/candidate_phase_cpu_evidence.json` | `4a74fee85d864c11b20ea2e42ad9b9504b6166a2857d57d17efcd67706140c9e` |
-| 相对 a1ca 的 diff（新增） | `runtime/candidate_phase_variant.diff` | `cae4dfb5e75813dead8a01e6589d1422b0f433727a4260f566d87a8cd489781b` |
+| 本地 CPU 证据（新增） | `runtime/candidate_phase_cpu_evidence.json` | `a00cf2bceda15ac595133a485210fe11fbc290372356146ae8f31f4d91aa5861` |
+| 相对 a1ca 的 diff（新增） | `runtime/candidate_phase_variant.diff` | `8b96aa8935a6da91e3c791386542aec40b70cd737e39eab893d7f43e1775aca3` |
 | stage 清单（新增） | `runtime/candidate_phase_stage.json` | 由提交后 SHA 记录 |
 | 本文件（新增） | `docs/candidate-s2-erqa-phases-2026-11-19.md` | 由提交后 SHA 记录 |
 | frozen f810 manifest | cc7 `runtime/final_acceptance_manifest.json` | `0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2` |
@@ -162,13 +165,13 @@ python3 runtime/run_typed_phase_evidence.py \
   --out runtime/candidate_phase_cpu_evidence.json
 ```
 
-结果（`candidate_phase_cpu_evidence.json`，SHA `4a74fee8…`）：
+结果（`candidate_phase_cpu_evidence.json`，SHA `a00cf2bc…`）：
 
 | 套件 | 结果 |
 | --- | --- |
 | 原 a1ca 单元测试 | 18/18 通过 |
 | manifest 白名单/冻结 base | 8/8 通过（含真实 0338f87b） |
-| typed 单元测试 | **58/58 通过，0 跳过**（含 6 项 32 真实记录 shape/绑定测试） |
+| typed 单元测试 | **60/60 通过，0 跳过**（含 6 项 32 真实记录 shape/绑定测试） |
 | 原 a1ca 真实方法集成 | 4/4 通过（真实 SourceControl/AB + 临时 installer） |
 | typed 真实方法集成 | 6/6 通过（含 S2B8/S2B16 exact argv、restore 交接、链式 ERQA、CLI、恢复） |
 
@@ -182,8 +185,10 @@ mkdtemp 内；外部进程守卫拒绝 `ssh/scp/sftp/curl/npu-smi` 与任何 `/w
 
 - `supervision.json`：schema/argv/`clients_exited`/`observed` 与实现一致；candidate S1 的 argv 与
   `cand-deploy-complete.json` 的 phase/identities/launch-manifest/owner-evidence 字符串完全一致；
-- 历史 a1ca `complete.json` **没有** `manifest` 路径字段（typed 新增该字段），restore 绑定因此只接受
-  typed deploy 记录；旧 S1 阶段继续用 a1ca 入口；
+- 历史 a1ca `complete.json` **没有** `manifest` 路径字段（只有 `manifest_sha`）。typed restore 在缺失时
+  从本次 deploy 的 v5 supervision `--manifest` 推导并强制等于入口 manifest，plan/complete 记录
+  `manifest_source=prior_supervision`；typed 自身记录优先用 `deploy_record` 来源。32 finding 已按此关闭，
+  两种来源都跑真实数据绑定测试（`typed-records-20261119` 与 `typed-fixtures-20261119` 两种布局均通过）；
 - d0 `restore.json`（deploy/finally/phase s2b8）的 `label`、`service_discovery.api_identity`、
   `api_pid`、四检 `rc/ok` 与实现一致；
 - finally restore complete 的 OPP/LD compare `match=true`、counts 9/12、expected SHA
@@ -199,8 +204,10 @@ mkdtemp 内；外部进程守卫拒绝 `ssh/scp/sftp/curl/npu-smi` 与任何 `/w
 3. 四 phase 的 manifest/base/phase v3 三方逐项相等；仅两 env 键与 forbidden flag 差异。
 4. restore 的 deploy record + prior supervision 绑定字段齐全，旧 S1 helper 的“仅 record 退出不绑 label”缺口已关闭。
 5. `candidate_phase_cpu_evidence.json` 五套件全过；隔离守卫与 mkdtemp 约束符合要求。
-6. 32 真实记录副本已逐 SHA 校验并驱动 `RealRecordShapeTest` 6 项实际运行；设备新产生的 typed
-   `complete.json` 必须含 `manifest`、`current_restore`、`current_restore_sha`，31 首次执行后由 32 复核这三项。
+6. 32 真实记录副本已逐 SHA 校验并驱动 `RealRecordShapeTest` 6 项实际运行；32 提出的 a1ca
+   deploy record 缺 `manifest` finding 已按“从本次 v5 supervision `--manifest` 推导”关闭，
+   `manifest_source` 明示来源。设备新产生的 typed `complete.json` 必须含
+   `manifest`/`manifest_source`、`current_restore`、`current_restore_sha`，31 首次执行后由 32 复核。
 
 ## 7. 结论边界
 
