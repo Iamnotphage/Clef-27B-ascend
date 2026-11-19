@@ -1634,3 +1634,16 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 4. 正向标记才计数，缺席不排除；设备 AICPU 内存无可证只读接口。
 
 **状态**：命令/计划准备**闭合**；**仍无 GO/未执行 cell/无设备动作**；是否执行由 20 授权。现有 `c95ae5c3` preflight、ABI 结论与 §15 结论保持不变；root cause 仍 unresolved。
+
+### 91.1 rank-env CPU 替身验证并入（条件 1 关闭）
+
+35 artifact `h11-rank-env-cpu-standin-2026-11-19.md` SHA-256 `e0511e91…`（4,363 B；本地已核）：
+- helper `a4b76676…`（39f30b9 与 a31e044 blob 相同）、window `1f780bf8`；**18/18 PASS**。
+- entries+pgid：两 rank 独立 PGID 1001/1002 均捕获，ppid/starttime 正确；fallback `scan_pgid(root_pid)` 仅发现 root pgid 的 1004，独立 PGID 的 1005 不出现 → **独立 PGID 只能靠 entries**。
+- 三白名单：GLOBAL_LOG_LEVEL/PROCESS_LOG_PATH/CLEF_WINDOW_OWNER 精确复现；CANARY_SECRET/canary-value/1005 leak 均不输出。
+- 缺失：缺键→`MISSING`；已退出→`alive=false`+`MISSING(not_alive)`；不推断。
+- 只读：源码无 os.kill/signal/subprocess/torch；patch os.kill 记录 0 次。
+- 窗口 registry：start 写 entries、无新 entry 不重写、stop 强制写且保留 schema/root_pid；entries 空/缺失→空行集 rc0，记缺测而非“无 rank”。
+- 未改源/未改 31 包；无设备动作。
+
+**结论**：§91 条件 1 关闭；剩余条件为 AICPU daemon env/guard 映射、执行前 preflight-rescan、正向标记才计数。仍无 GO/未执行 cell。
