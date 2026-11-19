@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "46344b9e06190efd617fd8defcd62ac8b9be82d8eedc45a2938e2f20d5d183bb",
-      "bytes": 35171
+      "sha256": "31940aa6870eed2c220ad715d7cdd2d959c0dd36809362c37ab0c6f2d1e338e8",
+      "bytes": 35687
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -474,6 +474,16 @@
       "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
       "candidate_freeze_after_v3": {"status": "CPU-only shape guard for later review; NOT the v3 execution tuple", "run_probe.py": "f7c5f860", "test_probe_cpu.py": "d7b6d0c4", "cpu": "74/74 (25+9+40; 7 Linux-only skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
       "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
+      "v3_result": {
+        "status": "executed on the locked tuple; diagnostic success only, not a production or precision-pass claim",
+        "tuple": "cdc8324 / run_probe 103b9775 / test f6fe2c99 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan 2fcd101b / identity 1330921/400000296",
+        "device": "both ranks pad {127 -> 128, pad_value 1.0}, row_block 0 (0,64) / 1 (64,128), gather 1.22224/1.21543 ms, workspace 17,170,432 B",
+        "numeric": "reduced max_abs=0.0, mean_abs=0.0, bit_equal=true; equivalence shape [127,512] with the same zero diff; diagnostic_gate within_bounds=true, status=diagnostic_only_not_an_official_gate; finite/both_finite/numeric_pass/pass true; numeric_error null",
+        "window": "child rc0, timed_out false, survivors []; ok=false only from the maps sampling artifact; cleanup_final killed with empty sets",
+        "restore": "branch aa3e-noop, root 1334752/400276164, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-small-v3-cell SUMS 17/17 (d7e8b90f, 31 commit 1d1daef); window f913ceef, rank0 result 34d57699/trace 267765b9, rank1 result 59162047/trace 565424b8, restore e1273081/03dacf1b",
+        "scope": "rows 127 / pad 128 / crop 127, K=256, N=512 small shape. The zero diff is a diagnostic fact for this cell only; it does not name a precision pass, does not extrapolate to the large shape or production, and the shape-guard candidate 8807597 was not used by this run"
+      },
       "v1_result": {
         "plan_sha256": "99db4369",
         "failure": "NameError: name 'k' is not defined at the old run_probe.py:386 in the A15 tail-pad branch; no pad_ready/gather/equivalence/numeric",
