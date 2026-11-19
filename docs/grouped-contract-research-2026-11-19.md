@@ -869,3 +869,13 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 ### 65.5 OP4 状态
 
 生产者候选现为：`0x7d6850`（AivParam +44 写者，函数体未证）、`GenMsgByTaskParam`（+44/+50..51 常量）、host 侧未知写者。**HcclMsg +48 的写者仍未找到**；0x7d6850 是否写 +48 待其函数体。
+
+### 65.6 与 35 的 abi7 字节表合并（7b639dd / b83171ba）
+
+35 的表与 §63 一致：gate/consume 为 `slot+48` 的 4 B 整字（覆盖 48–51）；GenMsg `+44` 4 B、`+48/+49` 1 B、`+50` u16（覆盖 50–51）；`CopyAndCheckApiMsg` 64 B bulk；getter 各 1 B；abi7 写者 `0x7d6850` 在 `+44` 写 4 B。统一表述为“按 valid 整字访问，未见独立字节 counter 操作”，撤回“libccl 唯一写者”。
+
+**对象关系边界**：
+- `param = [ctx+184] + u32[ctx+192]` 与 `recv = param + (u16[ctx+196]<<6)` 的**算术关系**已由 Init 零分支（`server+0x10=y+j`、`server+0x18=y+j+64T`）与 getter/ReadWorkMsg 指令证明；这不是头文件 offsetof，而是二进制算术证据。
+- 仍未证：j（`KFCTask+96`）的值与 Init 分支；`slot=[server+8]+64*turn` 与 `param=y+j` 是否同一 buffer/固定关系（需 j 与 S/C）。
+- AivAicpuOpParam 的**字段级布局**只在 `+0..+64` 有 GenMsg 写证据；`+64..+776` 内部结构无字段级证据（ReadWorkMsg 仅整块拷贝 774、RcvMsg 步长 776）。不把 header 的 64 B 结构外推到 776 B。
+- 35 的 (a) 已包含在 abi8 的 `0x7d67f4-0x7d68ec` + 调用点请求中（重点是 0x7d6838-0x7d6850）；(b) 的布局部分已由现有 Init/getter 算术证据覆盖，剩余是 j/分支取值，不另开全量布局反汇编。
