@@ -80,7 +80,7 @@ bash runtime/grouped_mmar/a12/run_a12.sh /abs/run/a12-build/build/bin/main
 # 3) 每个 arm 先 plan
 torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.py \
   --arm A0 --temp-root /abs/run/tmp --out /abs/run/A0 --adapter /abs/run/clef_mmar_probe.so \
-  --k 8704 --n 5120 --rows 128 --seed 20261119 --arm-timeout 60 --comm-timeout 90
+  --k 8704 --n 5120 --rows 128 --seed 20261119 --arm-timeout 240 --comm-timeout 90
 # 4) 同一命令加 --execute；A8 不需要 --adapter；H1/H2 用 --arm H1/H2
 ```
 

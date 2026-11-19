@@ -3,9 +3,10 @@
 
 Runs exactly one command in a new session/PGID with a hard timeout, refuses to
 signal any protected service PID, verifies the source tree is byte-unchanged
-(aa3e), and optionally runs 31's restore/post-check commands afterwards.  It
-never stops, starts or signals the service itself; service lifecycle stays
-with 31.  Plan-only by default.
+(aa3e), and optionally runs an auxiliary post-check command afterwards.  It is
+child-only: official start.sh restores must use supervised_probe_window.py
+(which starts the foreground service without waiting).  It never stops, starts
+or signals the service itself; service lifecycle stays with 31.  Plan-only by default.
 """
 from __future__ import annotations
 
@@ -115,13 +116,17 @@ def build_plan(a):
         raise ValueError('run-dir must be absolute')
     if a.cwd is not None and not Path(a.cwd).is_absolute():
         raise ValueError('cwd must be absolute')
+    restore = parse_argv(a.restore_argv, 'restore-argv')
+    if restore and any('start.sh' in str(item) for item in restore):
+        raise ValueError('cell_supervisor is child-only; use supervised_probe_window.py '
+                         'for the official start.sh restore')
     return {
         'schema': 'grouped-mmar-cell-plan/1',
         'command': list(a.command), 'cwd': a.cwd, 'timeout_seconds': a.timeout,
         'source_target': str(a.source_target), 'expected_source_sha256': a.expected_source_sha,
         'source_sha256_before': actual,
         'protected_pids': sorted(parse_pids(a.protected_pid)),
-        'restore_argv': parse_argv(a.restore_argv, 'restore-argv'),
+        'restore_argv': restore,
         'post_check_argv': parse_argv(a.post_check_argv, 'post-check-argv'),
         'run_dir': str(Path(a.run_dir).resolve()),
         'no_service_lifecycle': True,

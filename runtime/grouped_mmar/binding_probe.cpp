@@ -121,10 +121,17 @@ struct Lists {
 struct RunState {
     int flags = 0;
     int id = 0;
+    // Keepalive fields are populated ONLY for the flag under test.  A H1 arm
+    // must not accidentally keep the workspace/lists alive, and a H2 arm must
+    // not keep the group string/descriptors alive.
     std::shared_ptr<std::string> group_keep;
     const char* group_ptr = nullptr;
-    at::Tensor x, w, bias, y, workspace;
-    std::shared_ptr<Lists> lists;
+    at::Tensor keep_workspace;
+    std::shared_ptr<Lists> keep_lists;
+    at::Tensor keep_x, keep_w, keep_bias, keep_y;
+    // Logging-only addresses; never ownership.
+    const void* workspace_ptr = nullptr;
+    const void* lists_ptr = nullptr;
     aclOpExecutor* executor = nullptr;
     uint64_t bytes = 0;
     aclrtStream stream = nullptr;
@@ -175,9 +182,9 @@ std::string fields(const RunState& s, const char* phase, const void* group_obj,
         hex(group_obj).c_str(), hex(group_data).c_str(), group_size, group_capacity,
         static_cast<long long>(reinterpret_cast<const char*>(group_data) -
                                reinterpret_cast<const char*>(group_obj)),
-        hex(s.workspace.defined() ? s.workspace.data_ptr() : nullptr).c_str(),
+        hex(s.workspace_ptr).c_str(),
         static_cast<unsigned long long>(s.bytes),
-        hex(s.lists ? static_cast<const void*>(s.lists.get()) : nullptr).c_str(),
+        hex(s.lists_ptr).c_str(),
         hex(static_cast<const void*>(s.executor)).c_str());
     return b;
 }
@@ -209,11 +216,8 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
     Api& a = api();
     auto state = std::make_shared<RunState>();
     state->flags = flags;
-    state->x = x;
-    state->w = weight_kn;
-    state->bias = bias;
-    state->y = at::empty({rows, n}, x.options());
     state->trace = make_trace();
+    auto y = at::empty({rows, n}, x.options());
 
     // H1: the keepalive object must be created BEFORE prepare and its own
     // c_str() passed; a copy made after prepare cannot preserve that pointer.
@@ -234,11 +238,12 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
     state->group_ptr = group_pointer;
 
     auto lists = std::make_shared<Lists>(a);
-    state->lists = lists;
+    state->lists_ptr = lists.get();
+    if (keep_descriptors(flags)) state->keep_lists = lists;
     auto* tx = lists->add(x, ACL_BF16);
     auto* tw = lists->add(weight_kn, ACL_BF16);
     auto* tb = lists->add(bias, ACL_FLOAT);
-    auto* ty = lists->add(state->y, ACL_BF16);
+    auto* ty = lists->add(y, ACL_BF16);
     if (state->trace)
         state->trace->mark("descriptors_ready",
                            fields(*state, "descriptors", group_object, group_pointer,
@@ -267,7 +272,17 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
     }
     TORCH_CHECK(bytes <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max()),
                 "grouped-mmar workspace overflow");
-    state->workspace = at::empty({static_cast<int64_t>(bytes)}, x.options().dtype(at::kByte));
+    auto workspace = at::empty({static_cast<int64_t>(bytes)}, x.options().dtype(at::kByte));
+    state->workspace_ptr = workspace.data_ptr();
+    if (keep_workspace(flags)) state->keep_workspace = workspace;
+    if (flags & KEEP_ALL) {
+        state->keep_x = x;
+        state->keep_w = weight_kn;
+        state->keep_bias = bias;
+        state->keep_y = y;
+        state->keep_workspace = workspace;
+        state->keep_lists = lists;
+    }
 
     int id = 0;
     if (keep_group(flags) || keep_workspace(flags) || keep_descriptors(flags)) {
@@ -277,7 +292,8 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
         g_states[id] = state;  // Retain until release() after sync is confirmed.
     }
 
-    auto body = [state, a, prepare_rc, group_object, group_pointer, group_capacity, rows, k, n]() -> int {
+    auto body = [state, a, workspace, lists, y, prepare_rc, group_object, group_pointer,
+                 group_capacity, rows, k, n]() -> int {
         char extra[96];
         std::snprintf(extra, sizeof(extra), ",\"rows\":%lld,\"k\":%lld,\"n\":%lld",
                       static_cast<long long>(rows), static_cast<long long>(k),
@@ -296,7 +312,7 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
         }
         int memset_rc = 0;
         if (state->flags & MEMSET_WORKSPACE) {
-            memset_rc = aclrtMemsetAsync(state->workspace.data_ptr(), state->bytes, 0,
+            memset_rc = aclrtMemsetAsync(workspace.data_ptr(), state->bytes, 0,
                                          state->bytes, use_stream);
             if (state->trace) {
                 char s[80];
@@ -305,7 +321,7 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
             }
         }
         if (state->trace) state->trace->mark("launch_enter");
-        const int launch_rc = a.launch(state->bytes ? state->workspace.data_ptr() : nullptr,
+        const int launch_rc = a.launch(state->bytes ? workspace.data_ptr() : nullptr,
                                        state->bytes, state->executor, use_stream);
         if (state->trace) {
             char s[80];
@@ -323,7 +339,7 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
             }
         }
         int cleanup_rc = 0;
-        if (!keep_descriptors(state->flags)) cleanup_rc = state->lists->close();
+        if (!keep_descriptors(state->flags)) cleanup_rc = lists->close();
         if (state->trace) {
             char s[96];
             std::snprintf(s, sizeof(s), ",\"cleanup_rc\":%d,\"sync_rc\":%d", cleanup_rc, sync_rc);
@@ -348,7 +364,7 @@ std::tuple<at::Tensor, int64_t, int64_t> grouped_mmar_run(
         cmd.Run();
         if (state->trace) state->trace->mark("dispatch_return");
     }
-    return {state->y, static_cast<int64_t>(state->bytes), static_cast<int64_t>(id)};
+    return {y, static_cast<int64_t>(state->bytes), static_cast<int64_t>(id)};
 }
 
 int64_t grouped_mmar_release(int64_t id_value) {
@@ -366,17 +382,18 @@ int64_t grouped_mmar_release(int64_t id_value) {
         std::snprintf(s, sizeof(s), ",\"run_id\":%d,\"flags\":%d", id, state->flags);
         state->trace->mark("release_enter", s);
     }
-    const int rc = state->lists ? state->lists->close() : 0;
+    const int rc = state->keep_lists ? state->keep_lists->close() : 0;
     if (state->trace) {
         char s[96];
         std::snprintf(s, sizeof(s), ",\"run_id\":%d,\"cleanup_rc\":%d", id, rc);
         state->trace->mark("release_return", s);
     }
-    state->workspace = at::Tensor();
-    state->x = at::Tensor();
-    state->w = at::Tensor();
-    state->bias = at::Tensor();
-    state->y = at::Tensor();
+    state->keep_workspace = at::Tensor();
+    state->keep_x = at::Tensor();
+    state->keep_w = at::Tensor();
+    state->keep_bias = at::Tensor();
+    state->keep_y = at::Tensor();
+    state->keep_lists.reset();
     state->group_keep.reset();
     state->executor = nullptr;
     return rc;

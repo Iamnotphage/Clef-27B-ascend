@@ -85,6 +85,12 @@ class CellSupervisorTest(unittest.TestCase):
         self.assertEqual(result['restore']['rc'], 0)
         self.assertEqual(result['post_check']['rc'], 0)
 
+    def test_official_start_restore_is_rejected(self):
+        with self.assertRaises(ValueError):
+            win = sup
+            win.main(self.cmd(sys.executable, '-c', 'print("probe")',
+                              extra=('--restore-argv', json.dumps(['bash', '/x/start.sh']))))
+
     def test_failed_restore_fails_cell(self):
         restore = json.dumps([sys.executable, '-c', 'import sys; sys.exit(3)'])
         code = sup.main(self.cmd(sys.executable, '-c', 'print("probe")',

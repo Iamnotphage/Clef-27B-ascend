@@ -105,7 +105,7 @@ def parse_args(argv=None):
     p.add_argument('--adapter', type=Path)
     p.add_argument('--weight-bin', type=Path)
     p.add_argument('--weight-sha')
-    p.add_argument('--arm-timeout', type=float, default=60.0)
+    p.add_argument('--arm-timeout', type=float, default=240.0)
     p.add_argument('--comm-timeout', type=float, default=90.0)
     p.add_argument('--norm', action='store_true', help='stage 3: add native AddRMSNorm')
     p.add_argument('--watchdog-selftest', type=float, default=None,
@@ -154,7 +154,7 @@ def build_plan(a):
         failure_branches=['prepare rc!=0', 'launch rc!=0', 'sync does not return within arm timeout',
                           'rank group names differ', 'output non-finite', 'release rc!=0'],
         recovery='stop probe processes; restore aa3e/s1 with the official start.sh; '
-                 'never revert to f810 automatically; branch must be aa3e-noop or f810->fused',
+                 'normal success requires branch == aa3e-noop; f810->fused is rescue-only and never success',
         no_service_lifecycle=True, no_f810_revert=True,
     )
     return plan

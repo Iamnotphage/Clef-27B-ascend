@@ -7,8 +7,8 @@
   "files": {
     "runtime/grouped_mmar/binding_probe.cpp": {
       "role": "native MMAR binding with single-variable lifetime/thread/stream flags",
-      "sha256": "8ec3642d046f73f78cd27a966664fa4e2aabe46cf94459b43cbe8427011884ba",
-      "bytes": 17459
+      "sha256": "11baa2c68cfd1f16165cbacd6b41956e2ca955c8faac6745ed2596dfc545fee2",
+      "bytes": 18166
     },
     "runtime/grouped_mmar/probe_trace.h": {
       "role": "C++ CLOCK_MONOTONIC trace header",
@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "b27a954eeac14934bd43424f1dfc49088961b915be1b5f202c62ef39fc56e06d",
-      "bytes": 18951
+      "sha256": "c7e0410e744c1f971f7dc2c02b870ebb90f6e5183e93db41615af1ff1682d4b6",
+      "bytes": 18966
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -52,13 +52,13 @@
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
-      "sha256": "6473a0111ad1d96e5d57dc5814944c6aa65760c0f4678f42a5d085f450e475aa",
-      "bytes": 8819
+      "sha256": "3daa1455c5f72b6834125f242944fc77771fe805a9fdcbf44f651a032509c2a4",
+      "bytes": 9198
     },
     "runtime/grouped_mmar/test_cell_supervisor_cpu.py": {
       "role": "CPU supervisor tests (8)",
-      "sha256": "0e5bf08c083b7317b49e7fb6d89ab826af0972e635c0da0fd4bf058a3486e539",
-      "bytes": 4228
+      "sha256": "c5fb6f45e73c20dce2d55dad46152c0e5a97cfb53adcf596d4f53ae4e8036084",
+      "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "8ef3da00001edb9e4909a0846441e566ac5705a960d48f1ff91977d0b529099e",
-      "bytes": 12403
+      "sha256": "186a3cae4bc5cf026b088e3a0f5709b4cd87b869314c7cec7c4d065fb7b0f800",
+      "bytes": 12404
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -211,7 +211,7 @@
   "cpu_tests": {
     "suites": {
       "test_probe_cpu.py": "11/11",
-      "test_cell_supervisor_cpu.py": "8/8",
+      "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "12/12"
     },
     "no_torch_npu": true,
@@ -232,7 +232,12 @@
       "top-level finally restores after stop on all paths; alive service -> restore skipped",
       "A12 requires rc0 + no [ERROR]/retcode lines + two mc2 costtime markers",
       "child PGID maps with SHA/SONAME (A12 needs libhccl+opapi_math/transformer; native needs adapter)",
-      "restore_output fresh; manifest output_dir match + mtime after stop"
+      "restore_output fresh; manifest output_dir match + mtime after stop",
+      "binding keep flags split; cell_supervisor rejects official start.sh restore"
     ]
+  },
+  "run_probe": {
+    "default_arm_timeout_seconds": 240,
+    "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
   }
 }
