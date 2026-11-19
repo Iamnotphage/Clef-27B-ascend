@@ -1,0 +1,90 @@
+=== PostMsg call site 0x7c7f44 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007c7f10 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x164>:
+  7c7f10:	b9416283 	ldr	w3, [x20, #352]
+  7c7f14:	aa1703e1 	mov	x1, x23
+  7c7f18:	52800002 	mov	w2, #0x0                   	// #0
+  7c7f1c:	aa1303e0 	mov	x0, x19
+  7c7f20:	97eb1b20 	bl	28eba0 <_ZN17AicpuKfcRpcServer15CheckRcvWorkMsgEP15AivAicpuOpParamjj@plt>
+  7c7f24:	aa1403e0 	mov	x0, x20
+  7c7f28:	97eae2fa 	bl	280b10 <_ZN15AicpuKfcProcess13GetActiveSqIdEP15AicpuComContext@plt>
+  7c7f2c:	97eb3b0d 	bl	296b60 <_ZN16TaskOrchestrator16ActiveRecordMainEt@plt>
+  7c7f30:	2a0003f6 	mov	w22, w0
+  7c7f34:	35000f20 	cbnz	w0, 7c8118 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x36c>
+  7c7f38:	b9416281 	ldr	w1, [x20, #352]
+  7c7f3c:	aa1303e0 	mov	x0, x19
+  7c7f40:	51000421 	sub	w1, w1, #0x1
+  7c7f44:	97eb4caf 	bl	29b200 <_ZNK17AicpuKfcRpcServer7PostMsgEj@plt>
+  7c7f48:	aa1303e0 	mov	x0, x19
+  7c7f4c:	52800001 	mov	w1, #0x0                   	// #0
+  7c7f50:	97eb1370 	bl	28cd10 <_ZN17AicpuKfcRpcServer13CheckAivIsEndEj@plt>
+  7c7f54:	3607fbe0 	tbz	w0, #0, 7c7ed0 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x124>
+  7c7f58:	aa1303e0 	mov	x0, x19
+  7c7f5c:	97eb2db9 	bl	293640 <_ZN17AicpuKfcRpcServer12GetRspPolicyEv@plt>
+
+=== PostMsg call site 0x7c7f90 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007c7f60 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x1b4>:
+  7c7f60:	72001c1f 	tst	w0, #0xff
+  7c7f64:	54000180 	b.eq	7c7f94 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x1e8>  // b.none
+  7c7f68:	aa1403e0 	mov	x0, x20
+  7c7f6c:	97eafded 	bl	287720 <_ZN16TaskOrchestrator20WaitMainStreamFinishEP15AicpuComContext@plt>
+  7c7f70:	aa1303e0 	mov	x0, x19
+  7c7f74:	97eb04af 	bl	289230 <_ZNK17AicpuKfcRpcServer12ClearWorkMsgEv@plt>
+  7c7f78:	52800061 	mov	w1, #0x3                   	// #3
+  7c7f7c:	52800020 	mov	w0, #0x1                   	// #1
+  7c7f80:	97eb11d4 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7c7f84:	370024a0 	tbnz	w0, #0, 7c8418 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerTwoStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x66c>
+  7c7f88:	b9416281 	ldr	w1, [x20, #352]
+  7c7f8c:	aa1303e0 	mov	x0, x19
+  7c7f90:	97eb4c9c 	bl	29b200 <_ZNK17AicpuKfcRpcServer7PostMsgEj@plt>
+  7c7f94:	52800016 	mov	w22, #0x0                   	// #0
+  7c7f98:	aa1503e1 	mov	x1, x21
+  7c7f9c:	aa1403e0 	mov	x0, x20
+  7c7fa0:	97eafa80 	bl	2869a0 <_ZN13AicpuKfcUtils11PrintBufferEP15AicpuComContextRK15AivAicpuOpParam@plt>
+  7c7fa4:	90008aa0 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7c7fa8:	f9444400 	ldr	x0, [x0, #2184]
+  7c7fac:	f94587e2 	ldr	x2, [sp, #2824]
+
+=== 0x760930 upstream window ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007608e0 <RunAicpuKfcClearOpRes@@Base+0x3e0>:
+  7608e0:	b9006bff 	str	wzr, [sp, #104]
+  7608e4:	97ec7f3b 	bl	2805d0 <_ZN13AicpuKfcUtils15PrintTilingDataERKN7HcclApi18Mc2InitTilingInnerEb@plt>
+  7608e8:	52800001 	mov	w1, #0x0                   	// #0
+  7608ec:	aa1303e0 	mov	x0, x19
+  7608f0:	97ecb45c 	bl	28da60 <_ZN13AicpuKfcUtils20PrintMC2AicpuContextERK15AicpuComContextb@plt>
+  7608f4:	aa1303e0 	mov	x0, x19
+  7608f8:	97ecafd2 	bl	28c840 <_ZN13MC2TraceUtils6SubmitEP15AicpuComContext@plt>
+  7608fc:	2a0003f4 	mov	w20, w0
+  760900:	35003480 	cbnz	w0, 760f90 <RunAicpuKfcClearOpRes@@Base+0xa90>
+  760904:	f0008df6 	adrp	x22, 191f000 <_ZN4hccl13HcclCommAicpu17errMessageReport_E@@Base+0xf7c>
+  760908:	39470300 	ldrb	w0, [x24, #448]
+  76090c:	b94d02c1 	ldr	w1, [x22, #3328]
+  760910:	51000800 	sub	w0, w0, #0x2
+  760914:	12001c00 	and	w0, w0, #0xff
+  760918:	11000421 	add	w1, w1, #0x1
+  76091c:	b90d02c1 	str	w1, [x22, #3328]
+  760920:	7100041f 	cmp	w0, #0x1
+  760924:	54001ae9 	b.ls	760c80 <RunAicpuKfcClearOpRes@@Base+0x780>  // b.plast
+  760928:	aa1503e1 	mov	x1, x21
+  76092c:	aa1303e0 	mov	x0, x19
+  760930:	97ec94cc 	bl	285c60 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@plt>
+  760934:	2a0003f4 	mov	w20, w0
+  760938:	7100581f 	cmp	w0, #0x16
+  76093c:	540036a0 	b.eq	761010 <RunAicpuKfcClearOpRes@@Base+0xb10>  // b.none
