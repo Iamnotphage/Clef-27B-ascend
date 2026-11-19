@@ -61,14 +61,14 @@
       "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
-      "bytes": 48448
+      "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K; settle candidate adds a single-snapshot bounded post-SIGKILL wait/rescan (not adopted)",
+      "sha256": "5bbda3ccbe066bec674f92b7c5aea19028aca58a73166f3250312a732913333b",
+      "bytes": 52752
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (40; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle/original-restore, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures)",
-      "sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
-      "bytes": 41364
+      "role": "CPU window control-flow tests (48; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle/original-restore, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures, settle exit-delay/persistent/Z/single-snapshot/state/one-restore)",
+      "sha256": "8336a663756060cd128d5c067ca30e35219a0aa735b43da26a250dba5d7a19fd",
+      "bytes": 51814
     },
     "runtime/grouped_mmar/readaddrm_msg_timing.md": {
       "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
@@ -97,8 +97,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "b4ea479028d8d9d4da68928e0b87e74dac6967b4cf82e20a7f1d94325d14b4f7",
-      "bytes": 47451
+      "sha256": "e79ca80c8deca8e374ef9f9c25dc0b132aa3d889a318801dc1bee1a356c9310b",
+      "bytes": 48368
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -426,6 +426,21 @@
       "sums_sha256": "e88d9d23",
       "commit": "f176183"
     }
+  },
+  "settle_candidate_20261119": {
+    "status": "CPU candidate implemented and tested on macOS; NOT adopted; the v2 package still pins window 1f780bf8/test 228150e4; no device/NPU",
+    "base_window_sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
+    "base_test_sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
+    "window_sha256": "5bbda3ccbe066bec674f92b7c5aea19028aca58a73166f3250312a732913333b",
+    "test_sha256": "8336a663756060cd128d5c067ca30e35219a0aa735b43da26a250dba5d7a19fd",
+    "window_bytes": 52752,
+    "test_bytes": 51814,
+    "scope": "after the final SIGKILL cleanup, one consistent /proc snapshot per round, bounded settle (default 30 s total), two consecutive empty rounds to clear, per-pid starttime/state recorded (no state -> unknown), deadline fail-closed, gate reuses the same settle table and the unique begin_restore; verified/protected/unknown/drift/PID-reuse signal rules unchanged",
+    "trigger": "attempt2 raw 80c73d9: cleanup groups=[1354310,1354311], killed=true, unknown/drift empty; the gate still saw both pids at about SIGTERM+1.4-4.4 s; exact exit time and /proc state were not captured (D-state not asserted); parent torchrun exited rc0 and the old exception/finally cleanup is skipped when child.poll() is not None",
+    "diff_vs_base": "supervised_probe_window.py +111/-10; test_supervised_window_cpu.py +234; no other files",
+    "tests": "48/48 (41 passed + 7 skipped Linux-only) on macOS; new: exit delay, persistent non-Z deadline, Z/reap, single-snapshot/no _read_proc, missing state -> unknown, baseline not mis-signaled, parent-exits-then-delayed-clear with one restore, persistent residual bounded/no restore",
+    "unrun": ["Linux real-process fixtures (7) not run on macOS; hand to 31 for CPU-only Linux verification", "no device/NPU; not adopted by the v2 package"],
+    "notes": "settle runs once per window (settle_outcome reused by exception/finally/gate, no per-path 30 s accumulation); child timed_out/rc/trace facts are preserved and the timeout experiment is not reclassified as success"
   },
   "process_cleanup": {
     "status": "implemented and Linux-validated on window 9a31091b (34/34 + F2/F3); awaiting 32/33 result review; device cells paused",

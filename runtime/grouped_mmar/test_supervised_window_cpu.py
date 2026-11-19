@@ -257,6 +257,139 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(result['steps']['stopped']['port'], 111)
         self.assertEqual(result['recovery_gate']['reason'], 'restore')
 
+    class TimeoutProcess(FakeProcess):
+        def __init__(self):
+            super().__init__(pid=5252)
+            self.calls = 0
+
+        def wait(self, timeout=None):
+            self.calls += 1
+            if self.calls == 1:
+                raise subprocess.TimeoutExpired('torchrun', timeout)
+            self.returncode = 0
+            return 0
+
+    def timeout_settle_case(self, clear_rounds=2, persistent=False):
+        ranks = [
+            {'pid': 5253, 'ppid': 5252, 'pgid': 5253, 'sid': 5253,
+             'starttime': '2', 'boot_id': 'b', 'cmdline': ['rank0']},
+            {'pid': 5254, 'ppid': 5252, 'pgid': 5254, 'sid': 5254,
+             'starttime': '2', 'boot_id': 'b', 'cmdline': ['rank1']},
+        ]
+        alive = {e['pid']: {'pid': e['pid'], 'ppid': 5252, 'pgid': e['pid'],
+                            'sid': e['pid'], 'state': 'S', 'starttime': '2',
+                            'boot_id': 'b', 'cmdline': e['cmdline']}
+                 for e in ranks}
+
+        class FakeRegistry:
+            def __init__(self, entries):
+                self.entries = entries
+
+            def start(self):
+                return self
+
+            def stop(self):
+                pass
+
+            def record_now(self):
+                pass
+
+            def snapshot(self):
+                return [dict(entry) for entry in self.entries]
+
+        class Clock:
+            def __init__(self):
+                self.t = 0.0
+
+            def monotonic(self):
+                return self.t
+
+            def sleep(self, seconds):
+                self.t += seconds
+
+        clock = Clock()
+        tables = [alive] * 100 if persistent else [alive] * clear_rounds + [{}, {}]
+        seq = iter(tables)
+        real_settle = win.settle_attributed
+
+        def table_reader():
+            try:
+                return next(seq)
+            except StopIteration:
+                return {}
+
+        def fake_settle(entries, child_pid, **kwargs):
+            return real_settle(entries, child_pid, clock=clock.monotonic,
+                               sleep=clock.sleep, table_reader=table_reader,
+                               deadline=2.0 if persistent else 30.0, **kwargs)
+
+        started = []
+        stopped = {'value': False}
+
+        def fake_restore(plan, run_dir, result):
+            self.restore_output.mkdir(parents=True, exist_ok=True)
+            (self.restore_output / 'launch-manifest.json').write_text(json.dumps(
+                {'pid': 6262, 'output_dir': str(self.restore_output.resolve())}))
+            (self.restore_output / 'joint-patch-record.json').write_text(
+                json.dumps({'branch': 'aa3e-noop'}))
+            started.append(True)
+            result['restore'] = {'started': True, 'waited': False}
+
+        def fake_run(argv, timeout, log):
+            if 'stop.py' in ' '.join(argv):
+                stopped['value'] = True
+            return {'argv': argv, 'rc': 0, 'log': str(log)}
+
+        def fake_scan():
+            return table(4242, (4243,)) if not stopped['value'] else table(6262, (6263,))
+
+        def fake_proc(pid):
+            return {'pid': pid, 'ppid': 1, 'pgid': pid, 'state': 'S',
+                    'starttime': '2', 'boot_id': 'b', 'cmdline': ['child']}
+
+        with mock.patch.object(win, 'DescendantRegistry', return_value=FakeRegistry(ranks)), \
+                mock.patch.object(win, '_scan_direct', return_value=alive), \
+                mock.patch.object(win, '_read_proc', side_effect=lambda pid: alive.get(pid)), \
+                mock.patch.object(win, 'settle_attributed', side_effect=fake_settle), \
+                mock.patch.object(win, 'scan', side_effect=fake_scan), \
+                mock.patch.object(win, 'port_open', side_effect=[0, 111, 111]), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, 'run', side_effect=fake_run), \
+                mock.patch.object(win, 'start_restore', side_effect=fake_restore), \
+                mock.patch.object(win, 'npu_evidence', return_value=[]), \
+                mock.patch.object(win, 'wait_health', return_value={'status': 'ready'}), \
+                mock.patch.object(win, 'env_evidence', return_value={'match': True}), \
+                mock.patch.object(win, 'read_root_env', return_value={}), \
+                mock.patch.object(win, 'joint_env', return_value={'ok': True}), \
+                mock.patch.object(win, 'http_json', return_value={'status': 'ready', 'config': 's1'}), \
+                mock.patch.object(win, 'post_json', return_value=(200, {'ok': True})), \
+                mock.patch.object(win, 'proc_identity', side_effect=fake_proc), \
+                mock.patch.object(win, 'maps_evidence', return_value=maps()), \
+                mock.patch.object(win.subprocess, 'Popen', return_value=self.TimeoutProcess()):
+            code = win.main(self.args(execute=True))
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        return code, result, started
+
+    def test_timeout_parent_exits_then_delayed_clear_allows_one_restore(self):
+        code, result, started = self.timeout_settle_case(clear_rounds=2)
+        child = result['steps']['child']
+        self.assertTrue(child['timed_out'])
+        self.assertTrue(child['settle']['clean'])
+        self.assertEqual(child['survivors'], [])
+        self.assertEqual(result['recovery_gate']['reason'], 'restore')
+        self.assertEqual(len(started), 1)
+        self.assertFalse(result['ok'])  # timeout fact is preserved
+
+    def test_timeout_persistent_residual_is_bounded_and_blocks_restore(self):
+        code, result, started = self.timeout_settle_case(persistent=True)
+        child = result['steps']['child']
+        self.assertTrue(child['settle']['deadline_hit'])
+        self.assertGreaterEqual(len(child['settle']['rounds']), 2)
+        self.assertLessEqual(child['settle']['rounds'][-1]['t'], 2.0)
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_probe_residual')
+        self.assertEqual(started, [])
+        self.assertFalse(result['ok'])
+
     def test_f810_to_fused_marks_isolation_failure(self):
         self.assertEqual(self.full_success('f810->fused'), 1)
         result = json.loads((self.run_dir / 'window.json').read_text())
@@ -506,6 +639,107 @@ exec "{sys.executable}" "{service}" --output-dir "$out" --port "$port"
                 os.killpg(pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+
+
+class SettleAttributedTest(unittest.TestCase):
+    class Clock:
+        def __init__(self):
+            self.t = 0.0
+
+        def monotonic(self):
+            return self.t
+
+        def sleep(self, seconds):
+            self.t += seconds
+
+    def entry(self, pid, start='10'):
+        return {'pid': pid, 'ppid': 1, 'pgid': pid, 'sid': pid,
+                'starttime': start, 'boot_id': 'b'}
+
+    def row(self, pid, state='S', start='10'):
+        return {'pid': pid, 'ppid': 1, 'pgid': pid, 'sid': pid, 'state': state,
+                'starttime': start, 'boot_id': 'b', 'cmdline': []}
+
+    def seq(self, tables):
+        it = iter(tables)
+        calls = {'n': 0}
+
+        def reader():
+            calls['n'] += 1
+            return next(it)
+
+        reader.calls = calls
+        return reader
+
+    def test_exit_delay_clears_after_two_empty_rounds(self):
+        clock = self.Clock()
+        reader = self.seq([{5253: self.row(5253)}, {5253: self.row(5253)}, {}, {}])
+        out = win.settle_attributed([self.entry(5253)], 5252, clock=clock.monotonic,
+                                    sleep=clock.sleep, table_reader=reader,
+                                    deadline=30.0, interval=1.0)
+        self.assertTrue(out['clean'])
+        self.assertFalse(out['deadline_hit'])
+        self.assertEqual(len(out['rounds']), 4)
+        self.assertEqual(out['rounds'][0]['residual'], [5253])
+        self.assertEqual(out['rounds'][0]['states']['5253']['state'], 'S')
+        self.assertEqual(out['rounds'][0]['states']['5253']['starttime'], '10')
+        self.assertEqual(out['residual'], [])
+        self.assertEqual(reader.calls['n'], 4)
+
+    def test_persistent_non_z_hits_deadline_and_fails_closed(self):
+        clock = self.Clock()
+        alive = {5253: self.row(5253)}
+        reader = self.seq([alive] * 10)
+        out = win.settle_attributed([self.entry(5253)], 5252, clock=clock.monotonic,
+                                    sleep=clock.sleep, table_reader=reader,
+                                    deadline=3.0, interval=1.0)
+        self.assertFalse(out['clean'])
+        self.assertTrue(out['deadline_hit'])
+        self.assertEqual(out['residual'], [5253])
+        self.assertEqual(out['states']['5253']['state'], 'S')
+        self.assertGreaterEqual(len(out['rounds']), 4)
+
+    def test_zombie_not_residual_and_reaped(self):
+        clock = self.Clock()
+        zombie = {5253: self.row(5253, state='Z')}
+        reader = self.seq([zombie, zombie])
+        with mock.patch.object(win, '_reap') as reap:
+            out = win.settle_attributed([self.entry(5253)], 5252, clock=clock.monotonic,
+                                        sleep=clock.sleep, table_reader=reader, reap=True)
+        self.assertTrue(out['clean'])
+        self.assertEqual(out['residual'], [])
+        self.assertTrue(reap.called)
+
+    def test_single_snapshot_per_round_never_calls_read_proc(self):
+        clock = self.Clock()
+        reader = self.seq([{5253: self.row(5253)}, {}, {}])
+        with mock.patch.object(win, '_read_proc',
+                               side_effect=AssertionError('double read')):
+            out = win.settle_attributed([self.entry(5253)], 5252,
+                                        clock=clock.monotonic, sleep=clock.sleep,
+                                        table_reader=reader)
+        self.assertTrue(out['clean'])
+        self.assertEqual(reader.calls['n'], 3)
+
+    def test_missing_state_is_unknown(self):
+        clock = self.Clock()
+        bare = self.row(5253)
+        bare['state'] = None
+        reader = self.seq([{5253: bare}, {}, {}])
+        out = win.settle_attributed([self.entry(5253)], 5252, clock=clock.monotonic,
+                                    sleep=clock.sleep, table_reader=reader)
+        self.assertEqual(out['rounds'][0]['states']['5253']['state'], 'unknown')
+
+    def test_baseline_not_in_entries_is_not_residual(self):
+        clock = self.Clock()
+        table = {5253: self.row(5253), 4242: self.row(4242)}
+        reader = self.seq([table] * 10)
+        out = win.settle_attributed([self.entry(5253)], 5252, clock=clock.monotonic,
+                                    sleep=clock.sleep, table_reader=reader,
+                                    deadline=1.0, interval=0.5)
+        self.assertIn(5253, out['residual'])
+        self.assertNotIn(4242, out['residual'])
+        self.assertNotIn('4242', out['states'])
 
 
 class AttributedTargetsTest(unittest.TestCase):

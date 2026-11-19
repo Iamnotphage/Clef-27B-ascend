@@ -414,6 +414,60 @@ def cleanup_blocks_restore(outcome):
     return bool(outcome and outcome.get('reason') == 'protected_overlap')
 
 
+def settle_attributed(entries, child_pid, *, deadline=30.0, interval=0.5,
+                      min_empty=2, clock=None, sleep=None, table_reader=None,
+                      reap=False):
+    """Wait for registered descendants after the final cleanup signals.
+
+    Each round uses ONE /proc snapshot for the survivor and state decisions, so a
+    process exiting between two reads cannot leave a stale residual. Two
+    consecutive empty rounds clear. Per-pid state/starttime is recorded; a missing
+    pid is 'gone' and a row without a state is 'unknown'. The deadline is
+    fail-closed and never starts a restore on its own.
+    """
+    clock = time.monotonic if clock is None else clock
+    sleep_fn = time.sleep if sleep is None else sleep
+    table_reader = _scan_direct if table_reader is None else table_reader
+    entries = [dict(entry) for entry in entries]
+    started = clock()
+    rounds = []
+    empties = 0
+    table = {}
+    residual = []
+    while True:
+        if reap:
+            _reap(entries)
+        table = table_reader()
+        reader = table.get
+        targets = _attributed_targets(entries, table=table, reader=reader)
+        residual = sorted({row['pid'] for row in targets['verified']} |
+                          set(targets['unknown']) |
+                          {row['live']['pid'] for row in targets['drift']
+                           if row.get('live')})
+        states = {}
+        for pid in residual:
+            row = table.get(pid)
+            if row is None:
+                states[str(pid)] = {'state': 'gone', 'starttime': None}
+            else:
+                states[str(pid)] = {'state': row.get('state') or 'unknown',
+                                    'starttime': row.get('starttime')}
+        rounds.append({'t': clock() - started, 'residual': residual,
+                       'states': states, 'table_size': len(table)})
+        empties = empties + 1 if not residual else 0
+        if empties >= min_empty:
+            break
+        if clock() - started >= deadline:
+            break
+        sleep_fn(interval)
+    clean = empties >= min_empty
+    return {'clean': clean,
+            'deadline_hit': bool(not clean and clock() - started >= deadline),
+            'residual': residual, 'states': rounds[-1]['states'] if rounds else {},
+            'rounds': rounds, 'empty_rounds': empties, 'table': table,
+            'deadline': deadline, 'interval': interval, 'min_empty': min_empty}
+
+
 def same_identity(saved, live):
     return bool(live and live['state'] != 'Z' and
                 all(live[k] == saved[k] for k in FIELDS if k in saved))
@@ -762,9 +816,11 @@ def wait_restored_root(pid, timeout=30.0, interval=0.5):
         time.sleep(interval)
 
 
-def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=None):
+def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=None,
+                  table=None, settle=None):
     """Never start a second tree while the original root is alive."""
-    table = scan()
+    table = scan() if table is None else table
+    reader = table.get
     live = table.get(saved['pid'])
     old_alive = bool(live and live['state'] != 'Z' and same_identity(saved, live))
     try:
@@ -777,9 +833,10 @@ def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=Non
             health = http_json(f'http://127.0.0.1:{a.port}', '/health')
         except Exception as exc:  # noqa: BLE001
             health = {'error': f'{type(exc).__name__}: {exc}'}
+    attributed = attributed_survivors(registry, child_pid, table=table, reader=reader)
     residual = sorted({p for p, row in table.items()
                        if child_pid and row['pgid'] == child_pid and row['state'] != 'Z'} |
-                      set(attributed_survivors(registry, child_pid)))
+                      set(attributed))
     old_pgid = sorted(p for p, row in table.items()
                       if row['pgid'] == saved['pid'] and row['state'] != 'Z')
     try:
@@ -788,8 +845,14 @@ def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=Non
         runners = [f'error: {type(exc).__name__}: {exc}']
     context = {'port': port, 'health': health, 'old_identity': live,
                'old_pgid_members': old_pgid, 'probe_residual': residual,
-               'attributed_survivors': attributed_survivors(registry, child_pid),
+               'attributed_survivors': attributed,
                'runner_residual': runners, 'source_after': source_after}
+    if settle is not None:
+        context['settle'] = {'clean': settle.get('clean'),
+                             'deadline_hit': settle.get('deadline_hit'),
+                             'residual': settle.get('residual'),
+                             'states': settle.get('states'),
+                             'rounds': settle.get('rounds')}
     if old_alive:
         if port == 0 and isinstance(health, dict) and health.get('status') == 'ready':
             return False, 'skipped_service_alive_healthy', context
@@ -861,6 +924,19 @@ def execute(a, plan):
     source_ok = False
     registry = None
     cleanup_blocked = False
+    settle_outcome = None
+
+    def settle_after_cleanup(outcome):
+        if outcome is None or child is None:
+            return None
+        if not (outcome.get('members') or outcome.get('unknown') or outcome.get('drift')):
+            return None
+        entries = registry.snapshot() if registry is not None else []
+        identity = child_state.get('identity')
+        if identity is not None:
+            entries.append(identity)
+        return settle_attributed(entries, child.pid, reap=subreaper)
+
     original_subreaper = get_subreaper()
     result['subreaper_original'] = original_subreaper
     subreaper = enable_subreaper()
@@ -953,11 +1029,20 @@ def execute(a, plan):
         child_state['cleanup_final'] = cleanup_final
         if cleanup_blocks_restore(cleanup_final):
             cleanup_blocked = True
-        members = {p for p, row in scan().items() if row['pgid'] == child.pid and row['state'] != 'Z'}
-        survivors = sorted(set(members) |
-                           set(attributed_survivors(registry, child.pid,
-                                                    child_state.get('identity'))) |
-                           set(cleanup_final.get('unknown') or []))
+        settle_outcome = settle_after_cleanup(cleanup_final)
+        if settle_outcome is not None:
+            child_state['settle'] = settle_outcome
+            members = {p for p, row in settle_outcome['table'].items()
+                       if row['pgid'] == child.pid and row['state'] != 'Z'}
+            survivors = sorted(set(members) | set(settle_outcome['residual']) |
+                               set(cleanup_final.get('unknown') or []))
+        else:
+            members = {p for p, row in scan().items()
+                       if row['pgid'] == child.pid and row['state'] != 'Z'}
+            survivors = sorted(set(members) |
+                               set(attributed_survivors(registry, child.pid,
+                                                        child_state.get('identity'))) |
+                               set(cleanup_final.get('unknown') or []))
         child_state.update(rc=rc, timed_out=timed, survivors=survivors)
         if survivors:
             raise RuntimeError(f'child group survivors: {survivors}')
@@ -987,6 +1072,8 @@ def execute(a, plan):
                     cleanup_blocked = True
             except BaseException as cleanup_error:
                 child_state['cleanup_error'] = f'{type(cleanup_error).__name__}: {cleanup_error}'
+        settle_outcome = settle_outcome or settle_after_cleanup(
+            child_state.get('cleanup_final') or child_state.get('cleanup'))
         result['error'] = child_state['error']
         step('child', child_state)
     finally:
@@ -1003,6 +1090,8 @@ def execute(a, plan):
                     cleanup_blocked = True
             except BaseException:
                 pass
+        settle_outcome = settle_outcome or settle_after_cleanup(
+            child_state.get('cleanup_final') or child_state.get('cleanup'))
         source_after = sha256(a.source_target)
         result['source_sha256_after_child'] = source_after
         source_ok = source_after == a.expected_source_sha
@@ -1021,7 +1110,9 @@ def execute(a, plan):
         elif stop_called:
             needs_restore, reason, context = recovery_gate(
                 a, plan, saved, stopped, child.pid if child is not None else None,
-                source_after, registry)
+                source_after, registry,
+                table=(settle_outcome or {}).get('table'),
+                settle=settle_outcome)
             result['recovery_gate'] = {'allow': needs_restore, 'reason': reason, **context}
         if needs_restore:
             try:

@@ -216,6 +216,8 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
 - 保留所有 run-dir/raw/trace/plog；不写服务 tree/guard/vendor；服务当前在线不改。
 - 31 stage 后交 32 preflight；设备格按 A8 → A12 → A0 → H1 → H2 顺序，其他假设按结果增量。
 
+- **settle 候选（CPU，未采纳）**：`supervised_probe_window.py` `5bbda3cc` / `test_supervised_window_cpu.py` `8336a663`（base window `1f780bf8` / test `228150e4`）。针对 attempt2（cleanup 已 signal 两独立 PGID、unknown/drift 空、gate 在 SIGTERM 后 1.4–4.4 s 仍见两 pid、精确退出/state 未留、D-state 未证）：最终 SIGKILL 后做**单快照**有界等待/重扫（默认 30 s 总宽限、连续两空、记录 pid/starttime/state、无 state=unknown、超期 fail-closed），gate 复用同一 settle 表且仍只走唯一 `begin_restore`；不改 verified/protected/unknown/drift/PID 复用信号规则，不据 D-state 改逻辑，settle 清空只允许恢复、不把超时实验改判成功。48 tests（41 pass + 7 Linux-only skip）；macOS 未跑 Linux 过程用例，交 31 CPU-only 复核；v2 包仍 pin `1f780bf8`，未采纳。diff window +111/−10、test +234。
+
 ## 8. 输入与来源
 
 - 33 契约：C1–C6、A12 冻结样例 `6c1a90ab…`（commit `f5703e4`）、矩阵 v2、支持矩阵研究
