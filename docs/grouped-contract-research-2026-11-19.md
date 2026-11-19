@@ -433,6 +433,15 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **结论**：e75a858 代码级 F1-F4 修复仍不满足 Linux 真机安全门槛；P0 收养过宽、P1 zombie reap、P2 chain 竞态需修/补测。设备格继续暂缓；A14 large fac2d948 未执行；A15 仅 CPU；Grouped large/A13 暂停。
 
+## 33. a00edad P0/P1/P2 代码级复核（2026-11-19）
+
+freeze `a00edad`：manifest `778c37af…`、window **`9a31091b…`（46,020 B）**、test_window `5fdc498f…`（34 个，Mac 5 Linux-only skip）、run_probe `0bd1fde8…`、binding `101660f8…`、adapter `d181b15a…`；CPU 60/60。
+
+- **F-A/P0 代码级 PASS**：window 在 spawn 时生成 `secrets.token_hex(16)`，`child_env={**os.environ, CLEF_WINDOW_OWNER: token}` 传入 Popen（L827-831）；`DescendantRegistry(token=...)`；`_record` 的 subreaper 分支仅当 `_has_env_token(pid, token)` 为真（读 `/proc/<pid>/environ`，按 NUL 精确匹配 `CLEF_WINDOW_OWNER=<token>`，L132-142/L165-167）才加入 pids；无 token 的无关进程不登记/不 kill。fixture 现在使用 token 且断言 unrelated 1322545 不在 snapshot、仍存活（L539-561/L578）。
+- **F-B/P1 代码级 PASS**：`cleanup_attributed` 在 SIGKILL 后 `_reap(entries)` 遍历**所有登记候选**（含 Z；L307-312/L334-336），再 settle/最终 scan；不再用 rescan 后的 verified。fixture `/proc/<worker>` 不存在断言可验证。
+- **F-C/P2 代码级 PASS（产品+测试）**：`stop()` 在 record 新增时 `time.sleep(0.1)` 并最多 3 次（L228-242）；chain fixture 等 intermediate 打印/出现孙代（`_scan_direct` ppid=intermediate）后再 start/stop（L648-662）。
+- **未证**：Linux 真机重跑 34 项 + F2/F3 探针尚未执行（31 通道恢复后）；token 在真实 torchrun/worker 环境是否继承、`/proc/environ` 是否可读、worker 被杀后的 Z reap 仍需实测。代码级无新阻塞；设备继续暂缓；A14 large `fac2d948` 未执行；A15 仅 CPU。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
