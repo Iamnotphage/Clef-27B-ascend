@@ -1196,7 +1196,7 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 
 | 段 | 地址 | 原文 | 归属/站点 | 类型 |
 | --- | --- | --- | --- | --- |
-| 1 | 0x1613b80 | `[%s:%d] [%u][MC2] Check msg equal failed, rMsg:%s msg:%s` | ReadApiValidMsg gate 不匹配（0x7d6fec 区） | **API 条件失败** |
+| 1 | 0x1613b80 | `[%s:%d] [%u][MC2] Check msg equal failed, rMsg:%s msg:%s` | **CopyAndCheckApiMsg 0x7d6ae4，Dlog 0x7d6e14**；0x7d6d40 `memcmp` 64 B 不等；非 slot+48 魔数比较 | **API 消息一致性失败（periodic）** |
 | 1 | 0x1613bd0 | `[%s:%d] [%u][%s]call trace: hcclRet -> %d` | ReadApiValidMsg 0x7d6fec/0x7d70b8 | API 条件失败（TraceProfSubmit rc） |
 | 1 | 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | 0x7d7074 | API 条件失败 |
 | 1 | 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | ReadApiValidMsg 0x7d71bc；x6=[slot+48] | **API 消费成功标记**（打印写后的 valid） |
@@ -1217,7 +1217,7 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 
 ### 78.2 修正后的正向标记（按原文校正）
 
-- **API 路径（最强）**：`start to read the [%u] msg`（RunRpcServerApi 每轮，打印 `ctx+12756`=turn，按 0x7b3a24 site）→ 直接证明 API 每轮入口；`reset valid value %u`（0x7d71bc，gate 匹配且 consume=true 后的写回值）→ **条件式成功 consume 标记**；`[MC2] Check msg equal failed, rMsg:%s msg:%s`（0x1613b80）→ **消息检查失败标记**（具体 cmp 对象/一致性/valid 语义待 site 证实，35 正在核；**不写成“valid 魔数不匹配”**）；`ReadValidMsg[%u] timeout %lus`（0x7d8d20，turn/20 s）→ 无消息超时（20/40/80/160 s）。
+- **API 路径（最强）**：`start to read the [%u] msg`（RunRpcServerApi 每轮，打印 `ctx+12756`=turn，按 0x7b3a24 site）→ 直接证明 API 每轮入口；`reset valid value %u`（0x7d71bc，gate 匹配且 consume=true 后的写回值）→ **条件式成功 consume 标记**；`[MC2] Check msg equal failed, rMsg:%s msg:%s`（0x1613b80，CopyAndCheckApiMsg 0x7d6e14）→ **64 B 消息一致性失败**（0x7d6d40 memcmp；非 valid 魔数比较）；**每 10000 次累计不等才打一次**（0x7d6d58-78 `count%10000==0` + HcclCheckLogLevel(2,3)），**不是逐事件标记**；`ReadValidMsg[%u] timeout %lus`（0x7d8d20，turn/20 s）→ 无消息超时（20/40/80/160 s）。
 - **关于 `call trace: hcclRet -> %d`**：原文是 **TraceProfSubmit/内部返回码** 的 trace 日志（0x1613bd0/0x1613c00），**不能直接叫“valid mismatch”**；只能记“ReadApiValidMsg 在 gate 不匹配分支调用 TraceProfSubmit 后的返回码”。
 - **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg **单次调用**的 6 s 超时）；“每 6 s 输出”需 caller 循环/重试证据，否则只记“每次调用最多一条”。`Post finishedTurnCnt[%u].cnt = %lu.` 与 `Run rpc error ... sndCnt ... rcvCnt ...` 仍是候选，站点未确认前不单独判路。
 - **`[NsRecovery][MC2] Suspending`**：原文无 OneStage/22 字样，只能靠 site CFG 条件归属，**不作必经入口**。
@@ -1296,7 +1296,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 | `AicpuKfcRpcServer::Init addr:%u`（line 27，Init4） | 该次运行进入 **Init4/RpcSrvLaunch** 且该级别 Dlog 生效 | 只证 Init4 路径；若实际走 `Init(y)`/ForApi 或 MC2，不要求它必现，**缺失不能判日志关闭** |
 | `start to read the [%u] msg`（line 1715，0x7b3a24） | RunRpcServerApi 每轮读 msg（API 路径） | 需该 site 实际执行；缺席不排除 |
 | `reset valid value %u`（0x7d71bc） | gate 匹配且 consume=true 的成功路径 | 条件标记；gate 失败/未读不出现 |
-| `[MC2] Check msg equal failed...`（0x1613b80） | **消息检查失败**标记 | cmp 对象/一致性/valid 语义待 site 证实；不写成“valid 魔数不匹配” |
+| `[MC2] Check msg equal failed...`（0x1613b80，CopyAndCheckApiMsg 0x7d6e14） | **64 B 消息一致性失败**（memcmp） | **每 10000 次累计不等才打一次**；出现=持续不一致且计数到万倍；缺席=累计不足/guard 未开，不排除；非逐事件、非 valid 魔数比较 |
 | `ReadValidMsg[%u] timeout %lus`（0x7d8d20） | API 无消息超时（20/40/80/160 s） | 非入口；消息到达后算法卡住不触发；缺席不排除 |
 | `ReadValidMsg timeout 6s...`（0x7d744c） | CheckRcvWorkMsg **单次调用** 6 s 超时 | **不宣称每 6 s 周期**；多次出现需 caller 循环/重试证据；缺席不排除 |
 | `[NsRecovery][MC2] Suspending`（0x762280） | 站点 CFG 条件证据（MC2/Suspending） | 文本无 OneStage/22；非必经入口 |
