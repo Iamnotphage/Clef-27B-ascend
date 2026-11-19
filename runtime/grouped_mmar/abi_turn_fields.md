@@ -118,6 +118,6 @@ only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
    +50/+51 and the u16 slot index at ctx+196 (source rac_server.h is not enough).
 2. Which server object/branch the Grouped path uses (the two Init call sites target
    different offsets; S=C needs the same object plus `Init(y)`).
-3. Deeper `ReadApiValidMsg` helpers (`CopyAndCheckApiMsg`, `CheckDebugMode`) only if
-   a blocking/sleep question remains.
+3. `CheckDebugMode` body only if a blocking/sleep question remains;
+   `CopyAndCheckApiMsg` is confirmed as a 64-byte copy/GenXor/memcmp by 31/33.
 Do not fetch these outside 31; 33 merges and 31 executes the single remote read.

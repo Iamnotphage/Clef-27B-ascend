@@ -68,21 +68,32 @@ call long before ~1280 s; ReadAddrMsg itself does not return at 180 s.
 `57412224`, range `0x7d6f20-0x7d71cc`). The body contains **no
 sleep/nanosleep/usleep/select/poll** call. It calls `TraceProfSubmit`,
 `CopyAndCheckApiMsg@plt`, `CheckDebugMode`, `DlogRecord` and `syscall(178)` (gettid),
-and returns 0/1. The non-blocking premise is therefore supported at depth 1; whether
-`CopyAndCheckApiMsg` or `CheckDebugMode` blocks internally is not in this body and
-remains unproven.
+and returns 0/1. This proves only that **no explicit blocking mechanism is visible**
+(no sleep/poll/syscall wait; the syscalls are gettid). The execution time of
+`DlogRecord`, `TraceProfSubmit`, `CopyAndCheckApiMsg` and `CheckDebugMode` is not
+bounded by this body; the derivation keeps the **single-round return premise** that
+each helper returns and control re-enters the loop. 31/33 checked
+`CopyAndCheckApiMsg` as a 64-byte copy/GenXor/memcmp with no +50/+51 access; only
+`CheckDebugMode` remains unchecked.
 
 This also corrects 33's sequence at the 640 s point: w24 is 32 before the 640 s
 crossing and becomes **64** (not 128), so the next threshold is 1280 s. At the
 1280 s crossing w24 becomes 128 and the same block checks elapsed > 960 s and
-returns 0. The 2560 s threshold is therefore not reached in a non-blocking run; the
-ceiling remains about 1280 s plus one poll iteration. A single callee call would
-have to block for more than 1920 s (crossing from <640 s to >2560 s) to reach the
-2560 branch, and no such blocking is evidenced.
+returns 0. The 2560 s threshold is therefore not reached; the ceiling remains about
+1280 s plus one poll iteration.
+
+Two separate questions must not be merged: "is the w24=128/2560 s threshold state
+reachable by the CFG" and "does elapsed exceed 2560 s because a callee blocked".
+The 960 s check lives inside the 1280 s branch, so the CFG reaches w24=128 and then
+returns; the 2560 s branch is **not reachable by CFG**, and a long callee only raises
+the wall time, it cannot be used as an exception that makes the threshold state
+reachable. 33 should confirm this CFG ordering.
 
 ## Conditional gap and merged request
 
-The remaining condition is whether the deeper helper bodies block. The static path
-and this cell's actual path remain separate. No device action. The 20 s x w24
+The remaining uncertainty is helper duration (`DlogRecord`/`TraceProfSubmit`/
+`CopyAndCheckApiMsg`/`CheckDebugMode`), not an explicit sleep; the single-round
+return premise covers it. `CopyAndCheckApiMsg` is confirmed as copy/GenXor/memcmp by
+31/33. The static path and this cell's actual path remain separate. No device action. The 20 s x w24
 intervals are timeout-log intervals; 180 s is a log-interval point, not a sleep or
 return.

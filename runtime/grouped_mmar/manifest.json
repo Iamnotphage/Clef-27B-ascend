@@ -72,13 +72,13 @@
     },
     "runtime/grouped_mmar/readaddrm_msg_timing.md": {
       "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
-      "sha256": "78caf46ff02b57dcd2a52134c22c51aaee136086524607fff2d13153d1494da6",
-      "bytes": 5032
+      "sha256": "9449340934f5018f3d7abb2d74dd13da868c8a4ecad8fa9352526e85fdca01f3",
+      "bytes": 5824
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "a5425dfc3fe2e8576f5ca0ec0933b720f710d412110aa4fc6ad3d4ff123bcfa0",
-      "bytes": 8226
+      "sha256": "442c066168ec462cc118e75e0908fff53102caca595c0fe8b73c9de3fef2c733",
+      "bytes": 8250
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -92,8 +92,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "0072059d0e85c37237dba4935e52acfcbf14b5a006abfda38de0d6724ce04c07",
-      "bytes": 41408
+      "sha256": "f1e9b1a80b013ad65174e13b7f747562bdb873cf34f00cce908b1ced6fa10754",
+      "bytes": 41662
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -466,28 +466,29 @@
     "status": "read-only derivation; conditional on a non-blocking ReadApiValidMsg",
     "source": "abi-preflight5 disasm-ReadAddrMsg 9ec8e134 (SUMS ae91a530) and abi-preflight6 disasm-ReadApiValidMsg 57412224 (SUMS b8775ff6), libccl 2281deca",
     "doc": "runtime/grouped_mmar/readaddrm_msg_timing.md",
-    "design_sha256": "78caf46ff02b57dcd2a52134c22c51aaee136086524607fff2d13153d1494da6",
+    "design_sha256": "9449340934f5018f3d7abb2d74dd13da868c8a4ecad8fa9352526e85fdca01f3",
     "proven": [
       "clock_gettime(4)=CLOCK_MONOTONIC_RAW; start/elapsed in nanoseconds via *1e9",
       "20 s = 0x4a817c800 ns and 960 s = 0xdf84758000 ns constants",
       "w24 = ubfiz(w24,#1,#7): 1,2,4,8,16,32,64,128,0; thresholds 20..2560 s",
       "no sleep/nanosleep/usleep/select/poll call exists in ReadAddrMsg; 20 s*w24 is the timeout-log interval, not a sleep",
       "the 960 s hard check sits inside the timeout-log branch; the first threshold above 960 s is 1280 s, so the ceiling is about 1280 s plus one poll iteration (960-1280 s if a poll straddles the cutoff), not 2560 s",
+      "the w24=128/2560 s threshold state is unreachable by the CFG (w24 becomes 128 at the 1280 s branch and the 960 s check returns); a callee that takes a long time only raises wall time and is not an exception to threshold-state reachability",
       "180 s lies in the 160-320 s log interval; it is not a return point and an external 180/240 s window truncates first",
-      "abi6 ReadApiValidMsg 0x7d6f20-0x7d71cc (57412224) contains no sleep/nanosleep/usleep/select/poll and returns 0/1; the non-blocking premise holds at depth 1",
+      "abi6 ReadApiValidMsg 0x7d6f20-0x7d71cc (57412224) contains no explicit sleep/poll/waiting syscall (the four syscalls are gettid); this proves only that no explicit blocking mechanism is visible, not that helper durations are bounded",
       "at the 640 s crossing w24 is 32->64, not 128; at 1280 s it is 64->128 and the 960 s check returns, so 2560 s is not reached in a non-blocking run"
     ],
     "unproven": [
-      "deeper helpers CopyAndCheckApiMsg/CheckDebugMode could block or sleep; not in the ReadApiValidMsg body",
+      "helper durations (DlogRecord/TraceProfSubmit/CopyAndCheckApiMsg/CheckDebugMode) are not bounded; the derivation keeps the single-round return premise. CopyAndCheckApiMsg is confirmed by 31/33 as a 64-byte copy/GenXor/memcmp with no +50/+51; only CheckDebugMode body is unchecked",
       "any ctx+0xf31d turn path is not in this disassembly (only ctx+0xF31F0 is loaded here)"
     ],
-    "request": "the abi6 callee disassembly resolves the depth-1 sleep question; only deeper helper blocking remains, and 33/31 can merge it if a blocking question persists; static path and the actual cell remain separate"
+    "request": "33 to confirm by CFG that the 1280 s branch returns before the 2560 s threshold state; helper duration uncertainty is handled by the single-round return premise, not by a reachability exception. Later work is 33's minimal actual-path observation design; static path and the actual cell remain separate"
   },
   "abi_turn_analysis": {
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
     "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "a5425dfc3fe2e8576f5ca0ec0933b720f710d412110aa4fc6ad3d4ff123bcfa0",
+    "design_sha256": "442c066168ec462cc118e75e0908fff53102caca595c0fe8b73c9de3fef2c733",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
