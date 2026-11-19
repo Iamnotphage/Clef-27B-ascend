@@ -30,6 +30,7 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 
 import candidate_service_phase as cand
 
@@ -53,9 +54,12 @@ class RealMethodsTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(prefix='clef-real-integration-')
         self.root = Path(self.tmp.name)
         self.tree = self.root / 'tree'
+        source = Path(os.environ['CLEF_REAL_F810'])
+        self.assertEqual(cand.sha(source), cand.F810_HEAD,
+                         'real f810 fixture is not the frozen preimage; refusing to run')
         target = self.tree / 'vllm/model_executor/models/clef_joint_schema.py'
         target.parent.mkdir(parents=True)
-        target.write_bytes(Path(os.environ['CLEF_REAL_F810']).read_bytes())
+        target.write_bytes(source.read_bytes())
         self.service = self.root / 'service'
         guard = self.service / 'runtime/apply_joint_single_field_patch.py'
         guard.parent.mkdir(parents=True)
@@ -254,6 +258,45 @@ class RealMethodsTest(unittest.TestCase):
         self.assertEqual(cand.sha(guard), cand.GUARD_PRE)
         self.assertIn('restore_env', self.deps.ab.state['steps'])
         self.assertTrue(self.deps.ab.state['steps']['restore_env']['ok'])
+
+    def test_main_deploy_cli_success(self):
+        real_build = cand.build_deps
+
+        def build(a):
+            self.assertEqual(Path(a.tree), self.tree, 'CLI tree must stay in the fixture')
+            deps = real_build(a)
+            self.deps = deps
+            self.old_argv = list(deps.manifest['phases']['s1']['expected_argv'])
+            self.table[self.old_root]['cmdline'] = ' '.join(self.old_argv)
+            self.install(deps)
+            return deps
+
+        old = self.root / 'cli-old-restore.json'
+        old.write_text(json.dumps({'label': 'old',
+            'service_discovery': {'api_identity': row(self.old_root, self.old_root)},
+            **{k: {'rc': 0, 'ok': True} for k in ('health', 'workers', 'text', 'image')}}))
+        argv = ['--action', 'deploy', '--code', os.environ['CLEF_REAL_CODE'],
+                '--owner-code', os.environ['CLEF_REAL_OWNER'], '--ab-code', os.environ['CLEF_REAL_AB'],
+                '--repo', os.environ['CLEF_REAL_REPO'], '--manifest', os.environ['CLEF_REAL_CANDIDATE_MANIFEST'],
+                '--manifest-sha', cand.MANIFEST_SHA, '--base-manifest', os.environ['CLEF_REAL_MANIFEST'],
+                '--run-dir', str(self.root / 'cli-run'), '--phase', 's1', '--from-phase', 's1',
+                '--current-restore', str(old), '--current-restore-sha', cand.sha(old),
+                '--first-phase-no-client', '--execute',
+                '--tree', str(self.tree), '--service-log-root', str(self.logs),
+                '--port', '18143', '--python', os.environ['CLEF_REAL_PYTHON'],
+                '--activate', '/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh',
+                '--launch', '/workspace/yangchen/logs/perf-wave2-20261118/launch.sh',
+                '--wait', '/workspace/yangchen/logs/perf-wave2-20261118/wait.sh',
+                '--stop-script', '/tmp/d0cc/d0_stop.py',
+                '--clean-env-expect', os.environ['CLEF_REAL_CLEAN_EXPECT']]
+        with patch.object(cand, 'build_deps', side_effect=build):
+            rc = cand.main(argv)
+        self.assertEqual(rc, 0)
+        self.assertTrue((self.root / 'cli-run/complete.json').is_file())
+        self.assertEqual(cand.sha(self.tree / 'vllm/model_executor/models/clef_joint_schema.py'),
+                         cand.AA3E_HEAD)
+        self.assertEqual(cand.sha(Path(os.environ['CLEF_REAL_F810'])), cand.F810_HEAD,
+                         'production head must remain untouched')
 
     def test_independent_restore_after_deploy(self):
         deployed = cand.deploy(self.deploy_args(), self.deps)
