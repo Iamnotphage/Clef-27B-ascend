@@ -410,6 +410,14 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **当前状态**：35 尚无新 cleanup freeze（tip 94aa830，window f05f352f 仍只父组）；A14 large `fac2d948` 未启动、暂缓；A15 仅 CPU（94aa830/0bd1fde8），无设备 GO；新 window 审过前设备暂停。本清单不进行进程操作。
 
+## 30. 6def7a0/34f77ea safe-window 代码审 findings（2026-11-19）
+
+- **F1 高：drift 不入 survivors/恢复门**。`_live_verified` 将身份不匹配放 `drift`；`attributed_survivors`（L314-326）只返回 verified+unknown，`cleanup_attributed.members` 不含 drift；`recovery_gate.residual`（L675-677）只用 `attributed_survivors`。因此漂移/PID 复用组不被 signal（正确）但**也不阻断 `start_restore`**。`test_pid_reuse_and_starttime_drift_rejected`（L478-486）只断言 `_attributed_targets` 分类，未断言 gate。与 32 规范“未知/漂移→拒杀+停报、恢复门 blocked”不符；建议 drift 纳入 survivors/residual（单列 drift gate），cleanup 仍不 signal。
+- **F2 高：首次登记前父退出的 cleanup 时序**。`registry.start()` 只启动 0.2s 线程，首次 `_record` 不同步执行；`registry.stop()`（L199-209）才最终 `_record`，而 child flow 的 `cleanup_final`（L835）在 `registry.stop()`（L838）之前。父在首次扫描前退出且 window 立即 cleanup 时，cleanup 见空 registry、不杀孤儿；随后 stop 登记，survivors（L839-843）非空并阻断恢复。**最终 gate blocked，但 cleanup 未完成、孤儿存活**。fixture `test_orphan_after_immediate_parent_exit...`（L522-579）父退出后**先等待 registry 快照包含 worker 再 cleanup**，未覆盖“cleanup 立即发生在首次登记前”；建议 start 时先同步 record 或在 cleanup 前强制 record，并新增“不等快照立即 cleanup”fixture。
+- **F3 中：subreaper 孤儿子代单次展开不足**。`_record`（L146-170）先按 `tree(root_pid)|known` 展开，之后才加入 `ppid==self` 的孤儿子代，且不重新展开这些新孤儿的下代；`stop()` 只一次最终 record。若 torchrun 退出后由被收养的中间进程持有独立 PGID 的 rank 子进程，最终 record 可能只登记中间进程、漏子代；fixture 只有父→直接 setsid worker，无中间/孙代。建议加入孤儿后循环展开到 fixed point，或 stop 重复 record 至稳定。
+- **F4 低：protected_overlap 未显式转 gate**。`cleanup_attributed` 返回 `killed=False/reason=protected_overlap`（L292-296），child flow 未检查该 reason 是否阻断恢复；protected 测试只断言不 signal。建议明确 protected 不杀但记 blocked。
+- **已核通过**：plan-only（L131）不调用 enable_subreaper/不执行；Linux subreaper 失败（L143）在 d0_stop 前返回且 `run` 未调用；protected 不 signal；无关进程不杀；Mac 57/57（2 Linux-only skipped）。31 Linux fixtures 仍应执行，并补 F2/F3 用例；设备继续暂缓。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
