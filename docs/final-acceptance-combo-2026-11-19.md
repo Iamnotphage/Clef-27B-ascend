@@ -33,9 +33,9 @@
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `runtime/candidate_service_phase.py` | `1f98dba90c4cb466fd3ae3804ab1dacbaee8bd9799b8ef2110e22bc5489164d7` |
+| `runtime/candidate_service_phase.py` | `d3aead16060a46e8817126345bcc3f84b5cd6778716f508e4fb08d19633cb98b` |
 | `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |
-| `runtime/test_candidate_service_phase.py` | `b65653af0dd9a19077bffa05dab62df1848e2f4d22b5002c574dff7d83faf048` |
+| `runtime/test_candidate_service_phase.py` | `adb7f6c1ab18afea4b4cb47cdbe837138ec2469868be6384f9bf3bfcb91660ba` |
 | `runtime/test_candidate_manifest.py` | `8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a` |
 | `runtime/final_acceptance_candidate_manifest.json` | `31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4` |
 | `runtime/final_acceptance_candidate_manifest.diff.json` | `646ba8d89a07c9a647bea1a6429b617d22b409fb6aa9ca9f68b1fc37c6c9a9ab` |
@@ -114,6 +114,10 @@ sha256sum "$B/runtime/apply_joint_fused_attention.py" \
 
 该错误发生在 `stage_d0/stage_candidate` 阶段、早于停服，不会发信号或改 source/guard；但必须按上述值调用，避免重复空跑。
 
+### 3.2.2 已修复：`SourceControl.state` 初始化（31 实跑 finding）
+
+31 的 v2 deploy 在停服+apply adapter 后调用 `switch_source` 时报 `AttributeError: 'SourceControl' object has no attribute 'state'`。根因：ebca `main()` 在使用前给 `ab.state` 赋值，库式调用不会。最小修复：`build_deps()` 构造 `SourceControl` 后立即写入 `initial_state()`（schema/at/args/rounds/steps/source_switches/overall_rc），不改变其它行为；新增回归测试覆盖该初始化与首次 `switch_source`。修复前 recovery 也因 `restore_prod` 写 `state` 失败而停止在“服务已停、source f810、guard pre、端口关闭、卡7空”；31 须先用既有已核 clean restore 恢复服务，再做新 deploy。
+
 ### 3.2 部署（每个候选 phase 一次，默认 plan-only）
 
 ```bash
@@ -177,7 +181,7 @@ sha256sum "$B/runtime/apply_joint_fused_attention.py" \
 ## 5. CPU 验证记录（本提交实际执行）
 
 - `runtime/test_candidate_manifest.py`：8 项通过（含真实 cc7 基线时 8/8），验证派生确定性、候选 SHA `31202d…`、13 项白名单、非白名单/额外 env/错误 preimage 全部拒绝。
-- `runtime/test_candidate_service_phase.py`：17 项通过，覆盖 plan-only 零变更、成功部署顺序与 clean env、停服失败不安装、启动失败回原、端口未知阻断、source 未知阻断、停前 PGID 未归属阻断、pending client 阻断、restore 成功/错误记录/phase 不匹配/停服失败不启动、adapter 失败不误启动、CLI 互斥门。
+- `runtime/test_candidate_service_phase.py`：18 项通过，覆盖 plan-only 零变更、成功部署顺序与 clean env、停服失败不安装、启动失败回原、端口未知阻断、source 未知阻断、停前 PGID 未归属阻断、pending client 阻断、restore 成功/错误记录/phase 不匹配/停服失败不启动、adapter 失败不误启动、CLI 互斥门，以及 `build_deps` 必须为 ebca `SourceControl` 初始化 `state` 的回归。
 - `runtime/candidate_manifest.py --check` 对真实 cc7 manifest 复算候选 SHA 一致。
 - 全部测试不 import torch/NPU、不访问服务、不发请求；设备侧真实执行仍由 31 完成。
 

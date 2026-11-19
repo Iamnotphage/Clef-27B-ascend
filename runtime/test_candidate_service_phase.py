@@ -420,3 +420,59 @@ class CliTest(Base):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class BuildDepsTest(unittest.TestCase):
+    """The ebca SourceControl writes through self.state; build_deps must seed it."""
+
+    def test_build_deps_seeds_source_control_state(self):
+        with tempfile.TemporaryDirectory(prefix='clef-build-deps-') as tmp:
+            root = Path(tmp)
+            owner = root / 'owner'; owner.mkdir()
+            code = root / 'code' / 'runtime'; code.mkdir(parents=True)
+            ab = root / 'ab'; ab.mkdir()
+            paths = {
+                owner / 'final_acceptance_supervisor.py': cand.SUPERVISOR_SHA,
+                owner / 'final_service_phase.py': cand.PHASE_SHA,
+                code / 'final_acceptance.py': cand.RUNNER_SHA,
+                root / 'manifest.json': cand.MANIFEST_SHA,
+                root / 'base-manifest.json': cand.BASE_MANIFEST_SHA,
+                ab / 'joint_fused_service_ab.py': cand.BASE_SHA,
+                ab / 'joint_fused_source_control.py': cand.SOURCE_CONTROL_SHA,
+                ab / 'joint_fused_attention_window.py': cand.WINDOW_SHA,
+                ab / 'apply_joint_fused_attention.py': 'b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406',
+                ab / 'apply_joint_service_check.py': '1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c',
+            }
+            for path in paths:
+                path.write_text('{}' if path.name.endswith('manifest.json') else 'fixture')
+            paths = {path.resolve(): digest for path, digest in paths.items()}
+
+            class FakeSourceControl:
+                def __init__(self, ns):
+                    self.args = ns
+                    self.run_dir = Path(ns.run_dir)
+
+                def switch_source(self, target, tag):
+                    self.state['source_switches'].append({'target': target, 'tag': tag})
+
+            fake_base = types.SimpleNamespace(now=lambda: 'T',
+                                              __file__=str((ab / 'joint_fused_service_ab.py').resolve()))
+            fake_sc = types.SimpleNamespace(SourceControl=FakeSourceControl, base=fake_base)
+            fake_phase = types.SimpleNamespace(strict=types.SimpleNamespace())
+            fake_acceptance = types.SimpleNamespace()
+            a = argparse.Namespace(
+                owner_code=owner, code=root / 'code', manifest=root / 'manifest.json',
+                manifest_sha=cand.MANIFEST_SHA, base_manifest=root / 'base-manifest.json',
+                ab_code=ab, run_dir=root / 'run', repo=root, tree='/tree', python='/py',
+                activate='/act', launch='/launch', wait='/wait', stop_script='/stop',
+                service_log_root=str(root / 'labels'), clean_env_expect=root / 'expect.json',
+                port=18143, stop_timeout=120.0, wait_timeout=900.0)
+            with patch.object(cand, 'sha', side_effect=lambda p: paths[Path(p).resolve()]), \
+                 patch.object(cand, 'load', side_effect=[fake_phase, fake_sc, fake_acceptance]):
+                deps = cand.build_deps(a)
+            self.assertEqual(deps.ab.state, {'schema': 'joint-fused-source-control/1', 'at': 'T',
+                                             'args': {}, 'rounds': [], 'steps': {},
+                                             'source_switches': [], 'overall_rc': 1})
+            deps.ab.switch_source('aa3e', 'fixture')
+            self.assertEqual(deps.ab.state['source_switches'],
+                             [{'target': 'aa3e', 'tag': 'fixture'}])

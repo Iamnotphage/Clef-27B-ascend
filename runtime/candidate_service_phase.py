@@ -103,6 +103,12 @@ def proc_environ(pid):
                 for part in raw.split(b'\0') if b'=' in part)
 
 
+def initial_state(base):
+    """The ebca main() normally seeds this before any switch/restore call."""
+    return {'schema': 'joint-fused-source-control/1', 'at': base.now(), 'args': {},
+            'rounds': [], 'steps': {}, 'source_switches': [], 'overall_rc': 1}
+
+
 def build_deps(a):
     owner = a.owner_code.resolve()
     require(sha(owner / 'final_acceptance_supervisor.py') == SUPERVISOR_SHA, 'supervisor SHA mismatch')
@@ -134,6 +140,9 @@ def build_deps(a):
         image_url='', port=a.port, rounds=0, reps=0, warmup=0, http_timeout=0.0,
         stop_timeout=a.stop_timeout, wait_timeout=a.wait_timeout)
     ab = sc_mod.SourceControl(ns)
+    # SourceControl.switch_source/restore_prod write through self.state; the ebca
+    # main() seeds it, but a library caller must do the same.
+    ab.state = initial_state(sc_mod.base)
     return SimpleNamespace(strict=strict, phase=phase, ab=ab, acceptance=acceptance,
                            manifest=read(a.manifest), base_manifest=read(a.base_manifest))
 
