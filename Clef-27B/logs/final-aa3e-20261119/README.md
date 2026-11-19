@@ -36,6 +36,7 @@ ERQA 216/400。所有质量差在 2PP 内（相对 11-13 适配 baseline 最大 
 - `b8/`、`b16/`：typed 候选 B8/B16 两点的同结构原件
 - `erqa/`：ERQA400 acceptance/summary/erqa-score、`predictions.jsonl.gz`、expected-inputs、supervision
 - `restore/`：最终 restore 的 complete/restore/envcompare/actual/expected/restored-identities，以及 B8/B16 中间 restore 的 complete/envcompare/actual/expected/restored-identities
+- `entry/`：官方 `start.sh` 入口验证原件——abs/（绝对参数首启：launch-manifest、joint-patch-record、patch-manifest、service.log、patch-backup）、rel/（相对参数重启：aa3e-noop 记录与日志）、run/（旧 f810 stop、首启 stop、wrapper 清理、最终服务身份/env、四检、生产根 dry-run）、backup/（受控部署备份清单）
 
 远端原件路径（执行机）：
 - S1：`/workspace/yangchen/logs/owner31-candidate-s1-20261119T0059Z/`

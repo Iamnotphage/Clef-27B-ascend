@@ -2,6 +2,8 @@
 
 ## 当前提交指标（2026-11-19，aa3e fused 选定版本）
 
+> 图片说明：`result.png` 与 `npu_device_call.png` 仍为 2026-11-12 早期 baseline 的历史截图，**不代表当前 aa3e 提交版本**；当前版本的真实截图由用户本人补拍（结果图应展示本轮 aa3e S1/S2/OD/ERQA 数值，设备图应为卡 7 双 worker 的实时 `npu-smi`）。原始输出路径见 `logs/final-aa3e-20261119/`。
+
 ### 精度指标
 
 **OpenDecisions 1.0.1 全量 2,352 题（作者原生评分器，0～100 分）**

@@ -1,30 +1,106 @@
 {
  "schema": "owner31-release-binding/1",
- "status": "draft_pending_official_entry",
+ "status": "ready_official_entry_verified",
  "selected_profile": {
   "arm": "aa3eON",
   "config": "s1",
-  "launch": {"max_model_len": 4096, "max_num_seqs": 1, "max_num_batched_tokens": 4096, "tensor_parallel_size": 2, "dtype": "bfloat16", "enforce_eager": true, "prefix_cache": false, "limit_mm_per_prompt": {"image": 1, "video": 1}},
-  "joint_env": {"CLEF_JOINT_FUSED_ATTN": "1", "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503", "CLEF_JOINT_SINGLE_FIELD": "1"},
-  "service_env_bytes": {"ASCEND_CUSTOM_OPP_PATH_entries": 9, "ASCEND_CUSTOM_OPP_PATH_sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1", "LD_LIBRARY_PATH_entries": 12, "LD_LIBRARY_PATH_sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c", "expected_manifest": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json", "expected_manifest_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"}
+  "launch": {
+   "max_model_len": 4096,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "tensor_parallel_size": 2,
+   "dtype": "bfloat16",
+   "enforce_eager": true,
+   "prefix_cache": false,
+   "limit_mm_per_prompt": {
+    "image": 1,
+    "video": 1
+   }
+  },
+  "joint_env": {
+   "CLEF_JOINT_FUSED_ATTN": "1",
+   "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+   "CLEF_JOINT_SINGLE_FIELD": "1"
+  },
+  "service_env_bytes": {
+   "ASCEND_CUSTOM_OPP_PATH_entries": 9,
+   "ASCEND_CUSTOM_OPP_PATH_sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1",
+   "LD_LIBRARY_PATH_entries": 12,
+   "LD_LIBRARY_PATH_sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c",
+   "expected_manifest": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+   "expected_manifest_sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"
+  }
  },
  "assets": {
-  "head_aa3e": {"path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py", "role": "selected aa3e runtime head", "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"},
-  "single_field_f810_source": {"path": "runtime/joint_fused_attention/clef_joint_schema.py (bundle)", "role": "f810 single-field source used by fused installer", "sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"},
-  "fused_installer": {"path": "runtime/apply_joint_fused_attention.py (bundle)", "role": "audited fused source installer", "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"},
-  "guard_official_fused": {"path": "runtime/apply_joint_single_field_patch_fused.py", "role": "official aa3e fused guard (new entry reads this path)", "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"},
-  "guard_legacy_single_field": {"path": "runtime/apply_joint_single_field_patch.py", "role": "legacy f810 single-field guard; preserved unchanged; aa3e runtime does not read it", "sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"},
-  "candidate_manifest": {"path": "runtime/final_acceptance_candidate_manifest.json", "role": "frozen candidate acceptance manifest", "sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4"},
-  "typed_entry_measured": {"path": "runtime/candidate_service_phase_typed.py", "role": "entry used for measured typed S2/ERQA chain", "sha256": "abb7c383deee092ff6037d09400735981b6550cd8f761d92dcb1d901715b1bc5"},
-  "typed_stage_manifest": {"sha256": "644be6b4e7ce2ebd091160fcb5ef663791ebdd96c7d35a2b2052585849738860"},
-  "combo": {"sha256": "d72e79579e11d54cefd86ab881d55149b858ecf0630f0ade43aab6c624774f7d"},
-  "frozen_entry_a1ca": {"sha256": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44"},
-  "phase_v3": {"sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"},
-  "supervisor_v5": {"sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"},
-  "cc7_runner": {"sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"},
-  "cc7_manifest": {"sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2"},
-  "model": {"dir": "/workspace/yangchen/models/Clef-27B", "revision": "local-65e5a3c5ffb6", "manifest_sha256": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"},
-  "existing_chain_assets": ["GDN conv+QKV vendor (ClefGdnConvQkv)", "GDN chunk128 default", "MLP BF16 NZ (CLEF_MLP_BF16_NZ=1)", "ACLNN_CACHE_LIMIT=1000000", "BIC decision prefill", "GDN decision prefill"]
+  "head_aa3e": {
+   "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+   "role": "selected aa3e runtime head",
+   "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+  },
+  "single_field_f810_source": {
+   "path": "runtime/joint_fused_attention/clef_joint_schema.py (bundle)",
+   "role": "f810 single-field source used by fused installer",
+   "sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
+  },
+  "fused_installer": {
+   "path": "runtime/apply_joint_fused_attention.py (bundle)",
+   "role": "audited fused source installer",
+   "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
+  },
+  "guard_official_fused": {
+   "path": "runtime/apply_joint_single_field_patch_fused.py",
+   "role": "official aa3e fused guard (new entry reads this path)",
+   "sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
+  },
+  "guard_legacy_single_field": {
+   "path": "runtime/apply_joint_single_field_patch.py",
+   "role": "legacy f810 single-field guard; preserved unchanged; aa3e runtime does not read it",
+   "sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
+  },
+  "candidate_manifest": {
+   "path": "runtime/final_acceptance_candidate_manifest.json",
+   "role": "frozen candidate acceptance manifest",
+   "sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4"
+  },
+  "typed_entry_measured": {
+   "path": "runtime/candidate_service_phase_typed.py",
+   "role": "entry used for measured typed S2/ERQA chain",
+   "sha256": "abb7c383deee092ff6037d09400735981b6550cd8f761d92dcb1d901715b1bc5"
+  },
+  "typed_stage_manifest": {
+   "sha256": "644be6b4e7ce2ebd091160fcb5ef663791ebdd96c7d35a2b2052585849738860"
+  },
+  "combo": {
+   "sha256": "d72e79579e11d54cefd86ab881d55149b858ecf0630f0ade43aab6c624774f7d"
+  },
+  "frozen_entry_a1ca": {
+   "sha256": "a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44"
+  },
+  "phase_v3": {
+   "sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"
+  },
+  "supervisor_v5": {
+   "sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"
+  },
+  "cc7_runner": {
+   "sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+  },
+  "cc7_manifest": {
+   "sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2"
+  },
+  "model": {
+   "dir": "/workspace/yangchen/models/Clef-27B",
+   "revision": "local-65e5a3c5ffb6",
+   "manifest_sha256": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"
+  },
+  "existing_chain_assets": [
+   "GDN conv+QKV vendor (ClefGdnConvQkv)",
+   "GDN chunk128 default",
+   "MLP BF16 NZ (CLEF_MLP_BF16_NZ=1)",
+   "ACLNN_CACHE_LIMIT=1000000",
+   "BIC decision prefill",
+   "GDN decision prefill"
+  ]
  },
  "inheritance_map": {
   "A_reused_measured": [
@@ -43,11 +119,27 @@
   ]
  },
  "measured_acceptance_bindings": {
-  "s1_candidate": {"acceptance": "604a68b4858da30037154872c20e37ed89153f0378c6caf4925be08fb91af970", "supervision": "a0f78be918dc1982e075862dea72fefabb0a9c37d2bb70102fbe2fb83c2cc884", "p95_median_ms": 156.44167428836226},
-  "s2_b8": {"acceptance": "c54c09580fa6dd6650ae1580d0d45ec43cf8d7519ee98887876881e547018ab2", "supervision": "70b1834f828394638d53fb5153dc0a0f2d645930926be0045114cab6300feeac"},
-  "s2_b16": {"acceptance": "8f90bddd5bd7dd1f5592498437e8f97569605a15ab7f3fc9c3604e6910ee70eb", "supervision": "700361dfbb07dc77fb9501a38a2eef07a8cac5e399a8832074aea3049f0f7127"},
-  "erqa": {"acceptance": "1f119678767f83b8bbfdf53a894c573de4661e5512a58f07983af33f0f482538", "supervision": "5ec2942e4fd58b815d80882477c5b904449ad6ae8f2cb10ec4a3694f0a27a1b1"},
-  "final_f810_baseline_service": {"label": "d0-restore-20261119T020614Z-b57139dc", "restore": "a61bdf3177e99708d0de3b36a6246a0258565d6f799f18748896ead5df254717"}
+  "s1_candidate": {
+   "acceptance": "604a68b4858da30037154872c20e37ed89153f0378c6caf4925be08fb91af970",
+   "supervision": "a0f78be918dc1982e075862dea72fefabb0a9c37d2bb70102fbe2fb83c2cc884",
+   "p95_median_ms": 156.44167428836226
+  },
+  "s2_b8": {
+   "acceptance": "c54c09580fa6dd6650ae1580d0d45ec43cf8d7519ee98887876881e547018ab2",
+   "supervision": "70b1834f828394638d53fb5153dc0a0f2d645930926be0045114cab6300feeac"
+  },
+  "s2_b16": {
+   "acceptance": "8f90bddd5bd7dd1f5592498437e8f97569605a15ab7f3fc9c3604e6910ee70eb",
+   "supervision": "700361dfbb07dc77fb9501a38a2eef07a8cac5e399a8832074aea3049f0f7127"
+  },
+  "erqa": {
+   "acceptance": "1f119678767f83b8bbfdf53a894c573de4661e5512a58f07983af33f0f482538",
+   "supervision": "5ec2942e4fd58b815d80882477c5b904449ad6ae8f2cb10ec4a3694f0a27a1b1"
+  },
+  "final_f810_baseline_service": {
+   "label": "d0-restore-20261119T020614Z-b57139dc",
+   "restore": "a61bdf3177e99708d0de3b36a6246a0258565d6f799f18748896ead5df254717"
+  }
  },
  "reporting": {
   "metric": "official benchmark JSON decisions_per_second = successful / wall_seconds",
@@ -64,5 +156,86 @@
   "release manifest binding the above and measured acceptance SHAs",
   "final service = aa3e/s1 healthy, clients empty, no stray processes"
  ],
- "frozen_unchanged": ["765 legacy guard", "a1ca entry", "31202d27 manifest", "phase 888a8d7f", "v5 172c2838", "cc7 runner 7d32e5c3/manifest 0338f87b", "all previous stage directories in place"]
+ "frozen_unchanged": [
+  "765 legacy guard",
+  "a1ca entry",
+  "31202d27 manifest",
+  "phase 888a8d7f",
+  "v5 172c2838",
+  "cc7 runner 7d32e5c3/manifest 0338f87b",
+  "all previous stage directories in place"
+ ],
+ "official_entry": {
+  "release_root": "/workspace/yangchen/work/final-release-aa3e-0b869dd",
+  "source_commit": "2dcc029",
+  "release_files": 326,
+  "remote_bytes_verified_by": "32 (326/326 vs git blobs)",
+  "entry_sha256": "de5b0d1ea95194dcb7e039e65cb192c3fb6ad98e5c8217579040ecce309e7b29",
+  "stage_manifest_sha256": "048dec3174e218890206fc80d1ca128a21d586d6ba1a61e4c02a978bca6a4ebe",
+  "doc_sha256": "ba0e97e959454a4ba62ba188021e3b5f852beb75d2abb4fdcd873cb7e59cdd05",
+  "cpu_evidence_sha256": "1cad8ba1d0074e6b9ac221d5b977467d73f2f7e6169e0d0172c595783c6a2c4d",
+  "deployment": "Plan B controlled deploy to production root /workspace/yangchen/Clef-27B-ascend; backup at /workspace/yangchen/work/official-entry-backup-20261119T024617Z (backup-manifest 739724631f7a355df0fbcab1d30274301312de872555aab00cae1dd11259cc15, at 20261119T024617Z = 2026-11-19 10:46:17 CST)",
+  "dry_run_exact_gate": {
+   "file": "/workspace/yangchen/logs/official-entry-dryrun-prod-20261119/dry-run.json",
+   "sha256": "f8c506aa85e9f385937c44377aa9b105f6797e499cacadc2bbb26ca81fe0b540",
+   "argv_equal_frozen": true,
+   "opp": "9 entries byte-equal fcbdcbf1",
+   "ld": "12 entries byte-equal fcbdcbf1",
+   "effective_equal": true
+  }
+ },
+ "final_service": {
+  "root": 1287336,
+  "ppid": 1,
+  "pgid": 1287336,
+  "sid": 1287336,
+  "starttime": "397375124",
+  "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+  "tree": [
+   1287336,
+   1287469,
+   1287470,
+   1287487,
+   1287488
+  ],
+  "label_output_dir": "/workspace/yangchen/logs/official-aa3e-rel-20261119T0254Z",
+  "config": "s1",
+  "max_model_len": 4096,
+  "max_num_seqs": 1,
+  "max_num_batched_tokens": 4096,
+  "tensor_parallel_size": 2,
+  "source_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+  "guard_fused_sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+  "guard_old_sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+  "env": {
+   "opp_entries": 9,
+   "opp_sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1",
+   "ld_entries": 12,
+   "ld_sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c",
+   "joint_keys": {
+    "CLEF_JOINT_FUSED_ATTN": "1",
+    "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "CLEF_JOINT_SINGLE_FIELD": "1"
+   }
+  },
+  "four_checks": "health/workers/text/image rc0 ok (d0_restore verify)",
+  "card7": "chip0 worker 1287487, chip1 worker 1287488",
+  "first_start": {
+   "output_dir": "/workspace/yangchen/logs/official-aa3e-abs-20261119T0250Z",
+   "root": 1285953,
+   "branch": "f810->fused",
+   "stopped_with": "d0_stop exact identity verified"
+  },
+  "restart": {
+   "output_dir": "/workspace/yangchen/logs/official-aa3e-rel-20261119T0254Z",
+   "branch": "aa3e-noop"
+  },
+  "wrapper_cleanup": "orphaned launcher bash 1287335 identity-verified then TERM; root reparented to ppid 1 (wrapper-cleanup.json)"
+ },
+ "p3_notes": [
+  "official_entry_stage.json frozen_unchanged lists a1ca26cf and 31202d27; these are external frozen audit harness files (cc34-e20e128/runtime), not submission-tree files and not official-entry dependencies"
+ ],
+ "user_actions": [
+  "result.png / npu_device_call.png remain historical 2026-11-12 baseline; user will capture real aa3e screenshots; README states they are historical and pending user update"
+ ]
 }

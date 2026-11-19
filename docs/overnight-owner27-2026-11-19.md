@@ -197,3 +197,18 @@ v3 SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`，test
 本轮证据：`Clef-27B/logs/overnight-20261119-owner31/`（pre-window、rstd8、smallq-ad、grouped29、grouped-recovery-and-candidate-attempts、s1-final-f810、phase-s1-first-clean、final-chain-results、typed-chain-results）；提交 `934fff0`（f810 全链）、`da5a6d1`（typed 链）。独立核验：32（生命周期/性能/raw/恢复）、33（逐 index 逐题质量）。
 
 最终服务目标：官方 `start.sh` 入口验证通过后为**所选 aa3e/s1**（当前临时状态仍为 f810 clean s1，label `b57139dc`，仅作为入口验证前的健康基线；入口验证与最终切换见下节计划）。
+
+## 2026-11-19 官方 start.sh 入口验证闭合（Plan B）
+
+35 交付官方入口 commit `f9e601c`（代码 tuple）与 `3072f04`（stage 增量），已整合为收口分支 `ao/resume-cc/execute-20261119` 的 `2dcc029`（随后 P2 文档修正 `36b13b4`）。完整 release 根 `/workspace/yangchen/work/final-release-aa3e-0b869dd` 由该提交树逐字节重建（326 文件，含 `Clef-27B/logs/model_manifest.json` 98c104a9；不含 bulk logs/`__pycache__`/`._*`），32 独立核对 326/326 与 git blob 一致。
+
+- 独立根 exact dry-run 显示 OPP 0–4 与 LD 0–1 内嵌 repo 根路径，冻结 expected（`fcbdcbf1…`，12933 B）要求生产绝对路径，独立根无法过精确门。经 20/32 同意采用 **Plan B 受控部署**：备份后把 13 个已审对象部署到原生产根 `/workspace/yangchen/Clef-27B-ascend`；release 根仍为不可变交付原件。
+- 备份：`/workspace/yangchen/work/official-entry-backup-20261119T024617Z/`（backup-manifest `73972463…`；**时间为 20261119T024617Z = 2026-11-19 10:46:17 CST**，此前报文中的 14:46:17Z 为转录错误）。被替换件：`Clef-27B/inference.py`（原 `081b5623…`）与 `runtime/test_inference_launch.py`（原 `99baa718…`）；其余 11 件原不存在。旧 765 guard、f810 源、a1ca/31202d27、phase/v5、GDN/QKV/chunk/NZ 安装器与 vendor 六 .so 均未改。
+- 生产根 exact dry-run（clean 两键父环境 + 一次 `source scripts/activate_env.sh`，正式 venv 解释器）：`/workspace/yangchen/logs/official-entry-dryrun-prod-20261119/dry-run.json`（`f8c506aa…`），argv 35/35、OPP 9/9、LD 12/12、effective 全等 `fcbdcbf1…`。
+- 停旧服务：d0_stop 精确身份（root 1279960 / start 397095494）`stop_root_identity=verified`；停后端口 111、整 PGID 空、卡 7 无进程。
+- 首启（绝对参数）：`/workspace/yangchen/logs/official-aa3e-abs-20261119T0250Z`，root 1285953；`joint-patch-record`：`branch=f810->fused`、fused_action=apply、fused backup 独立、guard_action=noop、target before=f810→after=aa3e、guard 36eaff44；argv 与冻结一致；四检 health/workers/text/image 全 ok；五 PID 同 PGID、卡 7 chip0/1 双 worker、OPP9/LD12、joint 三键正确。
+- 停首启后相对参数重启（cwd=生产根，`--model-dir ../models/Clef-27B --output-dir ../logs/official-aa3e-rel-20261119T0254Z`，同 clean+activate）：root 1287336；`branch=aa3e-noop`、fused/guard 均 noop、patch-backup 0 新文件（noop 不写 manifest，record 的 `fused_manifest` 为候选路径字段）；argv 35/35、五 PID 同 PGID、四检全 ok、env 与 joint 键同前。
+- 最终服务：root 1287336、ppid 1、PGID/SID 1287336、starttime 397375124（包装 bash 1287335 经身份校验后 TERM，root reparent 到 1，见 `wrapper-cleanup.json`）；source aa3e1758、fused guard 36eaff44、旧 guard 76595657 未变；OPP 9（`7b79c5db…`）/LD 12（`ca27dbb7…`）；health ready、config s1/4096/seqs1。
+- 入口证据已归档 `Clef-27B/logs/final-aa3e-20261119/entry/`（abs/rel launch 与 record、两次 stop、wrapper 清理、最终身份/env、四检、生产 dry-run、备份清单）；该目录 `SHA256SUMS` 78 项全部校验通过。
+- P3 说明：`runtime/official_entry_stage.json` 的 `frozen_unchanged` 列出的 a1ca26cf 与 31202d27 属**外部已冻结审计 harness**（位于 cc34-e20e128 stage），不在提交树、也非官方入口依赖；非缺文件。
+- 图片：`result.png`/`npu_device_call.png` 仍为 2026-11-12 历史 baseline 截图，已在 README 明示不代表当前 aa3e 版本；由用户本人补拍真实截图（结果图应展示本轮 aa3e S1/S2/OD/ERQA 数值，设备图为卡 7 双 worker 实时 `npu-smi`）。
