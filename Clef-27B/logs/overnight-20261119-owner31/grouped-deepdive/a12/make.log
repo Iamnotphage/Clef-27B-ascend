@@ -1,0 +1,22 @@
+[ 50%] Building CXX object CMakeFiles/a12_grouped_mmar.dir/test_aclnn_grouped_mat_mul_all_reduce.cpp.o
+/workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/src/test_aclnn_grouped_mat_mul_all_reduce.cpp: In function ‘int callMatmulAndAicpu(HcclComm, void**, void**, int*, int*, DataSize&, aclrtStream, aclrtEvent, aclrtEvent, int, int, int, int, int, std::string, std::map<std::__cxx11::basic_string<char>, long int>&)’:
+/workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/src/test_aclnn_grouped_mat_mul_all_reduce.cpp:370:64: warning: ‘aclnnStatus aclnnGroupedMatMulAllReduceGetWorkspaceSize(const aclTensorList*, const aclTensorList*, const aclTensorList*, const aclIntArray*, int64_t, const char*, const char*, int64_t, int64_t, const aclTensorList*, uint64_t*, aclOpExecutor**)’ is deprecated: aclnnGroupedMatMulAllReduceGetWorkspaceSize will be deprecated [-Wdeprecated-declarations]
+  370 |     auto aclnnRet = aclnnGroupedMatMulAllReduceGetWorkspaceSize(
+      |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  371 |         (aclTensorList*)inputs[0], (aclTensorList*)inputs[1], (aclTensorList*)inputs[2], (aclIntArray*)inputs[3],
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  372 |         split_item, hcom_name, "sum", comm_turn, 1, (aclTensorList*)outputs[0], &workspaceSize, &executor);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/src/test_aclnn_grouped_mat_mul_all_reduce.cpp:34:
+/usr/local/Ascend/cann-9.2.1/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h:48:23: note: declared here
+   48 | ACLNN_API aclnnStatus aclnnGroupedMatMulAllReduceGetWorkspaceSize(
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/src/test_aclnn_grouped_mat_mul_all_reduce.cpp:380:43: warning: ‘aclnnStatus aclnnGroupedMatMulAllReduce(void*, uint64_t, aclOpExecutor*, aclrtStream)’ is deprecated: aclnnGroupedMatMulAllReduce will be deprecated [-Wdeprecated-declarations]
+  380 |     aclnnRet = aclnnGroupedMatMulAllReduce(workspaceAddr, workspaceSize, executor, rtStream);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/src/test_aclnn_grouped_mat_mul_all_reduce.cpp:34:
+/usr/local/Ascend/cann-9.2.1/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h:62:23: note: declared here
+   62 | ACLNN_API aclnnStatus aclnnGroupedMatMulAllReduce(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[100%] Linking CXX executable bin/a12_grouped_mmar
+[100%] Built target a12_grouped_mmar
