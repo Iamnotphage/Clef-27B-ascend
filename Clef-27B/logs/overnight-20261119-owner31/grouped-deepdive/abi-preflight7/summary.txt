@@ -1,0 +1,8 @@
+abi-preflight7 summary (owner31, read-only)
+1) Headers: CommKfcParamDesc / struct KFCTask not found under installed include/opp (search output in headers.txt); CANN toolkit version recorded there.
+2) AicpuKfcProcess::AicpuRunRpcServerForApi nm 0x7b6770 size 0x430; direct external callers via @plt: 0x760930 (owner unresolved in dynsym), and RunAicpuKfcSrvLaunch for MC2/V2: 0x763880 (ForMC2V2), 0x7639dc (ForMC2). Other bl lines in that region are calls to local unexported helpers.
+3) 0x5CDF123A literal byte scan: 0 hits in libccl_kernel/libopapi/libhccl/libhccl_v2 (constant is built with movz/movk immediates, not a data word). Immediate sites from full disassembly are listed in const-immediate-sites.txt; contexts in site-contexts.txt. Key sites:
+   - 0x7d6838/0x7d6844 -> str w4,[x0,#44] at 0x7d6850: writer of AivAicpuOpParam+44 (unexported local function between Init(y) 0x7d67e0 and WriteFinish 0x7d68ec)
+   - 0x7d6f44 gate compare slot+48 in ReadApiValidMsg; 0x7d71dc/0x7d71e4 in CheckRcvWorkMsg; 0x797978 compare [x19+48] in ReadMsgFromMemory(HcclMsg); 0x7980f0 compare [x19+8240] in ReadMsgFromMemory(HcclMsgExt); 0x7d53f0 compare [x1+44] in AicpuKfcRetryProcess::RetryProcess; 0x7d7f0c/0x7d7f18 in GenMsgByTaskParam region (context in file); 0x7db884/0x7dbc30 further sites.
+4) Grouped op config/kernel json and .o strings: no rac_server/TurnWait/TurnNotify symbols or strings (op-config-symbols.txt).
+No code/device actions; service untouched.
