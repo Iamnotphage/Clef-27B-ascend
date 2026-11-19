@@ -485,6 +485,15 @@ class AttributedTargetsTest(unittest.TestCase):
         self.assertEqual(targets['groups'], {})
         self.assertEqual(targets['singles'], set())
 
+        class FakeRegistry:
+            def snapshot(self):
+                return [entry]
+
+        self.assertEqual(win.attributed_survivors(FakeRegistry(), table=table,
+                                                  reader=table.get), [77])
+        self.assertTrue(win.cleanup_blocks_restore({'reason': 'protected_overlap'}))
+        self.assertFalse(win.cleanup_blocks_restore({'reason': None}))
+
     def test_unknown_group_member_is_not_group_killed(self):
         entry = {'pid': 88, 'starttime': '10', 'boot_id': 'b', 'pgid': 88, 'sid': 88}
         table = {
@@ -576,6 +585,75 @@ class AttributedProcessTest(unittest.TestCase):
                     pass
             unrelated.kill()
             unrelated.wait(timeout=5)
+
+    def test_stop_before_cleanup_records_orphan_without_waiting(self):
+        self.assertTrue(win.enable_subreaper())
+        code = (
+            'import subprocess, sys\n'
+            'w = subprocess.Popen([sys.executable, "-c", '
+            '"import time; time.sleep(60)"], start_new_session=True)\n'
+            'print(w.pid, flush=True)\n'
+            'sys.exit(0)\n')
+        parent = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
+                                  start_new_session=True, text=True)
+        worker = None
+        try:
+            worker = int(parent.stdout.readline().strip())
+            parent.wait(timeout=10)
+            root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-race-'))
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            try:
+                registry.stop()  # synchronous final record, no wait for the poller
+                self.assertTrue(any(entry['pid'] == worker for entry in registry.snapshot()))
+                win.cleanup_attributed(parent.pid, None, registry, set(), reap=True)
+                self.assertFalse(Path(f'/proc/{worker}').exists())
+            finally:
+                registry.stop()
+        finally:
+            if parent.poll() is None:
+                parent.kill()
+                parent.wait(timeout=5)
+            if worker is not None:
+                try:
+                    os.killpg(worker, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_adopted_intermediate_and_child_are_recorded(self):
+        self.assertTrue(win.enable_subreaper())
+        intermediate = ('import subprocess, sys, time\n'
+                        'subprocess.Popen([sys.executable, "-c", '
+                        '"import time; time.sleep(60)"], start_new_session=True)\n'
+                        'time.sleep(60)\n')
+        parent_code = ('import subprocess, sys\n'
+                       f'subprocess.Popen([sys.executable, "-c", {intermediate!r}], '
+                       'start_new_session=True)\n'
+                       'sys.exit(0)\n')
+        parent = subprocess.Popen([sys.executable, '-c', parent_code],
+                                  start_new_session=True)
+        root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-chain-'))
+        registry = None
+        try:
+            parent.wait(timeout=10)
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            registry.stop()
+            snapshot = registry.snapshot()
+            self.assertGreaterEqual(len(snapshot), 2)
+            win.cleanup_attributed(parent.pid, None, registry, set(), reap=True)
+            self.assertEqual(win.attributed_survivors(registry), [])
+            for entry in snapshot:
+                self.assertFalse(Path(f"/proc/{entry['pid']}").exists())
+        finally:
+            if registry is not None:
+                registry.stop()
+                for entry in registry.snapshot():
+                    try:
+                        os.killpg(entry['pid'], signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+            if parent.poll() is None:
+                parent.kill()
+                parent.wait(timeout=5)
 
     def test_protected_identity_is_not_signaled(self):
         sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],

@@ -147,15 +147,16 @@ class DescendantRegistry:
         with self._lock:
             known = {entry['pid'] for entry in self._entries.values()}
         pids = tree(table, self.root_pid) | known
+        self_pid = os.getpid()
+        for pid, row in table.items():
+            if row['ppid'] == self_pid and pid != self.root_pid:
+                pids.add(pid)  # subreaper orphans
+        # Expand again so children of an adopted orphan are recorded in the same pass.
         while True:
             children = {p for p, row in table.items() if row['ppid'] in pids}
             if children.issubset(pids):
                 break
             pids |= children
-        self_pid = os.getpid()
-        for pid, row in table.items():
-            if row['ppid'] == self_pid and pid != self.root_pid:
-                pids.add(pid)  # subreaper orphans
         changed = False
         now = time.monotonic_ns()
         with self._lock:
@@ -185,6 +186,10 @@ class DescendantRegistry:
         atomic_write_json(self.path, payload)
 
     def start(self):
+        try:
+            self._record()
+        except Exception:  # noqa: BLE001
+            pass
         self._thread = threading.Thread(target=self._loop, name='descendant-registry',
                                         daemon=True)
         self._thread.start()
@@ -197,6 +202,13 @@ class DescendantRegistry:
             except Exception:  # noqa: BLE001
                 pass
 
+    def record_now(self):
+        try:
+            self._record()
+        except Exception:  # noqa: BLE001
+            pass
+        self.write()
+
     def stop(self):
         if self._stopped:
             return
@@ -204,10 +216,12 @@ class DescendantRegistry:
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2)
-        try:
-            self._record()
-        except Exception:  # noqa: BLE001
-            pass
+        # Repeat until stable so an adopted intermediate and its children both land.
+        for _ in range(3):
+            before = len(self.snapshot())
+            self.record_now()
+            if len(self.snapshot()) == before:
+                break
         self.write()
 
     def snapshot(self):
@@ -305,21 +319,29 @@ def cleanup_attributed(child_pid, child_identity, registry, protected, *, wait=1
     final = _attributed_targets(entries)
     members = ({row['pid'] for row in final['verified']} |
                set(final['unknown']) |
+               {row['live']['pid'] for row in final['drift'] if row.get('live')} |
                {p for members_set in final['groups'].values() for p in members_set})
     return {'killed': True, 'reason': None, 'members': sorted(members),
             'groups': sorted(final['groups']), 'singles': sorted(final['singles']),
             'unknown': final['unknown'], 'drift': final['drift']}
 
 
-def attributed_survivors(registry, child_pid=None, child_identity=None):
+def attributed_survivors(registry, child_pid=None, child_identity=None, table=None,
+                         reader=None):
     entries = registry.snapshot() if registry is not None else []
     if child_identity is not None:
         entries.append(child_identity)
     if not entries:
         return []
-    targets = _attributed_targets(entries)
+    targets = _attributed_targets(entries, table=table, reader=reader)
     live = {row['pid'] for row in targets['verified']} | set(targets['unknown'])
+    # A PID reuse / start-time drift is not signalable, but it must still block restore.
+    live |= {row['live']['pid'] for row in targets['drift'] if row.get('live')}
     return sorted(live)
+
+
+def cleanup_blocks_restore(outcome):
+    return bool(outcome and outcome.get('reason') == 'protected_overlap')
 
 
 def same_identity(saved, live):
@@ -755,6 +777,7 @@ def execute(a, plan):
     child_ok = False
     source_ok = False
     registry = None
+    cleanup_blocked = False
     subreaper = enable_subreaper()
     result['subreaper'] = subreaper
     if sys.platform.startswith('linux') and not subreaper:
@@ -813,16 +836,20 @@ def execute(a, plan):
         except subprocess.TimeoutExpired:
             timed = True
             child_state['timed_out'] = True
+            registry.stop()  # final synchronous record before any cleanup
             attributed = maps_for_pids(
                 {child.pid, *[entry['pid'] for entry in registry.snapshot()]}, names)
             child_state['maps_attributed'] = attributed
             cleanup = cleanup_attributed(child.pid, child_state.get('identity'), registry,
                                          protected, reap=subreaper)
             child_state['cleanup'] = cleanup
+            if cleanup_blocks_restore(cleanup):
+                cleanup_blocked = True
             try:
                 rc = child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 rc = None
+        registry.stop()  # final synchronous record before any cleanup
         attributed = maps_for_pids(
             {child.pid, *[entry['pid'] for entry in registry.snapshot()]}, names)
         child_state['maps_attributed'] = attributed
@@ -835,7 +862,8 @@ def execute(a, plan):
         cleanup_final = cleanup_attributed(child.pid, child_state.get('identity'), registry,
                                            protected, reap=subreaper)
         child_state['cleanup_final'] = cleanup_final
-        registry.stop()
+        if cleanup_blocks_restore(cleanup_final):
+            cleanup_blocked = True
         members = {p for p, row in scan().items() if row['pgid'] == child.pid and row['state'] != 'Z'}
         survivors = sorted(set(members) |
                            set(attributed_survivors(registry, child.pid,
@@ -856,30 +884,34 @@ def execute(a, plan):
         step('child', child_state)
     except BaseException as exc:
         child_state['error'] = f'{type(exc).__name__}: {exc}'
+        if registry is not None:
+            try:
+                registry.stop()  # final record before cleanup
+            except BaseException:
+                pass
         if child is not None and child.poll() is None:
             try:
                 child_state['cleanup'] = cleanup_attributed(
                     child.pid, child_state.get('identity'), registry, {saved['pid']},
                     reap=subreaper)
+                if cleanup_blocks_restore(child_state['cleanup']):
+                    cleanup_blocked = True
             except BaseException as cleanup_error:
                 child_state['cleanup_error'] = f'{type(cleanup_error).__name__}: {cleanup_error}'
-        if registry is not None:
-            try:
-                registry.stop()
-            except BaseException:
-                pass
         result['error'] = child_state['error']
         step('child', child_state)
     finally:
-        if child is not None and child.poll() is None:
-            try:
-                cleanup_attributed(child.pid, child_state.get('identity'), registry,
-                                   {saved['pid']}, reap=subreaper)
-            except BaseException:
-                pass
         if registry is not None:
             try:
-                registry.stop()
+                registry.stop()  # final record before any cleanup
+            except BaseException:
+                pass
+        if child is not None and child.poll() is None:
+            try:
+                outcome = cleanup_attributed(child.pid, child_state.get('identity'),
+                                             registry, {saved['pid']}, reap=subreaper)
+                if cleanup_blocks_restore(outcome):
+                    cleanup_blocked = True
             except BaseException:
                 pass
         source_after = sha256(a.source_target)
@@ -890,7 +922,14 @@ def execute(a, plan):
         needs_restore = False
         reason = 'stop_not_called'
         context = {}
-        if stop_called:
+        if cleanup_blocked:
+            needs_restore = False
+            reason = 'blocked_protected_overlap'
+            context = {'cleanup_blocked': True,
+                       'attributed_survivors': attributed_survivors(
+                           registry, child.pid if child is not None else None)}
+            result['recovery_gate'] = {'allow': False, 'reason': reason, **context}
+        elif stop_called:
             needs_restore, reason, context = recovery_gate(
                 a, plan, saved, stopped, child.pid if child is not None else None,
                 source_after, registry)

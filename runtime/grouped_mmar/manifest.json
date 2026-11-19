@@ -62,13 +62,13 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "07e0429cb9e18bbb61d55f41b35c78e055f9120695afdffa87b15af67bf24b3a",
-      "bytes": 43245
+      "sha256": "0ca36426da2903a176f1297cf92d4cfe66ce6b6b4bb78ebed3c0d59c39f94637",
+      "bytes": 45182
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (31; H4K/H5K/A15 choices, attribution/drift/unknown/dead-leader logic, subreaper gate/plan-only, Linux real-process fixtures)",
-      "sha256": "0bddc78595f3c359e8582274f70d864753a6c05ff1b632332b7398d6ad86a0a7",
-      "bytes": 28950
+      "role": "CPU window control-flow tests (33; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, Linux real-process fixtures)",
+      "sha256": "17de751279efd72176b0650c7aa95d7ea1376ec68840769e4ecd900df19e8561",
+      "bytes": 32661
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "e8a22b38ea3c34024dd92821d779c7a2c466417018838c6acac3f5e8165e273d",
-      "bytes": 29443
+      "sha256": "8e8c163f31bfc86454857dbf7488be632b968ff2563959dd973fbf8743b53916",
+      "bytes": 29746
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "17/17",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "31/31 (2 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "33/33 (4 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -417,7 +417,13 @@
     "problem": "d7e73514/f05f352f cleanup_child and survivors only covered pgid == child pid; torchrun workers run in independent PGIDs (rank0 1318300, rank1 1318301, PGID=self), so rank groups were not attributed, cleaned, or visible to the recovery gate",
     "fix": "runtime DescendantRegistry polls the child PPID subtree plus subreaper orphans every 0.2 s and persists pid/ppid/pgid/sid/starttime/boot_id/cmdline to descendants.json; cleanup_attributed verifies pid/starttime/boot_id/pgid/sid (ppid may reparent) and signals only verified group leaders, unknown members are never group-killed; SIGTERM -> rescan -> SIGKILL -> reap; protected overlap refuses to signal; survivors and recovery_gate residual include all attributed groups; Linux subreaper failure blocks before d0_stop; plan-only is unaffected",
     "gates": "240 s window, official aa3e restore, old_alive never Popen, restore root ppid1/pgid self/descendants same-group checks unchanged",
-    "freeze": {"supervised_probe_window.py": "07e0429c", "test_supervised_window_cpu.py": "0bddc785", "cpu": "57/57 (17+9+31; 2 Linux-only skipped on macOS)"},
+    "findings_fixed": {
+      "F1": "drift/PID reuse enters attributed_survivors and cleanup members, so it blocks start_restore while never being signaled",
+      "F2": "registry.start() records synchronously and every cleanup path calls registry.stop() (final stable record) before cleanup_attributed; a probe that cleans immediately after start still sees the orphan",
+      "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
+      "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
+    },
+    "freeze": {"supervised_probe_window.py": "0ca36426", "test_supervised_window_cpu.py": "17de7512", "cpu": "59/59 (17+9+33; 4 Linux-only skipped on macOS)"},
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
   },
