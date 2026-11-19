@@ -1,0 +1,25 @@
+{
+ "schema": "a14-large-manual-verify/1",
+ "window_error": "RuntimeError: restored root identity mismatch",
+ "diag": "window required live ppid==1 and pgid==pid immediately after wait_health; the setsid wrapper (1323588) was still the parent at scan time, so the check failed while the service was already healthy; no second tree was started",
+ "live_after_window": {
+  "root": 1323589, "starttime": "399707126", "ppid": 1, "pgid": 1323589, "sid": 1323589,
+  "tree_pids": [1323589, 1323745, 1323746, 1323777, 1323778],
+  "workers": {"EngineCore": 1323746, "TP0": 1323777, "TP1": 1323778},
+  "manifest_pid": 1323589
+ },
+ "checks": {
+  "health": "ready", "info_config": "s1",
+  "ASCEND_CUSTOM_OPP_PATH": {"entries": 9, "sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1"},
+  "LD_LIBRARY_PATH": {"entries": 12, "sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c"},
+  "branch": "aa3e-noop", "text_http": 200, "image_http": 200, "clients": []
+ },
+ "device_facts": {
+  "prepare_rc": 0, "executor_nonnull": true,
+  "workspace_bytes": 115818496,
+  "launch_rc": 0, "kfktask_sync_rc_default": 0,
+  "sync_return_ms": {"rank0": 36.61861, "rank1": 9.46084},
+  "harness_error": "UnboundLocalError: cannot access local variable 'output' (run_probe 0bd1fde8 assigns output=y only when arm is not A14/A15)"
+ },
+ "status": "MRS V1 large device path returned; numeric comparison blocked by run_probe A14 branch bug; restore false-negative in window identity check"
+}
