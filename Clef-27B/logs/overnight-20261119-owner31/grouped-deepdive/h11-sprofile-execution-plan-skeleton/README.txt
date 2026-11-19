@@ -14,23 +14,26 @@ Scope
   release candidate 83598d6e is NOT used. Supervisor is 8f4b843 existing bytes d2576c63... with only
   its path placed in a fresh isolated dir; no derived core changes.
 
-Observation end vs task/pending endpoint
-- observation window: ~10 s delay + 120 s duration = about 130 s after launch (EARLY pending only).
-- task/pending endpoint: actual task completion, timeout, or outer 240 s termination if artifacts exist.
-- attribution uses the explicit task endpoint and reason; duration arrival is NOT flush and NOT task
-  termination; if the endpoint is unknown, the result is capability_unproven.
+Observation end vs task/pending endpoint (machine-readable)
+- observation_start_ns/observation_end_ns: delay+duration (~10-130 s); end_kind=observation_end_only.
+- attribution_window: window_basis=task_or_pending_end; task_or_pending_end_ns + endpoint_reason
+  (unknown|timeout|pending_end|actual_task_end); fail_closed_if_missing=true.
+- duration arrival is NOT flush and NOT task termination; observation_end cannot substitute for task end;
+  unknown endpoint => capability_unproven.
 
 Fresh layout (all paths planned, none created)
 - cell: /workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1
 - run / msprof-out / probe-temp / probe-out / logs / archive / restore under that cell.
 - runid/window/collect begin-end identity to be created at execution time by the existing tools.
 
-Budgets and gates
+Budgets and gates (machine-readable in plan-skeleton.json)
 - stop 120 s, child 240 s, comm 90 s, restore 900 s; supervisor settle default 30 s — explicitly noted
   as NOT proving coverage of the old exit delay (attempt2 residual behaviour).
-- Fail-closed gates: caller env + preflight ALL PASS + collect begin success before any stop;
-  continuous two-empty residual before restore; exactly one begin_restore; no second restore tree;
-  no same-cell retry. Collector wait/unflushed/rank-exits-first remains fail-closed.
+- pre_stop_gates (ordered): caller_env -> preflight_ALL_PASS -> collect_begin_rc0; stop_after collect_begin_rc0.
+  preflight/collect/wrapper new-cell copies are pending; source SHAs are recorded (3ea4e890 / 2bedc64a / 0af37af4).
+- continuous two-empty residual before restore; exactly one begin_restore; no second restore tree; no same-cell retry;
+  collector wait/unflushed/rank-exits-first remains fail-closed.
+- collect end/archive/SUMS paths are encoded; archive SUMS at <archive>/SHA256SUMS; end may repeat to collect late flush.
 - Success requires: valid AIC sample + kernel identity + sample time within this submit-end window +
   this run's actual stream/task; otherwise capability_unproven. timeline-only/empty/truncated are not success.
 - Collector help flags/units: aic-freq 100 Hz; delay/duration seconds; no documented conflicts;
@@ -38,8 +41,9 @@ Budgets and gates
 
 Files
 - child-argv.json: exact child argv list (msprof + native app).
-- window-argv-skeleton.json: full supervisor argv; $PENDING_WINDOW_PATH and $PENDING_FRESH_IDENTITY_FILE
-  must be pinned at execution time.
+- build_window_argv.py: canonical generator for the supervisor argv (reads child-argv.json only;
+  optional --check-argv asserts exact equality, preventing duplicate/drifting embedded child argv).
+  $PENDING_WINDOW_PATH and $PENDING_FRESH_IDENTITY_FILE must be pinned at execution time.
 - plan-skeleton.json: plan fields, budgets, gates, pending list, status.
 - identity-snapshot-now.txt: informational current read (not final).
 - restore-source.txt: restore argv source and adapted template (not executed).
