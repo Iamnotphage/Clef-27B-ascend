@@ -2231,3 +2231,36 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 4. **abi14 静态包**（RcvMsg/Start to run 的 fmt/file/xref/实参）已由 20 发 31（handle `h11-abi14-static31-20261120-1`）；本节不重复请求。
 
 **结论**：根因仍 unresolved。当前最完整的证据链是：H13 已提交/展开、AICPU 通信执行并本地排空、s12/t7 启动核 rc0、H13 3 min 未完成；缺的是 AICPU→AICORE 的 `rcvCnt` response 回写绑定（或等价的 AICORE 等待源），现有 12 文件既无该写、也无 AICORE 侧日志，故只能记“缺失/未证”，不能结案。
+
+## 118. 7b99846 静态包整合：OneStageWait 日志点与 §117 表
+
+**包核**：commit `7b99846`，`SHA256SUMS` 自哈希 `ecca3248…`，4/4 OK；源 `libccl_kernel.so` SHA `2281deca…`（与 abi12 同源）。本节仅并包内原件与 §117 表，无新取件/设备。
+
+### 118.1 日志点 → fmt/file → 函数（唯一直接 xref）
+
+| 运行行 | fmt(VMA) | 文本 | file | 函数/偏移 | line |
+| --- | --- | --- | --- | --- | --- |
+| `rpc_server.cc:298 RcvMsg by task param 1` | 0x1614250 | `[%s:%d] [%u]RcvMsg by task param %u`（空格单值） | 0x1613cc8 | `AicpuKfcRpcServer::CheckRcvAddrMsg+0x120` @0x7d8408 | **298** |
+| `rpc_server.cc:121`（attempt2 0 命中） | 0x1613c38 | `...param:%d/%d`（冒号双值） | 0x1613cc8 | `AicpuKfcRpcServer::RcvMsg+0x130` @0x7d8130 | **121** |
+| `deprecated_process.cc:551 Start to run, round 0` | 0x14fa9c0 | `[%s:%d] [%u]Start to run, round %u`（空格单值） | 0x14fa618 | `AicpuKfcDeprecatedProcess::TryRunRpcServerOneStageWait+0xa4` @0x7ca2c4 | **551** |
+
+- 三 fmt 各仅 1 个直接 ADRP+ADD 引用；未枚举 .plt/间接/函数指针/dlsym，0 直接匹配不作全库无调用证明。
+- 先前“%d/%d 与单值不一致”是**误绑到 0x1613c38**；298 的单值 fmt 与运行行完全一致，**不推 binary 版本不一致**，该差异关闭。
+- 运行行 298 的发出者是 `CheckRcvAddrMsg`（不是 `RcvMsg`）；`RcvMsg` 的 line 121（双值）在 attempt2 0 命中，guard w1=0（298/551 为 w1=1），属缺测，不反证 RcvMsg。
+
+### 118.2 AICPU 执行路径（在函数日志点层面）
+
+`RunAicpuKfcSrvLaunch` → `RunAicpuRpcSrvLaunch` V1（`end` 日志）→ **`TryRunRpcServerOneStageWait`**（`Start to run, round 0`）→ `CheckRcvAddrMsg`（`param %u=1`）→ `Addr Msg[...]` → `AicpuCcOpExe`。
+
+- 这是 **OneStageWait 子路径**的函数内日志点证据；上层 dispatch 谓词（F8 `GetPreparePosition`、F9 `GetTaskType`、F10 `ctx+0xf31bc`）的**取值仍未观测**——日志点证明“到达 OneStageWait”，不证明“哪个谓词选中它”。
+- 与 §117 一致：TwoStageWait 的 `PostMsg` 串未出现（P1/P4 未被本路径执行），`Post finishedTurnCnt`/turn 仍 0 命中；这**加强**了“非 TwoStage 路径”的行为证据，但仍保留 guard 差异的缺测边界。
+- 字段分离：`round` 来自 `ctx+0xF3208`（`x21+0xF0000+0x3208`，12808），`phase` 在 `ctx+0xF31BC`，`turn` 在 `ctx+0x160`（352）——三者不可混用；本轮 `round=0`，不等于 turn/phase。
+
+### 118.3 对 §117 表与缺失 ack 的影响
+
+- 表 A/B/C 不变；仅把 AICPU 路径行补为 OneStageWait，并修正 298 的发出函数为 `CheckRcvAddrMsg`。
+- 缺失 ack 结论不变且更聚焦：OneStageWait 已执行，`PostMsg`（TwoStage 的 +51 写者）不在本路径；Grouped 窗口仍无任何写 response 区（`0x12c09bc...` 0 命中）、无小 memcpy 到 response、`Post finishedTurnCnt`/turn 0 命中。**AICPU→AICORE 的 `rcvCnt` 回写仍缺测**；OneStage 下的实际响应函数/写点未定位。
+- P1–P4/F 更新：P1/P4（TwoStage PostMsg 同字节链）**未被本路径执行**（函数日志点证据）；P2 分支值仍未观测；P3 仍静态；F1 顶层=RpcSrvLaunch V1（部分）；F6 y 仍为 workspace 候选（低32 匹配，未运行绑定）；F8/F9/F10 值仍缺；F4/F5 仍缺。
+- 边界：不从文件名“Deprecated”判弃用/分支；不因一个直接 xref 全局排路；不把 host MC2 与 device V1 入口当互斥。
+
+**缺口（交 20，合并 35/33 精确范围，不新增取件）**：若后续要钉 OneStageWait 的响应写点，需要 ① `TryRunRpcServerOneStageWait` 的 CFG/尾部调用（是否调用 `WriteFinish/WriteTurnCnt/PostMsg` 或仅 SQE）；② Init 参数数据流（y/j/T）与 `ctx+0xF3208` 写者；③ response 区只读快照（候选 `0x12c09bc20040..007f`）。当前不请求，root cause 仍 unresolved。
