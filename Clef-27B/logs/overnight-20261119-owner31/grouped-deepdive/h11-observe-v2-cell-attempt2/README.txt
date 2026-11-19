@@ -6,3 +6,8 @@ attempt2 执行摘要（H11-observe-v2 唯一 window；handle -2）
 - 20 授权补发第一次唯一 restore：plan restore_argv 原样，14:56Z 启动成功；新 root 1355077 / starttime 401718579 / 五 PID / health ready / info s1 / branch aa3e-noop / source aa3e；clients 0；29531 free。
 - collect end：92 文件、SUMS 52d145ee；因 probe-temp 目录 ABSENT，end rc1（如实记录，不补造）。
 - 因果标注：cleanup 覆盖两 PGID 但 gate 仍判残留；保留事实，不作最终因果结论。
+- 人工唯一 restore 验收：见 manual-restore-record.txt（argv/来源/启动时刻/root 1355077 ppid 偏差/
+  五 PID/9 项检查全 true/source 三段/subreaper/clients/29531/残留）。
+- 缺失事实：probe-temp 目录不存在；collect end rc1 原样保留，92 文件 SUMS 52d145ee。
+- cleanup 边界：groups 两 PGID killed=true、unknown/drift 空；gate 仍判两 PID 残留并阻断；
+  signal 与 gate residual 集合不一致原因保留待查，不作最终因果判定。

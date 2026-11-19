@@ -1,0 +1,69 @@
+人工第一次（唯一）restore 验收记录 — H11-observe-v2 attempt2
+================================================================
+
+1. 触发与授权
+- window 的 restore 未发起：restore_block = skipped/blocked，reason=blocked_probe_residual；
+  restore.started 不存在，无 restore.log、无 restore 目录（原件字段保留在 window.json）。
+- 20 授权：原唯一 restore 尚未发起，允许补上第一次且唯一 restore；不重启 window、不重跑 probe。
+- argv 来源：plan `restore_argv`（原样，未改）：
+  env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+    CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c "cd /workspace/yangchen/Clef-27B-ascend &&
+    source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh &&
+    exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh
+    --model-dir /workspace/yangchen/models/Clef-27B
+    --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2"
+- 发起时间：约 2026-11-19T14:56:0xZ（容器时间）；restore launch-manifest started_at
+  = 2026-11-19T14:56:49+0000；输出目录 …/restore-h11-observe-v2。
+
+2. 恢复 root 与五 PID
+- root pid **1355077**；starttime **401718579**；state S；pgid=sid=1355077；
+  ppid=**1355076**（本会话 ssh/bash 包装进程；非 1 —— 见偏差说明）；boot 393ecc15…
+- 五 PID：[1355077, 1355208, 1355209, 1355231, 1355232]
+  （root / resource_tracker / EngineCore / Worker_TP0 / Worker_TP1）。
+- launch-manifest：pid=1355077、config=s1、started_at=14:56:49Z。
+- 偏差说明：人工 restore 由后台 ssh 包装启动，root 当前 ppid 为包装 bash 1355076，而不是
+  window 校验要求的 1；服务本身已 setsid（pgid=sid=root），包装退出/断开后将由 init 收养。
+  该偏差只影响 window 的 ppid1 断言，不影响服务健康与 pgid/sid 稳定性。
+
+3. 九项恢复检查（按 window 1f780bf8 的同一函数复跑：env_evidence/joint_env/http/post/scan）
+- health=true（status ready, clef, local-65e5a3c5ffb6）
+- info=true（config=s1）
+- workers=true（五 PID 全在）
+- text=true（POST /v1/systemone，HTTP 200）
+- image=true（POST /v1/decide，HTTP 200）
+- env=true（env_evidence match=true，clean_expect 比对通过）
+- joint_env=true
+- source=true（after_restore=aa3e1758…）
+- clients=true（pending_clients=[]）
+- 原始输出（复跑）：
+  {"pid":1355077,"pids":[1355077,1355208,1355209,1355231,1355232],
+   "checks":{"health":true,"info":true,"workers":true,"text":true,"image":true,
+             "env":true,"joint_env":true,"source":true,"clients":true},
+   "env_match":true,"joint_ok":true,"text_status":200,"image_status":200,
+   "health_status":"ready","info_config":"s1","clients":[],
+   "source_after_restore":"aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"}
+
+4. source 三段 / 分支 / subreaper
+- source before = after_child = after_restore = aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503。
+- joint-patch-record：branch=aa3e-noop；schema_sha256=aa3e1758…；config=s1。
+- window subreaper：subreaper=True、cleared_for_restore=null、final=0、final_restored=True、original=0。
+- 人工 restore 在 window 之外，无 subreaper 设置（当前 0）。
+
+5. 端口 / clients / 残留
+- 18143 listen=1、established=0；29531 tcp/udp FREE。
+- 无 run_probe/torchrun/window 残留；五 PID 之外无新增设备进程。
+
+6. collect end 与缺失事实（原样保留，不补造）
+- ARCH=…/archive-h11-observe-v2-attempt2；end rc=1，原因：
+  MISSING REQUIRED DIR: probe temp (…/probe-temp-h11-observe-v2) —— 该目录在 window cleanup 后不存在。
+- archive 实际 92 个 raw 文件 + SHA256SUMS=52d145ee6d21ef3b093c3b6d61becb6f8f0f4aa2b56af39ea4bcbaea641005a3。
+- 未创建/未伪造 probe-temp，未重跑 probe。
+
+7. cleanup 覆盖边界与时间线（事实，不作最终因果结论）
+- window cleanup：groups=[1354310,1354311]、singles=[]、unknown=[]、drift=[]、killed=true、members=[1354310,1354311]。
+- recovery_gate：allow=false、reason=blocked_probe_residual、probe_residual 与 attributed_survivors 均为 [1354310,1354311]。
+- child.stderr signal 行：14:52:59Z torchrun 收到 15，向 1354310/1354311 发 SIGTERM。
+- 观察：14:55 前后两 PID 与 torchrun 均已退出（本会话只读扫描）；精确退出时刻与 /proc state 未留原件，
+  因此 D-state/不可杀仅为未知，不作判定。
+- 结论边界：cleanup 已 signal 两独立 PGID（记录 killed=true、members 含两者），但 gate 时刻仍判残留并阻断
+  restore；signal 集合与 gate residual 集合不一致的具体原因（时序/存活判定/状态）保留为待查，不给定论。
