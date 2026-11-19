@@ -1786,3 +1786,19 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 4. 绝对 torchrun 写入 child_argv 可行，但受 `--child-argv`/`--arm` 冲突约束，需完整重建 argv 并在预扫校验 SHA/`--help`。
 
 **状态**：除该项外 v2 CPU 准备 PASS；该项未修前 **v2 命令准备未闭合，不能发 GO**。v1 原件封存、不改旧 plan；操作仍只引用 31 v2 包；无设备动作；静态 ABI/§15 不再重审，root cause 待 v2 实测。
+
+## 100. v2 85ab351/b5cec871 复审：A/B/C 阻断 + README 索引缺文件
+
+**32/35 阻断**：
+- **A（caller-env 假阳性）**：preflight torchrun 段只查嵌套自建 env，不查调用 shell PATH；裸 shell 可 ALL PASS→window 裸 torchrun 失败（v1 复现）。需 caller `command -v` fail-closed 或单一 wrapper。
+- **B（rank-env 硬编码 v1）**：`rank-env-read.py` 同 blob `a4b76676`，但 `RUN = os.path.join(CELL, "run-h11-observe-v1")`、默认 CELL 为 v1；传 v2 CELL 仍读 v1 run；v2 README 只写“同 blob”，无 v2 调用。需 v2 helper 副本/`--run`/env 覆盖（RUN 由 CELL 派生为 `run-h11-observe-v2`）+ README 明确命令；若改 blob 需重新验证逻辑（35 的 18/18 仅对 a4b76676）。
+- **C（collect-raw 标题/注释 v1）**：`collect-raw.sh` 标题仍 `H11-observe-v1`、注释源 SHA 为 v1；功能路径已 v2。需改标题/注释到 v2。
+
+**D（33 新增，README 索引缺文件）**：v2 `README.txt` 文件索引列出 `run-h11-observe-v2.sh`（单一 wrapper）、`validation-caller-bare-fail.txt`、`validation-prepared-pass.txt`，但**包内 19 文件不含这三项**，SUMS 也未覆盖。要么补齐文件并纳入 SUMS，要么删除索引引用；否则包自描述与内容不一致。
+
+**修复要求（31，脚本/文档层，不改 window）**：
+1. A：加 caller 检查（不嵌套 source/export）或提供 wrapper；wrapper 文件必须存在并纳入 SUMS；自建 env 检查改标 recipe。
+2. B：v2 helper 的 RUN 由 CELL 派生或 `--run`/env 覆盖；README 给 v2 明确调用；新 blob 需重跑 35 的 CPU 替身或证明逻辑等价。
+3. C：collect-raw 标题/注释改 v2。
+4. D：补齐 README 索引的 wrapper/validation 文件或删除引用；重生成 SUMS 覆盖全部索引文件。
+- 完成后 commit/push，32/35 复审；**修好前 v2 未闭、无 GO/设备**。
