@@ -206,3 +206,62 @@ the sustainable production integration remain separate gates.
 No change to the official `start.sh`/`inference.py` defaults, no metrics/CSV edits, no
 new device plan in this design step, and no change to the frozen H4K code
 (`0d3f7fb` / run_probe `508e2931` / window `d7e73514`).
+
+## 12. A15 rows=127 contract confirmation (CPU-only, no new code)
+
+The current freeze (`6d09515`, run_probe `d54584b7`) already expresses the requested
+A15 small contract with parameters only:
+
+```
+--arm A15 --rows 127 --k 256 --n 512
+flags = 8 (KEEP_ALL), bias = nullptr, native grouped run
+padded_rows(127, 2) = 128
+row_block(0, 127, 2) = (0, 64)   # RS output per rank: [64, 512]
+row_block(1, 127, 2) = (64, 128)
+all_gather_into_tensor -> [128, 512]; crop [:127]
+reference = matmul(127, 256) then all_reduce -> [127, 512]
+```
+
+The plan-only output was verified locally: arm A15, flags 8, rows 127, k 256, n 512,
+bias nullptr, status plan_not_executed. The pad row is tail row 127 (rank1's block);
+the original 127 rows keep their positions and the crop removes only that pad row.
+No code or freeze change is needed to stage this cell.
+
+## 13. Production lifecycle and NZ baseline plan (CPU design, not implemented)
+
+The single-cell experiment uses `KEEP_ALL` and still hits the unregistered `release`
+op; that is a diagnostic configuration, not a production implementation.
+
+- **Executor/workspace lifetime**: for production, call the aclnn two-phase API with
+  `flags=0` (no keep), destroy the `aclOpExecutor` after the launch returns, and let
+  the workspace tensor be owned per call or by a small pool. The probe's
+  "executor is never destroyed" comment and the missing `release` op must not be
+  carried into the service.
+- **Stream ordering**: prepare captures the current stream; MRS launch, all_gather and
+  AddRMSNorm must stay on that stream. Production must not call
+  `torch.npu.synchronize()`; the probe sync is measurement only.
+- **Collective ordering**: reduce-scatter inside MRS and the following all_gather use
+  the same TP HCCL group; no barrier beyond the two collectives.
+- **NZ baseline comparison**: the current MLP keeps FRACTAL_NZ29 weights. Keep down in
+  ND for the MRS path (skip the down NZ cast only), keep gate/up NZ, and compare the
+  service against the full-NZ baseline on the same workload: S1 mean/p50/p95, S2
+  throughput at the recorded concurrency, and OpenDecisions/ERQA 2PP. Rollback is the
+  MLP-NZ flag plus a restart; no runtime conversion.
+- **Memory**: a per-layer ND down copy for all 64 layers would be 5.31 GiB/rank, so
+  the default plan is load-time format choice, not dual resident copies.
+- **Adoption gate**: any service adoption still requires the model-level 2PP gate; the
+  tensor-level A14/A15 cells are feasibility only.
+
+## 14. Proposed error-stat fields (not implemented; no rerun now)
+
+If a later cell needs scale-aware equivalence, add to `result.reduced`:
+
+- `reference_abs_max`, `output_abs_max`
+- `max_rel` (max |diff| / (|reference| + tiny)) and `mean_rel`
+- `ulp_at_max` (BF16 ulp at the reference magnitude near the max diff)
+- `diff_count_gt_1ulp`, `element_count`
+- optionally a small diff histogram
+
+These are field proposals only; they are not part of the current freeze and do not
+change the A14 large v3 record, which remains numeric-complete but not a precision
+pass.

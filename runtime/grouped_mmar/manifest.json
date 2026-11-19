@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
-      "sha256": "e5638d62e86961469308f35c59351e66067ecf03e8f0028820c42e244cd32161",
-      "bytes": 12444
+      "sha256": "87498b28d7b79710a12fc4742d8f81832d5c2d917543ee0c3c5b8671b2ea5988",
+      "bytes": 15493
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "984eaf2986f78c10a6a20036169f04819290fcb65ad416e1495be953c0b0ac90",
-      "bytes": 33243
+      "sha256": "e61cfe43e426e8811edb301a1bcb11a21848782814138aaf47150a4e8b5e3e09",
+      "bytes": 33334
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -455,7 +455,9 @@
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
     "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
-    "design_sha256": "e5638d62e86961469308f35c59351e66067ecf03e8f0028820c42e244cd32161",
+    "design_sha256": "87498b28d7b79710a12fc4742d8f81832d5c2d917543ee0c3c5b8671b2ea5988",
+    "a15_contract": "the current freeze expresses rows 127 via parameters only: --arm A15 --rows 127 --k 256 --n 512; flags 8 KEEP_ALL, bias nullptr, pad 128, RS blocks 64/64, AG 128, crop 127; plan-only verified, no code change needed",
+    "production_plan": "CPU design sections 13/14: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan; error-stat fields (max_rel/mean_rel/ulp_at_max/counts) are proposals only, not implemented",
     "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
     "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
     "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
