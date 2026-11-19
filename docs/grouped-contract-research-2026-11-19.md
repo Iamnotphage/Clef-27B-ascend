@@ -1066,3 +1066,45 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 3. 除 Init4 零分支外，是否有其它指令写 `server+0x18`（影响 P3）。
 4. `AivAicpuOpParam::PrintMsg` 体是否写 `dest`（影响 PostMsg 后 dest 内容）。
 - 说明：不做全库 store 扫描/跨 DSO 搜索；唯一写者结论保持撤回；不推断协议冲突；无设备动作。
+
+## 72. abi-preflight10（2de8278/dfcbaa1a）CopyCtxInfo 端点消费
+
+- **偏移更正被接受**：12732=0x31BC，统一 `x26+12732` / `ctx_R+0xf31bc`；f31dc 撤回。
+- `CopyCtxInfo`：nm `0x7edc20`/`0xc90`；直接 `bl` 调用者**仅 1 处** 0x7ba9f0，位于 `AicpuKfcProcess::AicpuRpcResInit(HcclCombinOpParam*)+0xc28`；调用点 `x0=x20`（x20 在 AicpuRpcResInit 更早处构造，未在本窗口解析）。
+- 内部端点：源侧 `x23=arg+0xf0000`；目标 `x7` 由 `x22`（0x7ede58 madd、0x7edeb0 add 0xf0000）派生；`0x7edfb4 ldr w5,[x23,#12732]` → `0x7edfc0 str w5,[x7,#12732]`。目标是与静态全局表相关的 ctx，**不是 ctx_R**（ctx_R 是 AicpuGetComContext 返回）。
+- 静态初值 `0x2ea7b8`：位于未导出静态初始化区域（objdump `DlopenTraceSov+0x24fc0`），调用 `__cxa_atexit`，写静态全局 `0x22ce888+0xf0000` 的 `+0x31bc=9`；`bl` 到该区计数=0、init_array 字节模式命中=0 → **不是 ctx_R 的直接写者**。
+- 结论：f31bc 的**直接**写者仍是 CopyCtxInfo 的源 ctx 与静态 global 9；ctx_R 的取值需“源 ctx 身份 + 是否/何时 CopyCtxInfo 到 per-op ctx”两者，当前均未证。仅保留这两个端点，不再扩展 store/helper。
+
+## 73. 有限观测方案（可审核版；不执行设备）
+
+### 73.1 现有可证证据（本地）
+
+- 已结束 cell 的 plog 明确显示日志开关**未设置**：`[TsdClient] get ASCEND_GLOBAL_LOG_LEVEL [] ASCEND_GLOBAL_EVENT_ENABLE [] ASCEND_MODULE_LOG_LEVEL []`（a15-small-v3 plog L29 等）；`HCCL_DEBUG_CONFIG is not set, debugConfig set by default to 0x0`（同 plog L150）。这证明变量名存在且当时为空/默认，**不证明各取值的语义**。
+- 设备日志现有内容：`ae_so_manager ... Get api RunAicpuKfcSrvLaunch ... success`、`ATRACE ... create object KFCtaskAndTilingTraceData/AivAicpuOpParam ...`（h11/a12/v4r1 有，a14/a15 无）、Dlog 配置/错误行。**没有任何分支选择、desc、j/T、server 字段、ctx 字段的值**；`RunAicpuRpcSrvLaunch` 字样只出现在 so 管理器取 API 行，不是分支标记。
+- Host 可见：plan JSON（rows/k/n/flags/seed/identity）、probe result（arm/flags/api_returned/sync_returned/workspace_bytes/run_id/libraries）、trace（pad/workspace/sync/gather 时间）；**无 KFC `desc/sub/P[0]/j/T`、无 server/ctx 字段**。
+
+### 73.2 四个分派路径的现有入口标记（候选，待 35 格式串确认）
+
+| 路径 | 现有标记/入口 | 触发条件 | 能排除 | 当前可用性 |
+| --- | --- | --- | --- | --- |
+| RpcSrvLaunch→RunRpcServerApi | `ReadAddrMsg` 超时路径：Dlog line 360 + `PrintAllHcclMsgArea` + `PrintTimeOutSqInfo`（0x7d8d24-0x7d8d9c） | 无有效 HcclMsg，20 s×w24 到期 | 若出现，排除 TwoStage/MC2，指向 API 路径且无消息 | 需日志级别开启；现有 cell 未见 |
+| RpcSrvLaunch→TwoStageWait | `CheckRcvWorkMsg` 超时日志（Dlog line 285，0x7d7408-0x7d7450）；PostMsg 内 `PrintMsg` | sendCnt < ctx+352 每 6 s；PostMsg 每次 | 若出现，指向 stage-wait ack 路径 | 需日志级别开启；现有 cell 未见 |
+| RpcSrvLaunch→OneStage/Unfold | 函数入口/错误 Dlog（格式串待 35）；Unfold 与 TaskType=6 相关 | 进入分支/错误 | 指向 OneStage/Unfold | 格式串/级别待 35 |
+| MC2 / CommKfc | `MC2TraceUtils::Submit` 的 ATRACE 对象；`CommKfcDispatcher` 日志 | MC2/CommKfc 提交 | 与 KFC API/stage-wait 区分 | ATRACE 对象名现有 cell 可见（KFCtaskAndTiling 仅 KFC 路径）；CommKfc 无现有命中 |
+
+**已有可用的最小替代观测**：
+- KFC vs MRS：`KFCtaskAndTilingTraceData`/`AivAicpuOpParam` ATRACE 对象是否创建（Grouped/A12/H11/H4K 有，A14/A15 无）——只区分“KFC 路径 vs MRS”，**不区分 API/TwoStage/MC2**。
+- 若未来允许一次带日志级别的 cell：优先用上表 1/2 的超时日志区分 API 与 TwoStage；这两个标记不需要读设备内存。
+
+### 73.3 精确开关/命令（只列有来源的）
+
+- 现有来源：plog 的 TSD 行与 HCCL 行证明变量名；**取值语义/推荐级别在公开文档不可得**（hiascend 页面返回空），也未在本地仓库文档中找到。因此**不写具体级别数值**；候选变量为 `ASCEND_GLOBAL_LOG_LEVEL`、`ASCEND_MODULE_LOG_LEVEL`、`ASCEND_GLOBAL_EVENT_ENABLE`、`HCCL_DEBUG_CONFIG`。
+- 需 31 从同版安装文档补：变量取值表、模块名格式、HCCL_DEBUG_CONFIG 位含义；在得到之前，任何“设 X=0 即 DEBUG”的命令都属未证，不列入可执行步骤。
+- 设备侧 AICPU ctx/task/workspace/HcclMsg **无受支持的只读内存接口**证据；不提供 `devmem`/自定义读内存命令。字段值 F1–F12 继续标缺测。
+
+### 73.4 最小有限观测设计（条件式，当前不执行）
+
+1. **静态可完成**：用 ATRACE 对象集合确认 KFC vs MRS（已完成）；用 F1/F8-F10 的分派谓词做假设表。
+2. **若未来授权一次带日志的 cell（非本任务）**：只开现有全局/模块日志变量（取值待 31 文档），采集 device/plog，按 73.2 的 1/2 标记判定 API vs TwoStage；若两者都无标记，再考虑 OneStage/Unfold 格式串。
+3. **若字段值必须直接读**：仅能通过新增 host 侧 launch 日志或设备侧代码埋点（均属代码变更，需单独授权），**不是现有接口**；不把“快照”写成可执行命令。
+- 当前无新 GO/SSH/设备动作；root cause 仍 unresolved。
