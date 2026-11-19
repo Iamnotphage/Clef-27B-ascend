@@ -235,5 +235,38 @@
   }
  },
  "window_argv_mode": "generated_from_child_argv_json",
- "window_argv_generator": "build_window_argv.py (asserts equality if a window argv is supplied)"
+ "window_argv_generator": "build_window_argv.py (asserts equality if a window argv is supplied)",
+ "settle_budget_s": {
+  "requested": 300,
+  "supported_by_pinned_supervisor": false,
+  "current_default": 30,
+  "requires_new_frozen_supervisor": true,
+  "not_implemented_here": true,
+  "blocker_if_300_required": true,
+  "reason": "d2576c63 argparse has no settle option; settle_after_cleanup calls settle_attributed without deadline",
+  "old_exit_delay_coverage": "unproven",
+  "fail_closed_on_deadline": true,
+  "evidence_fields": "kill_time, per-round same-snapshot state/pid/starttime, first_empty_time, two_empty_time, deadline_hit"
+ },
+ "wall_clock_budget_s": {
+  "preflight_external": 60,
+  "collect_begin_external": 60,
+  "stop": 120,
+  "child": 240,
+  "collector_observation_inside_child": 130,
+  "app_arm_inside_child": 240,
+  "comm": 90,
+  "settle_current": 30,
+  "settle_if_300": 300,
+  "restore": 900,
+  "collect_end_external": 120,
+  "total_current": 1530,
+  "total_if_settle300": 1800,
+  "overlaps": [
+   "collector observation 10+120 s inside child 240 s",
+   "app arm timeout 240 s equals child budget",
+   "comm 90 s inside child"
+  ],
+  "note": "300 s is a conservative bound only if a new frozen supervisor adds it; no historical coverage proof"
+ }
 }

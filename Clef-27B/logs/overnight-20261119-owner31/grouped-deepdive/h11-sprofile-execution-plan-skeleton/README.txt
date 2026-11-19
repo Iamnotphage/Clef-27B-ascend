@@ -29,8 +29,17 @@ Fresh layout (all paths planned, none created)
 Budgets and gates (machine-readable in plan-skeleton.json)
 - stop 120 s, child 240 s, comm 90 s, restore 900 s; supervisor settle default 30 s — explicitly noted
   as NOT proving coverage of the old exit delay (attempt2 residual behaviour).
+- settle is NOT configurable by the pinned supervisor: machine fields settle_budget_s record requested 300 s,
+  supported_by_pinned_supervisor=false, current_default=30 s, requires_new_frozen_supervisor=true, and
+  blocker_if_300_required=true. Actual plan uses 30 s; old exit delay remains unproven. If 300 s is required,
+  a new frozen supervisor must add it (not implemented here).
+- wall_clock_budget_s: preflight 60 + collect begin 60 + stop 120 + child 240 + settle 30 (or 300 only with
+  new supervisor) + restore 900 + collect end 120 = about 1530 s current / 1800 s with 300 s settle; collector
+  observation 10+120 s and app arm 240 s/comm 90 s are inside child. Lifecycle evidence must keep kill time,
+  per-round same-snapshot state/pid/starttime, first-empty/two-empty times and deadline_hit.
 - pre_stop_gates (ordered): caller_env -> preflight_ALL_PASS -> collect_begin_rc0; stop_after collect_begin_rc0.
-  preflight/collect/wrapper new-cell copies are pending; source SHAs are recorded (3ea4e890 / 2bedc64a / 0af37af4).
+  preflight/collect/wrapper new-cell copies are pending (constructor paths), with source SHAs recorded
+  (3ea4e890 / 2bedc64a / 0af37af4); their derived-copy SHAs are produced in the final merge after 35 fix/32 review.
 - continuous two-empty residual before restore; exactly one begin_restore; no second restore tree; no same-cell retry;
   collector wait/unflushed/rank-exits-first remains fail-closed.
 - collect end/archive/SUMS paths are encoded; archive SUMS at <archive>/SHA256SUMS; end may repeat to collect late flush.
