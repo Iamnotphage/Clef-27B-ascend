@@ -2,11 +2,29 @@
 
 Status: **CPU review evidence, device not executed**. This packet is self-contained for independent audit by 32. It does not authorize device execution; 31 remains the only service owner. Frozen f810 entry (`final_service_phase.py` `888a8d7f…`, supervisor `172c2838…`, cc7 runner/manifest) is untouched.
 
+## Errata rev2 (32 finding: call parameter only)
+
+The earlier example used `--repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb`; **the correct value is the bundle root** `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`. `stage_candidate()` and `stage_d0()` copy from `repo/runtime`; the bundle root holds all four pinned artifacts (`b09cd602…` fusion installer, `1ed35f0a…` guardadapter, `aa3e1758…` postimage, `36eaff44…` guard postimage) and the six pinned d0 modules. `5c045eb` is still correct only for `--helper joint_fused_attention_window.py` (`9245e1a6…`).
+
+31's failed attempt reached `stage_d0/stage_candidate` and failed **before** the stop gate: no signal, source or guard change; the service tree survived. Code, tests, manifest and gates are unchanged (`candidate_service_phase.py` still `1f98dba9…`); this revision only corrects the call parameter and adds this errata. The code-identical execution stage is the commit containing this packet revision; verify with section 0/5.
+
+Preflight before any deploy (any mismatch blocks):
+
+```bash
+B=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769
+sha256sum "$B/runtime/apply_joint_fused_attention.py" \
+          "$B/runtime/apply_joint_service_check.py" \
+          "$B/runtime/joint_fused_attention/clef_joint_schema.py" \
+          "$B/runtime/joint_service_check/apply_joint_single_field_patch.py"
+# b09cd602… / 1ed35f0a… / aa3e1758… / 36eaff44…
+```
+
 ## 0. Frozen identities
 
 | Object | Path | SHA-256 |
 | --- | --- | --- |
-| execution stage | `/workspace/yangchen/work/final-acceptance-cc34-640ac23cac9aaa9a937832c2361dddd74007d195` | commit `640ac23` |
+| code stage (original) | `/workspace/yangchen/work/final-acceptance-cc34-640ac23cac9aaa9a937832c2361dddd74007d195` | commit `640ac23` |
+| docs-corrected stage | commit containing this rev2 packet (code/manifest SHAs identical to 640ac23) | path in 34 steer |
 | candidate entry | stage `runtime/candidate_service_phase.py` | `1f98dba90c4cb466fd3ae3804ab1dacbaee8bd9799b8ef2110e22bc5489164d7` |
 | candidate manifest | stage `runtime/final_acceptance_candidate_manifest.json` | `31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4` |
 | manifest generator | stage `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |

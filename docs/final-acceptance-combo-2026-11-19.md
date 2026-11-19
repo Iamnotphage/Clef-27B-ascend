@@ -97,6 +97,23 @@ S2/ERQA 客户端完全相同，只把 `--phase` 换成 `s2_b8`/`s2_b16`/`erqa` 
 
 候选 manifest 相对 cc7 f810 manifest 只允许 13 个叶节点变化：head 与 guard 的 `source_files[].sha256`、`source_selection.production_head_sha/guard_sha`、`forbidden_environment`（移除 `CLEF_JOINT_FUSED_ATTN`），以及四个 phase 的 `service_environment` 各新增 `CLEF_JOINT_FUSED_ATTN=1` 与 `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e…`。argv/effective/数据/分母/scorer/门/OPP/LD 全部不变。
 
+### 3.2.1 `--repo` 必填值与停前自检（32 finding 更正）
+
+`--repo` 必须是 **bundle 根** `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`。entry 的 `stage_candidate()`/`stage_d0()` 从 `repo/runtime` 复制 fusion installer、guardadapter、aa3e postimage、guard postimage 与 d0 六件；`joint-fused-5c045eb` 只用于 `--helper joint_fused_attention_window.py`（`9245e1a6…`），不能作 `--repo`。
+
+部署前先做停前自检（任一行不匹配即不执行）：
+
+```bash
+B=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769
+sha256sum "$B/runtime/apply_joint_fused_attention.py" \
+          "$B/runtime/apply_joint_service_check.py" \
+          "$B/runtime/joint_fused_attention/clef_joint_schema.py" \
+          "$B/runtime/joint_service_check/apply_joint_single_field_patch.py"
+# 期望：b09cd602… / 1ed35f0a… / aa3e1758… / 36eaff44…
+```
+
+该错误发生在 `stage_d0/stage_candidate` 阶段、早于停服，不会发信号或改 source/guard；但必须按上述值调用，避免重复空跑。
+
 ### 3.2 部署（每个候选 phase 一次，默认 plan-only）
 
 ```bash
@@ -105,7 +122,7 @@ S2/ERQA 客户端完全相同，只把 `--phase` 换成 `s2_b8`/`s2_b16`/`erqa` 
   --code /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab \
   --owner-code /workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916 \
   --ab-code /workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime \
-  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769 \
   --manifest "${CLEF_CC34_CODE}/runtime/final_acceptance_candidate_manifest.json" \
   --manifest-sha 31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4 \
   --base-manifest /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
@@ -127,7 +144,7 @@ S2/ERQA 客户端完全相同，只把 `--phase` 换成 `s2_b8`/`s2_b16`/`erqa` 
   --action restore \
   --code <cc7 stage> --owner-code <d4464ac stage> \
   --ab-code /workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime \
-  --repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb \
+  --repo /workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769 \
   --manifest "${CLEF_CC34_CODE}/runtime/final_acceptance_candidate_manifest.json" \
   --manifest-sha 31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4 \
   --base-manifest <cc7 manifest> \
