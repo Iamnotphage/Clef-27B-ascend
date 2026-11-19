@@ -276,6 +276,14 @@
 - **P1 新增**：clean_expect 仅比 OPP/LD 并记录路径；需 gate 其 service_environment == 冻结 `7b79c5db…`/`ca27dbb7…`（或提供该 launch-manifest 本地副本/SHA），否则可换文件放宽。
 - **GO=否**；等 35 修复版新 commit → 31 重 stage+plan-only → 32 核 diff/SHA、CPU 复跑、restore/A12 日志门/maps 后重给 GO。服务在线未动。
 
+## 8.19 监督窗 P0/E 复审（d619501 + 7e1cf51）
+
+- **d619501（window 80fd76f9，manifest 817ed3aa）**：restore=Popen(start_new_session/stdin DEVNULL/不 wait)、顶层 finally、A12 `[ERROR]`/retcode/≥2 `mc2 costtime`、PGID maps、restore_output fresh+output_dir/mtime——P0 A–D 代码 PASS；CPU 独立 11+8+12=31/31。
+- **7e1cf51（binding 11baa2c6、run_probe c7e0410e、cell 3daa1455、manifest fbce54cd；window 同 80fd76f9）**：binding 按资源拆分（H1 仅 group_keep、H2 仅 keep_workspace、H3 仅 keep_lists；handler 仅 !keep_descriptors 时 close；release 仅释放对应对象）→ 单变量成立；run_probe 默认 arm-timeout 240、recovery 仅 aa3e-noop；cell 明确拒绝 start.sh restore；CPU 独立 **11+9+12=32/32**。
+- **clean_expect**：31 本地副本 SHA `fcbdcbf1…`（12,933 B；OPP9 `7b79c5db…`、LD12 `ca27dbb7…`）——P1 env gate 满足；此前 fcbdc7b1 为转录错。
+- **仍缺（A12 GO 前）**：① 恢复状态机安全门：old_alive 时绝不 Popen（端口 open+health ready → skip+该格失败；端口非 0/未知 → restore_blocked 停报）；仅 old_root gone 时进入恢复，且 Popen 前再门 port==111/旧 PGID 非 Z 空/无 probe 残留/source==aa3e；skip/blocked 记 identity/health/port/PGID/source。② A12 maps 按 PGID 子树每 PID 记录（pid/cmdline/命中库 path SHA/SONAME），识别实际 binary 进程并记录 opapi_math/transformer/hccl_fwk/hcomm 实际加载（未链上记 absent）。③ CPU 补真实前台常驻 fixture（Popen 后窗口完成、服务仍活、fixture 清理）与 stop 失败/旧服务活不双启；不得整段 mock win.run。④ 小项：stop-script build_plan 强制 is_file；skip 记 health。
+- **skip 语义决定**：接受“旧服务活+端口 open+health ready → skip 且判失败”；不接受旧 root 活时因 port==111 启动第二棵树（必须 blocked/停报）。A12 inputs/identity/plan/clean_expect 已 PASS；完成①②③后重冻结再核。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
