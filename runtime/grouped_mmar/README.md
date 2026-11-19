@@ -71,6 +71,16 @@ executor 引用调用方描述符（则并入 H3）。
 `release(run_id)` 只由 Python 在 `torch.npu.synchronize()` 返回后调用；不销毁 executor，避免双释放；
 sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 
+## A12 官方样例结果（2026-11-19，决定性）
+
+- window `ok=false`（正确）；child rc0 是假成功（样例 `std::thread` 忽略 `ACL_CHECK` 返回值）。
+- stdout：`[ERROR] acl interface return err ...test_aclnn_grouped_mat_mul_all_reduce.cpp:383, retcode: 507046`、`TestCall execute AICPU failed`。
+- plog：两 device `stream_id=47` 10 s sync timeout，current task `KERNEL_AICORE`，`InnerCode=0x7030010`；`DestroyAicpuComm` 50 s timeout。
+- **首因线索**：`package_loader` 两次记录 `current device chip:5 does not support package:mc2_server.tar.gz`，该 MC2 server 包未加载；随后 AICORE 任务在 stream 47 上等待永不返回。
+- 其他：workspace 16,777,216（与 v4r1 同）；两 rank hcom name 已创建；per-PID maps 实际加载 libhccl/opapi_math/opapi_transformer/hcomm/ascendcl/nnopbase，hccl_fwk absent；binary_pids [1301080]。
+- 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
+- **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
+
 ## 5. 31 执行 CLI（先 plan-only，再 execute；每臂 fresh）
 
 ```bash

@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "a2037d105de943a33427dd66a483a2a8b815dbff27388ec4670c6daf569c8789",
-      "bytes": 13409
+      "sha256": "dfe1aee87c9690e226e83beda7cff0e362cfd43a5da72264f8b62d31fd6b0fb0",
+      "bytes": 14869
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,5 +242,34 @@
     "default_arm_timeout_seconds": 240,
     "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
   },
-  "priority_note": "33 E1/E2 binary evidence weakens H1/H4/H5/H11; prefer H2/H3/H6/H12; first order A8->A12->A0(M128)->A9->H2/H3"
+  "priority_note": "A12 official sample failed with the same stream47/AICORE hang and mc2_server chip:5 unsupported; H1/H2/H3/H11/H12/H6/H7 binding-side arms paused until 33/31 confirm the mc2_server support matrix; Grouped path is environment-blocked if no supported package/config exists",
+  "a12_result": {
+    "status": "failed_official_sample_same_hang",
+    "window_sha256": "77528fdf076d6600",
+    "child_stdout_sha256": "c9fea1c41b483f8c",
+    "plog_debug_sha256": "0e9d96a3b1e40fe6",
+    "plog_run_sha256": "e544c870fa8ddde0",
+    "restore_launch_sha256": "80b5fcb8b27dc777",
+    "restore_joint_sha256": "f8ef9d161cc70e08",
+    "retcode": 507046,
+    "stream_id": 47,
+    "task": "KERNEL_AICORE",
+    "workspace_bytes": 16777216,
+    "hcom_names": "199.88.54.221%eth0_60000_14_1795069461197380 (both ranks)",
+    "maps_coverage": {
+      "libhccl": true,
+      "opapi_math": true,
+      "opapi_transformer": true,
+      "hccl_fwk": false,
+      "hcomm": true,
+      "libascendcl": true,
+      "libnnopbase": true
+    },
+    "binary_pids": [
+      1301080
+    ],
+    "root_cause_clue": "mc2_server.tar.gz not loaded: current device chip:5 does not support package:mc2_server.tar.gz",
+    "recovery": "branch=aa3e-noop, tree=aa3e, root=1301295, five PIDs, health/info/text/image/env/joint/source/clients all true",
+    "conclusion": "official sample fails identically; lifecycle/comm-creation binding hypotheses cannot explain the hang; platform MC2 server support is the leading blocker"
+  }
 }
