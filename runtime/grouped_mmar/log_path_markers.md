@@ -53,18 +53,50 @@ abi11 caller and body windows, all libccl `2281deca`.
 
 | # | Kind | Branch / step | Dlog call | Guard operands (then branch) | Fields | Caller scope / exclusivity | 180–240 s window premise | Presence implies / absence implies |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | K-entry (per turn) | ForApi / `RunRpcServerApi` after `WriteTurnCnt(turn)`, `[ctx+12756]=(turn+1)&0x3f` | 0x7b3a24 | `HcclCheckLogLevel(1,3)` at 0x7b39f0, `tbz -> 0x7b3918` | w0=3, w1=1, x2=0x14f8290, x3=0x14f71a8, w4=1715, x5=tid, x6=`[ctx+12756]` | `RunRpcServerApi` is the ForApi worker; its caller set is not enumerated here (K-shared for the caller question) | fires on each turn once the guard passes; first turn well within 180 s | presence: ForApi turn loop ran and reached the post-`WriteTurnCnt` point; absence: ForApi not reached, guard failed, or no turn completed — cannot separate without the guard semantics |
-| 2 | K-cond (return 0x16) | OneStage `TryRunRpcServerOneStageWait` returned 22 | 0x762280 | `HcclCheckLogLevel(1,0x01000003)` at 0x76224c, `tbz -> 0x762284` | w0=0x01000003, w1=1, x2=0x14ee650, x3=0x14edee8, w4=98, x5=tid | call site 0x762228 in `RunAicpuRpcSrvLaunch`; OneStage-only | fires only if the OneStage call returns 22; may repeat per turn | presence: OneStage returned 22 (`b.ne 0x7619ac` not taken); absence: OneStage not called, returned another value, or guard failed — **not** proof that OneStage was not used |
-| 3 | K-cond (arg0 NULL) | `RunAicpuRpcSrvLaunch` arg0 (`x19`) == 0 | 0x7615a4 | `HcclCheckLogLevel(3,3)` at 0x761568, `tbz -> 0x7614a0`, then `IsErrorToWarn` -> 0x761a78 | w0=0x01000003, w1=2, x2=0x14eb1b0, x3=0x14edee8, w4=433, x5=tid | RpcSrvLaunch only | immediate if the null-arg condition holds | presence: the null-arg branch ran; absence: not that condition (or guard failed) |
-| 4 | K-cond (error/warn) | post-Init error/warn path; counter `[0x191fd04]`; exits 0x7620ec -> 0x7614a4 (clear + return) | 0x7620e8 | gate at 0x7620a4 (`mov w0,w1` at 0x7620a0) + `IsErrorToWarn` at 0x7620ac | w0=0x01000003, w1=2, x2=0x14ee728, x3=0x14edee8, w4=544, x5=tid, x6=`[0x191fd04]` | RpcSrvLaunch error path; gate module not fully resolved | immediate if the condition holds | presence: the error/warn branch ran and the flow is heading to the clear+return path; absence: not proven |
-| 5 | K-entry (per Init4 call) | `Init(y,j,t,KFCTask*)` called, before the zero/non-zero branch | 0x7d67cc | `HcclCheckLogLevel(0,3)` at 0x7d6728, `tbnz -> 0x7d67a0` | w0=3, w1=0, x2=0x1613f20, x3=0x1613cc8, w4=27, x5=tid, x6=y | 4-arg Init has one direct caller, 0x76192c in `RunAicpuRpcSrvLaunch` (abi6) — so this marker is exclusive to the RpcSrvLaunch Init4 step among the fetched callers | fires on each Init4 call; per task/turn, well within 180 s | presence: Init4 ran with that `y`; absence: Init4 not called on this path or guard failed — **does not** distinguish zero vs non-zero branch |
-| 6 | K-cond (wait timeout) | `ReadAddrMsg` wait; log when `elapsed > w24*20 s` (w24 doubles 1,2,4,...) | 0x7d8d20 | `HcclCheckLogLevel(2,0x01000003)` at 0x7d8ce4, `tbz -> 0x7d8d24` | w0=0x01000003, w1=2, x2=0x1614408, x3=0x1613cc8, w4=360, x5=tid, x6=turn (`[sp,#32]`), x7=20 | ReadAddrMsg is a shared method; callers not enumerated here | first log at 20 s, then 40/80/160 s; the 1280 s value is the CFG return ceiling, not a log. Within 180 s up to 4 logs; within 240 s the same 4 (next at 320 s) | presence: the wait exceeded a threshold (turn printed); after it `SetErrToWarnSwitch(1)` + `PrintAllHcclMsgArea` run. Absence in <20 s proves nothing; **this is not an entry marker and an empty log cannot exclude ReadAddrMsg** |
-| 7 | K-cond (valid mismatch) | `ReadApiValidMsg` gate word != 0x5CDF123A, `TraceProfSubmit` return == 20 | 0x7d6fec | `HcclCheckLogLevel(2,3)` at 0x7d6f8c plus byte/bit checks | w0=3, w1=2, x2=0x1613bd0, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method; caller set not enumerated | immediate on mismatch when ret==20 | presence: invalid gate word observed on this path; absence: no mismatch of this kind, ret != 20, or guard failed |
-| 8 | K-cond (valid mismatch) | same, ret != 20, `IsErrorToWarn` true | 0x7d7074 | `HcclCheckLogLevel(2,3)` at 0x7d6ffc + `IsErrorToWarn` at 0x7d7020 | w0=0x01000003, w1=2, x2=0x1613c00, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method | immediate on mismatch when ret != 20 and error-to-warn | as #7, plus the error-to-warn condition |
-| 9 | K-cond (valid mismatch) | same, `IsErrorToWarn` false | 0x7d70b8 | same gate, branch 0x7d7030 -> 0x7d707c | w0=3, w1=3, x2=0x1613bd0, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method | immediate on mismatch when error-to-warn is false | as #7, different level |
-| 10 | K-cond (valid word) | `ReadApiValidMsg` line-241 path, prints the actual `[slot+48]` word | 0x7d71bc | gate at 0x7d7160 (not fully read) | w0=3, w1=1, x2=0x1613ce0, x3=0x1613cc8, w4=241, x5=tid, x6=`[slot+48]` | shared method | immediate when that branch is taken | presence: prints the observed valid word; absence: branch not taken/guard, not proof |
-| 11 | K-cond (6 s timeout) | `CheckRcvWorkMsg` budget expired with `sendCnt < turn` (e.g. turn > 255) | 0x7d744c | `HcclCheckLogLevel(3,3)` at 0x7d7410, `tbz -> 0x7d7450`, then `IsErrorToWarn` at 0x7d7418 | w0=0x01000003, w1=2, x2=0x1614060, x3=0x1613cc8, w4=285, x5=tid | shared method; called at 0x7c7f20 in TwoStageWait among others (caller set not enumerated) | 6 s per call; up to 30 events in 180 s if repeated | presence: the condition held for 6 s (the loop still reached the same continuation as the success jump); absence: no 6 s expiry, or guard failed. **Not a TwoStage entry marker; an empty log cannot exclude TwoStage** |
+| 1 | K-entry (per turn) | ForApi / `RunRpcServerApi` after `WriteTurnCnt(turn)`, `[ctx+12756]=(turn+1)&0x3f`; text `start to read the [%u] msg` | 0x7b3a24 | `HcclCheckLogLevel(1,3)` at 0x7b39f0, `tbz -> 0x7b3918` | w0=3, w1=1, x2=0x14f8290, x3=0x14f71a8, w4=1715, x5=tid, x6=`[ctx+12756]` | `RunRpcServerApi` is the ForApi worker; its caller set is not enumerated here (K-shared for the caller question) | fires on each turn once the guard passes; first turn well within 180 s | presence: ForApi turn loop ran and reached the post-`WriteTurnCnt` point; absence: ForApi not reached, guard failed, or no turn completed — cannot separate without the guard semantics |
+| 2 | K-cond (return 0x16) | OneStage `TryRunRpcServerOneStageWait` returned 22; text `[NsRecovery][MC2] Suspending` | 0x762280 | `HcclCheckLogLevel(1,0x01000003)` at 0x76224c, `tbz -> 0x762284` | w0=0x01000003, w1=1, x2=0x14ee650, x3=0x14edee8, w4=98, x5=tid | call site 0x762228 in `RunAicpuRpcSrvLaunch`; OneStage-only | fires only if the OneStage call returns 22; may repeat per turn | presence: OneStage returned 22 (`b.ne 0x7619ac` not taken); absence: OneStage not called, returned another value, or guard failed — **not** proof that OneStage was not used |
+| 3 | K-cond (arg0 NULL) | `RunAicpuRpcSrvLaunch` arg0 (`x19`) == 0; text `ErrToWarn: args is null.` | 0x7615a4 | `HcclCheckLogLevel(3,3)` at 0x761568, `tbz -> 0x7614a0`, then `IsErrorToWarn` -> 0x761a78 | w0=0x01000003, w1=2, x2=0x14eb1b0, x3=0x14edee8, w4=433, x5=tid | RpcSrvLaunch only | immediate if the null-arg condition holds | presence: the null-arg branch ran; absence: not that condition (or guard failed) |
+| 4 | K-cond (error/warn) | post-Init error/warn path; counter `[0x191fd04]`; text `ErrToWarn: Failed to run aicpu server, MC2 opIdx:%u`; exits 0x7620ec -> 0x7614a4 (clear + return) | 0x7620e8 | gate at 0x7620a4 (`mov w0,w1` at 0x7620a0) + `IsErrorToWarn` at 0x7620ac | w0=0x01000003, w1=2, x2=0x14ee728, x3=0x14edee8, w4=544, x5=tid, x6=`[0x191fd04]` | RpcSrvLaunch error path; gate module not fully resolved | immediate if the condition holds | presence: the error/warn branch ran and the flow is heading to the clear+return path; absence: not proven |
+| 5 | K-entry (per Init4 call) | `Init(y,j,t,KFCTask*)` called, before the zero/non-zero branch; text `AicpuKfcRpcServer::Init addr:%u` | 0x7d67cc | `HcclCheckLogLevel(0,3)` at 0x7d6728, `tbnz -> 0x7d67a0` | w0=3, w1=0, x2=0x1613f20, x3=0x1613cc8, w4=27, x5=tid, x6=y | 4-arg Init has one direct caller, 0x76192c in `RunAicpuRpcSrvLaunch` (abi6) — so this marker is exclusive to the RpcSrvLaunch Init4 step among the fetched callers | fires on each Init4 call; per task/turn, well within 180 s | presence: Init4 ran with that `y`; absence: Init4 not called on this path or guard failed — **does not** distinguish zero vs non-zero branch |
+| 6 | K-cond (wait timeout) | `ReadAddrMsg` wait; log when `elapsed > w24*20 s` (w24 doubles 1,2,4,...); text `[AicpuKfcRpcServer][ReadAddrMsg] ReadValidMsg[%u] timeout %lus` | 0x7d8d20 | `HcclCheckLogLevel(2,0x01000003)` at 0x7d8ce4, `tbz -> 0x7d8d24` | w0=0x01000003, w1=2, x2=0x1614408, x3=0x1613cc8, w4=360, x5=tid, x6=turn (`[sp,#32]`), x7=20 | ReadAddrMsg is a shared method; callers not enumerated here | first log at 20 s, then 40/80/160 s; the 1280 s value is the CFG return ceiling, not a log. Within 180 s up to 4 logs; within 240 s the same 4 (next at 320 s) | presence: the wait exceeded a threshold (turn printed); after it `SetErrToWarnSwitch(1)` + `PrintAllHcclMsgArea` run. Absence in <20 s proves nothing; **this is not an entry marker and an empty log cannot exclude ReadAddrMsg** |
+| 7 | K-cond (failure call trace) | `ReadApiValidMsg` failure path, `TraceProfSubmit` return == 20; text `[%s:%d] [%u][%s]call trace: hcclRet -> %d` with `%s`=`ReadApiValidMsg` | 0x7d6fec | `HcclCheckLogLevel(2,3)` at 0x7d6f8c plus byte/bit checks | w0=3, w1=2, x2=0x1613bd0, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method; caller set not enumerated | immediate on mismatch when ret==20 | presence: invalid gate word observed on this path; absence: no mismatch of this kind, ret != 20, or guard failed |
+| 8 | K-cond (failure call trace) | same failure path, ret != 20, `IsErrorToWarn` true; text `ErrToWarn: [%s]call trace: hcclRet -> %d` | 0x7d7074 | `HcclCheckLogLevel(2,3)` at 0x7d6ffc + `IsErrorToWarn` at 0x7d7020 | w0=0x01000003, w1=2, x2=0x1613c00, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method | immediate on mismatch when ret != 20 and error-to-warn | as #7, plus the error-to-warn condition |
+| 9 | K-cond (failure call trace) | same failure path, `IsErrorToWarn` false; text `[%s:%d] [%u][%s]call trace: hcclRet -> %d` at level 3 | 0x7d70b8 | same gate, branch 0x7d7030 -> 0x7d707c | w0=3, w1=3, x2=0x1613bd0, x3=0x1613cc8, w4=226, x5=tid, x6=0x1613bc0, w7=ret | shared method | immediate on mismatch when error-to-warn is false | as #7, different level |
+| 10 | K-cond (reset valid) | `ReadApiValidMsg` reset path; text `[%s:%d] [%u]reset valid value %u`, prints the actual `[slot+48]` word | 0x7d71bc | gate at 0x7d7160 (not fully read) | w0=3, w1=1, x2=0x1613ce0, x3=0x1613cc8, w4=241, x5=tid, x6=`[slot+48]` | shared method | immediate when that branch is taken | presence: prints the observed valid word; absence: branch not taken/guard, not proof |
+| 11 | K-cond (6 s timeout) | `CheckRcvWorkMsg` budget expired with `sendCnt < turn` (e.g. turn > 255); text `ErrToWarn: ReadValidMsg timeout 6s... ` | 0x7d744c | `HcclCheckLogLevel(3,3)` at 0x7d7410, `tbz -> 0x7d7450`, then `IsErrorToWarn` at 0x7d7418 | w0=0x01000003, w1=2, x2=0x1614060, x3=0x1613cc8, w4=285, x5=tid | shared method; called at 0x7c7f20 in TwoStageWait among others (caller set not enumerated) | 6 s per call; up to 30 events in 180 s if repeated | presence: the condition held for 6 s (the loop still reached the same continuation as the success jump); absence: no 6 s expiry, or guard failed. **Not a TwoStage entry marker; an empty log cannot exclude TwoStage** |
 | 12 | K-entry (per response, not Dlog) | `PostMsg` response; `AivAicpuOpParam::PrintMsg(dest, stack string)` | 0x7d6868 | none | x0=dest, x1=&stack string built from global 0x1613c90 +704 (u16) / +706 (u8) | abi8 reports only two direct PostMsg callers (0x7c7f44/0x7c7f90), both in TwoStageWait | every PostMsg call | presence/visibility unknown: PrintMsg's body (abi11, 0x7c24e0/0x654) does not write dest +24/+44/+51, but whether it emits a Dlog and at which level is not established here |
+
+## Resolved format strings (abi12, libccl 2281deca)
+
+| Format addr | Text | Arguments after the common `[%s:%d] [%u]` (file, line, tid) |
+| --- | --- | --- |
+| 0x1613bd0 | `[%s:%d] [%u][%s]call trace: hcclRet -> %d` | x6=`ReadApiValidMsg` (0x1613bc0), x7=ret |
+| 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | x6=`ReadApiValidMsg`, x7=ret |
+| 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | `[slot+48]` |
+| 0x1613f20 | `[%s:%d] [%u]AicpuKfcRpcServer::Init addr:%u` | x6=y (printed as %u) |
+| 0x1614060 | `[%s:%d] [%u]ErrToWarn: ReadValidMsg timeout 6s... ` | none |
+| 0x1614408 | `[%s:%d] [%u][AicpuKfcRpcServer][ReadAddrMsg] ReadValidMsg[%u] timeout %lus` | x6=turn, x7=20 |
+| 0x14eb1b0 | `[%s:%d] [%u]ErrToWarn: args is null.` | none |
+| 0x14ee650 | `[%s:%d] [%u][NsRecovery][MC2] Suspending` | none |
+| 0x14ee728 | `[%s:%d] [%u]ErrToWarn: Failed to run aicpu server, MC2 opIdx:%u` | x6=`[0x191fd04]` |
+| 0x14f8290 | `[%s:%d] [%u]start to read the [%u] msg` | x6=`[ctx+12756]` |
+
+File strings: 0x1613cc8 `aicpu_kfc_rpc_server.cc`; 0x14eb198
+`hccl_aicpu_interface.cc`; 0x14edee8 `aicpu_kfc_interface.cc`; 0x14f71a8
+`aicpu_kfc_process.cc`.
+
+Corrections against the first version of this table: the ReadApiValidMsg sites print
+a **call trace with `hcclRet`** (or `reset valid value`), not the message-equality
+text; the OneStage-return-22 site prints `[NsRecovery][MC2] Suspending` (a recovery
+semantics clue, not a OneStage label); the 6 s site prints `ReadValidMsg timeout
+6s...` (the function is `CheckRcvWorkMsg`).
+
+Unassigned strings present in the dumped ranges (text known, call site not in the
+audited marker set; do not assign): 0x1613b80 `[%s:%d] [%u][MC2] Check msg equal
+failed, rMsg:%s msg:%s` — the actual message-equality failure text, a natural future
+target but outside the audited windows; 0x14ee680 `ErrToWarn: Run rpc error, opIdx:%u,
+sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d`; 0x1614098 `ReadValidMsg timeout 6s... `
+(non-ErrToWarn variant).
 
 ## Positive-control rule for any observation run
 
@@ -85,17 +117,23 @@ MC2 (33 §73).
 
 ## What the four candidate paths have (and do not have)
 
-- **API / address wait**: #6 is a conditional timeout log (20 s first), not an entry
-  marker; the 1280 s figure is the CFG return ceiling, not a log event. #7–#10 are
-  mismatch logs. None of these is a mandatory entry marker.
-- **TwoStage**: #11 is a 6 s conditional timeout inside `CheckRcvWorkMsg`, which is
-  also invoked from other paths; the only TwoStage-exclusive facts available are the
-  callee prologue (`x19=x1`, abi11) and the two `PostMsg` call sites. There is **no
-  full TwoStageWait disassembly** in abi3–abi11, so no internal entry marker is
-  provable. Absence of #11 does not exclude TwoStage.
+- **API / address wait**: #6 is a conditional timeout log (20 s first; text
+  `ReadAddrMsg ... ReadValidMsg[%u] timeout %lus`), not an entry marker; the 1280 s
+  figure is the CFG return ceiling, not a log event. #7–#10 are failure call-trace /
+  reset-valid logs; the actual equality-failure text (`[MC2] Check msg equal failed`)
+  exists at 0x1613b80 but its call site is not in the audited windows. None of these
+  is a mandatory entry marker.
+- **TwoStage**: #11 is a 6 s conditional timeout inside `CheckRcvWorkMsg`, text
+  `ErrToWarn: ReadValidMsg timeout 6s... `; the function is also invoked from other
+  paths, so this is not TwoStage-exclusive. The only TwoStage-exclusive facts
+  available are the callee prologue (`x19=x1`, abi11) and the two `PostMsg` call
+  sites. There is **no full TwoStageWait disassembly** in abi3–abi11, so no internal
+  entry marker is provable. Absence of #11 does not exclude TwoStage.
 - **OneStage / Unfold**: #2 fires only when `TryRunRpcServerOneStageWait` returns 22;
-  it is a conditional return marker, not an entry marker. No distinct "Unfold"
-  window or marker exists in the delivered material.
+  the text is `[NsRecovery][MC2] Suspending`, so the return value and the text are
+  consistent with a suspend/recovery status (a semantic clue, not proof of the
+  caller's state). It is a conditional return marker, not an entry marker. No
+  distinct "Unfold" window or marker exists in the delivered material.
 - **MC2 / CommKfc**: not audited here (no MC2Trace/CommKfc windows in the marker
   set); 33's §73 covers it. Do not fill this row with a wish.
 
