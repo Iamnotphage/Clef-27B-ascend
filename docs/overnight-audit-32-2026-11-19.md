@@ -124,6 +124,15 @@
 - supervision complete、clients_exited=true、client_rc0、timed_out false；s2_b16 phase restore.json SHA `5683086c…7ace`。
 - 待续：ERQA 400（16384/16 图/1048576）→ s1 clean 恢复。
 
+## 8.3 f810 正式验收 ERQA（已完成并核）
+
+- phase：`owner31-phase-erqa-20261119T0136Z`，complete ok=true、label `d0-final-erqa-20261119T013135Z-dca5097e`、root 1268324、五 PID、四检 rc0/ok；launch-manifest effective max_model_len 16384、limit_mm `{"image":16,"video":0}`、mm 像素上限 1048576（argv 实测）。
+- v5：400/400 预测、0 失败；我逐题独立核对 gold=expected answer、correct 标志、argmax=prediction、图像 SHA 与 expected 绑定、概率有限 → 0 issue。
+- **216/400 = 0.5400**；多图 49/113、单图 167/287；选项 4:203/382、2:11/14、3:2/4；与 acceptance breakdown 逐项一致。对基线 219/400=0.5475 的 Δ = −3 题（−0.75 pp），在 2PP（±8 题）内。
+- supervision complete、clients_exited=true、client_rc0、timed_out false、remaining_group []。
+- 待续：最终 s1 clean 恢复（最佳服务）与四检/envcompare。
+
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
