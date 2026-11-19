@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "e7af4d4442efc59d2c28dc443574550b89a3a6e6428ae5143f02d528d7dd3e1f",
-      "bytes": 17586
+      "sha256": "be32050e1340ebb4aed5f45e937c0f7e5f05325ace370cdde1fbf0acb9df310f",
+      "bytes": 18603
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -119,6 +119,26 @@
       "role": "A12 run wrapper (2 devices, 1 loop, 0,1)",
       "sha256": "087b4cef870ceb24fdd3bd69f91e22e6bc9145cee8055ff4ce9bc87444dc8044",
       "bytes": 374
+    },
+    "runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp": {
+      "role": "A12-H6 derivative: official source + one workspace memset before launch",
+      "sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
+      "bytes": 22292
+    },
+    "runtime/grouped_mmar/a12_h6/h6.diff": {
+      "role": "A12-H6 single-variable diff",
+      "sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
+      "bytes": 1117
+    },
+    "runtime/grouped_mmar/a12_h6/compile_a12_h6.sh": {
+      "role": "A12-H6 CMake build wrapper",
+      "sha256": "e7a59de67372dd58cc3ba4a01bfe1daade67c44f9801a7f2165c8203821462ce",
+      "bytes": 1674
+    },
+    "runtime/grouped_mmar/a12_h6/README.md": {
+      "role": "A12-H6 design, contract pending, success gate",
+      "sha256": "2e0d5276c0e1b50213dc8e6337bc808e0e607760e1a8dbddb9bd366ab6a5d85b",
+      "bytes": 1557
     }
   },
   "first_matrix": [
@@ -305,5 +325,18 @@
     "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
     "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2"
+  },
+  "a12_h6": {
+    "status": "prepared_not_executed_pending_33_32_contract",
+    "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+    "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
+    "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
+    "single_variable": "aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream) after aclrtMalloc and before launch, rc printed/checked",
+    "unchanged": "provider/libopapi, FP16 shapes, 2 devices/1 loop, buffer lifetimes",
+    "compile": "bash a12_h6/compile_a12_h6.sh <absolute build dir>",
+    "run": "bash a12/run_a12.sh <build>/bin/a12_grouped_mat_mmar_h6",
+    "success_gate": "rc0 + no [ERROR]/retcode lines + >=2 mc2 costtime + maps hard gate libhccl+opapi_math/transformer",
+    "falsification": "same 507046/stream47 -> H6 workspace-init hypothesis falsified for the hang, not a platform negative",
+    "pending": "33 workspace convention (memset/sync) and 32 review before any execution"
   }
 }

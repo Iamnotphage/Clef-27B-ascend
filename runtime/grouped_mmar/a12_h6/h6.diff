@@ -1,0 +1,18 @@
+--- a12/test_aclnn_grouped_mat_mul_all_reduce.cpp	2026-11-19 13:46:06
++++ a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp	2026-11-19 14:43:22
+@@ -377,6 +377,15 @@
+     if (workspaceSize > 0) {
+         ACL_CHECK(aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST));
+     }
++    // A12-H6 single variable: initialize the caller-allocated workspace after
++    // GetWorkspaceSize/aclrtMalloc and before the launch, on the same stream.
++    if (workspaceAddr != nullptr) {
++        aclError h6MemsetRet = aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream);
++        printf("[INFO] h6 workspace memset api=aclrtMemsetAsync rc=%d\n", (int)h6MemsetRet);
++        CHECK_RET(h6MemsetRet == ACL_SUCCESS,
++                  printf("[ERROR] h6 workspace memset failed. rc = %d\n", (int)h6MemsetRet);
++                  return -1);
++    }
+     aclnnRet = aclnnGroupedMatMulAllReduce(workspaceAddr, workspaceSize, executor, rtStream);
+     CHECK_RET(aclnnRet == ACL_SUCCESS, printf("[ERROR] aclnnGroupedMatMulAllReduce failed. aclnnRet = %d \n", aclnnRet);
+               return -1);

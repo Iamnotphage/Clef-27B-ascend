@@ -81,6 +81,12 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 - 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
 - **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
 
+## A12-H6 workspace 初值最小派生（已准备，未执行）
+
+- 父源官方冻结 `a12/test_aclnn_grouped_mat_mul_all_reduce.cpp` `6c1a90ab…`；派生 `a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp` SHA `4b8e6e2a…`，唯一差异 `a12_h6/h6.diff` SHA `754e2f24…`：`GetWorkspaceSize`/`aclrtMalloc` 之后、launch 之前对同一 workspace 执行 `aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream)` 并打印/校验 rc。
+- 其余不变：同 provider/FP16 形状/2 设备 1 loop/buffer 生命周期。编译 `bash a12_h6/compile_a12_h6.sh <abs build>`；运行 `bash a12/run_a12.sh <build>/bin/a12_grouped_mmar_h6`，窗口 `--arm A12 --a12-binary <bin>` 同日志门。
+- 约定待 33/32 确认：workspace 为调用方 scratch，同 stream 清零不破坏 GetWorkspace 约定；若需同步 memset/额外 sync 仅改一行。**未执行**；成功=无 `[ERROR]`/`retcode:`、≥2 `mc2 costtime`、rc0；仍 507046 → H6 对该挂起证伪，不作平台否定证据。
+
 ## 最终结案（2026-11-19）
 
 32/31 独立核验 mc2-support 证据包（5/5 SHA 通过）：`mc2_server.tar.gz` SHA `71263835…`（873,250 B，私有头 `aa55aa55`）；`ascend_package_load.ini` 中 `mc2_server` `optional:true`、`load_as_per_soc:false`；`libmc2_server.json` 明确 `HcclLaunchAicpuKernel/Mc2AicpuTaskCacheClearKernel/Mc2ServerKernel` 均来自 `libmc2_server.so`。A12 plog 两 device 均在 TDT 启动阶段 `current device chip:5 does not support package:mc2_server.tar.gz`，包未加载；AICPU 仅从 `libccl_kernel.so` 取 KFC ResInit/SrvLaunch，MC2 KFC 任务无实现 → AICORE 等待 → stream 47 pending/507046（样例）或 239 s 挂起（v4r1）→ `DestroyAicpuComm` 50 s×2。
