@@ -1,0 +1,32 @@
+签名证据（逐行见 acl-targets-raw.txt / acl-context-raw.txt；此处摘要，行号为 acl_rt.h）
+- aclrtMemcpy: line 2273-2274
+  aclError aclrtMemcpy(void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind);
+  注释：synchronous memory replication between host and device（2272 起）。
+- aclrtMemcpyAsync: line 2320-2321
+  aclError aclrtMemcpyAsync(void* dst, size_t destMax, const void* src, size_t count,
+                            aclrtMemcpyKind kind, aclrtStream stream);
+  注释：Asynchronous memory replication between Host and Device；@param stream asynchronized task stream。
+- 流创建：line 2741 aclrtCreateStream(aclrtStream* stream)；
+  line 2768 aclrtCreateStreamWithConfig(aclrtStream* stream, uint32_t priority, uint32_t flag)。
+- 流销毁：line 2789 aclrtDestroyStream(aclrtStream stream)；注释 Can only destroy streams created through
+  aclrtCreateStream interface；line 2805 aclrtDestroyStreamForce(aclrtStream stream)（destroy by force）。
+- 同步：line 2817 aclrtSynchronizeStream(aclrtStream stream)；
+  line 2831 aclrtSynchronizeStreamWithTimeout(aclrtStream stream, int32_t timeout)；
+  注释 2825: @param timeout [IN] timeout value, the unit is milliseconds（流级 unit 明确）。
+  line 1668 aclrtSynchronizeDeviceWithTimeout(int32_t timeout)：**头部注释未写 unit**（仅 "set timeout"），
+  属未覆盖（不推断单位）；另有 aclrtSynchronizeDevice(void) line 1659。
+  事件级：line 1859 aclrtSynchronizeEventWithTimeout(aclrtEvent event, int32_t timeout)（unit 未注释）。
+- Context：line 1416 aclrtCreateContext(aclrtContext* context, int32_t deviceId)；
+  line 1432 aclrtDestroyContext(aclrtContext context)；
+  line 1468 aclrtSetCurrentContext(aclrtContext context)；
+  line 1486 aclrtGetCurrentContext(aclrtContext* context)。
+- 线程限制/归属（注释证据，非签名）：
+  * CreateContext 将 context 关联到调用线程；未显式创建时使用 aclrtSetDevice 隐式创建的默认 context；
+    进程可创建多个 context（数量不限），但当前线程同一时间只能使用其中一个；
+    推荐用 aclrtSetCurrentContext 显式指定。
+  * DestroyContext 只能销毁通过 aclrtCreateContext 创建的 context；默认 context 不能用它释放。
+  * SetCurrentContext：线程内 CreateContext 后默认使用该 ctx；多次 SetCurrentContext 以最后一次为准；
+    若 context 对应 device 已被 reset，则不能设置为线程 context；跨线程使用须由用户保证同 context
+    同 stream 的任务执行顺序。
+  * 头文件**没有 stream→context 的 accessor**：搜索 aclrtStreamGetContext 无匹配（not found）。
+- 线程任务：line 2121 aclrtGetThreadLastTaskId(uint32_t* taskId)（get thread last task id）。

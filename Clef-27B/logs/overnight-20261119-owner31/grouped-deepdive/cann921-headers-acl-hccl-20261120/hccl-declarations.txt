@@ -1,0 +1,27 @@
+扫描范围：/usr/local/Ascend/cann-9.2.1/aarch64-linux/include/hccl/*.h + version/hccl_version.h
+方法：grep -E 'Workspace|workspace|Context|context|Mem|Addr|Reg|Profiling|profil|Dump|dump|Trace|trace'
+全部匹配行见 hccl-scan-raw.txt（88 行，未截断）；声明类匹配如下（保留路径与行号）：
+- hccl_channel.h:258 HcclChannelGetRemoteMems(HcclComm, ChannelHandle, uint32_t* memNum,
+    CommMem** remoteMems, char*** memTags);
+- hccl_comm.h:293 HcclCommRegCommStateCallback(const char* regName, HcclCommStateCallback cb, void* args);
+- hccl_comm.h:317 HcclCommSetMemoryRange(HcclComm, void* baseVirPtr, size_t size, size_t alignment,
+    uint64_t flags) HCOMM_WEAK_SYMBOL;（alignment 注释：now only support 0）
+- hccl_comm.h:325 HcclCommUnsetMemoryRange(HcclComm, void* baseVirPtr) HCOMM_WEAK_SYMBOL;
+- hccl_comm.h:336 HcclCommActivateCommMemory(HcclComm, void* virPtr, size_t size, size_t offset,
+    aclrtDrvMemHandle handle, ...);（多行，见 raw）
+- hccl_comm.h:345 HcclCommDeactivateCommMemory(HcclComm, void* virPtr) HCOMM_WEAK_SYMBOL;
+- hccl_comm.h:386 HcclCommSymWinRegister(HcclComm, void* addr, uint64_t size,
+    HcclCommSymWindow* winHandle, uint32_t flag);
+- hccl_res.h:188 HcclCommMemReg(HcclComm, const char* memTag, const CommMem* mem, HcclMemHandle* memHandle);
+- hccl_sym_win.h:44 HcclSymWinGetRemoteAddr(HcclCommSymWindow, size_t offset, uint32_t peerRank, void** ptr);
+- hccl_team.h:112 HcclTeamMemberToRank(HcclComm, HcommTeamHandle, uint32_t memberId, uint32_t* rankId);
+- hccl_team.h:123 HcclTeamRankToMember(HcclComm, HcommTeamHandle, uint32_t rankId, uint32_t* memberId);
+未发现（公开头）：
+- context 访问器（Hccl*Context* 函数）无；workspace 访问器无（grep workspace 无匹配）。
+- profiling/dump 函数声明无；仅 hccl_types.h:41 枚举 `HCCL_E_PROFILING = 17`。
+DSO 符号核对（只读 nm，未加载 libhccl.so）：
+- SHA da6dd17f...596f22；上述 11 个声明名在 `nm -D --defined-only` 中匹配数 **0**
+  （该 DSO 未导出这些名字；其它 DSO 未扫描，属未覆盖，不作“不存在”结论）。
+- `nm -D` 中 profiling/dump 相关仅内部 C++ 符号 4 个（ops_hccl BinaryStream::Dump、
+  CostTableManager::DumpCostTable、ReportProfilingThread、for_each<...BinaryStream::Dump>），
+  不是公开头声明的 API。

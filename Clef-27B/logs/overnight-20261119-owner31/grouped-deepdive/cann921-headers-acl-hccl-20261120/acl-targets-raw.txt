@@ -1,0 +1,581 @@
+
+### aclrtMemcpy ###
+2259-
+2260-/**
+2261- * @ingroup AscendCL
+2262- * @brief synchronous memory replication between host and device
+2263- *
+2264- * @param dst [IN]       destination address pointer
+2265- * @param destMax [IN]   Max length of the destination address memory
+2266- * @param src [IN]       source address pointer
+2267- * @param count [IN]     the length of byte to copy
+2268- * @param kind [IN]      memcpy type
+2269- *
+2270- * @retval ACL_SUCCESS The function is successfully executed.
+2271- * @retval OtherValues Failure
+2272- */
+2273:ACL_FUNC_VISIBILITY aclError aclrtMemcpy(
+2274-    void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind);
+2275-
+2276-/**
+2277- * @ingroup AscendCL
+2278- * @brief Initialize memory and set contents of memory to specified value
+2279- *
+--
+6049- */
+6050-ACL_FUNC_VISIBILITY aclError aclrtHostGetDevicePointerAddrRange(aclrtAddrRange *addrRange, uint32_t *count);
+6051-
+6052-/**
+6053- * @ingroup AscendCL
+6054- * @brief Generic aclrt api function pointer type used for api hook.
+6055- */
+6056-typedef int (*aclrtApiFunc)(void);
+6057-
+6058-/**
+6059- * @ingroup AscendCL
+6060- * @brief Hook the aclrt/aclmdlRI api identified by name with the given function.
+6061- *        The api name must match an existing, non-deprecated runtime api.
+6062- *        An invalid or non-hookable api name returns ACL_ERROR_INVALID_PARAM.
+6063: * @param [in] name     api name, e.g. "aclrtMemcpy"
+6064- * @param [in] func     hook function pointer; pass the original func to restore
+6065- *
+6066- * @retval ACL_SUCCESS The function is successfully executed.
+6067- * @retval ACL_ERROR_INVALID_PARAM null name or null func or api not hookable.
+6068- * @retval ACL_ERROR_FEATURE_UNSUPPORTED hook feature disabled at build time.
+6069- */
+6070-ACL_FUNC_VISIBILITY aclError aclrtApiInjectionSetFunc(const char* name, aclrtApiFunc func);
+6071-/**
+6072- * @ingroup AscendCL
+6073- * @brief Get the original and current function pointer of the api identified by name.
+6074- *        At runtime initialization, currentFunc equals originFunc. After a tool
+6075- *        calls aclrtApiInjectionSetFunc, currentFunc points to the hook function.
+6076: * @param [in]  name        api name, e.g. "aclrtMemcpy"
+6077- * @param [out] originFunc  original function pointer, may be nullptr if not needed
+6078- * @param [out] currentFunc current function pointer, may be nullptr if not needed
+6079- *
+6080- * @retval ACL_SUCCESS The function is successfully executed.
+6081- * @retval ACL_ERROR_INVALID_PARAM null name or api not hookable.
+6082- * @retval ACL_ERROR_FEATURE_UNSUPPORTED hook feature disabled at build time.
+
+### aclrtMemcpyAsync ###
+2306- *     both the source and destination addresses must be 64-byte aligned
+2307- *
+2308- * @param dst [IN]     destination address pointer
+2309- * @param destMax [IN] Max length of destination address memory
+2310- * @param src [IN]     source address pointer
+2311- * @param count [IN]   the number of byte to copy
+2312- * @param kind [IN]    memcpy type
+2313- * @param stream [IN]  asynchronized task stream
+2314- *
+2315- * @retval ACL_SUCCESS The function is successfully executed.
+2316- * @retval OtherValues Failure
+2317- *
+2318- * @see aclrtSynchronizeStream
+2319- */
+2320:ACL_FUNC_VISIBILITY aclError aclrtMemcpyAsync(
+2321-    void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind, aclrtStream stream);
+2322-
+2323-/**
+2324- * @ingroup AscendCL
+2325- * @brief Initialize memory and set contents of memory to specified 32-bit unsigned value (element-wise)
+2326- *
+--
+2387- *     both the source and destination addresses must be 64-byte aligned
+2388- *
+2389- * @param dst [IN]     destination address pointer
+2390- * @param destMax [IN] Max length of destination address memory
+2391- * @param src [IN]     source address pointer
+2392- * @param count [IN]   the number of byte to copy
+2393- * @param kind [IN]    memcpy type
+2394- * @param stream [IN]  asynchronized task stream
+2395- *
+2396- * @retval ACL_SUCCESS The function is successfully executed.
+2397- * @retval OtherValues Failure
+2398- *
+2399- * @see aclrtSynchronizeStream
+2400- */
+2401:ACL_DEPRECATED_MESSAGE("aclrtMemcpyAsyncWithCondition is deprecated, use aclrtMemcpyAsync instead")
+2402-ACL_FUNC_VISIBILITY aclError aclrtMemcpyAsyncWithCondition(
+2403-    void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind, aclrtStream stream);
+2404-
+2405-/**
+2406- * @ingroup AscendCL
+2407- * @brief synchronous memory replication of two-dimensional matrix between host and device
+
+### aclrtCreateStream ###
+2727- * @retval OtherValues Failure
+2728- */
+2729-ACL_FUNC_VISIBILITY aclError aclrtSetStreamConfigOpt(
+2730-    aclrtStreamConfigHandle* handle, aclrtStreamConfigAttr attr, const void* attrValue, size_t valueSize);
+2731-
+2732-/**
+2733- * @ingroup AscendCL
+2734- * @brief  create stream instance
+2735- *
+2736- * @param  stream [OUT]   the created stream
+2737- *
+2738- * @retval ACL_SUCCESS The function is successfully executed.
+2739- * @retval OtherValues Failure
+2740- */
+2741:ACL_FUNC_VISIBILITY aclError aclrtCreateStream(aclrtStream* stream);
+2742-
+2743-/**
+2744- * @ingroup AscendCL
+2745- * @brief  create stream instance
+2746- *
+2747- * @param  stream [OUT]   the created stream
+--
+2761- * @param  stream [OUT]   the created stream
+2762- * @param  priority [IN]   the priority of stream, value range:0~7
+2763- * @param  flag [IN]   indicate the function for stream
+2764- *
+2765- * @retval ACL_SUCCESS The function is successfully executed.
+2766- * @retval OtherValues Failure
+2767- */
+2768-ACL_FUNC_VISIBILITY aclError aclrtCreateStreamWithConfig(aclrtStream* stream, uint32_t priority, uint32_t flag);
+2769-
+2770-/**
+2771- * @ingroup AscendCL
+2772- * @brief destroy stream instance
+2773- *
+2774- * @par Function
+2775: * Can only destroy streams created through the aclrtCreateStream interface
+2776- *
+2777- * @par Restriction
+2778- * Before calling the aclrtDestroyStream interface to destroy
+2779- * the specified Stream, you need to call the aclrtSynchronizeStream interface
+2780- * to ensure that the tasks in the Stream have been completed.
+2781- *
+2782- * @param stream [IN]  the stream to destroy
+2783- *
+2784- * @retval ACL_SUCCESS The function is successfully executed.
+2785- * @retval OtherValues Failure
+2786- *
+2787: * @see aclrtCreateStream | aclrtSynchronizeStream
+2788- */
+2789-ACL_FUNC_VISIBILITY aclError aclrtDestroyStream(aclrtStream stream);
+2790-
+2791-/**
+2792- * @ingroup AscendCL
+2793- * @brief destroy stream instance by force
+2794- *
+2795- * @par Function
+2796: * Can only destroy streams created through the aclrtCreateStream interface
+2797- *
+2798- * @param stream [IN]  the stream to destroy
+2799- *
+2800- * @retval ACL_SUCCESS The function is successfully executed.
+2801- * @retval OtherValues Failure
+2802- *
+2803: * @see aclrtCreateStream
+2804- */
+2805-ACL_FUNC_VISIBILITY aclError aclrtDestroyStreamForce(aclrtStream stream);
+2806-
+2807-/**
+2808- * @ingroup AscendCL
+2809- * @brief block the host until all tasks
+
+### aclrtDestroyStream ###
+1562- * @brief Reset the current operating Device and free resources on the device,
+1563- * including the default context, the default stream,
+1564- * and all streams created under the default context,
+1565- * and synchronizes the interface.
+1566- * If the task under the default context or stream has not been completed,
+1567- * the system will wait for the task to complete before releasing it.
+1568- *
+1569- * @par Restriction
+1570- * @li The Context, Stream, and Event that are explicitly created
+1571- * on the device to be reset. Before resetting,
+1572- * it is recommended to follow the following interface calling sequence,
+1573- * otherwise business abnormalities may be caused.
+1574- * @li Interface calling sequence:
+1575- * call aclrtDestroyEvent interface to release Event or
+1576: * call aclrtDestroyStream interface to release explicitly created Stream->
+1577- * call aclrtDestroyContext to release explicitly created Context->
+1578- * call aclrtResetDevice interface
+1579- *
+1580- * @param  deviceId [IN]   the device id
+1581- *
+1582- * @retval ACL_SUCCESS The function is successfully executed.
+--
+1591- * and all streams created under the default context,
+1592- * and synchronizes the interface.
+1593- * If the task under the default context or stream has not been completed,
+1594- * the system will wait for the task to complete before releasing it.
+1595- * No matter how many times you call aclrtSetDevice for the same device id,
+1596- * you only need to call aclrtResetDeviceForce once for resetting.
+1597- *
+1598- * @par Restriction
+1599- * @li The Context, Stream, and Event that are explicitly created
+1600- * on the device to be reset. Before resetting,
+1601- * it is recommended to follow the following interface calling sequence,
+1602- * otherwise business abnormalities may be caused.
+1603- * @li Interface calling sequence:
+1604- * call aclrtDestroyEvent interface to release Event or
+1605: * call aclrtDestroyStream interface to release explicitly created Stream->
+1606- * call aclrtDestroyContext to release explicitly created Context->
+1607- * call aclrtResetDeviceForce interface
+1608- *
+1609- * @param  deviceId [IN]   the device id
+1610- *
+1611- * @retval ACL_SUCCESS The function is successfully executed.
+--
+2764- *
+2765- * @retval ACL_SUCCESS The function is successfully executed.
+2766- * @retval OtherValues Failure
+2767- */
+2768-ACL_FUNC_VISIBILITY aclError aclrtCreateStreamWithConfig(aclrtStream* stream, uint32_t priority, uint32_t flag);
+2769-
+2770-/**
+2771- * @ingroup AscendCL
+2772- * @brief destroy stream instance
+2773- *
+2774- * @par Function
+2775- * Can only destroy streams created through the aclrtCreateStream interface
+2776- *
+2777- * @par Restriction
+2778: * Before calling the aclrtDestroyStream interface to destroy
+2779- * the specified Stream, you need to call the aclrtSynchronizeStream interface
+2780- * to ensure that the tasks in the Stream have been completed.
+2781- *
+2782- * @param stream [IN]  the stream to destroy
+2783- *
+2784- * @retval ACL_SUCCESS The function is successfully executed.
+2785- * @retval OtherValues Failure
+2786- *
+2787- * @see aclrtCreateStream | aclrtSynchronizeStream
+2788- */
+2789:ACL_FUNC_VISIBILITY aclError aclrtDestroyStream(aclrtStream stream);
+2790-
+2791-/**
+2792- * @ingroup AscendCL
+2793- * @brief destroy stream instance by force
+2794- *
+2795- * @par Function
+
+### aclrtSynchronizeStream ###
+1858- */
+1859-ACL_FUNC_VISIBILITY aclError aclrtSynchronizeEventWithTimeout(aclrtEvent event, int32_t timeout);
+1860-
+1861-/**
+1862- * @ingroup AscendCL
+1863- * @brief computes the elapsed time between events.
+1864- *
+1865- * @param ms [OUT]     time between start and end in ms
+1866- * @param start [IN]   starting event
+1867- * @param end [IN]     ending event
+1868- *
+1869- * @retval ACL_SUCCESS The function is successfully executed.
+1870- * @retval OtherValues Failure
+1871- *
+1872: * @see aclrtCreateEvent | aclrtRecordEvent | aclrtSynchronizeStream
+1873- */
+1874-ACL_FUNC_VISIBILITY aclError aclrtEventElapsedTime(float* ms, aclrtEvent startEvent, aclrtEvent endEvent);
+1875-
+1876-/**
+1877- * @ingroup AscendCL
+1878- * @brief get syscnt when event recorded.
+1879- *
+1880- * @param event [IN]          event to be record
+1881- * @param timestamp [OUT]     syscnt
+1882- *
+1883- * @retval ACL_SUCCESS The function is successfully executed.
+1884- * @retval OtherValues Failure
+1885- *
+1886: * @see aclrtCreateEvent | aclrtRecordEvent | aclrtSynchronizeStream
+1887- */
+1888-ACL_FUNC_VISIBILITY aclError aclrtEventGetTimestamp(aclrtEvent event, uint64_t* timestamp);
+1889-
+1890-/**
+1891- * @ingroup AscendCL
+1892- * @brief alloc memory on device, real alloc size is aligned to 32 bytes and padded with 32 bytes
+--
+2287- * @param value [IN]     Set value
+2288- * @param count [IN]     The length of memory
+2289- *
+2290- * @retval ACL_SUCCESS The function is successfully executed.
+2291- * @retval OtherValues Failure
+2292- */
+2293-ACL_FUNC_VISIBILITY aclError aclrtMemset(void* devPtr, size_t maxCount, int32_t value, size_t count);
+2294-
+2295-/**
+2296- * @ingroup AscendCL
+2297- * @brief  Asynchronous memory replication between Host and Device
+2298- *
+2299- * @par Function
+2300- *  After calling this interface,
+2301: *  be sure to call the aclrtSynchronizeStream interface to ensure that
+2302- *  the task of memory replication has been completed
+2303- *
+2304- * @par Restriction
+2305- * @li For on-chip Device-to-Device memory copy,
+2306- *     both the source and destination addresses must be 64-byte aligned
+2307- *
+2308- * @param dst [IN]     destination address pointer
+2309- * @param destMax [IN] Max length of destination address memory
+2310- * @param src [IN]     source address pointer
+2311- * @param count [IN]   the number of byte to copy
+2312- * @param kind [IN]    memcpy type
+2313- * @param stream [IN]  asynchronized task stream
+2314- *
+2315- * @retval ACL_SUCCESS The function is successfully executed.
+2316- * @retval OtherValues Failure
+2317- *
+2318: * @see aclrtSynchronizeStream
+2319- */
+2320-ACL_FUNC_VISIBILITY aclError aclrtMemcpyAsync(
+2321-    void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind, aclrtStream stream);
+2322-
+2323-/**
+2324- * @ingroup AscendCL
+--
+2340- */
+2341-ACL_FUNC_VISIBILITY aclError aclrtMemsetD32(void* ptr, size_t memSize, uint32_t value, size_t N);
+2342-
+2343-/**
+2344- * @ingroup AscendCL
+2345- * @brief Asynchronously initialize memory and set contents of memory to specified 32-bit unsigned value (element-wise)
+2346- *
+2347- * @par Function
+2348- *  The memory to be initialized can be on the Host or Device side,
+2349- *  and the system determines the location according to the address.
+2350- *  For Host memory, the fill operation is performed synchronously
+2351- *  For Device memory, a temporary pinned host buffer is filled with SIMD,
+2352- *  then the data is asynchronously copied to the device memory on the specified stream.
+2353- *  After calling this interface, the caller should ensure the stream synchronization
+2354: *  (e.g., aclrtSynchronizeStream) if the filled memory is to be used immediately.
+2355- *
+2356- * @par Restriction
+2357- * @li For device memory, the fill task is queued on the specified stream;
+2358- *     the memory may not be actually filled until the stream is synchronized.
+2359- * @li If stream is nullptr, the default stream of the current context is used.
+2360- *
+2361- * @param ptr [IN]     Starting address of memory
+2362- * @param memSize [IN] Max length of the memory buffer in bytes (must be >= N * 4)
+2363- * @param value [IN]   32-bit unsigned integer value to fill
+2364- * @param N [IN]       Number of uint32_t elements to set
+2365- * @param stream [IN]  Stream handle for the asynchronous fill task
+2366- *
+2367- * @retval ACL_SUCCESS The function is successfully executed.
+2368- * @retval OtherValues Failure
+2369- *
+2370: * @see aclrtSynchronizeStream
+2371- */
+2372-ACL_FUNC_VISIBILITY aclError aclrtMemsetD32Async(
+2373-    void* ptr, size_t memSize, uint32_t value, size_t N, aclrtStream stream);
+2374-
+2375-/**
+2376- * @ingroup AscendCL
+2377- * @brief  Asynchronous memory replication between Host and Device, would
+2378- *         be synchronous if memory is not allocated via calling acl or rts api.
+2379- *
+2380- * @par Function
+2381- *  After calling this interface and memory is allocated via calling acl or rts api,
+2382: *  be sure to call the aclrtSynchronizeStream interface to ensure that
+2383- *  the task of memory replication has been completed
+2384- *
+2385- * @par Restriction
+2386- * @li For on-chip Device-to-Device memory copy,
+2387- *     both the source and destination addresses must be 64-byte aligned
+2388- *
+2389- * @param dst [IN]     destination address pointer
+2390- * @param destMax [IN] Max length of destination address memory
+2391- * @param src [IN]     source address pointer
+2392- * @param count [IN]   the number of byte to copy
+2393- * @param kind [IN]    memcpy type
+2394- * @param stream [IN]  asynchronized task stream
+2395- *
+2396- * @retval ACL_SUCCESS The function is successfully executed.
+2397- * @retval OtherValues Failure
+2398- *
+2399: * @see aclrtSynchronizeStream
+2400- */
+2401-ACL_DEPRECATED_MESSAGE("aclrtMemcpyAsyncWithCondition is deprecated, use aclrtMemcpyAsync instead")
+2402-ACL_FUNC_VISIBILITY aclError aclrtMemcpyAsyncWithCondition(
+2403-    void* dst, size_t destMax, const void* src, size_t count, aclrtMemcpyKind kind, aclrtStream stream);
+2404-
+2405-/**
+--
+2547- * @par Function
+2548- *  The memory to be initialized is on the Host or device side,
+2549- *  and the system determines whether
+2550- *  it is host or device according to the address
+2551- *
+2552- * @param devPtr [IN]      destination address pointer
+2553- * @param maxCount [IN]    Max length of destination address memory
+2554- * @param value [IN]       set value
+2555- * @param count [IN]       the number of byte to set
+2556- * @param stream [IN]      asynchronized task stream
+2557- *
+2558- * @retval ACL_SUCCESS The function is successfully executed.
+2559- * @retval OtherValues Failure
+2560- *
+2561: * @see aclrtSynchronizeStream
+2562- */
+2563-ACL_FUNC_VISIBILITY aclError aclrtMemsetAsync(
+2564-    void* devPtr, size_t maxCount, int32_t value, size_t count, aclrtStream stream);
+2565-
+2566-/**
+2567- * @ingroup AscendCL
+--
+2765- * @retval ACL_SUCCESS The function is successfully executed.
+2766- * @retval OtherValues Failure
+2767- */
+2768-ACL_FUNC_VISIBILITY aclError aclrtCreateStreamWithConfig(aclrtStream* stream, uint32_t priority, uint32_t flag);
+2769-
+2770-/**
+2771- * @ingroup AscendCL
+2772- * @brief destroy stream instance
+2773- *
+2774- * @par Function
+2775- * Can only destroy streams created through the aclrtCreateStream interface
+2776- *
+2777- * @par Restriction
+2778- * Before calling the aclrtDestroyStream interface to destroy
+2779: * the specified Stream, you need to call the aclrtSynchronizeStream interface
+2780- * to ensure that the tasks in the Stream have been completed.
+2781- *
+2782- * @param stream [IN]  the stream to destroy
+2783- *
+2784- * @retval ACL_SUCCESS The function is successfully executed.
+2785- * @retval OtherValues Failure
+2786- *
+2787: * @see aclrtCreateStream | aclrtSynchronizeStream
+2788- */
+2789-ACL_FUNC_VISIBILITY aclError aclrtDestroyStream(aclrtStream stream);
+2790-
+2791-/**
+2792- * @ingroup AscendCL
+2793- * @brief destroy stream instance by force
+--
+2803- * @see aclrtCreateStream
+2804- */
+2805-ACL_FUNC_VISIBILITY aclError aclrtDestroyStreamForce(aclrtStream stream);
+2806-
+2807-/**
+2808- * @ingroup AscendCL
+2809- * @brief block the host until all tasks
+2810- * in the specified stream have completed
+2811- *
+2812- * @param  stream [IN]   the stream to wait
+2813- *
+2814- * @retval ACL_SUCCESS The function is successfully executed.
+2815- * @retval OtherValues Failure
+2816- */
+2817:ACL_FUNC_VISIBILITY aclError aclrtSynchronizeStream(aclrtStream stream);
+2818-
+2819-/**
+2820- * @ingroup AscendCL
+2821- * @brief block the host until all tasks
+2822- * in the specified stream have completed
+2823- *
+--
+3188- * @brief get saturation mode
+3189- * @param mode [OUT]   get saturation mode
+3190- *
+3191- * @retval ACL_SUCCESS The function is successfully executed.
+3192- * @retval OtherValues Failure
+3193- */
+3194-ACL_FUNC_VISIBILITY aclError aclrtGetDeviceSatMode(aclrtFloatOverflowMode* mode);
+3195-
+3196-/**
+3197- * @ingroup AscendCL
+3198- * @brief get overflow status asynchronously
+3199- *
+3200- * @par Restriction
+3201- * After calling the aclrtGetOverflowStatus interface,
+3202: * you need to call the aclrtSynchronizeStream interface
+3203- * to ensure that the tasks in the stream have been completed.
+3204- * @param outputAddr [IN/OUT]  output device addr to store overflow status
+3205- * @param outputSize [IN]  output addr size
+3206- * @param outputSize [IN]  stream
+3207- *
+3208- * @retval ACL_SUCCESS The function is successfully executed.
+3209- * @retval OtherValues Failure
+3210- */
+3211-ACL_FUNC_VISIBILITY aclError aclrtGetOverflowStatus(void* outputAddr, size_t outputSize, aclrtStream stream);
+3212-
+3213-/**
+3214- * @ingroup AscendCL
+3215- * @brief reset overflow status asynchronously
+3216- *
+3217- * @par Restriction
+3218- * After calling the aclrtResetOverflowStatus interface,
+3219: * you need to call the aclrtSynchronizeStream interface
+3220- * to ensure that the tasks in the stream have been completed.
+3221- * @param outputSize [IN]  stream
+3222- *
+3223- * @retval ACL_SUCCESS The function is successfully executed.
+3224- * @retval OtherValues Failure
+3225- */
+
+### aclrtSynchronizeStreamWithTimeout ###
+2817-ACL_FUNC_VISIBILITY aclError aclrtSynchronizeStream(aclrtStream stream);
+2818-
+2819-/**
+2820- * @ingroup AscendCL
+2821- * @brief block the host until all tasks
+2822- * in the specified stream have completed
+2823- *
+2824- * @param  stream [IN]   the stream to wait
+2825- * @param  timeout [IN]  timeout value,the unit is milliseconds
+2826- * -1 means waiting indefinitely, 0 means check whether synchronization is complete immediately
+2827- *
+2828- * @retval ACL_SUCCESS The function is successfully executed.
+2829- * @retval OtherValues Failure
+2830- */
+2831:ACL_FUNC_VISIBILITY aclError aclrtSynchronizeStreamWithTimeout(aclrtStream stream, int32_t timeout);
+2832-
+2833-/**
+2834- * @ingroup AscendCL
+2835- * @brief begin a non-blocking kernel launch section on the specified stream
+2836- *
+2837- * @param  stream [IN]   the stream used by subsequent kernel launches; NULL indicates the default stream
+
+### aclrtSynchronizeDeviceWithTimeout ###
+1654- * @brief Wait for compute device to finish
+1655- *
+1656- * @retval ACL_SUCCESS The function is successfully executed.
+1657- * @retval OtherValues Failure
+1658- */
+1659-ACL_FUNC_VISIBILITY aclError aclrtSynchronizeDevice(void);
+1660-
+1661-/**
+1662- * @ingroup AscendCL
+1663- * @brief Wait for compute device to finish and set timeout
+1664- *
+1665- * @retval ACL_SUCCESS The function is successfully executed.
+1666- * @retval OtherValues Failure
+1667- */
+1668:ACL_FUNC_VISIBILITY aclError aclrtSynchronizeDeviceWithTimeout(int32_t timeout);
+1669-
+1670-/**
+1671- * @ingroup AscendCL
+1672- * @brief Set Scheduling TS
+1673- *
+1674- * @param tsId [IN]   the ts id
+
+### aclrtGetThreadLastTaskId ###
+2107- * @retval OtherValues Failure
+2108- */
+2109-
+2110-ACL_FUNC_VISIBILITY aclError aclrtHostMemMapCapabilities(
+2111-    uint32_t deviceId, aclrtHacType hacType, aclrtHostMemMapCapability* capabilities);
+2112-/**
+2113- * @ingroup AscendCL
+2114- * @brief get thread last task id
+2115- *
+2116- * @param taskId [OUT] thread task id
+2117- *
+2118- * @retval ACL_SUCCESS The function is successfully executed.
+2119- * @retval OtherValues Failure
+2120- */
+2121:ACL_FUNC_VISIBILITY aclError aclrtGetThreadLastTaskId(uint32_t* taskId);
+2122-
+2123-/**
+2124- * @ingroup AscendCL
+2125- * @brief get stream id from a stream handle
+2126- *
+2127- * @param stream [IN]    stream handle
+
+### aclrtStreamGetContext ###

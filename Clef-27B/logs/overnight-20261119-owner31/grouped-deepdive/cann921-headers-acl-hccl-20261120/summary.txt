@@ -1,0 +1,12 @@
+结论（仅头文件/DSO 证据，供 33 设计）：
+1) ACL 9.2.1 (header 1.17.0) 提供：同步/异步 memcpy（异步带 aclrtStream）；流创建/销毁（含 WithConfig/Force）；
+   流级同步带 timeout 且头注释明确单位 ms；设备级 SyncWithTimeout 有签名但无单位注释；事件级 WithTimeout；
+   context 创建/销毁/设置/获取及线程/默认 context 限制注释；aclrtGetThreadLastTaskId。
+   头文件没有 stream→context accessor（aclrtStreamGetContext not found）。
+2) HCCL 9.2.1 公开头提供 comm memory range/activate/deactivate、symwin register/getremoteaddr、
+   comm memreg、channel remote mems、team member/rank 等声明；没有公开 context/workspace 访问器，
+   也没有 profiling/dump 函数声明（仅 HCCL_E_PROFILING 枚举）。
+3) libhccl.so（SHA 见 paths）在 dynsym 中未导出上述 11 个公开声明名；profiling/dump 仅内部 C++ 符号。
+   其它 DSO 未扫描。
+未覆盖/边界：仅头文件签名与注释；未加载 DSO、未读进程内存、未查其它版本/DSO、未追踪运行时行为；
+  未证明这些接口在 device/AICPU 侧的可用性或调用约束；设备级 timeout 单位与实现语义未覆盖。

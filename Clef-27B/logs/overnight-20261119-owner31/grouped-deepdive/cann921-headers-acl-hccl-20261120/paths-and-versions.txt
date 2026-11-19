@@ -1,0 +1,21 @@
+include root: /usr/local/Ascend/cann-9.2.1/aarch64-linux/include
+  (/usr/local/Ascend/cann-9.2.1/include is a symlink to aarch64-linux/include)
+version sources: compiler/version.info Version=9.2.1; opp/version.info Version=9.2.1
+ACL header version: acl_rt.h defines ACL_MAJOR 1 / ACL_MINOR 17 / ACL_PATCH 0
+HCCL header version: version/hccl_version.h HCCL_VERSION_STR "9.2.1"
+copied ACL headers (SHA256):
+  acl/acl_rt.h              fc88d1a672f9d4ea060404398f23d8a331614c2420b04ccdc197eceddd89fa78  213K
+  acl/acl_base.h            f7c6c5c7538585c7656aa1240a402035d967d49183dce2d294429e18dca4faae
+  acl/acl_rt_allocator.h    e87033c680981331fbdb2fe88ce4799ce62a382ce579110db39192feccd2b76f
+  acl/acl_base_rt.h         48f9772d0b08194fb8b7f3021886ef44fd3a4614cc4444ae75ce12239b1949df
+  acl/acl_base_mdl.h        eb39563b62d7d94a63db675a3dc3fd950d60ab49c9c10c148bfc07301f347875
+  acl/error_codes/rt_error_codes.h  12fbd6bd67ab4e638ad1ce9bb3448c8b20beb0661f193f41997a467d0ad781a6
+  acl/error_codes/ge_error_codes.h  861ce4f9d187e9e8d24a62d7603647e3c8cd4ed395278a121937a0bdc6173389
+dependency closure: acl_base.h includes acl_base_rt.h, acl_base_mdl.h and both error_codes headers;
+  those include only stdint.h/stddef.h (no further SDK headers).
+HCCL public headers scanned (path + SHA256 in hccl-scan-raw.txt):
+  hccl/hccl.h, hccl_ccu_res.h, hccl_channel.h, hccl_comm.h, hccl_launch.h,
+  hccl_mc2.h, hccl_rank_graph.h, hccl_res.h, hccl_sym_win.h, hccl_team.h,
+  hccl_types.h, plus version/hccl_version.h.
+HCCL DSO (not loaded): /usr/local/Ascend/cann-9.2.1/lib64/libhccl.so
+  size 14161128; SHA256 da6dd17ffd21f288fa77066155fd83ddf50c26d1e2f82e6a6507670661596f22

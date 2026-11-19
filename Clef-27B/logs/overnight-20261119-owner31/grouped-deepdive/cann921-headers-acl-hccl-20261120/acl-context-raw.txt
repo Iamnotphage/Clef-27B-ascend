@@ -1,0 +1,172 @@
+== acl context/thread comments 1380-1500 ==
+ *        the callback function on the specified Stream
+ *        is no longer processed by the specified thread
+ *
+ * @param threadId [IN]   thread ID
+ * @param stream [IN]     stream handle
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclrtUnSubscribeReport(uint64_t threadId, aclrtStream stream);
+
+/**
+ * @ingroup AscendCL
+ * @brief create context and associates it with the calling thread
+ *
+ * @par Function
+ * The following use cases are supported:
+ * @li If you don't call the aclrtCreateContext interface
+ * to explicitly create the context,
+ * the system will use the default context, which is implicitly created
+ * when the aclrtSetDevice interface is called.
+ * @li If multiple contexts are created in a process
+ * (there is no limit on the number of contexts),
+ * the current thread can only use one of them at the same time.
+ * It is recommended to explicitly specify the context of the current thread
+ * through the aclrtSetCurrentContext interface to increase.
+ * the maintainability of the program.
+ *
+ * @param  context [OUT]    point to the created context
+ * @param  deviceId [IN]    device to create context on
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ *
+ * @see aclrtSetDevice | aclrtSetCurrentContext
+ */
+ACL_FUNC_VISIBILITY aclError aclrtCreateContext(aclrtContext* context, int32_t deviceId);
+
+/**
+ * @ingroup AscendCL
+ * @brief destroy context instance
+ *
+ * @par Function
+ * Can only destroy context created through aclrtCreateContext interface
+ *
+ * @param  context [IN]   the context to destroy
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ *
+ * @see aclrtCreateContext
+ */
+ACL_FUNC_VISIBILITY aclError aclrtDestroyContext(aclrtContext context);
+
+/**
+ * @ingroup AscendCL
+ * @brief set the context of the thread
+ *
+ * @par Function
+ * The following scenarios are supported:
+ * @li If the aclrtCreateContext interface is called in a thread to explicitly
+ * create a Context (for example: ctx1), the thread's Context can be specified
+ * without calling the aclrtSetCurrentContext interface.
+ * The system uses ctx1 as the context of thread1 by default.
+ * @li If the aclrtCreateContext interface is not explicitly created,
+ * the system uses the default context as the context of the thread.
+ * At this time, the aclrtDestroyContext interface cannot be used to release
+ * the default context.
+ * @li If the aclrtSetCurrentContext interface is called multiple times to
+ * set the thread's Context, the last one prevails.
+ *
+ * @par Restriction
+ * @li If the device corresponding to the context set for the thread
+ * has been reset, you cannot set the context as the context of the thread,
+ * otherwise a business exception will result.
+ * @li It is recommended to use the context created in a thread.
+ * If the aclrtCreateContext interface is called in thread A to create a context,
+ * and the context is used in thread B,
+ * the user must guarantee the execution order of tasks in the same stream
+ * under the same context in two threads.
+ *
+ * @param  context [IN]   the current context of the thread
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ *
+ * @see aclrtCreateContext | aclrtDestroyContext
+ */
+ACL_FUNC_VISIBILITY aclError aclrtSetCurrentContext(aclrtContext context);
+
+/**
+ * @ingroup AscendCL
+ * @brief get the context of the thread
+ *
+ * @par Function
+ * If the user calls the aclrtSetCurrentContext interface
+ * multiple times to set the context of the current thread,
+ * then the last set context is obtained
+ *
+ * @param  context [OUT]   the current context of the thread
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ *
+ * @see aclrtSetCurrentContext
+ */
+ACL_FUNC_VISIBILITY aclError aclrtGetCurrentContext(aclrtContext* context);
+
+/**
+ * @ingroup AscendCL
+ * @brief get system param option value in current context
+ *
+ * @param opt[IN] system option
+ * @param value[OUT] value of system option
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclrtCtxGetSysParamOpt(aclSysParamOpt opt, int64_t* value);
+
+/**
+ * @ingroup AscendCL
+== device timeout 1650-1672 ==
+ACL_FUNC_VISIBILITY aclError aclrtGetRunMode(aclrtRunMode* runMode);
+
+/**
+ * @ingroup AscendCL
+ * @brief Wait for compute device to finish
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclrtSynchronizeDevice(void);
+
+/**
+ * @ingroup AscendCL
+ * @brief Wait for compute device to finish and set timeout
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclrtSynchronizeDeviceWithTimeout(int32_t timeout);
+
+/**
+ * @ingroup AscendCL
+ * @brief Set Scheduling TS
+== thread task id 2105-2125 ==
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+
+ACL_FUNC_VISIBILITY aclError aclrtHostMemMapCapabilities(
+    uint32_t deviceId, aclrtHacType hacType, aclrtHostMemMapCapability* capabilities);
+/**
+ * @ingroup AscendCL
+ * @brief get thread last task id
+ *
+ * @param taskId [OUT] thread task id
+ *
+ * @retval ACL_SUCCESS The function is successfully executed.
+ * @retval OtherValues Failure
+ */
+ACL_FUNC_VISIBILITY aclError aclrtGetThreadLastTaskId(uint32_t* taskId);
+
+/**
+ * @ingroup AscendCL
+ * @brief get stream id from a stream handle
+== header shas ==
+fc88d1a672f9d4ea060404398f23d8a331614c2420b04ccdc197eceddd89fa78  /usr/local/Ascend/cann-9.2.1/aarch64-linux/include/acl/acl_rt.h
+f7c6c5c7538585c7656aa1240a402035d967d49183dce2d294429e18dca4faae  /usr/local/Ascend/cann-9.2.1/aarch64-linux/include/acl/acl_base.h
+e87033c680981331fbdb2fe88ce4799ce62a382ce579110db39192feccd2b76f  /usr/local/Ascend/cann-9.2.1/aarch64-linux/include/acl/acl_rt_allocator.h
