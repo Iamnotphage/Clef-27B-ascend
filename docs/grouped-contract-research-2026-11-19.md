@@ -1552,3 +1552,17 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 服务未重启判据：starttime 仍 `400405818`、boot_id 不变；restore 前不重启服务。
 
 **当前不执行、无 GO；以上交 31 补齐实路径/既有采集脚本后由 20/32 审。**
+
+## 87. h11-observe-execution-v1 包状态（未闭，待 31 补齐）
+
+**当前实际文件（6 个，未提交 `??`）**：`README.txt`、`window-planonly-argv.json`、`window-execute-argv.json`、`window-launch-template.txt`、`collect-raw.sh`、`rank-env-read.py`。
+**README 索引仍缺 3 个**：`planonly-rerun.txt`、`preflight-rescan.sh`、`restore-and-failure.txt`；**无 SHA256SUMS、无 commit**。
+
+**已核通过（只读）**：
+- argv 数组：venv 绝对 python、**e38b541 stage 绝对 window 脚本**、全 argparse；execute 版仅多顶层 `--execute`；env 仅两项 sidecar；`--expect-stop-sha d6d49d…`、`--stop-timeout/--restore-timeout/--port/--clean-env-expect` 显式。
+- `--execute` 与 build_plan 一致（含 `--python` 显式；未用 `--child-argv`；`--a12-binary` 不需要；`--prior-client-record/--cwd` 可选未传）。
+- device 源头已给：`/root/ascend/log/run/device-0/device-<pid>_<timestamp>.log`、`device-1`、`plog`、`vllm_ascend`；既有 cell 的 `device-0-<pid>.log` 是改名副本，仓库无独立采集脚本。
+- `collect-raw.sh`：START/END+slack marker 时间窗、完整文件、不按 PID、SUMS、correlation 派生；`rank-env-read.py`：`descendants.json entries` + pgid 扫描，三白名单，缺失 MISSING。
+- official/activate/service-root/model-dir 由 restore_argv 推得并已 test/ls。
+
+**未闭**：缺 3 文件 + SUMS/commit；`planonly-rerun.txt` 的 c95ae5c3 逐字节结果未归档；`preflight-rescan.sh`/`restore-and-failure.txt` 未落盘。31 补齐并提交后，32 再审 plan-only=c95ae5c3、采集/白名单/预扫/唯一 restore，并给 readiness/包 SHA。**无 GO/不执行。**
