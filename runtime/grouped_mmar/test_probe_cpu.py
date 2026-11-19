@@ -81,6 +81,27 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan['rows'], 128)
         self.assertEqual(plan['flags'], run_probe.KEEP_ALL)
 
+    def test_out_dir_shared_by_two_ranks(self):
+        import threading
+        out = self.root / 'shared-out'
+        barrier = threading.Barrier(8)
+        errors = []
+
+        def worker():
+            barrier.wait()
+            try:
+                run_probe.prepare_out(out)
+            except BaseException as exc:  # noqa: BLE001
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(8)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        self.assertEqual(errors, [])
+        self.assertTrue(out.is_dir())
+
     def test_weight_requires_sha(self):
         weight = self.root / 'w.bin'
         weight.write_bytes(b'x')

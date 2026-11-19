@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "6ae866b1235691b87fefb6c9cb9776a7d324035add0959bf6036a8a832023afc",
-      "bytes": 20131
+      "sha256": "b7f255cb0dceb759d9962d4ae0b09ec40bf222dfd3b23811735d7ed66951f08d",
+      "bytes": 20278
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
-      "sha256": "cc579b66171fd87a15100b38a707642e8d287039f974ae4f709df0acc56961e9",
-      "bytes": 7073
+      "sha256": "ea514245ded967c419ba47e31dd3c8b64373768e24df5ce0b66b71265e58f038",
+      "bytes": 7708
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "a3a5c53213a9584b76613d2a63bd1ced8ba38df87b1d3dc18ad00ffd53c21cdf",
-      "bytes": 20557
+      "sha256": "a3447ca29ae8cd0f89ca1f17622b811853d61ed672309ea8d42bd33cfecdc7fe",
+      "bytes": 20688
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -342,8 +342,8 @@
       "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven"
     ],
     "pending": [
-      "A14 small GO executing (plan 18fdf185, identity 1305145, KEEP_ALL)",
-      "A14 large after small result/new identity/32 review"
+      "A14 small v3: fresh out/identity after recovery, fixed prepare_out, 32 re-review, then GO",
+      "A14 large after small result"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -399,7 +399,7 @@
     }
   },
   "a14_control": {
-    "status": "small_go_executing",
+    "status": "small_v2_aborted_pre_launch_shared_out_mkdir; fixed_pending_v3_plan",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -482,6 +482,9 @@
       "plog",
       "restore identity/branch/four-check"
     ],
-    "gate": "run_probe pass + window child_ok (adapter/libhccl/ascendcl maps); hang records stream47/mc2_server"
+    "gate": "run_probe pass + window child_ok (adapter/libhccl/ascendcl maps); hang records stream47/mc2_server",
+    "abort_note": "both ranks raced on out.mkdir(exist_ok=False); no MC2 call, no 507046; not an A14 criterion",
+    "fix": "prepare_out uses exist_ok=True for the shared parent; rank subdirs remain per-rank",
+    "v3_requirement": "fresh out path and fresh identity after the aa3e recovery; 32 re-review plan v3"
   }
 }

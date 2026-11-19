@@ -233,14 +233,20 @@ def library_evidence(adapter):
     return result
 
 
+def prepare_out(path):
+    """Both ranks share the parent output dir; rank subdirs are per-rank."""
+    path = Path(path)
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def execute(a, plan):
     rank = int(os.environ.get('RANK', '-1'))
     world = int(os.environ.get('WORLD_SIZE', '-1'))
     local = int(os.environ.get('LOCAL_RANK', '-1'))
     if world != 2 or rank not in (0, 1) or local != rank:
         raise ValueError('requires two ranks with RANK=LOCAL_RANK in 0,1')
-    out = Path(plan['out'])
-    out.mkdir(parents=True, exist_ok=False)
+    out = prepare_out(plan['out'])
     rank_dir = out / f'rank{rank}'
     rank_dir.mkdir()
     from probe_trace import ProbeTrace
