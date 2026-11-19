@@ -32,10 +32,15 @@ def target(**over):
         kernel_name="K_fresh_abc",
         stream_id=7,
         task_id=99,
+        raw_submit_ns=900,
+        raw_end_ns=1900,
         submit_ns=1000,
         end_ns=2000,
         end_kind="timeout",
+        raw_clock="utc_ns",
         clock="monotonic_ns",
+        offset_ns=100,
+        clock_provenance="host plog UTC to collector monotonic via start/stop offset",
         source="StreamLaunchKernelV2",
         provenance="raw/plog:10",
     )
@@ -47,10 +52,14 @@ def record(**over):
     base = dict(
         valid=True,
         kernel_name="K_fresh_abc",
+        raw_timestamp_ns=1500,
         timestamp_ns=1500,
         stream_id=7,
         task_id=99,
+        raw_clock="monotonic_ns",
         clock="monotonic_ns",
+        offset_ns=0,
+        clock_provenance="collector raw timestamp, identity to common monotonic",
         source="synthetic",
         aic_sample=True,
     )
@@ -117,6 +126,7 @@ class CollectorArgvTest(unittest.TestCase):
             ]
             self.assertEqual(argv, prefix + APP)
             self.assertEqual(argv[-len(APP):], APP)
+            self.assertFalse(out.exists())
 
     def test_app_option_like_args_are_not_consumed(self):
         app = ["/app", "--aic-freq", "999", "--output", "app-out", "--delay", "1"]
@@ -257,7 +267,8 @@ class ClassificationTest(unittest.TestCase):
         self.assertEqual(result["status"], spc.STATUS_CANDIDATE)
         self.assertFalse(result["capability_proven"])
         self.assertFalse(result["capability_demonstrated"])
-        self.assertTrue(result["manual_device_review_required"])
+        self.assertFalse(result["manual_device_review_required"])
+        self.assertTrue(result["mock_candidate"])
         self.assertTrue(result["harness_pass"])
         self.assertTrue(result["mock_only"])
         self.assertFalse(result["kernel_counter_evidence"])
@@ -274,6 +285,40 @@ class ClassificationTest(unittest.TestCase):
         self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
         self.assertIn("clock_mismatch", result["reasons"])
 
+    def test_missing_offset_raw_or_provenance_is_unproven(self):
+        for over in (
+            {"offset_ns": None},
+            {"raw_timestamp_ns": None},
+            {"clock_provenance": None},
+        ):
+            with self.subTest(over=over):
+                result = classify(adapter_obj=adapter((record(**over),)))
+                self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("missing_offset_ns", spc.validate_target(target(offset_ns=None)))
+        self.assertIn(
+            "missing_clock_provenance", spc.validate_target(target(clock_provenance=None))
+        )
+
+    def test_conversion_mismatch_is_unproven(self):
+        self.assertIn(
+            "conversion_mismatch", spc.validate_target(target(submit_ns=1001))
+        )
+        result = classify(adapter_obj=adapter((record(timestamp_ns=1501),)))
+        self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("conversion_mismatch", result["reasons"])
+
+    def test_identity_domain_requires_zero_offset(self):
+        bad = record(
+            raw_clock="monotonic_ns",
+            clock="monotonic_ns",
+            raw_timestamp_ns=1500,
+            timestamp_ns=1501,
+            offset_ns=1,
+        )
+        result = classify(adapter_obj=adapter((bad,)))
+        self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("identity_offset_nonzero", result["reasons"])
+
     def test_invalid_sample_is_unproven(self):
         result = classify(adapter_obj=adapter((record(valid=False),)))
         self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
@@ -282,7 +327,9 @@ class ClassificationTest(unittest.TestCase):
     def test_before_and_after_window_are_not_success(self):
         for ts, reason in ((500, "before_submit"), (2500, "after_end")):
             with self.subTest(ts=ts):
-                result = classify(adapter_obj=adapter((record(timestamp_ns=ts),)))
+                result = classify(
+                    adapter_obj=adapter((record(raw_timestamp_ns=ts, timestamp_ns=ts),))
+                )
                 self.assertEqual(result["status"], spc.STATUS_NOT_SUCCESS)
                 self.assertIn(reason, result["reasons"])
 
@@ -343,6 +390,10 @@ class PlanTest(unittest.TestCase):
         self.assertFalse(plan["coverage"]["covers_late_pending"])
         self.assertTrue(plan["target"]["no_hardcode"])
         self.assertTrue(all(value is None for value in plan["target"]["values"].values()))
+        self.assertIn("raw_submit_ns", plan["target"]["fields"])
+        self.assertIn("clock_provenance", plan["target"]["fields"])
+        self.assertTrue(plan["clock"]["clock_provenance_required"])
+        self.assertEqual(plan["clock"]["same_label_without_offset"], "capability_unproven")
         self.assertTrue(plan["mock_only"])
         self.assertFalse(plan["device_go"])
         self.assertFalse(plan["success"]["kernel_name_only"])

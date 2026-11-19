@@ -98,9 +98,28 @@
       "bytes": 6723
     },
     "runtime/grouped_mmar/README.md": {
-      "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "56b94eb369d2d79b1e97fcea20700bd053660ebafccb3733c3216de68d028b29",
-      "bytes": 48997
+      "role": "first-package review, matrix, CLI, expected, recovery; H11 sample-profile CPU candidate section added 2026-11-20",
+      "sha256": "e9ffbdc2f011a15699c319233dbe5b3457e73d9e5fb5b7791b25f93fbfabec62",
+      "bytes": 52634,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/sample_profile_collector.py": {
+      "role": "CPU-only H11 sample-profile collector helper: list argv, fresh raw/offset clock binding, mock-only classification; native/device unchanged",
+      "sha256": "76b44c3558dcc76bf7be2fa18c270cfa9376452b18191d5c97ff28a61e84f5ab",
+      "bytes": 33389,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/h11_sample_profile_plan.json": {
+      "role": "H11 sample-based plan skeleton: fixed 100 Hz/10 s/120 s flags, 130 s early-pending coverage, AND/raw-offset/fail-closed classification",
+      "sha256": "d90f36eeb286c466d361f071e134bb1a0ce2ee40f0fc8c9fbc9ee327df67e449",
+      "bytes": 8727,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/test_sample_profile_cpu.py": {
+      "role": "new mock-only CPU suite for the sample-profile helper; 34/34 OK macOS; existing 50 not rerun",
+      "sha256": "01d5cf9417a71222440475e72af3f438785124c7059d304dbe807d7849cfaa87",
+      "bytes": 24912,
+      "candidate": true
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -896,22 +915,22 @@
     "scope": "outer collector argv/plan/classification only; native binding_probe.cpp, run_probe.py, adapter, old 8ec and 8f4b843 supervisor settle/gate core unchanged; existing 50 tests not rerun",
     "files": {
       "runtime/grouped_mmar/sample_profile_collector.py": {
-        "sha256": "f15980bde49d67e95c76ca1a8eb739932fe6ed5d9695ca82662b027f91832a2b",
-        "bytes": 29576
+        "sha256": "76b44c3558dcc76bf7be2fa18c270cfa9376452b18191d5c97ff28a61e84f5ab",
+        "bytes": 33389
       },
       "runtime/grouped_mmar/h11_sample_profile_plan.json": {
-        "sha256": "0aa63c1b8e9d7942897e7dcf8dde840850f219a11e9d0b5d644c85cf1fedb1cf",
-        "bytes": 7677
+        "sha256": "d90f36eeb286c466d361f071e134bb1a0ce2ee40f0fc8c9fbc9ee327df67e449",
+        "bytes": 8727
       },
       "runtime/grouped_mmar/test_sample_profile_cpu.py": {
-        "sha256": "555cf836cbc81854cfe097028561310f0117fcdc822f392ad69768fa06006852",
-        "bytes": 22686
+        "sha256": "01d5cf9417a71222440475e72af3f438785124c7059d304dbe807d7849cfaa87",
+        "bytes": 24912
       }
     },
     "readme": {
       "path": "runtime/grouped_mmar/README.md",
-      "sha256": "88343df3c9f652d16756143b3b2e5160a841ac09c2a90c6fead7ac2c5540ba04",
-      "bytes": 51923
+      "sha256": "e9ffbdc2f011a15699c319233dbe5b3457e73d9e5fb5b7791b25f93fbfabec62",
+      "bytes": 52634
     },
     "fixed_command": [
       "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
@@ -946,6 +965,7 @@
       "valid AIC sample",
       "kernel identity",
       "sample time in this run submit-end window",
+      "raw/offset/clock_provenance conversion validated",
       "this run stream/task attribution"
     ],
     "classification": {
@@ -978,11 +998,33 @@
     },
     "tests": {
       "command": "python3 runtime/grouped_mmar/test_sample_profile_cpu.py",
-      "result": "31/31 OK",
+      "result": "34/34 OK",
       "platform": "macOS CPU",
       "existing_50_not_rerun": true,
-      "mock_only": true
+      "mock_only": true,
+      "linux_evidence": {
+        "commit": "de64f83",
+        "result": "31/31 OK",
+        "applies_to": "5a11477 only; not this revision",
+        "note": "31 must re-run the new suite on a fresh tree of this revision"
+      }
     },
+    "verification": {
+      "main_files_updated": true,
+      "candidate_entries": [
+        "runtime/grouped_mmar/README.md",
+        "runtime/grouped_mmar/sample_profile_collector.py",
+        "runtime/grouped_mmar/h11_sample_profile_plan.json",
+        "runtime/grouped_mmar/test_sample_profile_cpu.py"
+      ],
+      "frozen_baseline": "top-level frozen_baseline",
+      "old_base_readme": {
+        "sha256": "56b94eb369d2d79b1e97fcea20700bd053660ebafccb3733c3216de68d028b29",
+        "bytes": 48997
+      },
+      "note": "main files table now carries the candidate README and three candidate files with candidate:true; frozen_baseline is separate; do not use the old 8f4b843 README hash as candidate verification"
+    },
+    "mock_candidate_policy": "synthetic candidate sets mock_candidate=true and manual_device_review_required=false; capability_proven stays false",
     "unknowns": [
       "real msprof output field schema and attribution mapping",
       "duration arrival flush/exit/kill/wait semantics",
@@ -999,5 +1041,36 @@
       "no_minus2_go": true,
       "no_device": true
     }
+  },
+  "frozen_baseline": {
+    "baseline_commit": "8f4b843",
+    "frozen": {
+      "runtime/grouped_mmar/binding_probe.cpp": {
+        "sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+        "bytes": 34645
+      },
+      "runtime/grouped_mmar/run_probe.py": {
+        "sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+        "bytes": 30686
+      },
+      "runtime/grouped_mmar/compile_probe.sh": {
+        "sha256": "53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb",
+        "bytes": 879
+      },
+      "runtime/grouped_mmar/probe_trace.h": {
+        "sha256": "3e07139f1cd93085dd43fa1f394eabeb398934c9af2ae0eb23f8c749dbd82da9",
+        "bytes": 2979
+      },
+      "runtime/grouped_mmar/supervised_probe_window.py": {
+        "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+        "bytes": 53078
+      }
+    },
+    "adapter": {
+      "sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+      "source": "old frozen stage SO; not in tree"
+    },
+    "no_8ec": true,
+    "no_minus2_go": true
   }
 }

@@ -150,10 +150,15 @@ REQUIRED_TARGET_FIELDS = (
     "kernel_name",
     "stream_id",
     "task_id",
+    "raw_submit_ns",
+    "raw_end_ns",
     "submit_ns",
     "end_ns",
     "end_kind",
+    "raw_clock",
     "clock",
+    "offset_ns",
+    "clock_provenance",
     "source",
     "provenance",
 )
@@ -169,17 +174,26 @@ MISSING_REASONS = {
     "missing_kernel_name",
     "missing_stream_id",
     "missing_task_id",
+    "missing_raw_submit_ns",
+    "missing_raw_end_ns",
     "missing_submit_ns",
     "missing_end_ns",
     "missing_end_kind",
+    "missing_raw_clock",
     "missing_clock",
+    "missing_offset_ns",
+    "missing_clock_provenance",
     "missing_source",
     "missing_provenance",
     "missing_sample_kernel",
+    "missing_sample_raw_timestamp",
     "missing_sample_timestamp",
     "missing_sample_stream",
     "missing_sample_task",
+    "missing_sample_raw_clock",
     "missing_sample_clock",
+    "missing_sample_offset",
+    "missing_sample_clock_provenance",
 }
 HARD_COLLECTOR_REASONS = {
     "collector_timeout",
@@ -200,6 +214,8 @@ HARD_COLLECTOR_REASONS = {
     "unknown_end_kind",
     "invalid_window",
     "sample_invalid",
+    "conversion_mismatch",
+    "identity_offset_nonzero",
 }
 
 
@@ -278,17 +294,39 @@ def _as_int(value: Any, name: str) -> Optional[int]:
     raise ProfileError(f"{name} must be an integer or null")
 
 
+def _conversion_reasons(
+    raw_ns: Optional[int],
+    converted_ns: Optional[int],
+    offset_ns: Optional[int],
+    raw_clock: Optional[str],
+    clock: Optional[str],
+) -> set[str]:
+    reasons: set[str] = set()
+    if raw_ns is not None and converted_ns is not None and offset_ns is not None:
+        if converted_ns != raw_ns + offset_ns:
+            reasons.add("conversion_mismatch")
+    if raw_clock is not None and clock is not None and raw_clock == clock:
+        if offset_ns not in (None, 0):
+            reasons.add("identity_offset_nonzero")
+    return reasons
+
+
 @dataclass(frozen=True)
 class ExpectedTarget:
-    """Fresh task identity expected for this run; never a historical label."""
+    """Fresh task identity and explicit raw/offset clock binding."""
 
     kernel_name: Optional[str]
     stream_id: Optional[int]
     task_id: Optional[int]
+    raw_submit_ns: Optional[int]
+    raw_end_ns: Optional[int]
     submit_ns: Optional[int]
     end_ns: Optional[int]
     end_kind: Optional[str]
+    raw_clock: Optional[str]
     clock: Optional[str]
+    offset_ns: Optional[int]
+    clock_provenance: Optional[str]
     source: Optional[str]
     provenance: Optional[str]
     ambiguities: tuple[str, ...] = ()
@@ -301,10 +339,15 @@ class ExpectedTarget:
             kernel_name=value.get("kernel_name"),
             stream_id=_as_int(value.get("stream_id"), "stream_id"),
             task_id=_as_int(value.get("task_id"), "task_id"),
+            raw_submit_ns=_as_int(value.get("raw_submit_ns"), "raw_submit_ns"),
+            raw_end_ns=_as_int(value.get("raw_end_ns"), "raw_end_ns"),
             submit_ns=_as_int(value.get("submit_ns"), "submit_ns"),
             end_ns=_as_int(value.get("end_ns"), "end_ns"),
             end_kind=value.get("end_kind"),
+            raw_clock=value.get("raw_clock"),
             clock=value.get("clock"),
+            offset_ns=_as_int(value.get("offset_ns"), "offset_ns"),
+            clock_provenance=value.get("clock_provenance"),
             source=value.get("source"),
             provenance=value.get("provenance"),
             ambiguities=tuple(value.get("ambiguities") or ()),
@@ -318,10 +361,15 @@ def validate_target(target: ExpectedTarget) -> list[str]:
         ("kernel_name", target.kernel_name),
         ("stream_id", target.stream_id),
         ("task_id", target.task_id),
+        ("raw_submit_ns", target.raw_submit_ns),
+        ("raw_end_ns", target.raw_end_ns),
         ("submit_ns", target.submit_ns),
         ("end_ns", target.end_ns),
         ("end_kind", target.end_kind),
+        ("raw_clock", target.raw_clock),
         ("clock", target.clock),
+        ("offset_ns", target.offset_ns),
+        ("clock_provenance", target.clock_provenance),
         ("source", target.source),
         ("provenance", target.provenance),
     )
@@ -330,10 +378,29 @@ def validate_target(target: ExpectedTarget) -> list[str]:
             reasons.add(f"missing_{name}")
     if target.ambiguities:
         reasons.add("ambiguous_target")
-    if target.clock is not None and target.clock not in KNOWN_CLOCKS:
-        reasons.add("unknown_clock")
+    for clock in (target.raw_clock, target.clock):
+        if clock is not None and clock not in KNOWN_CLOCKS:
+            reasons.add("unknown_clock")
     if target.end_kind is not None and target.end_kind not in END_KINDS:
         reasons.add("unknown_end_kind")
+    reasons.update(
+        _conversion_reasons(
+            target.raw_submit_ns,
+            target.submit_ns,
+            target.offset_ns,
+            target.raw_clock,
+            target.clock,
+        )
+    )
+    reasons.update(
+        _conversion_reasons(
+            target.raw_end_ns,
+            target.end_ns,
+            target.offset_ns,
+            target.raw_clock,
+            target.clock,
+        )
+    )
     if (
         target.submit_ns is not None
         and target.end_ns is not None
@@ -345,14 +412,18 @@ def validate_target(target: ExpectedTarget) -> list[str]:
 
 @dataclass(frozen=True)
 class SampleRecord:
-    """Explicit internal record; a synthetic record must say so in ``source``."""
+    """Explicit internal record with raw timestamp and offset conversion."""
 
     valid: bool
     kernel_name: Optional[str]
+    raw_timestamp_ns: Optional[int]
     timestamp_ns: Optional[int]
     stream_id: Optional[int]
     task_id: Optional[int]
+    raw_clock: Optional[str]
     clock: Optional[str]
+    offset_ns: Optional[int]
+    clock_provenance: Optional[str]
     source: str
     device: Optional[str] = None
     aic_sample: bool = True
@@ -362,7 +433,19 @@ class SampleRecord:
     def from_dict(cls, value: Mapping[str, Any]) -> "SampleRecord":
         if not isinstance(value, Mapping):
             raise ProfileError("sample record must be an object")
-        required = ("valid", "kernel_name", "timestamp_ns", "stream_id", "task_id", "clock", "source")
+        required = (
+            "valid",
+            "kernel_name",
+            "raw_timestamp_ns",
+            "timestamp_ns",
+            "stream_id",
+            "task_id",
+            "raw_clock",
+            "clock",
+            "offset_ns",
+            "clock_provenance",
+            "source",
+        )
         missing = [key for key in required if key not in value]
         if missing:
             raise ProfileError(f"sample record missing key(s): {missing}")
@@ -371,10 +454,14 @@ class SampleRecord:
         return cls(
             valid=value["valid"],
             kernel_name=value.get("kernel_name"),
+            raw_timestamp_ns=_as_int(value.get("raw_timestamp_ns"), "raw_timestamp_ns"),
             timestamp_ns=_as_int(value.get("timestamp_ns"), "timestamp_ns"),
             stream_id=_as_int(value.get("stream_id"), "stream_id"),
             task_id=_as_int(value.get("task_id"), "task_id"),
+            raw_clock=value.get("raw_clock"),
             clock=value.get("clock"),
+            offset_ns=_as_int(value.get("offset_ns"), "offset_ns"),
+            clock_provenance=value.get("clock_provenance"),
             source=str(value["source"]),
             device=value.get("device"),
             aic_sample=bool(value.get("aic_sample", True)),
@@ -480,15 +567,28 @@ def _match_record(target: ExpectedTarget, record: SampleRecord) -> tuple[bool, s
         reasons.add("sample_invalid")
     for name, value in (
         ("sample_kernel", record.kernel_name),
+        ("sample_raw_timestamp", record.raw_timestamp_ns),
         ("sample_timestamp", record.timestamp_ns),
         ("sample_stream", record.stream_id),
         ("sample_task", record.task_id),
+        ("sample_raw_clock", record.raw_clock),
         ("sample_clock", record.clock),
+        ("sample_offset", record.offset_ns),
+        ("sample_clock_provenance", record.clock_provenance),
     ):
         if value is None or value == "":
             reasons.add(f"missing_{name}")
     if record.clock is not None and target.clock is not None and record.clock != target.clock:
         reasons.add("clock_mismatch")
+    reasons.update(
+        _conversion_reasons(
+            record.raw_timestamp_ns,
+            record.timestamp_ns,
+            record.offset_ns,
+            record.raw_clock,
+            record.clock,
+        )
+    )
     if record.kernel_name is not None and target.kernel_name is not None:
         if record.kernel_name != target.kernel_name:
             reasons.add("kernel_mismatch")
@@ -595,7 +695,8 @@ def classify_profile(
         "status": status,
         "capability_proven": False,
         "capability_demonstrated": False,
-        "manual_device_review_required": status == STATUS_CANDIDATE,
+        "manual_device_review_required": status == STATUS_CANDIDATE and not adapter.mock_only,
+        "mock_candidate": status == STATUS_CANDIDATE and adapter.mock_only,
         "harness_pass": harness_pass,
         "mock_only": bool(adapter.mock_only),
         "real_adapter": bool(adapter.real),
@@ -686,6 +787,7 @@ def build_plan_skeleton(
             "sha256": MSPROF_SHA256,
             "help_package": HELP_PACKAGE,
             "mode": "sample-based",
+            "output_dir_creation": "helper validates fresh/absolute only; supervisor/msprof creates it; missing output = unproven",
             "command_prefix": [
                 msprof,
                 "--output",
@@ -718,6 +820,10 @@ def build_plan_skeleton(
             "offset_required": True,
             "raw_and_converted": True,
             "same_clock_required_for_window": True,
+            "clock_provenance_required": True,
+            "identity_conversion": "raw_clock == clock requires offset_ns == 0 and a provenance",
+            "different_domain_conversion": "converted == raw + offset; provenance non-empty",
+            "same_label_without_offset": "capability_unproven",
             "unproven_if_offset_missing": True,
         },
         "coverage": coverage_model(),
@@ -726,6 +832,7 @@ def build_plan_skeleton(
                 "valid AIC sample",
                 "kernel identity",
                 "sample time in this run submit-end window",
+                "raw/offset/clock_provenance conversion validated",
                 "this run stream/task attribution",
             ],
             "kernel_name_only": False,
