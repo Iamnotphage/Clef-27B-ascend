@@ -1,0 +1,208 @@
+{
+ "schema": "grouped-mmar-probe-result/1",
+ "arm": "A14",
+ "plan": {
+  "arm": "A14",
+  "title": "MatmulReduceScatter V1 AICPU MC2 control (A3-registered; full state kept until sync)",
+  "flags": 8,
+  "flag_names": [
+   "keep_all"
+  ],
+  "native": true,
+  "rows": 128,
+  "k": 256,
+  "n": 512,
+  "seed": 20261119,
+  "norm": false,
+  "external": false,
+  "schema": "grouped-mmar-probe-plan/1",
+  "first_matrix": [
+   "A8",
+   "A12",
+   "A0",
+   "H1",
+   "H2"
+  ],
+  "first_matrix_note": "A12 is a separate single-process two-thread official sample; A8/A0/H1/H2 run one fresh process per arm under a two-rank launcher",
+  "temp_root": "/workspace/yangchen/work/grouped-deepdive-cell-a14/probe-temp-a14-small-v5",
+  "out": "/workspace/yangchen/work/grouped-deepdive-cell-a14/probe-out-a14-small-v5",
+  "adapter": "/workspace/yangchen/work/grouped-deepdive-35-f3e76cc/runtime/grouped_mmar/probe_adapter.so",
+  "adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+  "weight": {
+   "path": null,
+   "sha256": null
+  },
+  "timeout": {
+   "arm_seconds": 240.0,
+   "comm_seconds": 90.0
+  },
+  "expected": [
+   "API returns",
+   "both ranks observe sync return",
+   "output finite",
+   "trace has prepare/handler thread/context/stream/group pointers"
+  ],
+  "failure_branches": [
+   "prepare rc!=0",
+   "launch rc!=0",
+   "sync does not return within arm timeout",
+   "rank group names differ",
+   "output non-finite",
+   "release rc!=0"
+  ],
+  "recovery": "stop probe processes; restore aa3e/s1 with the official start.sh; normal success requires branch == aa3e-noop; f810->fused is rescue-only and never success",
+  "no_service_lifecycle": true,
+  "no_f810_revert": true
+ },
+ "rank": 1,
+ "world": 2,
+ "local_rank": 1,
+ "hostname": "25e6d0590726",
+ "pid": 1311386,
+ "pgid": 1311386,
+ "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+ "clock": {
+  "implementation": "clock_gettime(CLOCK_MONOTONIC)",
+  "monotonic": true,
+  "adjustable": false,
+  "resolution": 1e-09
+ },
+ "api_returned": true,
+ "sync_returned": true,
+ "finite": true,
+ "timeout": false,
+ "pass": true,
+ "libraries": [
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libascendcl.so",
+   "sha256": "1c06b9c4a8910cfb585eab4ed0066bc09e28a0cf273dfcb15458f7cc49a78cea",
+   "soname": "libascendcl.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl.so",
+   "sha256": "da6dd17ffd21f288fa77066155fd83ddf50c26d1e2f82e6a6507670661596f22",
+   "soname": "libhccl.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl_alg.so",
+   "sha256": "266289dc1f6cb9e6aa4181e92332bf20716972522da86770c80a0a0807fbaac7",
+   "soname": "libhccl_alg.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl_compat.so",
+   "sha256": "a8c12718df4c8bebb3b248858d0d913425cf0d71c72ad78dda2dd8b0628cfc61",
+   "soname": "libhccl_compat.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl_legacy.so",
+   "sha256": "741553bb23c5b8b62394df532b448f6f5e30d711e99afd47a1ab06a1a3284a58",
+   "soname": "libhccl_legacy.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl_plf.so",
+   "sha256": "1e99f7025f0eeb7095b485088dc8af58ea7bbb36a6d11875f51e6e8a0a63d953",
+   "soname": "libhccl_plf.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libhccl_v2.so",
+   "sha256": "7965ae02cea2a2229b89a53631db4a69583b8dba2982da14369f8343ccb32ad4",
+   "soname": "libhccl_v2.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libnnopbase.so",
+   "sha256": "72cd43b4af1c9c451b566ccb7b32071793402949578f838d8345e369b056477c",
+   "soname": "libnnopbase.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so",
+   "sha256": "eb1c788e39b7a02f0694450e917a3771c7e65d7d8fb9ea2e03f78c4a5313c456",
+   "soname": "libopapi.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_cv.so",
+   "sha256": "77f63ae189f81383bf791703f53838ca33ef96873afe624e7492ceef4b73b455",
+   "soname": "libopapi_cv.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_math.so",
+   "sha256": "20ee30c376b094ba2ec71bbc9ea35799eb0624912ef25c1c8333e62185018e36",
+   "soname": "libopapi_math.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_nn.so",
+   "sha256": "8107f8d0418490d438ee50037bc91dbf5a8658aca65508516d4b6f7ab12baf68",
+   "soname": "libopapi_nn.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_oam.so",
+   "sha256": "e497c33b023f2d7239d2a1d24c7116ec9e18fd5f5b4827968a77f64e632ff529",
+   "soname": "libopapi_oam.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_ras.so",
+   "sha256": "90ac1c2b0992591a3d0f11cc2c28f802205fd7b12109d619ff1cd3ddd78ab8ae",
+   "soname": "libopapi_ras.so"
+  },
+  {
+   "path": "/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi_transformer.so",
+   "sha256": "34baeae3ec68bf34c00506a757cc605949163b78be371203d7cd1a640cf4301f",
+   "soname": "libopapi_transformer.so"
+  },
+  {
+   "path": "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/lib/libtorch_npu.so",
+   "sha256": "65e6be1984c686d91d064d252d030f4d73384e4c623eb38172e233b8aa294ab0",
+   "soname": "libtorch_npu.so"
+  },
+  {
+   "path": "/workspace/yangchen/work/grouped-deepdive-35-f3e76cc/runtime/grouped_mmar/probe_adapter.so",
+   "sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+   "soname": null
+  }
+ ],
+ "trace": "/workspace/yangchen/work/grouped-deepdive-cell-a14/probe-out-a14-small-v5/rank1/trace.jsonl",
+ "versions": {
+  "torch": "2.10.0+cpu",
+  "torch_npu": "2.10.0.post7"
+ },
+ "group": "group_name_0",
+ "group_names": [
+  "group_name_0",
+  "group_name_0"
+ ],
+ "inputs": {
+  "x": {
+   "shape": [
+    128,
+    256
+   ],
+   "dtype": "torch.bfloat16",
+   "sha256": "43296fb1fb45d56ff0e8ee181bd2ae37b42b68c4d2ff4d516d0caea5795ceb1c"
+  },
+  "weight": {
+   "shape": [
+    256,
+    512
+   ],
+   "dtype": "torch.bfloat16",
+   "sha256": "5e7dcbaaf0376ced0953f804469c63b56f60e2a9b7f3281abd5af968fb05241e"
+  }
+ },
+ "adapter": {
+  "path": "/workspace/yangchen/work/grouped-deepdive-35-f3e76cc/runtime/grouped_mmar/probe_adapter.so",
+  "sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3"
+ },
+ "provider": "prepare/launch=/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so;metadata=/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libnnopbase.so",
+ "workspace_bytes": 17170432,
+ "run_id": 1,
+ "reduced": {
+  "max_abs": 0.0,
+  "bit_equal": true
+ },
+ "wall_ms": 372.18479,
+ "release_rc": null,
+ "harness_release_ok": false,
+ "release_error": "NotImplementedError: There were no tensor arguments to this function (e.g., you passed an empty list of Tensors), but no fallback function is registered for schema clef_mmar_probe::release.  This usually means that this function requires a non-empty list of Tensors, or that you (the operator writer) forgot to register a fallback function.  Available functions are [PrivateUse1, Meta, SparsePrivateUse1, BackendSelect, Python, FuncTorchDynamicLayerBackMode, Functionalize, Named, Conjugate, Negative, ZeroTensor",
+ "both_finite": true,
+ "numeric_pass": true,
+ "harness_pass": false
+}
