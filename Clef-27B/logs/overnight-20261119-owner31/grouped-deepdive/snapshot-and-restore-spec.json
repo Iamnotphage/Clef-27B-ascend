@@ -1,0 +1,216 @@
+{
+ "schema": "owner31-grouped-deepdive/1",
+ "phase": "snapshot+restore-spec",
+ "captured_utc": "2026-11-19T05:27:39Z",
+ "service": {
+  "root": 1287336,
+  "root_identity": {
+   "pid": 1287336,
+   "ppid": 1,
+   "pgid": 1287336,
+   "sid": 1287336,
+   "starttime": "397375124",
+   "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+   "cmdline": "/workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size"
+  },
+  "tree": [
+   {
+    "pid": 1287336,
+    "ppid": 1,
+    "pgid": 1287336,
+    "sid": 1287336,
+    "starttime": "397375124",
+    "state": "S",
+    "cmdline": "/workspace/yangchen/venvs/clef-py312/bin/python -m vllm.entrypoints.cli.main serve /workspace/yangchen/models/Clef-27B --served-model-name clef --runner pooling --dtype bfloat16 --tensor-parallel-size"
+   },
+   {
+    "pid": 1287470,
+    "ppid": 1287336,
+    "pgid": 1287336,
+    "sid": 1287336,
+    "starttime": "397377850",
+    "state": "S",
+    "cmdline": "VLLM::EngineCore"
+   },
+   {
+    "pid": 1287488,
+    "ppid": 1287470,
+    "pgid": 1287336,
+    "sid": 1287336,
+    "starttime": "397378774",
+    "state": "S",
+    "cmdline": "VLLM::Worker_TP1"
+   },
+   {
+    "pid": 1287487,
+    "ppid": 1287470,
+    "pgid": 1287336,
+    "sid": 1287336,
+    "starttime": "397378774",
+    "state": "S",
+    "cmdline": "VLLM::Worker_TP0"
+   },
+   {
+    "pid": 1287469,
+    "ppid": 1287336,
+    "pgid": 1287336,
+    "sid": 1287336,
+    "starttime": "397377849",
+    "state": "S",
+    "cmdline": "/workspace/yangchen/venvs/clef-py312/bin/python -c from multiprocessing.resource_tracker import main;main(46)"
+   }
+  ],
+  "health": "ready",
+  "info": {
+   "config": "s1",
+   "max_model_len": 4096,
+   "max_num_seqs": 1,
+   "max_num_batched_tokens": 4096,
+   "tensor_parallel_size": 2,
+   "dtype": "bfloat16",
+   "eager": true
+  },
+  "env": {
+   "ASCEND_CUSTOM_OPP_PATH": {
+    "entries": 9,
+    "sha256": "7b79c5dbfac4fa09692cf902c3cb6f4dc6b9db4ace099144e4df488515869ef1"
+   },
+   "LD_LIBRARY_PATH": {
+    "entries": 12,
+    "sha256": "ca27dbb7cd79489e2e2c0fc25185f5aa35b83ee3d05a424c482c0a5758be6b6c"
+   },
+   "CLEF_LAUNCH_CONFIG": "s1",
+   "joint_keys": {
+    "CLEF_JOINT_FUSED_ATTN": "1",
+    "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "CLEF_JOINT_SINGLE_FIELD": "1",
+    "CLEF_JOINT_SMALLQ": null,
+    "CLEF_JOINT_SMALLQ_KERNEL": null
+   }
+  },
+  "files": {
+   "source": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+   "guard_fused": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+   "guard_old": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+   "inference": "de5b0d1ea95194dcb7e039e65cb192c3fb6ad98e5c8217579040ecce309e7b29",
+   "start_sh": "d880a01ea1e4625388317b9cd617470fc11c11db8900fa390c82133e0ea46b02",
+   "activate": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a",
+   "fused_installer": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
+  },
+  "npu_rows": [
+   "| 7     Ascend910           | OK            | 154.7                37                      0    / 0                |",
+   "| 7     Ascend910           | OK            | -                    38                      0    / 0                |",
+   "| 7       0                 | 1287487       | VLLMWorker_TP      | 56754                 | 1287487                 |",
+   "| 7       1                 | 1287488       | VLLMWorker_TP      | 56754                 | 1287488                 |"
+  ],
+  "clients_stray": [],
+  "vendor_so": {
+   "customize_op_api": "4d2440a32bfabcfd95bc670e02aa005a8a5261a023aee2cf7cd3c6fc561c2c98",
+   "customize_op_proto": "64b5dda797c432da78a4b211311303d37843c80aeecc5170e140573e723cb95b",
+   "customize_opmaster_optiling": "8f8c3dbbe72c99366bef0f44670b06a6288608fecdfb853aa1357a024060dcd3",
+   "convqkv_op_api": "2185231c7f78b0a14fdfdd2cbca8cb8482b91655453eea15ce7fdde7ead71321",
+   "convqkv_op_proto": "25063307e6221c7bdecdd8771947956c455033e7d87ed6ab23bc946933bd1a5b",
+   "convqkv_opmaster_optiling": "b8e60b5cd13358bcf97c1d86a2702e55216c7efb0dcb4de76ce5dbddcd2a6f24"
+  },
+  "installers": {
+   "gdn_decision": "124884fb98fe8967fff2d0f3a9a6462fd752f782bc1614c9767eae752b037022",
+   "qkv_norm": "37b0698e46864a4ee828dd72de8fa7a9c874bda3365551677b798001fac26e27",
+   "gdn_chunk128": "f12832187ffc32c80d717c1b98f8ebbf49bc8f9bdc8c31333741fe4157164c28",
+   "schema_cache": "0d8d495c15be5155064eed330ea285e30f633b5ce57c8402e40a57619b7d2b8a"
+  },
+  "model_manifest": "98c104a9d27227ee7c86a2713fdd5aa7e4256fd7826a4a1fc7168f982cad6b68"
+ },
+ "restore_spec": {
+  "target": "aa3e/s1 (current official entry), NOT f810",
+  "command": "env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c 'cd /workspace/yangchen/Clef-27B-ascend && source scripts/activate_env.sh && exec bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir <fresh-abs-dir>' > <outer.log> 2>&1 < /dev/null &",
+  "before_restore": [
+   "exact stop via /tmp/d0cc/d0_stop.py with fresh root-identity of current service",
+   "confirm port 111 / whole PGID empty / card7 empty / clients empty"
+  ],
+  "success_assertions": [
+   "health ready",
+   "/v1/decide/info config=s1/4096/seqs1/TP2",
+   "joint-patch-record ok=true branch in {f810->fused, aa3e-noop}",
+   "five PIDs same PGID/SID",
+   "card7 chip0+chip1 two workers",
+   "four checks health/workers/text/image rc0 ok",
+   "OPP9 7b79c5db / LD12 ca27dbb7 byte-exact vs fcbdcbf1",
+   "joint keys FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1, no SMALLQ",
+   "source aa3e1758, fused guard 36eaff44, old guard 76595657",
+   "no stray clients"
+  ],
+  "backup_evidence": {
+   "snapshot": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/snapshot-and-restore-spec.json",
+   "entry_evidence": "Clef-27B/logs/final-aa3e-20261119/entry/",
+   "backup_manifest": "/workspace/yangchen/work/official-entry-backup-20261119T024617Z/backup-manifest.json (73972463..., 2026-11-19 10:46:17 CST)"
+  },
+  "forbidden": [
+   "old Grouped/5c outer finally",
+   "restore_prod auto-revert to f810",
+   "any global tree/guard/vendor write during probes",
+   "extending probe timeout as a fix",
+   "card reset / driver upgrade / global kill"
+  ]
+ },
+ "api_pack": {
+  "local_path": "/tmp/aa3e-grouped-api-pack-20261119",
+  "tar_sha256": "6127ba7fa2691cdf12d07b6e486e3b6c1581746f6298517818f7ae420756a5ce",
+  "files": 59,
+  "contents": [
+   "aclnn grouped/matmul_all_reduce headers",
+   "hccl headers",
+   "ascend910_93 ops-info-transformer/binary_info_config + grouped match lists",
+   "Ascend910B*.ini/Ascend910A.ini",
+   "libopapi/libnnopbase/libhccl/libascendcl/libtorch_npu SHAs (+libs copies)",
+   "torch_npu hccl headers + libtorch_npu hccl symbols",
+   "v4r1 sources (binding.cpp/run_probe/first_trace/hook/contract/gate/window/compile/identity/payload/clef_grouped29.so)",
+   "driver version.info + snapshot.json + PACK_SHA256SUMS"
+  ],
+  "device": {
+   "name": "Ascend910_9382",
+   "cube_core_num": 24,
+   "vector_core_num": 48,
+   "L2_cache_size": 201326592,
+   "total_memory": 65787658240,
+   "driver": "26.1.1 fw 9.0.0.9.220",
+   "cann_home": "/usr/local/Ascend/cann-9.2.1",
+   "torch": "2.10.0+cpu",
+   "torch_npu": "2.10.0.post7"
+  }
+ },
+ "first_round_plan": {
+  "order": [
+   "A8 pure dist.all_reduce+sync",
+   "A0 current binding + M=128",
+   "A9 instrumentation (stream/thread/context/group pointer, loaded libs maps)",
+   "H1 static group string",
+   "H2 workspace keepalive",
+   "H3 lists/descriptors keepalive",
+   "H11 tiling/executor host buffers keepalive",
+   "H4/H5 handler thread/context/stream + direct-launch arm",
+   "H6 workspace zero-init diagnostic",
+   "H7 M sweep 128/256/1024/967"
+  ],
+  "per_arm": {
+   "ranks": 2,
+   "timeout_s": 240,
+   "fresh_process": true,
+   "fixed_seed": true,
+   "success": "API rc0 AND both ranks observe sync return AND output finite",
+   "records": [
+    "trace/plog",
+    "thread id/context/stream id vs RUNTIME 47",
+    "lifecycle of hypothesized objects",
+    "input SHA",
+    "API rc and sync timing"
+   ]
+  },
+  "isolation": [
+   "temp AOT/child env only",
+   "ASCEND_RT_VISIBLE_DEVICES=0,1",
+   "no vllm source/guard/global vendor writes",
+   "fresh run-dir and unique manifest",
+   "service stopped only after 32 preflight ready; restore via official start.sh aa3e-noop"
+  ]
+ }
+}
