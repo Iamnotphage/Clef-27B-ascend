@@ -197,6 +197,16 @@ class F821Test(unittest.TestCase):
         bad.write_text('def f(a):\n    return k + a\n')
         self.assertIn(('f', 'k'), f821_violations(bad))
 
+    def test_checker_catches_the_old_a15_pad_line(self):
+        root = Path(tempfile.mkdtemp(prefix='grouped-mmar-f821-old-'))
+        old = root / 'old_run_probe.py'
+        old.write_text(
+            'import torch\n'
+            'def execute(a, rows, m_pad):\n'
+            '    x_mrs = torch.ones((m_pad, k))\n'
+            '    return x_mrs\n')
+        self.assertIn(('execute', 'k'), f821_violations(old))
+
 
 class A15FlowTest(unittest.TestCase):
     def test_a15_rows127_pad_gather_crop_with_stubs(self):
@@ -256,6 +266,12 @@ class A15FlowTest(unittest.TestCase):
         self.assertEqual(calls['all_reduce'], rows)
         self.assertEqual(len(output), rows)
         self.assertEqual(len(reference), rows)
+        # Result/equivalence shape: output and reference both cover the original rows.
+        max_abs = max(abs(out - ref) for out_row, ref_row in zip(output, reference)
+                      for out, ref in zip(out_row, ref_row))
+        self.assertEqual(max_abs, 8.0)
+        self.assertEqual(output[0][0], 9.0)   # rank0 block placeholder
+        self.assertEqual(output[126][0], 5.0)  # last real row from rank1 block
         self.assertEqual(info['pad'], {'rows': rows, 'padded_rows': 128,
                                        'pad_value': 1.0})
         self.assertEqual(info['row_block'], {'rank': rank, 'start': 64, 'end': 128,

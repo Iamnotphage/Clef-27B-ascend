@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow/F821/arm_output tests (21)",
-      "sha256": "284974b3da4cc125d082e1fd65c685d1f762bba075cacd362e48b36eb59d209d",
-      "bytes": 15812
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow/F821/arm_output tests (22)",
+      "sha256": "4418a835d77e2e09f36720d6472a44f554807d775694678623db786b588129df",
+      "bytes": 16649
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,7 +82,7 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "b40a43b11f38e308146b5c9e9d3e20e6cc1ebb87657b85bc514119fb5db9b06c",
+      "sha256": "8a0d31d96dd5df6880f1b353c66485f9c5a6ee60aa12b1115e9630d7c87f22a9",
       "bytes": 34028
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
@@ -240,7 +240,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "21/21",
+      "test_probe_cpu.py": "22/22",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "40/40 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "284974b3", "run_probe": "7afd7799", "cpu": "70/70 (21+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "4418a835", "run_probe": "7afd7799", "cpu": "71/71 (22+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -471,7 +471,7 @@
       "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
-      "freeze": {"run_probe.py": "7afd7799", "test_probe_cpu.py": "284974b3", "window": "1f780bf8 (unchanged)", "test_window": "228150e4 (unchanged)", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "freeze": {"run_probe.py": "7afd7799", "test_probe_cpu.py": "4418a835", "window": "1f780bf8 (unchanged)", "test_window": "228150e4 (unchanged)", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
       "v1_result": {
         "plan_sha256": "99db4369",
         "failure": "NameError: name 'k' is not defined at the old run_probe.py:386 in the A15 tail-pad branch; no pad_ready/gather/equivalence/numeric",
