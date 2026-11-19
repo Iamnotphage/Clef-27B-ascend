@@ -1,0 +1,13 @@
+abi-preflight8 summary (read-only)
+1) The +44 writer is NOT an unexported function: 0x7d67f4-0x7d67fc are nops; the code starts at AicpuKfcRpcServer::PostMsg(uint) 0x7d6800. PostMsg:
+   - ldrh w3,[x2,#704], ldrb w2,[x2,#706] (tiling/task source)
+   - mov/movk w4 = 0x5CDF123A; str w4,[x0,#44] (4B valid)
+   - strb w1,[x0,#51] (1B; w1 is the PostMsg uint argument / turn)
+   - calls AivAicpuOpParam::PrintMsg; returns 1; no store to +50 in this function.
+2) PostMsg direct callers via @plt: 0x7c7f44 and 0x7c7f90, both inside AicpuKfcDeprecatedProcess::RunRpcServerTwoStageWait (+0x198/+0x1e4).
+3) AicpuRunRpcServerForApi caller: 0x760930 is inside RunAicpuKfcClearOpRes (objdump label Base+0x400; dynsym owner unknown). It passes x0=x19 (ctx) and x1=x21.
+4) Server bases (prologue evidence):
+   - RunAicpuRpcSrvLaunch: at 0x7618dc adrp x23,0x191f000; 0x7618e0 add x2,x23,#0xd00 -> server base 0x191fd00 (static global), later x0=r23+0xd10 passed to Init(y,j,t,KFCTask*).
+   - AicpuKfcProcess::AicpuRunRpcServerForApi: 0x7b678c adrp x20,0x22c7000; 0x7b6794 add x21,x20,#0xb50; server Init(y) object at x21+0x190 = 0x22c7ce0, and x20+0xcf0 = 0x22c7cf0 passed as +0x1a0.
+   -> The two paths use different static global server objects; S==C (server vs ctx) is not established by these windows.
+5) No code/device actions; service untouched.

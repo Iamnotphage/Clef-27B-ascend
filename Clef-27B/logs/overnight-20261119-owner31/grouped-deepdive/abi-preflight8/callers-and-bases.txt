@@ -1,0 +1,121 @@
+=== sites referencing 0x7d67f4 (calls/branches) ===
+1414725:  7d67f4:	d503201f 	nop
+2744853:  ce096c:	97d67f45 	bl	280680 <_ZN4hccl12ThreadManage10NotifyDoneEv@plt>
+2748495:  ce41d4:	97d67f4f 	bl	283f10 <__stack_chk_fail@plt>
+2748498:  ce41e0:	97d67f4c 	bl	283f10 <__stack_chk_fail@plt>
+
+=== label at 0x760930 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000760900 <RunAicpuKfcClearOpRes@@Base+0x400>:
+  760900:	35003480 	cbnz	w0, 760f90 <RunAicpuKfcClearOpRes@@Base+0xa90>
+  760904:	f0008df6 	adrp	x22, 191f000 <_ZN4hccl13HcclCommAicpu17errMessageReport_E@@Base+0xf7c>
+  760908:	39470300 	ldrb	w0, [x24, #448]
+  76090c:	b94d02c1 	ldr	w1, [x22, #3328]
+  760910:	51000800 	sub	w0, w0, #0x2
+  760914:	12001c00 	and	w0, w0, #0xff
+  760918:	11000421 	add	w1, w1, #0x1
+  76091c:	b90d02c1 	str	w1, [x22, #3328]
+  760920:	7100041f 	cmp	w0, #0x1
+  760924:	54001ae9 	b.ls	760c80 <RunAicpuKfcClearOpRes@@Base+0x780>  // b.plast
+  760928:	aa1503e1 	mov	x1, x21
+  76092c:	aa1303e0 	mov	x0, x19
+  760930:	97ec94cc 	bl	285c60 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@plt>
+  760934:	2a0003f4 	mov	w20, w0
+  760938:	7100581f 	cmp	w0, #0x16
+  76093c:	540036a0 	b.eq	761010 <RunAicpuKfcClearOpRes@@Base+0xb10>  // b.none
+  760940:	350016c0 	cbnz	w0, 760c18 <RunAicpuKfcClearOpRes@@Base+0x718>
+  760944:	aa1303e0 	mov	x0, x19
+  760948:	97ec88ce 	bl	282c80 <_ZN13AicpuKfcUtils19NeedRecordTimeTakenERK15AicpuComContext@plt>
+  76094c:	37002cc0 	tbnz	w0, #0, 760ee4 <RunAicpuKfcClearOpRes@@Base+0x9e4>
+  760950:	aa1b03e0 	mov	x0, x27
+  760954:	52800001 	mov	w1, #0x0                   	// #0
+  760958:	97ecc04a 	bl	290a80 <_ZN3dfx21AicpuProfilingManager22ReportTaskExecTimeLineEP12AicpuComProfj@plt>
+
+=== RunAicpuRpcSrvLaunch prologue (r23) ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000761380 <RunAicpuRpcSrvLaunch@@Base>:
+  761380:	a9ba7bfd 	stp	x29, x30, [sp, #-96]!
+  761384:	d290200d 	mov	x13, #0x8100                	// #33024
+  761388:	d2900206 	mov	x6, #0x8010                	// #32784
+  76138c:	910003fd 	mov	x29, sp
+  761390:	d0008dc1 	adrp	x1, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  761394:	f9444421 	ldr	x1, [x1, #2184]
+  761398:	a90153f3 	stp	x19, x20, [sp, #16]
+  76139c:	aa0003f3 	mov	x19, x0
+  7613a0:	a9025bf5 	stp	x21, x22, [sp, #32]
+  7613a4:	a90363f7 	stp	x23, x24, [sp, #48]
+  7613a8:	a9046bf9 	stp	x25, x26, [sp, #64]
+  7613ac:	a90573fb 	stp	x27, x28, [sp, #80]
+  7613b0:	cb2d63ff 	sub	sp, sp, x13
+  7613b4:	8b2663e2 	add	x2, sp, x6
+  7613b8:	9101a3f6 	add	x22, sp, #0x68
+  7613bc:	f9400020 	ldr	x0, [x1]
+  7613c0:	f9007440 	str	x0, [x2, #232]
+  7613c4:	d2800000 	mov	x0, #0x0                   	// #0
+  7613c8:	9101c3f4 	add	x20, sp, #0x70
+  7613cc:	aa1603e1 	mov	x1, x22
+  7613d0:	aa1403e0 	mov	x0, x20
+  7613d4:	b9006bff 	str	wzr, [sp, #104]
+  7613d8:	f9003bff 	str	xzr, [sp, #112]
+  7613dc:	97ece451 	bl	29a520 <_Z21AicpuGetAllComContextRP15AicpuComContextRj@plt>
+  7613e0:	b9406be1 	ldr	w1, [sp, #104]
+  7613e4:	d2866200 	mov	x0, #0x3310                	// #13072
+  7613e8:	f2a001e0 	movk	x0, #0xf, lsl #16
+  7613ec:	d2800003 	mov	x3, #0x0                   	// #0
+  7613f0:	52800002 	mov	w2, #0x0                   	// #0
+  7613f4:	52800024 	mov	w4, #0x1                   	// #1
+  7613f8:	34000161 	cbz	w1, 761424 <RunAicpuRpcSrvLaunch@@Base+0xa4>
+  7613fc:	d503201f 	nop
+  761400:	f9403be1 	ldr	x1, [sp, #112]
+
+=== AicpuRunRpcServerForApi prologue (x20) ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007b6770 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base>:
+  7b6770:	d101c3ff 	sub	sp, sp, #0x70
+  7b6774:	b0008b22 	adrp	x2, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7b6778:	f9444442 	ldr	x2, [x2, #2184]
+  7b677c:	a9037bfd 	stp	x29, x30, [sp, #48]
+  7b6780:	9100c3fd 	add	x29, sp, #0x30
+  7b6784:	a90453f3 	stp	x19, x20, [sp, #64]
+  7b6788:	aa0003f3 	mov	x19, x0
+  7b678c:	b000d894 	adrp	x20, 22c7000 <_ZN3dfx17g_groupNameHashIdE@@Base+0x478>
+  7b6790:	a9055bf5 	stp	x21, x22, [sp, #80]
+  7b6794:	912d4295 	add	x21, x20, #0xb50
+  7b6798:	aa0103f6 	mov	x22, x1
+  7b679c:	f90033f7 	str	x23, [sp, #96]
+  7b67a0:	910642b7 	add	x23, x21, #0x190
+  7b67a4:	f9400040 	ldr	x0, [x2]
+  7b67a8:	f90017e0 	str	x0, [sp, #40]
+  7b67ac:	d2800000 	mov	x0, #0x0                   	// #0
+  7b67b0:	c8dffee0 	ldar	x0, [x23]
+  7b67b4:	36000e40 	tbz	w0, #0, 7b697c <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base+0x20c>
+  7b67b8:	f9405e61 	ldr	x1, [x19, #184]
+  7b67bc:	912d4280 	add	x0, x20, #0xb50
+  7b67c0:	91068000 	add	x0, x0, #0x1a0
+  7b67c4:	97eb9503 	bl	29bbd0 <_ZN17AicpuKfcRpcServer4InitEy@plt>
+  7b67c8:	97eb8ae2 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  7b67cc:	36000620 	tbz	w0, #0, 7b6890 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base+0x120>
+  7b67d0:	d53be057 	mrs	x23, cntvct_el0
+  7b67d4:	910043f5 	add	x21, sp, #0x10
+  7b67d8:	aa1303e0 	mov	x0, x19
+  7b67dc:	97eb6e35 	bl	2920b0 <_ZN12AicpuKfcProf10GetProInstER15AicpuComContext@plt>
+  7b67e0:	aa0003e3 	mov	x3, x0
+  7b67e4:	aa1603e2 	mov	x2, x22
+  7b67e8:	912d4294 	add	x20, x20, #0xb50
+  7b67ec:	aa1303e0 	mov	x0, x19
+  7b67f0:	91068281 	add	x1, x20, #0x1a0

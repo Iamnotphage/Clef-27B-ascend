@@ -1,0 +1,62 @@
+=== r23 base window 0x761530-0x761570 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000761530 <RunAicpuRpcSrvLaunch@@Base+0x1b0>:
+  761530:	a9446bf9 	ldp	x25, x26, [sp, #64]
+  761534:	a94573fb 	ldp	x27, x28, [sp, #80]
+  761538:	a8c67bfd 	ldp	x29, x30, [sp], #96
+  76153c:	d65f03c0 	ret
+  761540:	aa1403e1 	mov	x1, x20
+  761544:	52800080 	mov	w0, #0x4                   	// #4
+  761548:	97ecaca6 	bl	28c7e0 <clock_gettime@plt>
+  76154c:	a94703f7 	ldp	x23, x0, [sp, #112]
+  761550:	d2994001 	mov	x1, #0xca00                	// #51712
+  761554:	f2a77341 	movk	x1, #0x3b9a, lsl #16
+  761558:	9b0102f7 	madd	x23, x23, x1, x0
+  76155c:	52800061 	mov	w1, #0x3                   	// #3
+  761560:	b5fff6d3 	cbnz	x19, 761438 <RunAicpuRpcSrvLaunch@@Base+0xb8>
+  761564:	2a0103e0 	mov	w0, w1
+  761568:	97ecac5a 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  76156c:	3607f9a0 	tbz	w0, #0, 7614a0 <RunAicpuRpcSrvLaunch@@Base+0x120>
+
+=== r23 +0xd00 window 0x7620a0-0x7620c0 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007620a0 <RunAicpuRpcSrvLaunch@@Base+0xd20>:
+  7620a0:	2a0103e0 	mov	w0, w1
+  7620a4:	97eca98b 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7620a8:	36079fe0 	tbz	w0, #0, 7614a4 <RunAicpuRpcSrvLaunch@@Base+0x124>
+  7620ac:	97ecb131 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7620b0:	360014e0 	tbz	w0, #0, 76234c <RunAicpuRpcSrvLaunch@@Base+0xfcc>
+  7620b4:	913402f7 	add	x23, x23, #0xd00
+  7620b8:	d2801640 	mov	x0, #0xb2                  	// #178
+  7620bc:	97eca651 	bl	28ba00 <syscall@plt>
+
+=== ForApi x20 window 0x7b67d0-0x7b6800 ===
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007b67d0 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base+0x60>:
+  7b67d0:	d53be057 	mrs	x23, cntvct_el0
+  7b67d4:	910043f5 	add	x21, sp, #0x10
+  7b67d8:	aa1303e0 	mov	x0, x19
+  7b67dc:	97eb6e35 	bl	2920b0 <_ZN12AicpuKfcProf10GetProInstER15AicpuComContext@plt>
+  7b67e0:	aa0003e3 	mov	x3, x0
+  7b67e4:	aa1603e2 	mov	x2, x22
+  7b67e8:	912d4294 	add	x20, x20, #0xb50
+  7b67ec:	aa1303e0 	mov	x0, x19
+  7b67f0:	91068281 	add	x1, x20, #0x1a0
+  7b67f4:	f9000477 	str	x23, [x3, #8]
+  7b67f8:	97eb53e2 	bl	28b780 <_ZN15AicpuKfcProcess15RunRpcServerApiEP15AicpuComContextR17AicpuKfcRpcServery@plt>
+  7b67fc:	2a0003f4 	mov	w20, w0
