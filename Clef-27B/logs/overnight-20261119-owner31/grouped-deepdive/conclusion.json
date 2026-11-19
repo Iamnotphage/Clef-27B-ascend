@@ -85,5 +85,20 @@
   "does GroupedMatMulAllReduce actually dispatch to libmc2_server KFC kernels, or to libccl_kernel KFC (RunAicpuKfcResInit/SrvLaunch) which is loaded?",
   "which op-info/binary_info entry binds GroupedMatMulAllReduce to an AICPU kernel library on A3?",
   "can a zero-initialized workspace A12 derivation return without pending (35 derivation, pending 32 review)?"
- ]
+ ],
+ "h11_matched": {
+  "plan": "e159c897",
+  "identity": "1311514/399079056",
+  "shape": "M128/K256/N512 BF16 FP32-zero-bias single-group KEEP_ALL",
+  "result": "hang at python torch.npu.synchronize; no sync_return",
+  "plog": "stream_id=47 task_id=13 pendingNum=1 both devices, three-minute report 07:50:08",
+  "device_objects": "KFCtaskAndTilingTraceData + AivAicpuOpParam created (same as A12/v4r1; A14 has none)",
+  "cell": "h11-small-v1-cell SUMS 57932c67 15/15 commit f576d23; restore aa3e-noop root 1313827",
+  "interpretation": "matched small shape still hangs -> not large-shape/tiling only; grouped rac_server/AivAicpu/KFC task protocol is the leading candidate; single-cell not conclusive; mc2_server dependency still supported_but_unproven"
+ },
+ "future_designs": {
+  "H4K": 24,
+  "H5K": 40,
+  "note": "DIRECT_LAUNCH|KEEP_ALL and REFETCH_STREAM|KEEP_ALL; need run_probe ARMS + window choices changes; not scheduled; H4K is thread+sync combination, H5K single stream-source variable vs H11"
+ }
 }
