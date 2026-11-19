@@ -1,0 +1,29 @@
+{
+ "schema": "h11-observe-env-sidecar/1",
+ "cell": "h11-observe-v1",
+ "plan": "plan-h11-observe-v1.json",
+ "created_local": "2026-11-19 Asia/Shanghai",
+ "candidate_env": {
+  "ASCEND_GLOBAL_LOG_LEVEL": "0",
+  "ASCEND_PROCESS_LOG_PATH": "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/logs-h11-observe-v1"
+ },
+ "application": {
+  "applied": false,
+  "scope_if_go": "child process only (torchrun ranks); service process and restore are not modified",
+  "doc_evidence": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/doc-envvar-scan-20261119 (GLOBAL_LOG_LEVEL 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR default, 4=NULL)"
+ },
+ "restore": {
+  "argv_mode": "env -i with clean PATH and CLEF_LAUNCH_CONFIG=s1",
+  "candidate_exported_to_restore": false
+ },
+ "baseline_observed": {
+  "ASCEND_GLOBAL_LOG_LEVEL": "empty in ended-cell plog env dump",
+  "HCCL_DEBUG_CONFIG": "0x0 (not set)"
+ },
+ "unproven_conditions": [
+  "AICPU env propagation into device-side libccl_kernel",
+  "HcclCheckLogLevel/DlogRecord w0/w1 raw operands vs any log level enum (bitmask/other enum not ruled out)",
+  "module-level log format and HCCL_DEBUG_CONFIG bit semantics"
+ ],
+ "note": "candidate env recorded only; no execution, no service change, no device action"
+}

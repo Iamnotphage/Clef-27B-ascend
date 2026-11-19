@@ -1,0 +1,87 @@
+{
+ "schema": "h11-observe-stage-identity/1",
+ "cell": "h11-observe-v1",
+ "commit": "e38b541",
+ "stage_dir": "/workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar",
+ "manifest_sha256": "8e324beae91cc858ef557fed97c7c60d7dbbef30eeca6709d84355e3f3f9a0f8",
+ "manifest_note": "same Linux stage as A15 large preflight (a15-large stage-identity records 29/29 manifest files verified at e38b541); this preflight re-verified the six key files below, no restage",
+ "run_probe_sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+ "window_sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
+ "binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+ "probe_adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+ "test_probe_sha256": "ad257b5fd702d0692140dd3ece89362bdba6081f1782d7e439b7094a9f449719",
+ "tests": {
+  "linux_probe_run": "not rerun in this preflight (frozen bytes unchanged; no restage/rebuild)"
+ },
+ "stop_script": {
+  "path": "/tmp/d0cc/d0_stop.py",
+  "sha256": "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
+ },
+ "source": {
+  "path": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+  "sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+ },
+ "root_identity": {
+  "pid": 1337814,
+  "ppid": 1,
+  "pgid": 1337814,
+  "starttime": "400405818",
+  "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+  "state": "S",
+  "file": "root-identity-h11-observe-v1.json",
+  "sha256": "de780872a55d49a0db494f0715055f68b7e0dd1d6bdaea358275922781d18752"
+ },
+ "service": {
+  "health": "ready",
+  "model": "clef",
+  "revision": "local-65e5a3c5ffb6",
+  "info_config": "s1",
+  "pids": [1337814, 1337961, 1337962, 1337979, 1337980],
+  "names": ["root", "resource_tracker", "EngineCore", "Worker_TP0", "Worker_TP1"],
+  "pgid_sid_all": 1337814
+ },
+ "port_29531": {
+  "tcp_127_0_0_1": "FREE",
+  "tcp_0_0_0_0": "FREE",
+  "udp_127_0_0_1": "FREE",
+  "udp_0_0_0_0": "FREE",
+  "method": "python socket bind test; ss is not installed on this host"
+ },
+ "fresh_dirs": {
+  "cell": "created /workspace/yangchen/work/grouped-deepdive-cell-h11-observe",
+  "logs": "created logs-h11-observe-v1",
+  "run": "run-h11-observe-v1 absent",
+  "probe_temp": "probe-temp-h11-observe-v1 absent",
+  "probe_out": "probe-out-h11-observe-v1 absent",
+  "restore": "restore-h11-observe-v1 absent"
+ },
+ "probes": {
+  "text": {"path": "/workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json", "sha256": "a7dd3f64133cfc9ecdc0b7784867bc8f3f5529b5465a6f5fa8da254cc28b5b38"},
+  "image": {"path": "/workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json", "sha256": "f3229f5c120098ac4eebcc6f4025c28254e35f959fd01998cac5db7b8d209aab"}
+ },
+ "plan": {
+  "file": "plan-h11-observe-v1.json",
+  "status": "plan_not_executed",
+  "via": "frozen supervised_probe_window.py plan-only entry (no --execute)",
+  "arm": "H11",
+  "rows": 128,
+  "k": 256,
+  "n": 512,
+  "world": 2,
+  "seed": 20261119,
+  "arm_timeout": 240.0,
+  "comm_timeout": 90.0,
+  "runtime_source": "e38b541 stage run_probe 8e308804 / window 1f780bf8 / binding 101660f8 / adapter d181b15a"
+ },
+ "env_sidecar": {
+  "file": "env-sidecar-h11-observe-v1.json",
+  "sha256": "a6a3c4a4ae6d0b2bc4bba5628ae5b065cb23a40383c483d7c1c8a4d9c3b851ab",
+  "candidate_env": ["ASCEND_GLOBAL_LOG_LEVEL=0", "ASCEND_PROCESS_LOG_PATH=<cell>/logs-h11-observe-v1"],
+  "applied": false
+ },
+ "notes": [
+  "plan-only preflight; no service stop, no torchrun, no device action, no GO",
+  "restore arm remains env -i + official start.sh at aa3e/s1",
+  "AICPU env propagation and guard mapping remain conditional/unproven (recorded in sidecar)"
+ ]
+}
