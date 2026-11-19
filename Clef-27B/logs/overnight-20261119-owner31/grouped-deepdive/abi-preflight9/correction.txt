@@ -1,0 +1,12 @@
+abi9 correction (after 33 exact-encoding review):
+1) ctx+352 clears DO exist and my earlier "none" was a grep truncation artifact:
+   - 0x7608c8 str wzr,[x19,#352] in RunAicpuKfcClearOpRes
+   - 0x76187c str wzr,[x28,#352] in RunAicpuRpcSrvLaunch (x28 = AicpuGetComContext result from 0x7615ac/0x7615b0)
+   Both are clears; an incrementer is still not identified.
+2) ctx+0xf31dc is ctx_R+0xf0000+12732: 0x761654 add x26,x28,#0xf0,lsl#12; 0x761848 and 0x761978 ldr w0,[x26,#12732]; 0x761984 and #0xfffffffd; 0x761988 cmp #1; 0x761990 b.ne OneStage; 0x761994 bl RunRpcServerTwoStageWait.
+   Writers to #12732 found:
+   - 0x2ea7b8 str w8,[x1,#12732] with w8=9; x1 is a static global (adrp 0x22ce000 + 0x888 + 0xf0000), not ctx_R -> static initializer.
+   - 0x7edfc0 str w5,[x7,#12732] inside AicpuHcclProcess::CopyCtxInfo: copies [x23+12732] (another ctx) into [x7+12732] -> field copied, not computed/incremented.
+   No +1/increment site found; value semantics and the source context of the copy remain unresolved.
+3) Identity accepted: TwoStageWait ctx argument is ctx_R (0x76198c mov x0,x28; 0x761994 call), so its [x20,#352] is ctx_R+352.
+4) server_A = 0x191f000 + 0xd00 + 0x10 = 0x191fd10 accepted; the 0x7620b4 add belongs to a post-Init error/log path with no back edge to Init; 0x1920a10 is not used.
