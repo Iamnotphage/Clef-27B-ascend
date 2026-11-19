@@ -347,6 +347,15 @@
 - **判据**：launch/sync rc0 + 无 `[ERROR]`/retcode + ≥2 mc2 costtime + per-PID maps 硬门 + memset rc0；仍 507046/stream47 → H6 削弱（非平台否定）；返回 → workspace 初值被支持（仍需区分 mc2_server 依赖）。
 - **执行门**：不编译/不执行；待 33 约定 + 31 头检查 + 32 ready + 20 排程；fresh identity 1301295/safe window/A12 臂；服务保持 aa3e。
 
+## 8.26 依赖分析与 H6 条件 ready（2026-11-19）
+
+- **依赖分析（31 dependency-analysis `31f8f1ee…`）**：磁盘无 `libmc2_server.so`（仅在拒绝包内）；仅 `libmc2_server.json` 引用 `Mc2ServerKernel`，无 op-info/binary_info/op 配置引用；`libccl_kernel.so` 导出 46 个 KFC/HCCL kernel（RunAicpuKfcResInit/SrvLaunch、RunAicpuRpcSrvLaunchV2_* 等）及 MC2 机制符号，但**无 Mc2ServerKernel/RacServer**；已装 AICPU .so 无该符号；Grouped AscendC 源码含 `rac_server.h`（期望 AICPU server）；运行日志未指名 grouped 具体等待哪个 server。→ `dependency_status=**supported_but_unproven**`；判别待 A12-H6 与 A14。
+- **31 conclusion 收窄**：`conclusion.json` `bfef1c02…`，status=`suspected_environment_blockage_pending_dependency_control`，revision_trail 记录 20 的收窄理由（旧 confirmed 文本保留）。
+- **H6 修复核验（35）**：commit 1e090d7/1641360；manifest `a35d5321…`，顶层 status=`narrowed_environment_first_cause_pending`；source `4b8e6e2a…`/diff `754e2f24…` 未变；compile `8ef604f1…`，注释已改“official source 6c1a90ab + h6.diff, derived build”；H6 条目 `prepared_not_executed_pending_33_32_contract`（含 api_check/static_preflight/pending）。
+- **剩余措辞项**：manifest `closure.root_cause` 仍把“MC2 KFC AICPU task has no implementation”写成事实；应改为“suspected first-cause: mc2_server skipped; grouped dependency unproven”或标为历史/证据摘要（非阻塞 H6）。
+- **H6 条件 ready**：静态单变量/同 stream/9 行 memset/Async API（31 核 acl_rt.h:2563、libascendcl 导出）均通过；仅待 33 的 workspace 约定——同流顺序足够则不改；若需额外 sync，作为单独变体（不与 H6 控制混）。之后 + 20 排程，31 以 1301295 fresh identity、safe window、A12 臂（--a12-binary H6）执行。
+- **A14** 等 33 的 A3 注册/依赖包结论；A13 停跑；服务 aa3e/s1 在线，无设备动作。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
