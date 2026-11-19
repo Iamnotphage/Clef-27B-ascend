@@ -337,6 +337,16 @@
   - 设备门（任何新格）：fresh root-identity/snapshot（当前 1301295）、run/restore fresh、safe window（old_alive 绝不 Popen/pre-Popen 门/官方 aae-noop 恢复/240s/精确 PGID）、32 ready 后 31 执行；服务保持 aa3e。
 - **A13**：停跑（未注册）；代码保留；未来 A3 控制只用确认注册的 MatmulReduceScatter V1/V2。
 
+## 8.25 A12-H6 最小派生静态 preflight（未执行）
+
+- **交付**：35 commit b4a658c；derivative source `4b8e6e2a…`、`h6.diff 754e2f24…`、compile `e7a59de6…`、manifest `ceb76693…`。`diff 官方源(6c1a90ab) vs h6` 与 h6.diff 完全一致，**仅新增 9 行 memset 块**（aclrtMalloc 后、launch 前）；`aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream)` 参数顺序正确、与 launch 同 stream（同流顺序保证先 memset 后 kernel）；rc 打印并 CHECK_RET；其余 provider/FP16 shape/2 设备 1 loop/生命周期未改。single-variable 成立，A12 臂/a12_evidence 可复用。
+- **待修/待核（3 项）**：
+  - **记录一致性**：manifest 顶层 status 仍 `closed_environment_blocked`，与 20 收窄冲突 → 改为“environment first-cause clue / dependency & legal control pending”，H6 条目保留 prepared_not_executed；31 conclusion.json 同样收窄（旧文本留轨迹）。
+  - **编译脚本注释**：`compile_a12_h6.sh` 头注释仍写 “Build the frozen official A12 sample unchanged”，应改为 “official source + h6.diff，derived build”（脚本验 source SHA 4b8e6e2a 正确）。
+  - **API 可用性/约定**：31 编译前 grep 本机 CANN `include/acl/acl.h`（或 acl_rt.h）确认 `aclrtMemsetAsync` 声明；若无则改用同步 `aclrtMemset` 并记变体；33 确认 workspace 零初始化约定与是否需额外 sync（同流已足够；跨 stream/context 则加 sync 属另一变量）。
+- **判据**：launch/sync rc0 + 无 `[ERROR]`/retcode + ≥2 mc2 costtime + per-PID maps 硬门 + memset rc0；仍 507046/stream47 → H6 削弱（非平台否定）；返回 → workspace 初值被支持（仍需区分 mc2_server 依赖）。
+- **执行门**：不编译/不执行；待 33 约定 + 31 头检查 + 32 ready + 20 排程；fresh identity 1301295/safe window/A12 臂；服务保持 aa3e。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
