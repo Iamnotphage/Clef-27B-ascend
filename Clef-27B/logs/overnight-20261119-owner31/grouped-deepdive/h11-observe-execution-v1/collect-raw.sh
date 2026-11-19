@@ -11,7 +11,11 @@ set -u
 
 CELL=${CELL:-/workspace/yangchen/work/grouped-deepdive-cell-h11-observe}
 ARCH=${ARCH:-$CELL/archive-h11-observe-v1}
-BODIES=/workspace/yangchen/work/grouped-deepdive-cell-a15-large
+BODIES=${BODIES:-/workspace/yangchen/work/grouped-deepdive-cell-a15-large}
+# 必需元数据实际来源（已在 CELL 核 SHA；可用环境变量覆盖为其它权威副本）
+SRC_ID=${SRC_ID:-$CELL/root-identity-h11-observe-v1.json}      # de780872…
+SRC_SIDECAR=${SRC_SIDECAR:-$CELL/env-sidecar-h11-observe-v1.json}  # a6a3c4a4…
+SRC_PLAN=${SRC_PLAN:-$CELL/plan-h11-observe-v1.json}           # c95ae5c3…
 SRC_DEV0=/root/ascend/log/run/device-0
 SRC_DEV1=/root/ascend/log/run/device-1
 SRC_PLOG=/root/ascend/log/run/plog
@@ -74,9 +78,7 @@ for proto,name in ((socket.SOCK_STREAM,"tcp"),(socket.SOCK_DGRAM,"udp")):
 PY
   # 必需元数据：实际来源 -> meta（sidecar/plan/root-identity 在 CELL；body 在 A15-large cell）
   for pair in \
-      "$CELL/root-identity-h11-observe-v1.json" \
-      "$CELL/env-sidecar-h11-observe-v1.json" \
-      "$CELL/plan-h11-observe-v1.json" \
+      "$SRC_ID" "$SRC_SIDECAR" "$SRC_PLAN" \
       "$BODIES/text-body.json" "$BODIES/image-body.json"; do
     name=$(basename "$pair")
     if need_file "$pair" "meta $name"; then
@@ -140,8 +142,8 @@ end)
     [ -f "$f" ] && cp -p "$f" "$ARCH/cell/" && record_src "$f" "cell/$(basename "$f")"
   done
   # plan 与 body：以实际来源为准（CELL plan；A15-large body）
-  if need_file "$CELL/plan-h11-observe-v1.json" "plan"; then
-    cp -p "$CELL/plan-h11-observe-v1.json" "$ARCH/cell/" && record_src "$CELL/plan-h11-observe-v1.json" "cell/plan-h11-observe-v1.json"
+  if need_file "$SRC_PLAN" "plan"; then
+    cp -p "$SRC_PLAN" "$ARCH/cell/" && record_src "$SRC_PLAN" "cell/$(basename "$SRC_PLAN")"
   fi
   for f in "$BODIES/text-body.json" "$BODIES/image-body.json"; do
     if need_file "$f" "body $(basename "$f")"; then

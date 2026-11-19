@@ -16,6 +16,14 @@ h11-observe-execution-v1 — H11 观测执行命令包（doc-only；无 GO，不
   之类的额外改动。历史 plog 中这两个变量为空/0x0 仅作为基线事实记录在
   `../h11-observe-preflight/env-sidecar-h11-observe-v1.json`，本包不改动它们。
 
+CELL 源文件（collect-raw 直接引用；缺失即报错，不静默）
+-------------------------------------------------------
+- root-identity：`<CELL>/root-identity-h11-observe-v1.json`，SHA de780872…（已核）
+- env sidecar：`<CELL>/env-sidecar-h11-observe-v1.json`，SHA a6a3c4a4…（已核）
+- plan：`<CELL>/plan-h11-observe-v1.json`，SHA c95ae5c3…（已核）
+- bodies：`/workspace/yangchen/work/grouped-deepdive-cell-a15-large/{text,image}-body.json`
+  （a7dd3f64… / f3229f5c…）；以上均可用环境变量 SRC_ID/SRC_SIDECAR/SRC_PLAN/BODIES 覆盖。
+
 文件索引
 --------
 - window-planonly-argv.json / window-execute-argv.json：完整绝对路径 argv 数组（60 项；

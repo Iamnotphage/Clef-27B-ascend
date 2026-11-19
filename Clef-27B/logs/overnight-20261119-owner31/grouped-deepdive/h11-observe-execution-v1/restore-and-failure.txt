@@ -13,8 +13,9 @@ env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/ga
 
 成功门（window 既有）
 ---------------------
-- child_rc == 0 且未超时（240 s）；attributed survivors 为空（window 的 no_survivors 判定：
-  DescendantRegistry 登记项与 PGID 扫描均为空，含已回收的 Z 项）。
+- child_rc == 0 且未超时（240 s）；**child PGID 无 survivor，且 attributed survivors 为空**
+  （window 的 no_survivors 判定：DescendantRegistry 登记项与 PGID 扫描均为空，含已回收的
+  Z 项；不表述为“全树无 survivor”）。
 - source SHA 前后均为 aa3e1758…；branch aa3e-noop。
 - four_checks / env / joint_env / two_workers / clients_empty 全真。
 - restore 后 health ready（clef，revision local-65e5a3c5ffb6），root identity 与
