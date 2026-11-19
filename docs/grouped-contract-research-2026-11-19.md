@@ -1726,3 +1726,24 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 操作命令仍只引用 31 的最终 v2 包；本记录不写第二套命令。
 - **下一单次 v2 设备步骤待 20 明确授权**；当前无 GO/不执行/无设备动作。
 - 静态 ABI（§78/§80/§91）与 §15 结论保持；root cause 仍 unresolved。
+
+## 97. v2 只读验收判据与代码事实（35，基于 1f780bf8/953eb2d）
+
+**v2 包状态**：截至 `3d54f70` 尚无 v2 目录；以下为 31 实现 v2 时的对照判据，未改包/无设备。
+
+**关键代码事实**：
+1. child env = `{**os.environ, CLEF_WINDOW_OWNER: token}`（window line 894），`Popen(child_argv, env=child_env)`（896-897）→ **PATH 必须存在于运行 window 进程的 shell 环境**；window 原样传给 child。
+2. `--activate` 只出现在 restore_argv（line 546-548，`env -i` + CLEAN_PATH + `source activate && start.sh`）→ **只服务 restore，不进入 child env**，不能当 child 激活。
+3. `--execute` 内部先 stop（line 876）再 spawn child（896）；**preflight-rescan 必须在 `--execute` 之前完成并 fail-closed**，否则 stop 已发生。
+4. `--child-argv` 可覆盖（line 552-554），但 v1 模板警告会覆盖 `--arm`；若用绝对 `torchrun` 写入 child_argv，需完整重建 argv 并在预扫校验绝对路径 SHA 与 `--help` rc0；更稳妥是同 shell 前置 PATH。
+
+**v2 验收判据（必须同时满足）**：
+- 同一 shell、启动 window **之前**：`source <activate_env.sh>`（CANN/ATB）→ `export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH` → `command -v torchrun` 必须解析到 `<venv>/bin/torchrun`（记录绝对路径与 SHA）→ 该 torchrun `--help` rc0。
+- 随后**同一 shell/同一 SSH** 运行 `preflight-rescan.sh`（fail-closed），再运行 `supervised_probe_window.py ... --execute`；三者不得拆到不同 shell/SSH，否则 PATH 不进 window 的 os.environ。
+- 只在 plan/planonly 生成时 source，或把 PATH 放在 `--activate`，**均不作用于 child**（line 894/546-548）。
+- v2 用当前恢复身份 **root 1347086 / starttime 401212026** 重生成 preflight/README/planonly，避免 v1 `1337814` pin 导致 fail-closed；fresh root/dirs/plan/包。
+- `rank-env-read.py` `a4b76676` 的 18/18 替身可复用，不重测；不扩 ABI/日志表。
+
+**v1 对照**：window 用 venv 绝对 python 启动但未 export PATH；child 继承登录 shell PATH（不含 venv bin），故裸 `torchrun` FileNotFound。v1 模板只写“execute 前先跑 preflight-rescan”，未写“同一 shell/PATH 前置”，是 v2 要补的核心。
+
+**操作来源**：仍只引用 31 最终 v2 包；本节不写第二套命令；无 v2 设备 GO/NPU 步骤；root cause unresolved。
