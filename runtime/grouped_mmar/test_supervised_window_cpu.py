@@ -664,6 +664,23 @@ class AttributedProcessTest(unittest.TestCase):
             outcome = win.cleanup_attributed(0, entry, None, {sleeper.pid})
             self.assertFalse(outcome['killed'])
             self.assertEqual(outcome['reason'], 'protected_overlap')
+            self.assertTrue(win.cleanup_blocks_restore(outcome))
+            self.assertIsNotNone(win._read_proc(sleeper.pid))
+        finally:
+            sleeper.kill()
+            sleeper.wait(timeout=5)
+
+    def test_drift_identity_is_not_signaled(self):
+        sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
+                                   start_new_session=True)
+        try:
+            live = win._read_proc(sleeper.pid)
+            entry = {key: live[key] for key in ('pid', 'boot_id', 'pgid', 'sid')}
+            entry['starttime'] = '0'  # wrong identity
+            outcome = win.cleanup_attributed(0, entry, None, set())
+            self.assertTrue(outcome['drift'])
+            self.assertNotIn(sleeper.pid, outcome['singles'])
+            self.assertNotIn(sleeper.pid, outcome['groups'])
             self.assertIsNotNone(win._read_proc(sleeper.pid))
         finally:
             sleeper.kill()

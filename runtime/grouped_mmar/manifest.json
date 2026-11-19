@@ -66,9 +66,9 @@
       "bytes": 45182
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (33; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, Linux real-process fixtures)",
-      "sha256": "17de751279efd72176b0650c7aa95d7ea1376ec68840769e4ecd900df19e8561",
-      "bytes": 32661
+      "role": "CPU window control-flow tests (34; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, Linux real-process fixtures)",
+      "sha256": "33961f36d0aff43cb1dd25f3bdb560d712defc76207f9e0635d9446262f014c5",
+      "bytes": 33503
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,7 +82,7 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "8e8c163f31bfc86454857dbf7488be632b968ff2563959dd973fbf8743b53916",
+      "sha256": "5ad6708a7c11142f0cca3e392f5b4d1dcd62f6f0eb8b82e25b9976264a3e5a9c",
       "bytes": 29746
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "17/17",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "33/33 (4 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "34/34 (5 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "0ca36426", "test_supervised_window_cpu.py": "17de7512", "cpu": "59/59 (17+9+33; 4 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "0ca36426", "test_supervised_window_cpu.py": "33961f36", "cpu": "60/60 (17+9+34; 5 Linux-only skipped on macOS)"},
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
   },
