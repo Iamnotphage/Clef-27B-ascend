@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "536e14d182093a164cf6a99b6130a26b1de28affc4f184ed596f62d6c6139614",
-      "bytes": 17186
+      "sha256": "e7af4d4442efc59d2c28dc443574550b89a3a6e6428ae5143f02d528d7dd3e1f",
+      "bytes": 17586
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -286,7 +286,10 @@
     "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
     "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
     "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119",
-    "status": "paused_unexecuted_environment_blocked"
+    "status": "paused_unexecuted_not_a3_registered",
+    "a3_registration": "absent; packed A3 ops-info has AllGatherMatmul/V2 and MatmulReduceScatter/V2 only",
+    "correction": "aclnnMatmulAllReduce v1 is not A3-registered; running would stop at op lookup (161001 class), not a valid MC2 control",
+    "future_control": "MatmulReduceScatter V1 (A3 AI CPU) vs V2 commMode=aiv (A3 aiv, >=200MB) only after A3 registration/platform support is confirmed"
   },
   "closure": {
     "root_cause": "mc2_server.tar.gz not loaded on chip:5; MC2 KFC AICPU task has no implementation; AICORE waits on stream 47",
@@ -295,10 +298,12 @@
       "package_load_ini_sha256": "38b4b47eb913cf1085561f45e65f34545947a6650a0170ec4e4c333a0dc1912f",
       "libmc2_server_json_sha256": "8e1346767b5c88393c01c4e94ae6eaac3d7ece558b733f496a7ed85c75537e52",
       "libaicpu_custom_sha256": "ce4f21b605b149bc9274593746c79604d2fc8197007b3e4ffd4951ae14c5e7c7",
-      "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae"
+      "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae",
+      "33_commit": "87ffb96"
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
     "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
-    "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR"
+    "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
+    "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2"
   }
 }
