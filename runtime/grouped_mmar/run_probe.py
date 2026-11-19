@@ -282,12 +282,6 @@ def arm_output(arm, y, full=None, rows=None):
     return y
 
 
-def all_reduce_sum(dist, tensor):
-    """torch.distributed.all_reduce returns None; keep the reduced tensor."""
-    dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
-    return tensor
-
-
 def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
              all_gather, final_sync, matmul, all_reduce, flags, trace=None):
     """One real A15 pass: tail pad, MRS, sync, all-gather, crop, full-row reference."""
@@ -304,7 +298,9 @@ def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
     sync()
     full = empty((m_pad, n), y)
     all_gather(full, y)
-    reference = all_reduce(matmul(x, w))
+    # torch.distributed.all_reduce is in-place and returns None; never use its return.
+    reference = matmul(x, w)
+    all_reduce(reference)
     final_sync()
     output = full[:rows]
     info = {'pad': {'rows': rows, 'padded_rows': m_pad,
@@ -313,6 +309,25 @@ def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
                           'padded_end': m_pad},
             'workspace_bytes': workspace_bytes, 'run_id': run_id}
     return output, reference, info
+
+
+def a15_record(output, reference, rows, n, *, diff, equal):
+    """Build the A15 result record; a missing reference is a fail-closed error."""
+    if reference is None:
+        return None
+    item = diff(output, reference)
+    item['bit_equal'] = bool(equal(output, reference))
+    return {'reduced': item,
+            'equivalence': {'reference': 'matmul+all_reduce full rows',
+                            'shape': [rows, n], **item},
+            'diagnostic_gate': {
+                'name': 'mrs_allgather_equivalence',
+                'max_abs_le': 0.03125, 'mean_abs_le': 1e-4,
+                'within_bounds': bool(item['max_abs'] <= 0.03125 and
+                                      item['mean_abs'] <= 1e-4),
+                'provenance': ('MC2 RS probe 0.03125; Dense SP probe '
+                               '0.015625 / 2e-5; not the fixed_gate'),
+                'status': 'diagnostic_only_not_an_official_gate'}}
 
 
 def execute(a, plan):
@@ -444,7 +459,7 @@ def execute(a, plan):
                     run_mrs=a15_run_mrs, sync=a15_sync, all_gather=a15_gather,
                     final_sync=torch.npu.synchronize,
                     matmul=torch.matmul,
-                    all_reduce=lambda t: all_reduce_sum(dist, t),
+                    all_reduce=lambda t: dist.all_reduce(t, op=dist.ReduceOp.SUM),
                     flags=plan['flags'], trace=trace)
                 meta.update(info)
                 run_id = info['run_id']
@@ -488,21 +503,26 @@ def execute(a, plan):
         else:
             finite = bool(torch.isfinite(output.float()).all())
             if reference is not None:
-                diff = (output.float() - reference.float()).abs()
-                item = {'max_abs': float(diff.max()), 'mean_abs': float(diff.mean()),
-                        'bit_equal': bool(torch.equal(output, reference))}
-                meta['reduced'] = item
                 if a.arm == 'A15':
-                    meta['equivalence'] = {'reference': 'matmul+all_reduce full rows',
-                                           'shape': [rows, a.n], **item}
-                    meta['diagnostic_gate'] = {
-                        'name': 'mrs_allgather_equivalence',
-                        'max_abs_le': 0.03125, 'mean_abs_le': 1e-4,
-                        'within_bounds': bool(item['max_abs'] <= 0.03125 and
-                                              item['mean_abs'] <= 1e-4),
-                        'provenance': ('MC2 RS probe 0.03125; Dense SP probe '
-                                       '0.015625 / 2e-5; not the fixed_gate'),
-                        'status': 'diagnostic_only_not_an_official_gate'}
+                    def diff_item(out, ref):
+                        delta = (out.float() - ref.float()).abs()
+                        return {'max_abs': float(delta.max()),
+                                'mean_abs': float(delta.mean())}
+
+                    record = a15_record(output, reference, rows, a.n,
+                                        diff=diff_item,
+                                        equal=lambda out, ref: torch.equal(out, ref))
+                    if record is not None:
+                        meta.update(record)
+                    else:
+                        meta['numeric_error'] = 'missing_equivalence_record'
+                else:
+                    diff = (output.float() - reference.float()).abs()
+                    meta['reduced'] = {'max_abs': float(diff.max()),
+                                       'mean_abs': float(diff.mean()),
+                                       'bit_equal': bool(torch.equal(output, reference))}
+            elif a.arm == 'A15':
+                meta['numeric_error'] = 'missing_equivalence_record'
         meta['finite'] = finite
         meta['wall_ms'] = (time.monotonic_ns() - begin) / 1e6
         trace.emit('result', finite=finite)
@@ -523,8 +543,14 @@ def execute(a, plan):
         meta['both_finite'] = all(both)
         # The numeric gate is api/sync/finite/reference; a release failure is a harness
         # record (harness_release_ok=False), never a reason to discard completed numbers.
+        record_ok = bool(a.arm != 'A15' or
+                         ('reduced' in meta and 'equivalence' in meta and
+                          'diagnostic_gate' in meta))
+        if not record_ok:
+            meta['numeric_error'] = 'missing_equivalence_record'
         numeric_pass = bool(meta['api_returned'] and meta['sync_returned'] and finite and
-                            all(both) and (not a.norm or meta.get('gate', {}).get('pass')))
+                            all(both) and record_ok and
+                            (not a.norm or meta.get('gate', {}).get('pass')))
         meta['numeric_pass'] = numeric_pass
         # pass/exit follow the numeric gate so a known cleanup defect cannot mask valid
         # numbers; harness_pass additionally requires clean cleanup and is reported apart.

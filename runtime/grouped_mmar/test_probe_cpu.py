@@ -208,22 +208,27 @@ class F821Test(unittest.TestCase):
         self.assertIn(('execute', 'k'), f821_violations(old))
 
 
-class AllReduceSumTest(unittest.TestCase):
-    def test_returns_the_tensor_when_dist_returns_none(self):
-        class FakeDist:
-            class ReduceOp:
-                SUM = 'sum'
+class A15RecordTest(unittest.TestCase):
+    def test_missing_reference_is_fail_closed(self):
+        self.assertIsNone(run_probe.a15_record(
+            [1.0], None, 1, 1, diff=lambda o, r: {}, equal=lambda o, r: False))
 
-            def all_reduce(self, tensor, op):
-                self.seen = (tensor, op)
-                tensor.append('reduced')
-                return None  # torch.distributed.all_reduce is in-place
-
-        dist = FakeDist()
-        tensor = []
-        self.assertIs(run_probe.all_reduce_sum(dist, tensor), tensor)
-        self.assertEqual(tensor, ['reduced'])
-        self.assertEqual(dist.seen[1], 'sum')
+    def test_record_contains_equivalence_and_diagnostic(self):
+        record = run_probe.a15_record(
+            [1.0], [2.0], 127, 512,
+            diff=lambda o, r: {'max_abs': 0.01, 'mean_abs': 1e-5},
+            equal=lambda o, r: False)
+        self.assertEqual(record['reduced'], {'max_abs': 0.01, 'mean_abs': 1e-5,
+                                             'bit_equal': False})
+        self.assertEqual(record['equivalence']['shape'], [127, 512])
+        self.assertTrue(record['diagnostic_gate']['within_bounds'])
+        self.assertEqual(record['diagnostic_gate']['status'],
+                         'diagnostic_only_not_an_official_gate')
+        record = run_probe.a15_record(
+            [1.0], [2.0], 127, 512,
+            diff=lambda o, r: {'max_abs': 2.0, 'mean_abs': 5e-5},
+            equal=lambda o, r: False)
+        self.assertFalse(record['diagnostic_gate']['within_bounds'])
 
 
 class A15FlowTest(unittest.TestCase):
@@ -268,7 +273,9 @@ class A15FlowTest(unittest.TestCase):
 
         def all_reduce(tensor):
             calls['all_reduce'] = len(tensor)
-            return tensor
+            for row in tensor:
+                row[0] += 1.0
+            return None  # mirrors torch.distributed.all_reduce's in-place None
 
         output, reference, info = run_probe.a15_flow(
             rows, k, n, world, rank, x, w, ones=ones, empty=empty,
@@ -285,6 +292,8 @@ class A15FlowTest(unittest.TestCase):
         self.assertEqual(len(output), rows)
         self.assertEqual(len(reference), rows)
         # Result/equivalence shape: output and reference both cover the original rows.
+        self.assertIsNotNone(reference)  # the in-place all_reduce must not null it
+        self.assertEqual(reference[0][0], 2.0)
         max_abs = max(abs(out - ref) for out_row, ref_row in zip(output, reference)
                       for out, ref in zip(out_row, ref_row))
         self.assertEqual(max_abs, 8.0)

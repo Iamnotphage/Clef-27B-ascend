@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "ae9ec907d1ea376e211462885ab8b968963090be1c3bea80e4e1fb36c3492dee",
-      "bytes": 27595
+      "sha256": "103b9775282d2e741d7daa2349c1fb964f5f5244259d039782b5a89a813f1d57",
+      "bytes": 28844
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow/all_reduce_sum/F821/arm_output tests (23)",
-      "sha256": "57be8874359c90f9cb1d12392d3756d7987eaea12c578bb2184165e9760a44a6",
-      "bytes": 17246
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record/F821/arm_output tests (24)",
+      "sha256": "f6fe2c99086fa66f0c14cad48bee29f4ab61fa4efe37e0e099d27d09c852e1b2",
+      "bytes": 18020
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "bde0ca3ccd114ed462e9e1cdcabb1eeabab6627a5473a96a1b34daea7056f86a",
-      "bytes": 34441
+      "sha256": "36a3a4650862d5ad63066e0f94b94b545b2a6b0074558c6f10a7f1c992a3e465",
+      "bytes": 34670
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -240,7 +240,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "23/23",
+      "test_probe_cpu.py": "24/24",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "40/40 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "57be8874", "run_probe": "ae9ec907", "cpu": "72/72 (23+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "f6fe2c99", "run_probe": "103b9775", "cpu": "73/73 (24+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -471,7 +471,7 @@
       "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
-      "freeze": {"run_probe.py": "ae9ec907", "test_probe_cpu.py": "57be8874", "window": "1f780bf8 (unchanged)", "test_window": "228150e4 (unchanged)", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "freeze": {"run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8 (unchanged)", "test_window": "228150e4 (unchanged)", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
       "v1_result": {
         "plan_sha256": "99db4369",
         "failure": "NameError: name 'k' is not defined at the old run_probe.py:386 in the A15 tail-pad branch; no pad_ready/gather/equivalence/numeric",
@@ -484,7 +484,7 @@
         "plan_sha256": "a9ea5fe2",
         "device": "both ranks pad {32767: 127 -> 128, pad_value 1.0}, row_block 0 (0,64) / 1 (64,128), gather 1.16421/1.15801 ms, workspace 17,170,432 B, sync ~7.78 ms, finite/both_finite/numeric_pass/pass true, child rc0, survivors []",
         "defect": "the A15 lambda used dist.all_reduce (in-place, returns None), so reference=None and result.reduced/equivalence/diagnostic_gate were skipped even though the numbers existed",
-        "fix": "all_reduce_sum(dist, tensor) calls dist.all_reduce and returns the tensor; execute uses it; a CPU test pins the in-place None-return contract",
+        "fix": "a15_flow computes reference=matmul then calls all_reduce(reference) and never uses the return; a15_record() builds reduced/equivalence/diagnostic and returns None for a missing reference; A15 numeric_pass also requires the three record keys and sets numeric_error=missing_equivalence_record otherwise. CPU stubs return None from all_reduce while mutating in place and assert the record appears",
         "restore": "branch aa3e-noop, root 1330921, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
         "evidence": "a15-small-v2-cell SUMS 18/18 (05b2ccc6, 31 commit 32ef246)",
         "status": "pad/gather/workspace/sync and numeric_pass are valid facts; the equivalence record is missing and this cell is invalid for the diagnostic gate"
