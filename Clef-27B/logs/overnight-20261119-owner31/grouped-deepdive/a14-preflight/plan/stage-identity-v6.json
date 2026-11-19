@@ -8,10 +8,29 @@
  "window_sha256": "2202165ef6c9f08bb1cc7168b457c5466a63f20ba0c6168ca63cacade81a03c5",
  "probe_adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
  "adapter_note": "copied from f087746 stage; binding unchanged so no recompile",
- "preconditions": {"master_port_29531": "free at plan time (ss -ltn)"},
- "root_identity": {"pid": 1308632, "starttime": "398926792", "file": "root-identity-1308632.json", "sha256": "eb3a4b424bb7da2d1b6a2008803e6a10f1b44788d806cd77e32aa1ff4ace3228"},
- "small_plan_v4": {"file": "plan-a14-small-v4.json", "sha256": "47907073fd6d9565bf17d81042977eefd4f770f6e40b67d5e46823d5c0e9ac75", "rows": 128, "k": 256, "n": 512, "probe_out": "probe-out-a14-small-v4", "status": "plan_not_executed"},
- "prior": {"v3_plan_8782537a": "executed; liveness pass (prepare/launch/sync rc0) but release harness crashed; cell a14-small-v3-cell", "v3_cell": "SUMS 88b823a4 16/16, commit 064d469, restore root 1308632"},
+ "preconditions": {
+  "master_port_29531": "free at plan time (ss -ltn)"
+ },
+ "root_identity": {
+  "pid": 1308632,
+  "starttime": "398926792",
+  "file": "root-identity-1308632.json",
+  "sha256": "eb3a4b424bb7da2d1b6a2008803e6a10f1b44788d806cd77e32aa1ff4ace3228"
+ },
+ "small_plan_v4": {
+  "file": "plan-a14-small-v4.json",
+  "sha256": "47907073fd6d9565bf17d81042977eefd4f770f6e40b67d5e46823d5c0e9ac75",
+  "rows": 128,
+  "k": 256,
+  "n": 512,
+  "probe_out": "probe-out-a14-small-v4",
+  "status": "plan_not_executed"
+ },
+ "prior": {
+  "v3_plan_8782537a": "executed; liveness pass (prepare/launch/sync rc0) but release harness crashed; cell a14-small-v3-cell",
+  "v3_cell": "SUMS 88b823a4 16/16, commit 064d469, restore root 1308632"
+ },
  "counter_evidence": "A14 both ranks skip mc2_server (same loader refusal) yet MRS V1 sync succeeds; retained as evidence that the refused package is not a universal MC2 blocker",
- "status": "v4 plan ready; awaiting 32 increment check and GO"
+ "status": "superseded_strict_pass_semantics",
+ "superseded_reason": "run_probe fdbfeb67 keeps pass=numeric_pass and harness_release_ok and returns 1 on release error; per 32/33 adopt option 1 (pass=numeric_pass, harness_pass separate, rc0 on numeric) before execution"
 }
