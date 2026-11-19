@@ -68,12 +68,30 @@
   "note": "same-source template only; output-dir replaced with the fresh restore path"
  },
  "pending": [
-  "$PENDING_WINDOW_PATH (8f4b843-derived supervisor path+SHA to pin)",
-  "$PENDING_FRESH_IDENTITY_FILE (capture at execution time; 1355077 snapshot is not final)",
-  "new fixed source commit + collector/plan/test/README SHAs",
-  "candidate adapter/new .so SHA (if release dispatcher is used)",
-  "candidate manifest complete files table + Linux incremental evidence",
+  "$PENDING_WINDOW_PATH (supervisor d2576c63 existing bytes; path pin only)",
+  "$PENDING_FRESH_IDENTITY_FILE (capture at execution time; 1355077 snapshot is informational, not final)",
+  "35 revised collector/plan/test/README and integrity manifest SHAs",
+  "corresponding Linux incremental originals for the revised suite",
+  "old frozen adapter full SHA pin d181b15a...10c3 (verified; no build/switch)",
   "final pre-execution rescan (identity/boot/ppid/pgid/29531/residue/fresh dirs)"
  ],
- "not_executed": "no real msprof, torch import, device, service stop; skeleton only"
+ "not_executed": "no real msprof, torch import, device, service stop; skeleton only",
+ "supervisor": {
+  "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+  "provenance": "8f4b843 existing bytes; path placed in a fresh isolated dir only; no derived core changes",
+  "path": "$PENDING_WINDOW_PATH"
+ },
+ "adapter": {
+  "kind": "old_frozen",
+  "sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+  "size": 195304,
+  "verified": "read-only sha256sum on the frozen stage file",
+  "note": "no new .so build or switch; release candidate 83598d6e is NOT used"
+ },
+ "observation_vs_endpoint": {
+  "observation_start": "collector launch (after supervisor starts child)",
+  "observation_end": "~10 s delay + 120 s duration = about 130 s after launch; EARLY pending window only",
+  "task_endpoint": "actual task completion, timeout, or outer 240 s termination if artifacts exist; must be explicit",
+  "attribution_rule": "attribution uses the explicit task/pending endpoint and its reason; duration arrival is NOT flush and NOT task termination; if endpoint unknown, capability_unproven"
+ }
 }

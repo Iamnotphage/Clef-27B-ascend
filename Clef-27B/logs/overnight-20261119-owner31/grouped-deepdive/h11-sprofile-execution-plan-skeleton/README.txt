@@ -10,6 +10,15 @@ Scope
   no shell, no argument splitting, no --application, no --dynamic, no --pid, no --instr.
 - The msprof collector is part of the child argv (single process tree). Native run flags/semantics
   are unchanged from the frozen H11 app.
+- Adapter is the OLD FROZEN probe_adapter.so d181b15a... (verified read-only); no new .so build or switch;
+  release candidate 83598d6e is NOT used. Supervisor is 8f4b843 existing bytes d2576c63... with only
+  its path placed in a fresh isolated dir; no derived core changes.
+
+Observation end vs task/pending endpoint
+- observation window: ~10 s delay + 120 s duration = about 130 s after launch (EARLY pending only).
+- task/pending endpoint: actual task completion, timeout, or outer 240 s termination if artifacts exist.
+- attribution uses the explicit task endpoint and reason; duration arrival is NOT flush and NOT task
+  termination; if the endpoint is unknown, the result is capability_unproven.
 
 Fresh layout (all paths planned, none created)
 - cell: /workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1
@@ -34,6 +43,6 @@ Files
 - plan-skeleton.json: plan fields, budgets, gates, pending list, status.
 - identity-snapshot-now.txt: informational current read (not final).
 - restore-source.txt: restore argv source and adapted template (not executed).
-- pending.txt: unresolved pins.
+- pending.txt: unresolved pins (revised 35 files/integrity/Linux incremental, fresh identity, adapter pin).
 
 No real msprof / torch / device / service stop / deployment occurred while preparing this skeleton.
