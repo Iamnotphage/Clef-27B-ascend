@@ -407,6 +407,7 @@
 - **release 修复**：schema 占位 token tensor 或 fallback；先 flush result 再 release；try/except；重冻 run_probe 新 SHA；31 完成 1308632 恢复回传后以新 root 重建 identity/plan、fresh out（v4）、port 预检，重跑同小格取完整 result.json；large 等完整 small + 32 有限核。
 - **v3 cell 原件核验（a14-small-v3-cell 16/16）**：rank0/1 trace prepare_rc0/executor、workspace 17,170,432、launch_rc0、handler cleanup0/sync0、sync_ms 18.66017/8.16125；无 stream47/507046；result.json api/sync=true、finite/pass=false（stub）、error 为 release 零 Tensor dispatch；window ok=false/child rc1；恢复 root **1308632**/start 398926792、五 PID、aa3e-noop、四检/env/joint/source/clients 全 true。33 独立核一致（trace/plog/result/window/restore）。
 - **release 修复（33 细化）**：① schema 占位 Tensor 或 fallback；② **先完整计算 reduced/reference/bit_equal/finite/versions 并原子落盘 result，再 release**；release 包 try/except 记录 release_rc/error 后重 flush；③ 重冻 run_probe 新 SHA/stage identity；31 用 1308632 重建 identity/plan v4、fresh out、port 29531 预检，重跑同小格取完整结果；large 等完整 small + 32 有限核。H6/A13/official 不变；服务 aa3e root 1308632。
+- **33 最终归档核（v3 收口）**：SUMS `88b823a4…` 16/16 OK；commit `064d469`（17 文件）；window `c291b877…`；rank0 result `33410194…`/trace `1fb6bf87…`、rank1 `300eebfd…`/`7e7b05a1…`、child stdout `cb1aa6ed…`/stderr `37177294…`、restore manifest `5deee436…`/joint `861044f4…` 均命中；restore branch aa3e-noop、root 1308632/start 398926792、五 PID、四检全 true、无残留。**A14 v3 收口 = KFC liveness 成立 + release harness 待修**；后续 35 修复重冻 → 31 v4 重跑完整数值 → large；Grouped-specific/依赖口径不变（supported_but_unproven）。
 
 ## 9. 本地核对副本
 
