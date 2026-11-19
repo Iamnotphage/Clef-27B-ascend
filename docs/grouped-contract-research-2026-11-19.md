@@ -1601,3 +1601,16 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 3. **精确五 PID**：`1337814/1337961/1337962/1337979/1337980`；survivors 措辞用“attributed survivors / child PGID 无 survivor”，不写全树无 survivor；`planonly-rerun.txt` 需含原始命令/输出/diff（不只 SHA 声明）。
 
 **状态**：内容基本 PASS，包未闭；31 修正并提交后 32 再审，给 readiness/包 SHA。**无 GO/不执行。**
+
+## 90. execution-v1 最终包核验（a31e044，SUMS afb741c7 11/11）
+
+**包**：commit `a31e044`，SHA256SUMS `afb741c7…` **11/11 OK**；目录 `h11-observe-execution-v1/`；31 报远端 cell `execution-v1/` 11 文件 SHA 与本地逐一相同（本地无法直读远端，记 31 报告）。
+
+**独立核验（只读）**：
+- `collect-raw.sh`：`BODIES=/workspace/yangchen/work/grouped-deepdive-cell-a15-large`；`need_file/need_dir` 缺失显式 `MISSING REQUIRED FILE/DIR` 并 FAIL（不再 `|| true`）；`meta/sources.txt` 记录 source→archive；sidecar/plan/root-identity 从 CELL、body 从 A15-large；device 源头 `/root/ascend/log/run/device-0|1/device-<pid>_<ts>.log`、`run/plog`、`vllm_ascend`，时间窗整文件、不按 PID。
+- `preflight-rescan.sh`：新增精确 PID 集合断言，`validation-readonly.txt` 含 `PASS PID set exact 1337814/1337961/1337962/1337979/1337980`，仍 `RESULT: ALL PASS (rc=0)`。
+- `restore-and-failure.txt`：成功门为“attributed survivors 为空（window no_survivors 判定）”。
+- `planonly-rerun.txt` 附 `sha256sum`/`diff` 实测；`planonly-rerun-output.json` 原始输出 SHA **c95ae5c3…**，与原 plan 逐字节相同。
+- argv 60/61、stage/venv 绝对、env 仅两项 sidecar、唯一 restore 不变。
+
+**状态**：包内容与证据**补齐**；仍无设备 GO/未执行 cell；交 32 按 `a31e044`/`afb741c7` 复审原件，给 readiness/包 SHA。条件项保持。
