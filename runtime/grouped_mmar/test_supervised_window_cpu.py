@@ -760,6 +760,60 @@ class AttributedProcessTest(unittest.TestCase):
                 pass
             win.enable_subreaper()
 
+    def test_fake_restore_reaches_pid1_after_disable(self):
+        self.assertTrue(win.enable_subreaper())
+        root = Path(tempfile.mkdtemp(prefix='grouped-mmar-fake-restore-'))
+        run_dir = root / 'run'
+        run_dir.mkdir()
+        restore_output = root / 'restore'
+        restore_output.mkdir()
+        manifest = restore_output / 'launch-manifest.json'
+        script = root / 'fake_restore.py'
+        script.write_text(
+            'import json, os, sys, time\n'
+            'manifest = sys.argv[1]\n'
+            'if os.fork() == 0:\n'
+            '    os.setsid()\n'
+            '    if os.fork() == 0:\n'
+            '        with open(manifest, "w") as handle:\n'
+            '            json.dump({"pid": os.getpid()}, handle)\n'
+            '        time.sleep(60)\n'
+            '        os._exit(0)\n'
+            '    os._exit(0)\n'
+            'sys.exit(0)\n')
+        plan = {'restore_argv': [sys.executable, str(script), str(manifest)],
+                'restore_output': str(restore_output)}
+        result = {}
+        calls = []
+        original = win.start_restore
+
+        def counted(*args, **kwargs):
+            calls.append(1)
+            return original(*args, **kwargs)
+
+        pid = None
+        try:
+            with mock.patch.object(win, 'start_restore', side_effect=counted):
+                self.assertTrue(win.begin_restore(plan, run_dir, result))
+            self.assertTrue(result['subreaper_restored'])
+            self.assertEqual(len(calls), 1)
+            deadline = time.time() + 5
+            while time.time() < deadline and not manifest.is_file():
+                time.sleep(0.05)
+            self.assertTrue(manifest.is_file())
+            pid = int(json.loads(manifest.read_text())['pid'])
+            live = win.wait_restored_root(pid, timeout=5, interval=0.05)
+            self.assertIsNotNone(live)
+            self.assertEqual(live['ppid'], 1)
+            self.assertEqual(live['pgid'], pid)
+        finally:
+            if pid is not None:
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            win.enable_subreaper()
+
     def test_protected_identity_is_not_signaled(self):
         sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
                                    start_new_session=True)

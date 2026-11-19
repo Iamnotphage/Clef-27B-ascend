@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot/A15/arm_output tests (18)",
-      "sha256": "c11f4284c63c19a0df12a41e160367247bb13af5d9e9d20bcc2516951f3717ab",
-      "bytes": 11152
+      "sha256": "01fd2f54bc01cb34dd0655698576c6a0ec9f0b543b914f1ed22037c877e79e9b",
+      "bytes": 11437
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -66,9 +66,9 @@
       "bytes": 47325
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (38; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, Linux real-process fixtures)",
-      "sha256": "6f6a3cc91f540e208dd5fed007b435feaa3c7b3169fdd9c413eb675f1898c92d",
-      "bytes": 38062
+      "role": "CPU window control-flow tests (39; choices, attribution/drift/unknown/dead-leader, subreaper gate/plan-only/lifecycle, drift survivor, immediate-cleanup, adopted-chain, protected/drift no-signal, restored-root wait, fake_restore to PID1, Linux real-process fixtures)",
+      "sha256": "0c81786a6c86cc78d0151324b29b623c1d054054e87e3b75b136cacd76c4b5be",
+      "bytes": 40245
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "f25dfef46fa214d3e78e0c9772f5954bb1018a10c8bcb23f6ce147e8d5de2786",
-      "bytes": 31788
+      "sha256": "7a7c28fa9c5cf1fa0e3d694485f81f5d6155dc33eb740d325f93e4fa93646ea7",
+      "bytes": 32078
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "18/18",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "38/38 (6 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+      "test_supervised_window_cpu.py": "39/39 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -423,8 +423,8 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "b77530bc", "test_supervised_window_cpu.py": "6f6a3cc9", "cpu": "65/65 (18+9+38; 6 Linux-only skipped on macOS)"},
-    "subreaper_lifecycle": "before start_restore the window clears PR_SET_CHILD_SUBREAPER via begin_restore(); if clearing fails the restore is blocked and no second tree starts. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set, and to PID1 (not the window) after disabling, so the strict ppid1/pgid-self restore contract is reachable; the fixture is skipped on macOS and pending 31's Linux run.",
+    "freeze": {"supervised_probe_window.py": "b77530bc", "test_supervised_window_cpu.py": "0c81786a", "test_probe_cpu.py": "01fd2f54", "cpu": "66/66 (18+9+39; 7 Linux-only skipped on macOS)"},
+    "subreaper_lifecycle": "before start_restore the window clears PR_SET_CHILD_SUBREAPER via begin_restore(); if clearing fails the restore is blocked and no second tree starts. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set, and to PID1 (not the window) after disabling. A second Linux-only fake_restore fixture runs the full path: enable -> cleanup/gate pass -> begin_restore (disable) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self within timeout; only one restore is started and the strict identity gate is unchanged. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
       "outcome": "34/34 window tests OK on Linux, including 5 real-process cases; F2/F3 probes pass",
