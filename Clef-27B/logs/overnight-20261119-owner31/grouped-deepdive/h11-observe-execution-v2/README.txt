@@ -8,7 +8,7 @@ h11-observe-execution-v2 — H11 观测 v2 执行命令包（CPU-only 准备；�
   /logs 均为 h11-observe-v2；旧 v1 目录未改动。
 - 当前**不是 v2 设备 GO**：未停服、未启动 torchrun payload、未跑 rank/NPU；仅 CPU/只读准备。
 - 冻结产品未变：stage e38b541 / run_probe 8e308804 / window 1f780bf8 / binding 101660f8 /
-  adapter d181b15a；未重 stage、未重跑 Linux40。rank helper 与 v1 同 blob（a4b76676）。
+  adapter d181b15a；未重 stage、未重跑 Linux40。rank helper 为 v2 绑定版（SHA 68dc9e2c；默认 CELL/RUN 为 -v2，支持 --run；非 v1 a4b76676）。
 
 新身份与 plan
 -------------
