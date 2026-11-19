@@ -6,6 +6,10 @@ Status: **CPU review evidence, device not executed**. Self-contained for indepen
 
 The unit `build_deps` regression now also asserts `deps.ab.prod_env == {}`; unit test SHA is `53d984ec043518e50bde24f60a55446b0a4807703feb7e0c6b91dbae40c16d96`. Entry (`a1ca26cf…`), manifest (`31202d27…`), execution stage `00e3bdb8…` and all device-facing bytes are unchanged. The 18 unit tests still pass; the 4 real-method integration tests cover `restore_prod` with `prod_env={}` end to end.
 
+## rev4.2 addendum (ownership boundary during 31's candidate window)
+
+The rev4 statement that the production head is f810 was true at 00:57:51Z, immediately after cc34's audited revert. At 00:59:5x owner31 legitimately started the candidate deploy and installed head aa3e + guard 36eaff44; during that window **head=aa3e and guard=36eaff are the expected owner state**. No external party, including cc34, may run `--check`/`--apply`/`--revert` or any "restore" against `/workspace/yangchen/work/src/vllm` or `/workspace/yangchen/Clef-27B-ascend/runtime` until owner31 announces closure. cc34 has stopped all production reads/writes and uses only temporary stages/trees.
+
 ## 0. Frozen identities (rev4)
 
 | Object | Path | SHA-256 |
@@ -47,7 +51,7 @@ Tests added: real `SourceControl`/`ServiceAB` methods against a temporary tree/g
 3. post-stop switch exception → real `recover` → real adapter revert + f810 switch + `restore_prod` → OPP/LD compare;
 4. independent restore success after deploy.
 
-**Disclosure:** while writing test 2, its first version left `--tree` at the production default and the real installer switched the production head to aa3e. Detected immediately; restored to f810 with the audited installer `--revert` using the existing f810 preimage backup `/workspace/yangchen/logs/joint-fused-attention-20261119/phase0/clef_joint_schema.py.preimage`. Installer report `/tmp/cc34-production-source-restore.json` SHA `f7a2e6d1…e009` records `state_before=postimage`, `state_after=preimage`, `ready=true`. Current production head is `f8101b98…`, guard `76595657…`. The test now pins temp tree/log root, rejects any other tree in `build_deps`, and asserts production f810 is byte-identical after the run.
+**Disclosure:** while writing test 2, its first version left `--tree` at the production default and the real installer switched the production head to aa3e. Detected immediately; restored to f810 with the audited installer `--revert` using the existing f810 preimage backup `/workspace/yangchen/logs/joint-fused-attention-20261119/phase0/clef_joint_schema.py.preimage`. Installer report `/tmp/cc34-production-source-restore.json` SHA `f7a2e6d1…e009` records `state_before=postimage`, `state_after=preimage`, `ready=true`. At 00:57:51Z the production head was `f8101b98…`, guard `76595657…` (superseded by owner31's 00:59:5x candidate window; see rev4.2). The test now pins temp tree/log root, rejects any other tree in `build_deps`, and asserts production f810 is byte-identical after the run.
 
 ## 2. Entry full file: `runtime/candidate_service_phase.py`
 
