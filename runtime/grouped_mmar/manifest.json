@@ -1,6 +1,6 @@
 {
   "schema": "grouped-mmar-probe-package/1",
-  "status": "cpu_frozen_device_pending",
+  "status": "closed_environment_blocked",
   "branch": "ao/resume-cc/grouped-mmar-research-20261119",
   "base_commit": "0db4d21",
   "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "35d4895249c9db1ef3fce5f6a3c8c612a99f8b32107d8514bf138e8b4f31b0a4",
-      "bytes": 15781
+      "sha256": "536e14d182093a164cf6a99b6130a26b1de28affc4f184ed596f62d6c6139614",
+      "bytes": 17186
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,7 +242,7 @@
     "default_arm_timeout_seconds": 240,
     "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
   },
-  "priority_note": "A12 official sample failed with the same stream47/AICORE hang and mc2_server chip:5 unsupported; A13 MatMulAllReduce control is the next decisive arm; A8/H6 are cheap confirmations; H1/H2/H3/H11/H4/H5/H7 are confirmation/low priority; platform mc2_server support pending 33/31",
+  "priority_note": "Closed: mc2_server chip:5 unsupported; H1-H12 closed for the hang; A13 control kept unexecuted for a future supported platform; no further Grouped device arms",
   "a12_result": {
     "status": "failed_official_sample_same_hang",
     "window_sha256": "77528fdf076d6600",
@@ -285,6 +285,20 @@
     "purpose": "distinguish MC2 common-path/platform failure from grouped-op-specific failure",
     "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
     "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
-    "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119"
+    "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119",
+    "status": "paused_unexecuted_environment_blocked"
+  },
+  "closure": {
+    "root_cause": "mc2_server.tar.gz not loaded on chip:5; MC2 KFC AICPU task has no implementation; AICORE waits on stream 47",
+    "evidence": {
+      "mc2_server_sha256": "712638354c71dff584651221d3c1227a62d809ed7de325e93c1ffa5926de25a0",
+      "package_load_ini_sha256": "38b4b47eb913cf1085561f45e65f34545947a6650a0170ec4e4c333a0dc1912f",
+      "libmc2_server_json_sha256": "8e1346767b5c88393c01c4e94ae6eaac3d7ece558b733f496a7ed85c75537e52",
+      "libaicpu_custom_sha256": "ce4f21b605b149bc9274593746c79604d2fc8197007b3e4ffd4951ae14c5e7c7",
+      "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae"
+    },
+    "a12": "official sample failed identically; supervision/recovery chain PASS",
+    "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
+    "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR"
   }
 }

@@ -1,6 +1,6 @@
 # Grouped MMAR 深挖首包（CPU 冻结，设备未执行）
 
-状态：**首包源码/计划/CPU 控制流测试完成，待 31 stage/编译/设备执行、32 preflight**。
+状态：**Grouped 深挖结案 = mc2_server 在 chip:5 不支持（环境阻塞）；H1–H12 对挂起结案；官方 aa3e/f810 默认、入口、指标不变。** 首包/窗口/A12 证据保留；A13 代码保留未执行。
 本包只研究 `aclnnGroupedMatMulAllReduce` 挂起；不改官方 aa3e 入口/默认/指标，不写服务 tree/guard/vendor，
 不含服务生命周期与 f810 回退。旧 v4r1 包与 raw 原样保留，本目录为独立研究包。
 
@@ -80,6 +80,11 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 - 其他：workspace 16,777,216（与 v4r1 同）；两 rank hcom name 已创建；per-PID maps 实际加载 libhccl/opapi_math/opapi_transformer/hcomm/ascendcl/nnopbase，hccl_fwk absent；binary_pids [1301080]。
 - 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
 - **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
+
+## 最终结案（2026-11-19）
+
+32/31 独立核验 mc2-support 证据包（5/5 SHA 通过）：`mc2_server.tar.gz` SHA `71263835…`（873,250 B，私有头 `aa55aa55`）；`ascend_package_load.ini` 中 `mc2_server` `optional:true`、`load_as_per_soc:false`；`libmc2_server.json` 明确 `HcclLaunchAicpuKernel/Mc2AicpuTaskCacheClearKernel/Mc2ServerKernel` 均来自 `libmc2_server.so`。A12 plog 两 device 均在 TDT 启动阶段 `current device chip:5 does not support package:mc2_server.tar.gz`，包未加载；AICPU 仅从 `libccl_kernel.so` 取 KFC ResInit/SrvLaunch，MC2 KFC 任务无实现 → AICORE 等待 → stream 47 pending/507046（样例）或 239 s 挂起（v4r1）→ `DestroyAicpuComm` 50 s×2。
+**结论：与 binding/lifetime/comm 创建无关；Grouped MC2 在本机 A3（Ascend910_9382）/CANN 9.2.1 不可运行。** 暂停 H6/H7/H12/A8/A13 及所有 Grouped 设备臂；A13 代码保留作未来平台支持时的控制；不改官方默认/指标/CSV，不新建 PR。A12 监督/恢复链已在真实失败下 PASS（rc0 假成功被日志门拦、aa3e-noop 恢复、五 PID/四检全过）。证据：`a12-cell/`（SUMS 10/10）、31 `mc2-support/`（SUMS 5/5，SUMS SHA `1f5e62c8…`）、32 commit `34ccde7`、31 commit `e33d5f7`、35 commit `d4b600c`。
 
 ## A13 MatMulAllReduce 控制（下一格）
 
