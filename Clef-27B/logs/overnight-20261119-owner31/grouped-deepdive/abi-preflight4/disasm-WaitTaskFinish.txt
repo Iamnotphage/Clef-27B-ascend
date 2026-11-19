@@ -1,0 +1,119 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+00000000007b1b84 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base>:
+  7b1b84:	a9bd7bfd 	stp	x29, x30, [sp, #-48]!
+  7b1b88:	910003fd 	mov	x29, sp
+  7b1b8c:	a90153f3 	stp	x19, x20, [sp, #16]
+  7b1b90:	aa0003f4 	mov	x20, x0
+  7b1b94:	f90013f5 	str	x21, [sp, #32]
+  7b1b98:	12001c35 	and	w21, w1, #0xff
+  7b1b9c:	97eb6919 	bl	28c000 <_ZN13AicpuKfcUtils15TraceProfSubmitEv@plt>
+  7b1ba0:	2a0003f3 	mov	w19, w0
+  7b1ba4:	35000460 	cbnz	w0, 7b1c30 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0xac>
+  7b1ba8:	37000095 	tbnz	w21, #0, 7b1bb8 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x34>
+  7b1bac:	9143ce80 	add	x0, x20, #0xf3, lsl #12
+  7b1bb0:	3946d000 	ldrb	w0, [x0, #436]
+  7b1bb4:	360000e0 	tbz	w0, #0, 7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1bb8:	aa1403e0 	mov	x0, x20
+  7b1bbc:	97eb56d9 	bl	287720 <_ZN16TaskOrchestrator20WaitMainStreamFinishEP15AicpuComContext@plt>
+  7b1bc0:	7100001f 	cmp	w0, #0x0
+  7b1bc4:	2a0003f3 	mov	w19, w0
+  7b1bc8:	7a561804 	ccmp	w0, #0x16, #0x4, ne  // ne = any
+  7b1bcc:	540000c1 	b.ne	7b1be4 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x60>  // b.any
+  7b1bd0:	f94013f5 	ldr	x21, [sp, #32]
+  7b1bd4:	2a1303e0 	mov	w0, w19
+  7b1bd8:	a94153f3 	ldp	x19, x20, [sp, #16]
+  7b1bdc:	a8c37bfd 	ldp	x29, x30, [sp], #48
+  7b1be0:	d65f03c0 	ret
+  7b1be4:	52800061 	mov	w1, #0x3                   	// #3
+  7b1be8:	2a0103e0 	mov	w0, w1
+  7b1bec:	97eb6ab9 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7b1bf0:	3607ff00 	tbz	w0, #0, 7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1bf4:	97eb725f 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7b1bf8:	360006a0 	tbz	w0, #0, 7b1ccc <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x148>
+  7b1bfc:	d2801640 	mov	x0, #0xb2                  	// #178
+  7b1c00:	97eb6780 	bl	28ba00 <syscall@plt>
+  7b1c04:	aa0003e5 	mov	x5, x0
+  7b1c08:	52800060 	mov	w0, #0x3                   	// #3
+  7b1c0c:	72a02000 	movk	w0, #0x100, lsl #16
+  7b1c10:	d0006a23 	adrp	x3, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1c14:	d0006a22 	adrp	x2, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1c18:	9106a063 	add	x3, x3, #0x1a8
+  7b1c1c:	9130e042 	add	x2, x2, #0xc38
+  7b1c20:	5280ede4 	mov	w4, #0x76f                 	// #1903
+  7b1c24:	52800041 	mov	w1, #0x2                   	// #2
+  7b1c28:	97eba132 	bl	29a0f0 <DlogRecord@plt>
+  7b1c2c:	17ffffe9 	b	7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1c30:	52800061 	mov	w1, #0x3                   	// #3
+  7b1c34:	7100501f 	cmp	w0, #0x14
+  7b1c38:	54000620 	b.eq	7b1cfc <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x178>  // b.none
+  7b1c3c:	2a0103e0 	mov	w0, w1
+  7b1c40:	97eb6aa4 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7b1c44:	3607fc60 	tbz	w0, #0, 7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1c48:	97eb724a 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7b1c4c:	36000220 	tbz	w0, #0, 7b1c90 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x10c>
+  7b1c50:	d2801640 	mov	x0, #0xb2                  	// #178
+  7b1c54:	97eb676b 	bl	28ba00 <syscall@plt>
+  7b1c58:	aa0003e5 	mov	x5, x0
+  7b1c5c:	52800060 	mov	w0, #0x3                   	// #3
+  7b1c60:	2a1303e7 	mov	w7, w19
+  7b1c64:	72a02000 	movk	w0, #0x100, lsl #16
+  7b1c68:	d0006a26 	adrp	x6, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1c6c:	d0006a23 	adrp	x3, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1c70:	9130a0c6 	add	x6, x6, #0xc28
+  7b1c74:	9106a063 	add	x3, x3, #0x1a8
+  7b1c78:	d00069c2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7b1c7c:	5280ed64 	mov	w4, #0x76b                 	// #1899
+  7b1c80:	910a0042 	add	x2, x2, #0x280
+  7b1c84:	52800041 	mov	w1, #0x2                   	// #2
+  7b1c88:	97eba11a 	bl	29a0f0 <DlogRecord@plt>
+  7b1c8c:	17ffffd1 	b	7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1c90:	d2801640 	mov	x0, #0xb2                  	// #178
+  7b1c94:	97eb675b 	bl	28ba00 <syscall@plt>
+  7b1c98:	52800061 	mov	w1, #0x3                   	// #3
+  7b1c9c:	aa0003e5 	mov	x5, x0
+  7b1ca0:	2a1303e7 	mov	w7, w19
+  7b1ca4:	2a0103e0 	mov	w0, w1
+  7b1ca8:	d0006a26 	adrp	x6, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1cac:	d0006a23 	adrp	x3, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1cb0:	9130a0c6 	add	x6, x6, #0xc28
+  7b1cb4:	9106a063 	add	x3, x3, #0x1a8
+  7b1cb8:	d00069c2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7b1cbc:	5280ed64 	mov	w4, #0x76b                 	// #1899
+  7b1cc0:	91094042 	add	x2, x2, #0x250
+  7b1cc4:	97eba10b 	bl	29a0f0 <DlogRecord@plt>
+  7b1cc8:	17ffffc2 	b	7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1ccc:	d2801640 	mov	x0, #0xb2                  	// #178
+  7b1cd0:	97eb674c 	bl	28ba00 <syscall@plt>
+  7b1cd4:	52800061 	mov	w1, #0x3                   	// #3
+  7b1cd8:	aa0003e5 	mov	x5, x0
+  7b1cdc:	d0006a23 	adrp	x3, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1ce0:	2a0103e0 	mov	w0, w1
+  7b1ce4:	9106a063 	add	x3, x3, #0x1a8
+  7b1ce8:	d0006a22 	adrp	x2, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1cec:	5280ede4 	mov	w4, #0x76f                 	// #1903
+  7b1cf0:	9131c042 	add	x2, x2, #0xc70
+  7b1cf4:	97eba0ff 	bl	29a0f0 <DlogRecord@plt>
+  7b1cf8:	17ffffb6 	b	7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1cfc:	52800040 	mov	w0, #0x2                   	// #2
+  7b1d00:	97eb6a74 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7b1d04:	3607f660 	tbz	w0, #0, 7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>
+  7b1d08:	d2801640 	mov	x0, #0xb2                  	// #178
+  7b1d0c:	97eb673d 	bl	28ba00 <syscall@plt>
+  7b1d10:	2a1303e7 	mov	w7, w19
+  7b1d14:	aa0003e5 	mov	x5, x0
+  7b1d18:	d0006a26 	adrp	x6, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1d1c:	d0006a23 	adrp	x3, 14f7000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xc094>
+  7b1d20:	9130a0c6 	add	x6, x6, #0xc28
+  7b1d24:	9106a063 	add	x3, x3, #0x1a8
+  7b1d28:	d00069c2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7b1d2c:	5280ed64 	mov	w4, #0x76b                 	// #1899
+  7b1d30:	91094042 	add	x2, x2, #0x250
+  7b1d34:	52800041 	mov	w1, #0x2                   	// #2
+  7b1d38:	52800060 	mov	w0, #0x3                   	// #3
+  7b1d3c:	97eba0ed 	bl	29a0f0 <DlogRecord@plt>
+  7b1d40:	17ffffa4 	b	7b1bd0 <_ZN15AicpuKfcProcess14WaitTaskFinishEP15AicpuComContextb@@Base+0x4c>

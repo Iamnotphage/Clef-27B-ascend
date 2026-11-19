@@ -1,0 +1,27 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000797450 <_ZN13AicpuKfcUtils10GetSendCntEP15AicpuComContext@@Base>:
+  797450:	b40000c0 	cbz	x0, 797468 <_ZN13AicpuKfcUtils10GetSendCntEP15AicpuComContext@@Base+0x18>
+  797454:	f9405c01 	ldr	x1, [x0, #184]
+  797458:	b940c000 	ldr	w0, [x0, #192]
+  79745c:	8b000020 	add	x0, x1, x0
+  797460:	3940c800 	ldrb	w0, [x0, #50]
+  797464:	d65f03c0 	ret
+  797468:	52800000 	mov	w0, #0x0                   	// #0
+  79746c:	d65f03c0 	ret
+
+0000000000797470 <_ZN13AicpuKfcUtils10GetRecvCntEP15AicpuComContext@@Base>:
+  797470:	b4000100 	cbz	x0, 797490 <_ZN13AicpuKfcUtils10GetRecvCntEP15AicpuComContext@@Base+0x20>
+  797474:	f9405c02 	ldr	x2, [x0, #184]
+  797478:	b940c001 	ldr	w1, [x0, #192]
+  79747c:	79418800 	ldrh	w0, [x0, #196]
+  797480:	8b020021 	add	x1, x1, x2
+  797484:	8b001820 	add	x0, x1, x0, lsl #6
+  797488:	3940cc00 	ldrb	w0, [x0, #51]
+  79748c:	d65f03c0 	ret
+  797490:	52800000 	mov	w0, #0x0                   	// #0
+  797494:	d65f03c0 	ret
