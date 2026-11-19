@@ -70,6 +70,11 @@
       "sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
       "bytes": 41364
     },
+    "runtime/grouped_mmar/readaddrm_msg_timing.md": {
+      "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
+      "sha256": "272f424d1fda87c31a6fb95172d48d10fd32470249af0dc23c7c6c8f8434ae27",
+      "bytes": 4149
+    },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
       "sha256": "ae7289842d124bf30e8f0df6fd3fd7ad9ebf3cea06b2da2bf77e9ed93f1a283e",
@@ -87,8 +92,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "a470418c5a53e8db01c64639428d1d4ea80509c1878365896eec1bcbb9eb23c8",
-      "bytes": 40102
+      "sha256": "ce0fe12c7fbc32a96754544ed441461ec05c9fbd610f070ccdee3bd887afa951",
+      "bytes": 40899
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -456,6 +461,25 @@
     },
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
+  },
+  "readaddrm_timing": {
+    "status": "read-only derivation; conditional on a non-blocking ReadApiValidMsg",
+    "source": "abi-preflight5 disasm-ReadAddrMsg 9ec8e134, SUMS ae91a530, libccl 2281deca",
+    "doc": "runtime/grouped_mmar/readaddrm_msg_timing.md",
+    "design_sha256": "272f424d1fda87c31a6fb95172d48d10fd32470249af0dc23c7c6c8f8434ae27",
+    "proven": [
+      "clock_gettime(4)=CLOCK_MONOTONIC_RAW; start/elapsed in nanoseconds via *1e9",
+      "20 s = 0x4a817c800 ns and 960 s = 0xdf84758000 ns constants",
+      "w24 = ubfiz(w24,#1,#7): 1,2,4,8,16,32,64,128,0; thresholds 20..2560 s",
+      "no sleep/nanosleep/usleep/select/poll call exists in ReadAddrMsg; 20 s*w24 is the timeout-log interval, not a sleep",
+      "the 960 s hard check sits inside the timeout-log branch; the first threshold above 960 s is 1280 s, so the ceiling is about 1280 s plus one poll iteration (960-1280 s if a poll straddles the cutoff), not 2560 s",
+      "180 s lies in the 160-320 s log interval; it is not a return point and an external 180/240 s window truncates first"
+    ],
+    "unproven": [
+      "ReadApiValidMsg (0x7d6f20) body is absent from abi5; it may block or sleep internally, so the non-sleep and 1280 s bound are conditional",
+      "any ctx+0xf31d turn path is not in this disassembly (only ctx+0xF31F0 is loaded here)"
+    ],
+    "request": "33/31 add one read-only disassembly of ReadApiValidMsg 0x7d6f20 (or source) to check sleep/nanosleep/poll before the 1280 s ceiling is final; static path and the actual cell remain separate"
   },
   "abi_turn_analysis": {
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
