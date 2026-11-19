@@ -140,9 +140,16 @@ def build_deps(a):
         image_url='', port=a.port, rounds=0, reps=0, warmup=0, http_timeout=0.0,
         stop_timeout=a.stop_timeout, wait_timeout=a.wait_timeout)
     ab = sc_mod.SourceControl(ns)
-    # SourceControl.switch_source/restore_prod write through self.state; the ebca
-    # main() seeds it, but a library caller must do the same.
+    # Complete context for every real SourceControl/ServiceAB method this entry
+    # calls (ebca main() normally seeds these before use):
+    #   switch_source        state["source_switches"], source_switches, active_source
+    #   restore_prod         state["steps"], prod_env (saved/restored only; the
+    #                        launch env is the explicit clean dict)
+    #   verify_restored_env  state["steps"], win.PROC_ROOT, args.clean_env_expect
+    # __init__ already provides args/run_dir/win, active_source/source_switches,
+    # service_check_applied, attribution_unknown and cleanup_unconfirmed.
     ab.state = initial_state(sc_mod.base)
+    ab.prod_env = {}
     return SimpleNamespace(strict=strict, phase=phase, ab=ab, acceptance=acceptance,
                            manifest=read(a.manifest), base_manifest=read(a.base_manifest))
 

@@ -33,9 +33,10 @@
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `runtime/candidate_service_phase.py` | `d3aead16060a46e8817126345bcc3f84b5cd6778716f508e4fb08d19633cb98b` |
+| `runtime/candidate_service_phase.py` | `a1ca26cf34cd2ca0ff47787d10e06bf6e395b794882c59c938691b05d62e1d44` |
 | `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |
 | `runtime/test_candidate_service_phase.py` | `adb7f6c1ab18afea4b4cb47cdbe837138ec2469868be6384f9bf3bfcb91660ba` |
+| `runtime/test_candidate_service_integration.py` | `85c906b5af5e224191da748bea8c96843b0ea5e7fbb34e9a08a0c0e3603e384a` |
 | `runtime/test_candidate_manifest.py` | `8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a` |
 | `runtime/final_acceptance_candidate_manifest.json` | `31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4` |
 | `runtime/final_acceptance_candidate_manifest.diff.json` | `646ba8d89a07c9a647bea1a6429b617d22b409fb6aa9ca9f68b1fc37c6c9a9ab` |
@@ -183,7 +184,9 @@ sha256sum "$B/runtime/apply_joint_fused_attention.py" \
 - `runtime/test_candidate_manifest.py`：8 项通过（含真实 cc7 基线时 8/8），验证派生确定性、候选 SHA `31202d…`、13 项白名单、非白名单/额外 env/错误 preimage 全部拒绝。
 - `runtime/test_candidate_service_phase.py`：18 项通过，覆盖 plan-only 零变更、成功部署顺序与 clean env、停服失败不安装、启动失败回原、端口未知阻断、source 未知阻断、停前 PGID 未归属阻断、pending client 阻断、restore 成功/错误记录/phase 不匹配/停服失败不启动、adapter 失败不误启动、CLI 互斥门，以及 `build_deps` 必须为 ebca `SourceControl` 初始化 `state` 的回归。
 - `runtime/candidate_manifest.py --check` 对真实 cc7 manifest 复算候选 SHA 一致。
-- 全部测试不 import torch/NPU、不访问服务、不发请求；设备侧真实执行仍由 31 完成。
+- `runtime/test_candidate_service_integration.py`：3 项真实方法级 CPU 集成通过（需真实冻结 bundle fixtures）：成功 deploy（真实 source/guard installer 在临时 tree/guard 上运行）、停后 switch 异常→真实 recovery→restore 成功、独立 restore 成功。仅替换 stop/launch/wait、/proc/NPU 扫描、HTTP 四检与 d0 服务发现/verify 等外部边界；真实 `SourceControl`/`ServiceAB` 的 `switch_source`/`apply_service_check`/`revert_service_check`/`restore_prod`/`verify_restored_env` 原样执行。
+- 字段契约审计：本入口调用的真实方法只依赖 `state`（`source_switches`、`steps`）与 `prod_env`（`restore_prod` 保存/恢复，launch 使用显式 clean env）；`__init__` 已提供 args/run_dir/win、active_source/source_switches、service_check_applied、attribution_unknown、cleanup_unconfirmed。`build_deps()` 现已同时初始化 `state` 与 `prod_env`。
+- 全部测试不 import torch/NPU、不访问生产服务或生产文件、不发模型请求；设备侧真实执行仍由 31 完成。
 
 ## 6. 待现场填写与剩余设备步骤
 
