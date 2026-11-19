@@ -1,0 +1,149 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000754568 <RunAicpuKfcResInitV2@@Base>:
+  754568:	a9be7bfd 	stp	x29, x30, [sp, #-32]!
+  75456c:	910003fd 	mov	x29, sp
+  754570:	f9000bf3 	str	x19, [sp, #16]
+  754574:	b4000300 	cbz	x0, 7545d4 <RunAicpuKfcResInitV2@@Base+0x6c>
+  754578:	aa0003f3 	mov	x19, x0
+  75457c:	52800061 	mov	w1, #0x3                   	// #3
+  754580:	52800020 	mov	w0, #0x1                   	// #1
+  754584:	97ece053 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  754588:	370004e0 	tbnz	w0, #0, 754624 <RunAicpuKfcResInitV2@@Base+0xbc>
+  75458c:	f9400260 	ldr	x0, [x19]
+  754590:	b50001a0 	cbnz	x0, 7545c4 <RunAicpuKfcResInitV2@@Base+0x5c>
+  754594:	52800020 	mov	w0, #0x1                   	// #1
+  754598:	97ecf066 	bl	290730 <hrtSetWorkModeAicpu@plt>
+  75459c:	52800061 	mov	w1, #0x3                   	// #3
+  7545a0:	2a0003f3 	mov	w19, w0
+  7545a4:	35000760 	cbnz	w0, 754690 <RunAicpuKfcResInitV2@@Base+0x128>
+  7545a8:	52800020 	mov	w0, #0x1                   	// #1
+  7545ac:	97ece049 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7545b0:	370009e0 	tbnz	w0, #0, 7546ec <RunAicpuKfcResInitV2@@Base+0x184>
+  7545b4:	2a1303e0 	mov	w0, w19
+  7545b8:	f9400bf3 	ldr	x19, [sp, #16]
+  7545bc:	a8c27bfd 	ldp	x29, x30, [sp], #32
+  7545c0:	d65f03c0 	ret
+  7545c4:	39402261 	ldrb	w1, [x19, #8]
+  7545c8:	f9400bf3 	ldr	x19, [sp, #16]
+  7545cc:	a8c27bfd 	ldp	x29, x30, [sp], #32
+  7545d0:	17ed025c 	b	294f40 <_ZN16AicpuHcclProcess17AicpuRpcResInitV2EP14HcclOpResParamb@plt>
+  7545d4:	52800061 	mov	w1, #0x3                   	// #3
+  7545d8:	2a0103e0 	mov	w0, w1
+  7545dc:	97ece03d 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7545e0:	360001e0 	tbz	w0, #0, 75461c <RunAicpuKfcResInitV2@@Base+0xb4>
+  7545e4:	97ece7e3 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7545e8:	360003a0 	tbz	w0, #0, 75465c <RunAicpuKfcResInitV2@@Base+0xf4>
+  7545ec:	d2801640 	mov	x0, #0xb2                  	// #178
+  7545f0:	97ecdd04 	bl	28ba00 <syscall@plt>
+  7545f4:	aa0003e5 	mov	x5, x0
+  7545f8:	52800060 	mov	w0, #0x3                   	// #3
+  7545fc:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754600:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754604:	91066063 	add	x3, x3, #0x198
+  754608:	9106c042 	add	x2, x2, #0x1b0
+  75460c:	72a02000 	movk	w0, #0x100, lsl #16
+  754610:	528003e4 	mov	w4, #0x1f                  	// #31
+  754614:	52800041 	mov	w1, #0x2                   	// #2
+  754618:	97ed16b6 	bl	29a0f0 <DlogRecord@plt>
+  75461c:	52800033 	mov	w19, #0x1                   	// #1
+  754620:	17ffffe5 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  754624:	d2801640 	mov	x0, #0xb2                  	// #178
+  754628:	97ecdcf6 	bl	28ba00 <syscall@plt>
+  75462c:	f9400267 	ldr	x7, [x19]
+  754630:	aa0003e5 	mov	x5, x0
+  754634:	39402266 	ldrb	w6, [x19, #8]
+  754638:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  75463c:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754640:	91066063 	add	x3, x3, #0x198
+  754644:	9107e042 	add	x2, x2, #0x1f8
+  754648:	52800484 	mov	w4, #0x24                  	// #36
+  75464c:	52800021 	mov	w1, #0x1                   	// #1
+  754650:	52800060 	mov	w0, #0x3                   	// #3
+  754654:	97ed16a7 	bl	29a0f0 <DlogRecord@plt>
+  754658:	17ffffcd 	b	75458c <RunAicpuKfcResInitV2@@Base+0x24>
+  75465c:	d2801640 	mov	x0, #0xb2                  	// #178
+  754660:	97ecdce8 	bl	28ba00 <syscall@plt>
+  754664:	52800061 	mov	w1, #0x3                   	// #3
+  754668:	aa0003e5 	mov	x5, x0
+  75466c:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754670:	2a0103e0 	mov	w0, w1
+  754674:	91066063 	add	x3, x3, #0x198
+  754678:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  75467c:	528003e4 	mov	w4, #0x1f                  	// #31
+  754680:	91076042 	add	x2, x2, #0x1d8
+  754684:	52800033 	mov	w19, #0x1                   	// #1
+  754688:	97ed169a 	bl	29a0f0 <DlogRecord@plt>
+  75468c:	17ffffca 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  754690:	7100501f 	cmp	w0, #0x14
+  754694:	54000440 	b.eq	75471c <RunAicpuKfcResInitV2@@Base+0x1b4>  // b.none
+  754698:	2a0103e0 	mov	w0, w1
+  75469c:	97ece00d 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7546a0:	3607f8a0 	tbz	w0, #0, 7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  7546a4:	97ece7b3 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7546a8:	360005e0 	tbz	w0, #0, 754764 <RunAicpuKfcResInitV2@@Base+0x1fc>
+  7546ac:	d2801640 	mov	x0, #0xb2                  	// #178
+  7546b0:	97ecdcd4 	bl	28ba00 <syscall@plt>
+  7546b4:	aa0003e5 	mov	x5, x0
+  7546b8:	52800060 	mov	w0, #0x3                   	// #3
+  7546bc:	2a1303e7 	mov	w7, w19
+  7546c0:	72a02000 	movk	w0, #0x100, lsl #16
+  7546c4:	f0006ca6 	adrp	x6, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7546c8:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7546cc:	9108e0c6 	add	x6, x6, #0x238
+  7546d0:	91066063 	add	x3, x3, #0x198
+  7546d4:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7546d8:	528004c4 	mov	w4, #0x26                  	// #38
+  7546dc:	910a0042 	add	x2, x2, #0x280
+  7546e0:	52800041 	mov	w1, #0x2                   	// #2
+  7546e4:	97ed1683 	bl	29a0f0 <DlogRecord@plt>
+  7546e8:	17ffffb3 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  7546ec:	d2801640 	mov	x0, #0xb2                  	// #178
+  7546f0:	97ecdcc4 	bl	28ba00 <syscall@plt>
+  7546f4:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7546f8:	aa0003e5 	mov	x5, x0
+  7546fc:	91066063 	add	x3, x3, #0x198
+  754700:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754704:	528004e4 	mov	w4, #0x27                  	// #39
+  754708:	910ae042 	add	x2, x2, #0x2b8
+  75470c:	52800021 	mov	w1, #0x1                   	// #1
+  754710:	52800060 	mov	w0, #0x3                   	// #3
+  754714:	97ed1677 	bl	29a0f0 <DlogRecord@plt>
+  754718:	17ffffa7 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  75471c:	52800040 	mov	w0, #0x2                   	// #2
+  754720:	97ecdfec 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  754724:	3607f480 	tbz	w0, #0, 7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  754728:	d2801640 	mov	x0, #0xb2                  	// #178
+  75472c:	97ecdcb5 	bl	28ba00 <syscall@plt>
+  754730:	2a1303e7 	mov	w7, w19
+  754734:	aa0003e5 	mov	x5, x0
+  754738:	f0006ca6 	adrp	x6, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  75473c:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754740:	9108e0c6 	add	x6, x6, #0x238
+  754744:	91066063 	add	x3, x3, #0x198
+  754748:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  75474c:	528004c4 	mov	w4, #0x26                  	// #38
+  754750:	91094042 	add	x2, x2, #0x250
+  754754:	52800041 	mov	w1, #0x2                   	// #2
+  754758:	52800060 	mov	w0, #0x3                   	// #3
+  75475c:	97ed1665 	bl	29a0f0 <DlogRecord@plt>
+  754760:	17ffff95 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>
+  754764:	d2801640 	mov	x0, #0xb2                  	// #178
+  754768:	97ecdca6 	bl	28ba00 <syscall@plt>
+  75476c:	52800061 	mov	w1, #0x3                   	// #3
+  754770:	aa0003e5 	mov	x5, x0
+  754774:	2a1303e7 	mov	w7, w19
+  754778:	2a0103e0 	mov	w0, w1
+  75477c:	f0006ca6 	adrp	x6, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754780:	f0006ca3 	adrp	x3, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754784:	9108e0c6 	add	x6, x6, #0x238
+  754788:	91066063 	add	x3, x3, #0x198
+  75478c:	f0006ca2 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  754790:	528004c4 	mov	w4, #0x26                  	// #38
+  754794:	91094042 	add	x2, x2, #0x250
+  754798:	97ed1656 	bl	29a0f0 <DlogRecord@plt>
+  75479c:	17ffff86 	b	7545b4 <RunAicpuKfcResInitV2@@Base+0x4c>

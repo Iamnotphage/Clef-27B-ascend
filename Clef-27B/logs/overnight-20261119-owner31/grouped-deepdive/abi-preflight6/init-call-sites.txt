@@ -1,0 +1,31 @@
+=== Init(y,j,t,KFCTask*) direct callers ===
+  76192c:	97ecbfed 	bl	2918e0 <_ZN17AicpuKfcRpcServer4InitEyjtP7KFCTask@plt>
+  7b67c4:	97eb9503 	bl	29bbd0 <_ZN17AicpuKfcRpcServer4InitEy@plt>
+
+=== owner context: 0x76192c ===
+  761910:	36002e00 	tbz	w0, #0, 761ed0 <RunAicpuRpcSrvLaunch@@Base+0xb50>
+  761914:	f9405f81 	ldr	x1, [x28, #184]
+  761918:	913402e0 	add	x0, x23, #0xd00
+  76191c:	79418b83 	ldrh	w3, [x28, #196]
+  761920:	aa1303e4 	mov	x4, x19
+  761924:	b940c382 	ldr	w2, [x28, #192]
+  761928:	91004000 	add	x0, x0, #0x10
+  76192c:	97ecbfed 	bl	2918e0 <_ZN17AicpuKfcRpcServer4InitEyjtP7KFCTask@plt>
+  761930:	97ecde88 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  761934:	36002340 	tbz	w0, #0, 761d9c <RunAicpuRpcSrvLaunch@@Base+0xa1c>
+  761938:	d53be053 	mrs	x19, cntvct_el0
+  76193c:	aa1c03e0 	mov	x0, x28
+
+=== owner context: 0x7b67c4 ===
+  7b67b0:	c8dffee0 	ldar	x0, [x23]
+  7b67b4:	36000e40 	tbz	w0, #0, 7b697c <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base+0x20c>
+  7b67b8:	f9405e61 	ldr	x1, [x19, #184]
+  7b67bc:	912d4280 	add	x0, x20, #0xb50
+  7b67c0:	91068000 	add	x0, x0, #0x1a0
+  7b67c4:	97eb9503 	bl	29bbd0 <_ZN17AicpuKfcRpcServer4InitEy@plt>
+  7b67c8:	97eb8ae2 	bl	299350 <_ZN3dfx16ProfilingManager14GetProfL1StateEv@plt>
+  7b67cc:	36000620 	tbz	w0, #0, 7b6890 <_ZN15AicpuKfcProcess23AicpuRunRpcServerForApiEP15AicpuComContexty@@Base+0x120>
+  7b67d0:	d53be057 	mrs	x23, cntvct_el0
+  7b67d4:	910043f5 	add	x21, sp, #0x10
+  7b67d8:	aa1303e0 	mov	x0, x19
+  7b67dc:	97eb6e35 	bl	2920b0 <_ZN12AicpuKfcProf10GetProInstER15AicpuComContext@plt>

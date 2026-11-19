@@ -1,0 +1,45 @@
+
+/usr/local/Ascend/cann-9.2.1/aarch64-linux/devlib/device/libccl_kernel.so:     file format elf64-littleaarch64
+
+
+Disassembly of section .text:
+
+0000000000760468 <RunAicpuKfcResInit@@Base>:
+  760468:	b4000060 	cbz	x0, 760474 <RunAicpuKfcResInit@@Base+0xc>
+  76046c:	f9400000 	ldr	x0, [x0]
+  760470:	17eccef4 	b	294040 <_ZN15AicpuKfcProcess15AicpuRpcResInitEP17HcclCombinOpParam@plt>
+  760474:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
+  760478:	52800061 	mov	w1, #0x3                   	// #3
+  76047c:	2a0103e0 	mov	w0, w1
+  760480:	910003fd 	mov	x29, sp
+  760484:	97ecb093 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  760488:	360001e0 	tbz	w0, #0, 7604c4 <RunAicpuKfcResInit@@Base+0x5c>
+  76048c:	97ecb839 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  760490:	36000200 	tbz	w0, #0, 7604d0 <RunAicpuKfcResInit@@Base+0x68>
+  760494:	d2801640 	mov	x0, #0xb2                  	// #178
+  760498:	97ecad5a 	bl	28ba00 <syscall@plt>
+  76049c:	aa0003e5 	mov	x5, x0
+  7604a0:	52800060 	mov	w0, #0x3                   	// #3
+  7604a4:	b0006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7604a8:	f0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7604ac:	913ba063 	add	x3, x3, #0xee8
+  7604b0:	9106c042 	add	x2, x2, #0x1b0
+  7604b4:	72a02000 	movk	w0, #0x100, lsl #16
+  7604b8:	52803204 	mov	w4, #0x190                 	// #400
+  7604bc:	52800041 	mov	w1, #0x2                   	// #2
+  7604c0:	97ece70c 	bl	29a0f0 <DlogRecord@plt>
+  7604c4:	52800020 	mov	w0, #0x1                   	// #1
+  7604c8:	a8c17bfd 	ldp	x29, x30, [sp], #16
+  7604cc:	d65f03c0 	ret
+  7604d0:	d2801640 	mov	x0, #0xb2                  	// #178
+  7604d4:	97ecad4b 	bl	28ba00 <syscall@plt>
+  7604d8:	52800061 	mov	w1, #0x3                   	// #3
+  7604dc:	aa0003e5 	mov	x5, x0
+  7604e0:	b0006c63 	adrp	x3, 14ed000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x2094>
+  7604e4:	2a0103e0 	mov	w0, w1
+  7604e8:	913ba063 	add	x3, x3, #0xee8
+  7604ec:	f0006c42 	adrp	x2, 14eb000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0x94>
+  7604f0:	52803204 	mov	w4, #0x190                 	// #400
+  7604f4:	91076042 	add	x2, x2, #0x1d8
+  7604f8:	97ece6fe 	bl	29a0f0 <DlogRecord@plt>
+  7604fc:	17fffff2 	b	7604c4 <RunAicpuKfcResInit@@Base+0x5c>
