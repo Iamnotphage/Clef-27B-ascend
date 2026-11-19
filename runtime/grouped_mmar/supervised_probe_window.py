@@ -14,6 +14,7 @@ cell isolation-failed; it never satisfies the success gate.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import os
@@ -23,6 +24,7 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 
@@ -35,7 +37,7 @@ RUNNER_NAMES = {'final_acceptance.py', 'bench_ready.py', 'run_cell.py',
                 'window_probe.py', 'supervised_window.py',
                 'joint_fused_attention_window.py', 'joint_fused_service_ab.py',
                 'joint_fused_source_control.py'}
-FIELDS = ('pid', 'starttime', 'boot_id', 'pgid', 'ppid')
+FIELDS = ('pid', 'starttime', 'boot_id', 'pgid', 'sid', 'ppid')
 
 
 def sha256(path):
@@ -54,18 +56,26 @@ def write_json(path, value):
     Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=1) + '\n')
 
 
-def proc_identity(pid):
+def _read_proc(pid):
+    """Direct /proc identity read; tests must not be able to fake a live process."""
     path = Path('/proc') / str(pid)
     try:
         stat = (path / 'stat').read_text()
         fields = stat[stat.rfind(')') + 2:].split()
         cmdline = (path / 'cmdline').read_bytes().decode(errors='replace').rstrip('\0').split('\0')
-    except FileNotFoundError:
+    except OSError:
         return None
-    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    try:
+        boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    except OSError:
+        boot = ''
     return {'pid': int(pid), 'ppid': int(fields[1]), 'pgid': int(fields[2]),
-            'state': fields[0], 'starttime': fields[19], 'boot_id': boot,
-            'cmdline': cmdline}
+            'sid': int(fields[3]), 'state': fields[0], 'starttime': fields[19],
+            'boot_id': boot, 'cmdline': cmdline}
+
+
+def proc_identity(pid):
+    return _read_proc(pid)
 
 
 def scan():
@@ -87,9 +97,241 @@ def tree(table, root):
         pids |= children
 
 
+def atomic_write_json(path, value):
+    path = Path(path)
+    temp = path.with_name(path.name + '.tmp')
+    temp.write_text(json.dumps(value, ensure_ascii=False, indent=1) + '\n')
+    os.replace(temp, path)
+
+
+def enable_subreaper():
+    """Linux only: orphaned descendants reparent to this window, not to init."""
+    if not sys.platform.startswith('linux'):
+        return False
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        return libc.prctl(36, 1, 0, 0, 0) == 0  # PR_SET_CHILD_SUBREAPER
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _scan_direct():
+    """Real /proc scan; mocked scan() can never make a fake pid signalable."""
+    if not Path('/proc').is_dir():
+        return {}
+    result = {}
+    for entry in Path('/proc').iterdir():
+        if entry.name.isdigit():
+            ident = _read_proc(int(entry.name))
+            if ident is not None:
+                result[ident['pid']] = ident
+    return result
+
+
+class DescendantRegistry:
+    """Records child descendants while they are still reachable by PPID."""
+
+    def __init__(self, root_pid, path, protected, interval=0.2):
+        self.root_pid = int(root_pid)
+        self.path = Path(path)
+        self.protected = set(protected)
+        self.interval = interval
+        self._entries = {}
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = None
+        self._stopped = False
+
+    def _record(self):
+        table = scan()
+        with self._lock:
+            known = {entry['pid'] for entry in self._entries.values()}
+        pids = tree(table, self.root_pid) | known
+        while True:
+            children = {p for p, row in table.items() if row['ppid'] in pids}
+            if children.issubset(pids):
+                break
+            pids |= children
+        self_pid = os.getpid()
+        for pid, row in table.items():
+            if row['ppid'] == self_pid and pid != self.root_pid:
+                pids.add(pid)  # subreaper orphans
+        changed = False
+        now = time.monotonic_ns()
+        with self._lock:
+            for pid in pids:
+                row = table.get(pid)
+                if not row or row['state'] == 'Z' or pid in self.protected or pid == self_pid:
+                    continue
+                key = (pid, row['starttime'], row['boot_id'])
+                if key not in self._entries:
+                    self._entries[key] = {
+                        'pid': pid, 'ppid': row['ppid'], 'pgid': row['pgid'],
+                        'sid': row['sid'], 'starttime': row['starttime'],
+                        'boot_id': row['boot_id'], 'cmdline': row.get('cmdline') or [],
+                        'first_seen_ns': now, 'last_seen_ns': now}
+                    changed = True
+                else:
+                    self._entries[key]['last_seen_ns'] = now
+                    self._entries[key]['ppid'] = row['ppid']
+        if changed:
+            self.write()
+
+    def write(self):
+        with self._lock:
+            payload = {'schema': 'grouped-mmar-descendants/1',
+                       'root_pid': self.root_pid,
+                       'entries': sorted(self._entries.values(), key=lambda e: e['pid'])}
+        atomic_write_json(self.path, payload)
+
+    def start(self):
+        self._thread = threading.Thread(target=self._loop, name='descendant-registry',
+                                        daemon=True)
+        self._thread.start()
+        return self
+
+    def _loop(self):
+        while not self._stop.wait(self.interval):
+            try:
+                self._record()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def stop(self):
+        if self._stopped:
+            return
+        self._stopped = True
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+        try:
+            self._record()
+        except Exception:  # noqa: BLE001
+            pass
+        self.write()
+
+    def snapshot(self):
+        with self._lock:
+            return [dict(entry) for entry in self._entries.values()]
+
+
+def _live_verified(entries, reader=None):
+    read = reader or _read_proc
+    verified, drift = [], []
+    for entry in entries:
+        live = read(entry['pid'])
+        if live is None or live['state'] == 'Z':
+            continue
+        if same_process(entry, live):
+            verified.append(live)
+        else:
+            drift.append({'saved': entry, 'live': live})
+    return verified, drift
+
+
+def _group_members(pid, table):
+    return {p for p, row in table.items() if row['pgid'] == pid and row['state'] != 'Z'}
+
+
+def _attributed_targets(entries, table=None, reader=None):
+    """Verified group leaders and singles; unknown group members are never signaled."""
+    table = _scan_direct() if table is None else table
+    verified, drift = _live_verified(entries, reader)
+    verified_pids = {row['pid'] for row in verified}
+    groups, singles, unknown = {}, set(), set()
+    for live in verified:
+        if live['pgid'] == live['pid']:
+            groups[live['pid']] = _group_members(live['pid'], table)
+        else:
+            singles.add(live['pid'])
+    for gid, members in list(groups.items()):
+        outside = members - verified_pids
+        if outside:
+            unknown |= outside
+            groups.pop(gid)
+            singles |= {pid for pid in verified_pids
+                        if table.get(pid) and table[pid]['pgid'] == gid}
+    # A registered leader may already be dead while its group still holds members;
+    # those members remain attributed and must block the restore gate.
+    for entry in entries:
+        if entry.get('pgid') == entry.get('pid'):
+            unknown |= _group_members(entry['pgid'], table) - verified_pids
+    return {'verified': verified, 'drift': drift, 'groups': groups,
+            'singles': singles, 'unknown': sorted(unknown)}
+
+
+def _signal_targets(targets, sig):
+    for gid in targets['groups']:
+        try:
+            os.killpg(gid, sig)
+        except ProcessLookupError:
+            pass
+    for pid in targets['singles']:
+        try:
+            os.kill(pid, sig)
+        except ProcessLookupError:
+            pass
+
+
+def _reap(entries):
+    for entry in entries:
+        try:
+            os.waitpid(entry['pid'], os.WNOHANG)
+        except (ChildProcessError, OSError):
+            pass
+
+
+def cleanup_attributed(child_pid, child_identity, registry, protected, *, wait=1.0,
+                       reap=False):
+    """Kill only identity-verified child groups, including independent rank PGIDs."""
+    protected = set(protected)
+    entries = registry.snapshot() if registry is not None else []
+    if child_identity is not None:
+        entries.append(child_identity)
+    targets = _attributed_targets(entries)
+    overlap = {row['pid'] for row in targets['verified']} & protected
+    if overlap:
+        return {'killed': False, 'reason': 'protected_overlap',
+                'members': sorted(overlap), 'groups': [], 'singles': [],
+                'unknown': [], 'drift': targets['drift']}
+    if targets['verified'] or targets['unknown']:
+        _signal_targets(targets, signal.SIGTERM)
+        time.sleep(wait)
+        targets = _attributed_targets(entries)
+        _signal_targets(targets, signal.SIGKILL)
+        time.sleep(wait)
+    if reap:
+        _reap(targets['verified'])
+    final = _attributed_targets(entries)
+    members = ({row['pid'] for row in final['verified']} |
+               set(final['unknown']) |
+               {p for members_set in final['groups'].values() for p in members_set})
+    return {'killed': True, 'reason': None, 'members': sorted(members),
+            'groups': sorted(final['groups']), 'singles': sorted(final['singles']),
+            'unknown': final['unknown'], 'drift': final['drift']}
+
+
+def attributed_survivors(registry, child_pid=None, child_identity=None):
+    entries = registry.snapshot() if registry is not None else []
+    if child_identity is not None:
+        entries.append(child_identity)
+    if not entries:
+        return []
+    targets = _attributed_targets(entries)
+    live = {row['pid'] for row in targets['verified']} | set(targets['unknown'])
+    return sorted(live)
+
+
 def same_identity(saved, live):
     return bool(live and live['state'] != 'Z' and
                 all(live[k] == saved[k] for k in FIELDS if k in saved))
+
+
+def same_process(saved, live):
+    """Identity check for registered descendants: PPID may legitimately reparent."""
+    fields = ('pid', 'starttime', 'boot_id', 'pgid', 'sid')
+    return bool(live and live['state'] != 'Z' and
+                all(live[k] == saved[k] for k in fields if k in saved))
 
 
 def pending_clients(table, prior=None):
@@ -318,34 +560,51 @@ def wait_health(a, state):
     raise RuntimeError(f'health not ready: {last}')
 
 
+def _libs_for_pid(pid, names):
+    try:
+        text = (Path('/proc') / str(pid) / 'maps').read_text(errors='replace')
+    except OSError:
+        return None
+    libs = []
+    for line in text.splitlines():
+        parts = line.split()
+        path = parts[-1] if parts else ''
+        if not path.startswith('/') or not any(name in Path(path).name for name in names):
+            continue
+        if not Path(path).is_file():
+            continue
+        entry = {'path': path, 'sha256': sha256(path), 'soname': None}
+        try:
+            text_d = subprocess.run(['readelf', '-d', path], capture_output=True, text=True,
+                                    timeout=10).stdout
+            match = __import__('re').search(r'\(SONAME\).*\[(.+?)\]', text_d)
+            entry['soname'] = match.group(1) if match else None
+        except (OSError, subprocess.SubprocessError):
+            pass
+        if entry not in libs:
+            libs.append(entry)
+    return libs
+
+
+def maps_for_pids(pids, names):
+    """Real /proc maps for the given pids, including independently grouped ranks."""
+    out = []
+    for pid in sorted(set(pids)):
+        libs = _libs_for_pid(pid, names)
+        if not libs:
+            continue
+        live = _read_proc(pid) or {}
+        out.append({'pid': pid, 'cmdline': live.get('cmdline') or [], 'libs': libs})
+    return out
+
+
 def maps_evidence(pgid, names):
     """Per-PID maps for every member of the owned child PGID."""
     per_pid = {}
     for pid, row in scan().items():
         if row['pgid'] != pgid or row['state'] == 'Z':
             continue
-        try:
-            text = (Path('/proc') / str(pid) / 'maps').read_text(errors='replace')
-        except OSError:
-            continue
-        libs = []
-        for line in text.splitlines():
-            parts = line.split()
-            path = parts[-1] if parts else ''
-            if not path.startswith('/') or not any(name in Path(path).name for name in names):
-                continue
-            if not Path(path).is_file():
-                continue
-            entry = {'path': path, 'sha256': sha256(path), 'soname': None}
-            try:
-                text_d = subprocess.run(['readelf', '-d', path], capture_output=True, text=True,
-                                        timeout=10).stdout
-                match = __import__('re').search(r'\(SONAME\).*\[(.+?)\]', text_d)
-                entry['soname'] = match.group(1) if match else None
-            except (OSError, subprocess.SubprocessError):
-                pass
-            if entry not in libs:
-                libs.append(entry)
+        libs = _libs_for_pid(pid, names)
         if libs:
             per_pid[pid] = {'pid': pid, 'cmdline': row.get('cmdline') or [], 'libs': libs}
     return list(per_pid.values())
@@ -398,7 +657,7 @@ def a12_evidence(stdout, stderr, rc):
             'ok': bool(rc == 0 and not errors and len(cost) >= 2)}
 
 
-def recovery_gate(a, plan, saved, stopped, child_pid, source_after):
+def recovery_gate(a, plan, saved, stopped, child_pid, source_after, registry=None):
     """Never start a second tree while the original root is alive."""
     table = scan()
     live = table.get(saved['pid'])
@@ -413,8 +672,9 @@ def recovery_gate(a, plan, saved, stopped, child_pid, source_after):
             health = http_json(f'http://127.0.0.1:{a.port}', '/health')
         except Exception as exc:  # noqa: BLE001
             health = {'error': f'{type(exc).__name__}: {exc}'}
-    residual = sorted(p for p, row in table.items()
-                      if child_pid and row['pgid'] == child_pid and row['state'] != 'Z')
+    residual = sorted({p for p, row in table.items()
+                       if child_pid and row['pgid'] == child_pid and row['state'] != 'Z'} |
+                      set(attributed_survivors(registry, child_pid)))
     old_pgid = sorted(p for p, row in table.items()
                       if row['pgid'] == saved['pid'] and row['state'] != 'Z')
     try:
@@ -423,6 +683,7 @@ def recovery_gate(a, plan, saved, stopped, child_pid, source_after):
         runners = [f'error: {type(exc).__name__}: {exc}']
     context = {'port': port, 'health': health, 'old_identity': live,
                'old_pgid_members': old_pgid, 'probe_residual': residual,
+               'attributed_survivors': attributed_survivors(registry, child_pid),
                'runner_residual': runners, 'source_after': source_after}
     if old_alive:
         if port == 0 and isinstance(health, dict) and health.get('status') == 'ready':
@@ -493,6 +754,13 @@ def execute(a, plan):
     child_state = {'started': False}
     child_ok = False
     source_ok = False
+    registry = None
+    subreaper = enable_subreaper()
+    result['subreaper'] = subreaper
+    if sys.platform.startswith('linux') and not subreaper:
+        result['error'] = 'subreaper unavailable on Linux; refusing to start a cell'
+        flush()
+        return 1
     stop_started_ns = time.time_ns()
 
     try:
@@ -520,7 +788,10 @@ def execute(a, plan):
         identity = proc_identity(child.pid)
         if not identity or identity['pgid'] != child.pid or child.pid in protected:
             raise RuntimeError('child is not a fresh own-PGID process')
-        child_state.update(started=True, pid=child.pid, identity=identity)
+        child_state.update(started=True, pid=child.pid, identity=identity,
+                           subreaper=subreaper)
+        registry = DescendantRegistry(child.pid, run_dir / 'descendants.json', protected).start()
+        child_state['descendants'] = str(run_dir / 'descendants.json')
         names = (['libhccl', 'libopapi', 'libnnopbase', 'libascendcl', 'libhcomm']
                  if a.arm == 'A12' else
                  [Path(a.adapter).name if a.adapter else 'clef_mmar_probe',
@@ -542,16 +813,37 @@ def execute(a, plan):
         except subprocess.TimeoutExpired:
             timed = True
             child_state['timed_out'] = True
-            cleanup = cleanup_child(child.pid, scan(), protected)
+            attributed = maps_for_pids(
+                {child.pid, *[entry['pid'] for entry in registry.snapshot()]}, names)
+            child_state['maps_attributed'] = attributed
+            cleanup = cleanup_attributed(child.pid, child_state.get('identity'), registry,
+                                         protected, reap=subreaper)
             child_state['cleanup'] = cleanup
             try:
                 rc = child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 rc = None
+        attributed = maps_for_pids(
+            {child.pid, *[entry['pid'] for entry in registry.snapshot()]}, names)
+        child_state['maps_attributed'] = attributed
+        combined = child_state['maps'] + [m for m in attributed
+                                          if m not in child_state['maps']]
+        child_state['maps'] = combined
+        child_state['maps_ok'] = required_map_ok(a.arm, a.adapter, combined)
+        child_state['map_coverage'] = map_coverage(combined)
+        child_state['binary_pids'] = binary_processes(combined)
+        cleanup_final = cleanup_attributed(child.pid, child_state.get('identity'), registry,
+                                           protected, reap=subreaper)
+        child_state['cleanup_final'] = cleanup_final
+        registry.stop()
         members = {p for p, row in scan().items() if row['pgid'] == child.pid and row['state'] != 'Z'}
-        child_state.update(rc=rc, timed_out=timed, survivors=sorted(members))
-        if members:
-            raise RuntimeError(f'child group survivors: {sorted(members)}')
+        survivors = sorted(set(members) |
+                           set(attributed_survivors(registry, child.pid,
+                                                    child_state.get('identity'))) |
+                           set(cleanup_final.get('unknown') or []))
+        child_state.update(rc=rc, timed_out=timed, survivors=survivors)
+        if survivors:
+            raise RuntimeError(f'child group survivors: {survivors}')
         evidence = None
         if a.arm == 'A12':
             evidence = a12_evidence(run_dir / 'child.stdout', run_dir / 'child.stderr', rc)
@@ -566,15 +858,28 @@ def execute(a, plan):
         child_state['error'] = f'{type(exc).__name__}: {exc}'
         if child is not None and child.poll() is None:
             try:
-                child_state['cleanup'] = cleanup_child(child.pid, scan(), {saved['pid']})
+                child_state['cleanup'] = cleanup_attributed(
+                    child.pid, child_state.get('identity'), registry, {saved['pid']},
+                    reap=subreaper)
             except BaseException as cleanup_error:
                 child_state['cleanup_error'] = f'{type(cleanup_error).__name__}: {cleanup_error}'
+        if registry is not None:
+            try:
+                registry.stop()
+            except BaseException:
+                pass
         result['error'] = child_state['error']
         step('child', child_state)
     finally:
         if child is not None and child.poll() is None:
             try:
-                cleanup_child(child.pid, scan(), {saved['pid']})
+                cleanup_attributed(child.pid, child_state.get('identity'), registry,
+                                   {saved['pid']}, reap=subreaper)
+            except BaseException:
+                pass
+        if registry is not None:
+            try:
+                registry.stop()
             except BaseException:
                 pass
         source_after = sha256(a.source_target)
@@ -587,7 +892,8 @@ def execute(a, plan):
         context = {}
         if stop_called:
             needs_restore, reason, context = recovery_gate(
-                a, plan, saved, stopped, child.pid if child is not None else None, source_after)
+                a, plan, saved, stopped, child.pid if child is not None else None,
+                source_after, registry)
             result['recovery_gate'] = {'allow': needs_restore, 'reason': reason, **context}
         if needs_restore:
             try:

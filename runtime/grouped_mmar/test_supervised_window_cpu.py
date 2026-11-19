@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 import unittest
 from unittest import mock
 
@@ -126,6 +127,23 @@ class WindowTest(unittest.TestCase):
             plan = json.loads(output.getvalue())
             self.assertIn(arm, plan['child_argv'])
             self.assertIn('--adapter', plan['child_argv'])
+
+    def test_linux_subreaper_failure_blocks_before_stop(self):
+        calls = []
+        with mock.patch.object(win.sys, 'platform', 'linux'), \
+                mock.patch.object(win, 'enable_subreaper', return_value=False), \
+                mock.patch.object(win, 'scan', return_value=table(4242, (4243,))), \
+                mock.patch.object(win, 'proc_identity', side_effect=lambda pid: {
+                    'pid': pid, 'ppid': 1, 'pgid': pid, 'sid': pid, 'state': 'S',
+                    'starttime': '1', 'boot_id': 'b', 'cmdline': ['root']}), \
+                mock.patch.object(win, 'port_open', return_value=0), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, 'run', side_effect=lambda *a, **k: calls.append(a)):
+            rc = win.main(self.args(execute=True))
+        self.assertEqual(rc, 1)
+        self.assertEqual(calls, [])
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        self.assertIn('subreaper unavailable', result['error'])
 
     def test_missing_stop_script_rejected(self):
         argv = self.args()
@@ -442,6 +460,119 @@ exec "{sys.executable}" "{service}" --output-dir "$out" --port "$port"
                 os.killpg(pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+
+
+class AttributedTargetsTest(unittest.TestCase):
+    def test_pid_reuse_and_starttime_drift_rejected(self):
+        entry = {'pid': 77, 'starttime': '10', 'boot_id': 'b', 'pgid': 77, 'sid': 77}
+        table = {77: {'pid': 77, 'ppid': 1, 'pgid': 77, 'sid': 77, 'state': 'S',
+                      'starttime': '11', 'boot_id': 'b', 'cmdline': []}}
+        targets = win._attributed_targets([entry], table=table, reader=table.get)
+        self.assertEqual(targets['verified'], [])
+        self.assertTrue(targets['drift'])
+        self.assertEqual(targets['groups'], {})
+        self.assertEqual(targets['singles'], set())
+
+    def test_unknown_group_member_is_not_group_killed(self):
+        entry = {'pid': 88, 'starttime': '10', 'boot_id': 'b', 'pgid': 88, 'sid': 88}
+        table = {
+            88: {'pid': 88, 'ppid': 1, 'pgid': 88, 'sid': 88, 'state': 'S',
+                 'starttime': '10', 'boot_id': 'b', 'cmdline': []},
+            99: {'pid': 99, 'ppid': 1, 'pgid': 88, 'sid': 88, 'state': 'S',
+                 'starttime': '12', 'boot_id': 'b', 'cmdline': []},
+        }
+        targets = win._attributed_targets([entry], table=table, reader=table.get)
+        self.assertEqual(targets['unknown'], [99])
+        self.assertEqual(targets['groups'], {})
+        self.assertEqual(targets['singles'], {88})
+
+    def test_dead_leader_group_member_is_attributed(self):
+        entry = {'pid': 70, 'starttime': '10', 'boot_id': 'b', 'pgid': 70, 'sid': 70}
+        table = {71: {'pid': 71, 'ppid': 1, 'pgid': 70, 'sid': 70, 'state': 'S',
+                      'starttime': '11', 'boot_id': 'b', 'cmdline': []}}
+        targets = win._attributed_targets([entry], table=table, reader=table.get)
+        self.assertEqual(targets['unknown'], [71])
+        self.assertEqual(targets['groups'], {})
+
+    def test_reparent_does_not_break_registered_identity(self):
+        entry = {'pid': 66, 'ppid': 5, 'starttime': '10', 'boot_id': 'b',
+                 'pgid': 66, 'sid': 66}
+        table = {66: {'pid': 66, 'ppid': 1, 'pgid': 66, 'sid': 66, 'state': 'S',
+                      'starttime': '10', 'boot_id': 'b', 'cmdline': []}}
+        targets = win._attributed_targets([entry], table=table, reader=table.get)
+        self.assertEqual([row['pid'] for row in targets['verified']], [66])
+        self.assertEqual(targets['groups'], {66: {66}})
+
+
+@unittest.skipUnless(Path('/proc').is_dir() and sys.platform.startswith('linux'),
+                     'Linux /proc required')
+class AttributedProcessTest(unittest.TestCase):
+    def test_orphan_after_immediate_parent_exit_is_registered_and_cleaned(self):
+        self.assertTrue(win.enable_subreaper())
+        code = (
+            'import subprocess, sys\n'
+            'w = subprocess.Popen([sys.executable, "-c", '
+            '"import time; time.sleep(60)"], start_new_session=True)\n'
+            'print(w.pid, flush=True)\n'
+            'sys.exit(0)\n')
+        parent = subprocess.Popen([sys.executable, '-c', code], stdout=subprocess.PIPE,
+                                  start_new_session=True, text=True)
+        worker = None
+        try:
+            worker = int(parent.stdout.readline().strip())
+            parent.wait(timeout=10)
+            root = Path(tempfile.mkdtemp(prefix='grouped-mmar-registry-'))
+            registry = win.DescendantRegistry(parent.pid, root / 'descendants.json', set()).start()
+            try:
+                deadline = time.time() + 5
+                snapshot = []
+                while time.time() < deadline:
+                    snapshot = registry.snapshot()
+                    if any(entry['pid'] == worker for entry in snapshot):
+                        break
+                    time.sleep(0.1)
+                self.assertTrue(any(entry['pid'] == worker for entry in snapshot))
+                entry = next(e for e in snapshot if e['pid'] == worker)
+                self.assertEqual(entry['ppid'], os.getpid())
+                self.assertIn(worker, win.attributed_survivors(registry))
+                args = types.SimpleNamespace(port=1, expected_source_sha='x')
+                with mock.patch.object(win, 'scan', return_value={}), \
+                        mock.patch.object(win, 'port_open', return_value=111), \
+                        mock.patch.object(win, 'pending_clients', return_value=[]):
+                    allow, reason, context = win.recovery_gate(
+                        args, {}, {'pid': 2 ** 22, 'starttime': '1', 'boot_id': 'x',
+                                   'pgid': 2 ** 22}, True, parent.pid, 'x', registry)
+                self.assertFalse(allow)
+                self.assertEqual(reason, 'blocked_probe_residual')
+                self.assertIn(worker, context['attributed_survivors'])
+                win.cleanup_attributed(parent.pid, None, registry, set(), reap=True)
+                self.assertEqual(win.attributed_survivors(registry), [])
+                self.assertFalse(Path(f'/proc/{worker}').exists())
+            finally:
+                registry.stop()
+        finally:
+            if parent.poll() is None:
+                parent.kill()
+                parent.wait(timeout=5)
+            if worker is not None:
+                try:
+                    os.killpg(worker, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_protected_identity_is_not_signaled(self):
+        sleeper = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'],
+                                   start_new_session=True)
+        try:
+            live = win._read_proc(sleeper.pid)
+            entry = {key: live[key] for key in ('pid', 'starttime', 'boot_id', 'pgid', 'sid')}
+            outcome = win.cleanup_attributed(0, entry, None, {sleeper.pid})
+            self.assertFalse(outcome['killed'])
+            self.assertEqual(outcome['reason'], 'protected_overlap')
+            self.assertIsNotNone(win._read_proc(sleeper.pid))
+        finally:
+            sleeper.kill()
+            sleeper.wait(timeout=5)
 
 
 if __name__ == '__main__':

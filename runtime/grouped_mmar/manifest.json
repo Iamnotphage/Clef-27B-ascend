@@ -61,14 +61,14 @@
       "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
-      "sha256": "f05f352fbd8c51b1b203ddb72ea87e138af4b33b36305c5bab9d9eaf9a23e5e2",
-      "bytes": 31657
+      "role": "full window: preflight/d0_stop/child Popen/descendant registry + subreaper/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
+      "sha256": "07e0429cb9e18bbb61d55f41b35c78e055f9120695afdffa87b15af67bf24b3a",
+      "bytes": 43245
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (23; H4K/H5K/A15 arm choices)",
-      "sha256": "74ccdcb2c7533a347ea8fcd5d9dab92eecce489d6042d2419b54557cfc2a984c",
-      "bytes": 21058
+      "role": "CPU window control-flow tests (30; H4K/H5K/A15 choices, attribution/drift/unknown/dead-leader logic, Linux real-process fixtures)",
+      "sha256": "53deb3c252dbc9de844bad674c24889f20ad9e5924ba76024b6c838e453fde91",
+      "bytes": 28116
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "47bd5b06e6238ba21d9dfa68e0cb667c032379b816ff74502a959b8185fefd9a",
-      "bytes": 28407
+      "sha256": "bf0edde94e4fadd104ef1546440dc3390de08f10729adb07111018f4a8ec27c0",
+      "bytes": 29443
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -242,7 +242,7 @@
     "suites": {
       "test_probe_cpu.py": "17/17",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "23/23"
+      "test_supervised_window_cpu.py": "30/30 (2 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -411,6 +411,15 @@
       "sums_sha256": "e88d9d23",
       "commit": "f176183"
     }
+  },
+  "process_cleanup": {
+    "status": "implemented in the supervised window; Linux real-process fixtures pending 31; device cells paused until 32/33 review",
+    "problem": "d7e73514/f05f352f cleanup_child and survivors only covered pgid == child pid; torchrun workers run in independent PGIDs (rank0 1318300, rank1 1318301, PGID=self), so rank groups were not attributed, cleaned, or visible to the recovery gate",
+    "fix": "runtime DescendantRegistry polls the child PPID subtree plus subreaper orphans every 0.2 s and persists pid/ppid/pgid/sid/starttime/boot_id/cmdline to descendants.json; cleanup_attributed verifies pid/starttime/boot_id/pgid/sid (ppid may reparent) and signals only verified group leaders, unknown members are never group-killed; SIGTERM -> rescan -> SIGKILL -> reap; protected overlap refuses to signal; survivors and recovery_gate residual include all attributed groups; Linux subreaper failure blocks before d0_stop; plan-only is unaffected",
+    "gates": "240 s window, official aa3e restore, old_alive never Popen, restore root ppid1/pgid self/descendants same-group checks unchanged",
+    "freeze": {"supervised_probe_window.py": "07e0429c", "test_supervised_window_cpu.py": "53deb3c2", "cpu": "56/56 (17+9+30; 2 Linux-only skipped on macOS)"},
+    "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
+    "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
