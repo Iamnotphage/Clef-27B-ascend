@@ -113,6 +113,34 @@ def _prctl_subreaper(enabled):
         return False
 
 
+def get_subreaper():
+    """Return the current PR_GET_CHILD_SUBREAPER value (0 on non-Linux)."""
+    if not sys.platform.startswith('linux'):
+        return 0
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        value = ctypes.c_int(0)
+        if libc.prctl(37, ctypes.byref(value), 0, 0, 0) != 0:
+            return None
+        return int(value.value)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def restore_subreaper(original):
+    """Put the supervisor's original subreaper flag back at window exit."""
+    if original is None:
+        return False
+    return set_subreaper(bool(original))
+
+
+def set_subreaper(enabled):
+    """Set PR_SET_CHILD_SUBREAPER; a no-op success on non-Linux."""
+    if not sys.platform.startswith('linux'):
+        return True
+    return _prctl_subreaper(bool(enabled))
+
+
 def enable_subreaper():
     """Linux only: make adopted probe orphans reparent to this window."""
     if not sys.platform.startswith('linux'):
@@ -134,7 +162,7 @@ def begin_restore(plan, run_dir, result):
                            'subreaper state')
         result['restore_blocked'] = True
         return False
-    result['subreaper_restored'] = True
+    result['subreaper_cleared_for_restore'] = True
     start_restore(plan, run_dir, result)
     return True
 
@@ -833,6 +861,8 @@ def execute(a, plan):
     source_ok = False
     registry = None
     cleanup_blocked = False
+    original_subreaper = get_subreaper()
+    result['subreaper_original'] = original_subreaper
     subreaper = enable_subreaper()
     result['subreaper'] = subreaper
     if sys.platform.startswith('linux') and not subreaper:
@@ -1054,6 +1084,9 @@ def execute(a, plan):
                                  'reason': reason, **context}
             if stop_called:
                 result['error'] = f'restore_blocked: {reason}' 
+        if original_subreaper is not None:
+            result['subreaper_final_restored'] = restore_subreaper(original_subreaper)
+            result['subreaper_final'] = get_subreaper()
         result['finished_monotonic_ns'] = time.monotonic_ns()
         flush()
         return 0 if result['ok'] else 1

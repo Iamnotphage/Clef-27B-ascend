@@ -137,6 +137,15 @@ class WindowTest(unittest.TestCase):
         self.assertTrue(result['restore_blocked'])
         self.assertIn('blocked_subreaper_restore', result['error'])
 
+    def test_restore_subreaper_restores_original(self):
+        with mock.patch.object(win, 'set_subreaper', return_value=True) as set_mock:
+            self.assertTrue(win.restore_subreaper(1))
+            set_mock.assert_called_once_with(True)
+            set_mock.reset_mock()
+            self.assertTrue(win.restore_subreaper(0))
+            set_mock.assert_called_once_with(False)
+        self.assertFalse(win.restore_subreaper(None))
+
     def test_restored_root_waits_for_wrapper_exit(self):
         wrapper = {'pid': 7, 'ppid': 8, 'pgid': 7, 'state': 'S',
                    'starttime': '1', 'boot_id': 'b', 'cmdline': []}
@@ -793,9 +802,13 @@ class AttributedProcessTest(unittest.TestCase):
 
         pid = None
         try:
+            self.assertTrue(win.set_subreaper(True))
+            original = win.get_subreaper()
+            self.assertEqual(original, 1)
             with mock.patch.object(win, 'start_restore', side_effect=counted):
                 self.assertTrue(win.begin_restore(plan, run_dir, result))
-            self.assertTrue(result['subreaper_restored'])
+            self.assertTrue(result['subreaper_cleared_for_restore'])
+            self.assertEqual(win.get_subreaper(), 0)
             self.assertEqual(len(calls), 1)
             deadline = time.time() + 5
             while time.time() < deadline and not manifest.is_file():
@@ -806,6 +819,8 @@ class AttributedProcessTest(unittest.TestCase):
             self.assertIsNotNone(live)
             self.assertEqual(live['ppid'], 1)
             self.assertEqual(live['pgid'], pid)
+            self.assertTrue(win.restore_subreaper(original))
+            self.assertEqual(win.get_subreaper(), 1)
         finally:
             if pid is not None:
                 try:
