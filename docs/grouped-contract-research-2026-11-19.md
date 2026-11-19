@@ -1201,14 +1201,14 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 | 1 | 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | 0x7d7074 | API 条件失败 |
 | 1 | 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | ReadApiValidMsg 0x7d71bc；x6=[slot+48] | **API 消费成功标记**（打印写后的 valid） |
 | 2 | 0x1613f20 | `[%s:%d] [%u]AicpuKfcRpcServer::Init addr:%u` | Init4 0x7d67cc；x6=y | **RpcSrvLaunch Init4 入口**（共享，打印 y 低 32 位） |
-| 2 | 0x1613f58 | `[%s:%d] [%u]Post finishedTurnCnt[%u].cnt = %lu.` | 段内相邻；站点未给 | 候选 stage-wait 完成/轮次标记（待站点） |
+| 2 | 0x1613f58 | `[%s:%d] [%u]Post finishedTurnCnt[%u].cnt = %lu.` | **WriteFinishWhenAllFinalize 0x7d68ec，Dlog 0x7d6984**；先写 `[server+8]+0x5000+64turn+8` u64 再回读打印 | **完成 helper 标记**（每次 finish 调用即打，非分支入口） |
 | 3 | 0x1614060 | `[%s:%d] [%u]ErrToWarn: ReadValidMsg timeout 6s... ` | CheckRcvWorkMsg 0x7d744c | **TwoStage 等待超时**（6 s） |
 | 3 | 0x1614098 | `[%s:%d] [%u]ReadValidMsg timeout 6s... ` | 0x7d744c 非 ErrToWarn 变体 | 同上 |
 | 4 | 0x1614408 | `[%s:%d] [%u][AicpuKfcRpcServer][ReadAddrMsg] ReadValidMsg[%u] timeout %lus` | ReadAddrMsg 0x7d8d20；x6=turn、x7=20 | **API 无消息超时**（20/40/80/160 s） |
 | 5 | 0x14eb1b0 | `[%s:%d] [%u]ErrToWarn: args is null.` | RunAicpuRpcSrvLaunch arg0 NULL | 共享错误 |
 | 6 | 0x14edee8 | `aicpu_kfc_interface.cc` | 共享 file 串 | 共享 |
 | 7 | 0x14ee650 | `[%s:%d] [%u][NsRecovery][MC2] Suspending` | 0x762280 | **MC2/Suspending**（非 OneStage；§77 #7 归因撤回） |
-| 7 | 0x14ee680 | `[%s:%d] [%u]ErrToWarn: Run rpc error, opIdx:%u, sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d` | 站点未给 | 候选 **字段型** stage-wait 错误（sndCnt/rcvCnt 四值）；待站点 |
+| 7 | 0x14ee680 | `[%s:%d] [%u]ErrToWarn: Run rpc error, opIdx:%u, sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d` | **RunAicpuRpcSrvLaunch 0x762098（+0xcb0）**；条件 `[ctx+12752]==0` + log level + IsErrorToWarn；字段 opIdx=`[0x191fd04]`、sndCnt=ctx+12864/68/72/76、rcvCnt=ctx+12880/84/88/92 | **共享返回错误摘要**（条件错误标记，非路径入口） |
 | 8 | 0x14ee728 | `[%s:%d] [%u]ErrToWarn: Failed to run aicpu server, MC2 opIdx:%u` | 0x7620e8 | **MC2 错误** |
 | 9 | 0x14f7160 | `[%s:%d] [%u]Query sqe info failed, stream:%u, id:%u` | site 待核（35 标 0x7b3a24，但同址另有 #10） | 不确定 |
 | 10 | 0x14f8280 | `RunRpcServerApi` | 0x7b3a24 区 | 函数名串 |
@@ -1219,7 +1219,7 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 
 - **API 路径（最强）**：`start to read the [%u] msg`（RunRpcServerApi 每轮，打印 `ctx+12756`=turn，按 0x7b3a24 site）→ 直接证明 API 每轮入口；`reset valid value %u`（0x7d71bc，gate 匹配且 consume=true 后的写回值）→ **条件式成功 consume 标记**；`[MC2] Check msg equal failed, rMsg:%s msg:%s`（0x1613b80，CopyAndCheckApiMsg 0x7d6e14）→ **64 B 消息一致性失败**（0x7d6d40 memcmp；非 valid 魔数比较）；**每 10000 次累计不等才打一次**（0x7d6d58-78 `count%10000==0` + HcclCheckLogLevel(2,3)），**不是逐事件标记**；`ReadValidMsg[%u] timeout %lus`（0x7d8d20，turn/20 s）→ 无消息超时（20/40/80/160 s）。
 - **关于 `call trace: hcclRet -> %d`**：原文是 **TraceProfSubmit/内部返回码** 的 trace 日志（0x1613bd0/0x1613c00），**不能直接叫“valid mismatch”**；只能记“ReadApiValidMsg 在 gate 不匹配分支调用 TraceProfSubmit 后的返回码”。
-- **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg **单次调用**的 6 s 超时）；“每 6 s 输出”需 caller 循环/重试证据，否则只记“每次调用最多一条”。`Post finishedTurnCnt[%u].cnt = %lu.` 与 `Run rpc error ... sndCnt ... rcvCnt ...` 仍是候选，站点未确认前不单独判路。
+- **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg **单次调用**的 6 s 超时）；“每 6 s 输出”需 caller 循环/重试证据，否则只记“每次调用最多一条”。`Post finishedTurnCnt` 属 `WriteFinishWhenAllFinalize` **完成 helper**（每次 finish 打，非入口）；`Run rpc error ... sndCnt/rcvCnt` 属 `RunAicpuRpcSrvLaunch` **共享返回错误摘要**（条件错误）；两者都不单独判路。
 - **`[NsRecovery][MC2] Suspending`**：原文无 OneStage/22 字样，只能靠 site CFG 条件归属，**不作必经入口**。
 - **共享入口**：`AicpuKfcRpcServer::Init addr:%u`（Init4 每次，打印 y 低 32 位）可作“日志在目标 AICPU 生效”的必经标记。
 - **MC2**：`[NsRecovery][MC2] Suspending`、`Failed to run aicpu server, MC2 opIdx:%u`。
@@ -1237,7 +1237,7 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 
 1. 候选配置同 §77（GLOBAL=0 + PROCESS_LOG_PATH；候选，未执行）。
 2. 采到日志后先验 `AicpuKfcRpcServer::Init addr:%u`；无它 → 配置未生效/未进 RpcSrvLaunch，缺测。
-3. 有 `start to read the [%u] msg` / `reset valid value` → API 路径；有 `ReadValidMsg timeout 6s` → TwoStage 等待失败；两者都无 → 不排除，需看候选 `Post finishedTurnCnt`/`Run rpc error` 站点后再定。
+3. 有 `start to read the [%u] msg` / `reset valid value` → API 路径；有 `ReadValidMsg timeout 6s` → TwoStage 等待失败；两者都无 → 不排除；`Post finishedTurnCnt`/`Run rpc error` 为完成/共享错误标记，不作路径入口。
 4. 若出现 `MC2` 串 → 该路径非 API/TwoStage（但同一进程可能多阶段，需按时间序列）。
 5. 仍无设备 GO/SSH；字段值（turn 等）仅在上述标记打印参数中出现，属日志 payload，不是内存读取。
 
@@ -1310,7 +1310,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 | `ReadValidMsg timeout 6s...`（0x7d744c） | CheckRcvWorkMsg **单次调用** 6 s 超时 | **不宣称每 6 s 周期**；多次出现需 caller 循环/重试证据；缺席不排除 |
 | `[NsRecovery][MC2] Suspending`（0x762280） | 站点 CFG 条件证据（MC2/Suspending） | 文本无 OneStage/22；非必经入口 |
 | `Failed to run aicpu server, MC2 opIdx:%u`（0x7620e8） | post-Init 错误并走向清区 | 非入口 |
-| `Post finishedTurnCnt...` / `Run rpc error ... sndCnt/rcvCnt` | 候选（站点未定） | 未确认前不判路；确认后可能提供字段型证据 |
+| `Post finishedTurnCnt...` / `Run rpc error ... sndCnt/rcvCnt` | 完成 helper / 共享返回错误摘要（站点已定） | 不作路径入口；后者可提供 sndCnt/rcvCnt 字段值，但需条件触发 |
 | ATRACE KFCtaskAndTiling/AivAicpuOpParam | KFC vs MRS | 不分子分支 |
 
 **有效性判据（按实际路径）**：任一**适用**的 K-entry/循环标记（Init4 用于 RpcSrvLaunch；`start to read` 用于 RunRpcServerApi/ForApi；若实际为 MC2 则以 MC2 标记为适用入口）出现，才算该路径日志生效；**不能把 Init4 缺失当全局日志关闭**。没有任何适用正向标记 → 本次运行按**缺测**处理。
@@ -1478,7 +1478,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - **TwoStage**：`ReadValidMsg timeout 6s...`（单次调用；多次需 loop 证据）。
 - **共享**：`AicpuKfcRpcServer::Init addr:%u`（Init4 路径；不要求其它路径必现）。
 - **MC2**：`[NsRecovery][MC2] Suspending`、`Failed to run aicpu server, MC2 opIdx:%u`（site 条件）。
-- **未定 xref**：`0x14ee680`（Run rpc error sndCnt/rcvCnt）、`0x1613f58`（Post finishedTurnCnt）、`0x1614098`（6s 非 ErrToWarn 变体）**未确认前不用于判路/排除**；若后续确认与关键正向标记关联，再作为条件证据。
+- **xref 已定（cef7836）**：`0x1613f58`=WriteFinishWhenAllFinalize 完成 helper（非入口）；`0x14ee680`=RunAicpuRpcSrvLaunch 共享返回错误摘要（条件错误）；`0x14f7160`=MC2TraceUtils::SubmitBatchSqeInfo 条件失败（非 MC2 入口）。**三者均不单独判路/排除**。剩余 `0x1614098`（6s 非 ErrToWarn 变体）仍未知，保留不用、不阻塞计划。
 - **缺席不排除**：任何标记缺席都可能是前提未满足/未采集；只有出现正向标记才支持对应路径。
 
 ### 85.5 唯一 restore
