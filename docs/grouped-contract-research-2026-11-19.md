@@ -453,6 +453,15 @@ freeze `a00edad`：manifest `778c37af…`、window **`9a31091b…`（46,020 B）
 
 **结论**：P0 收养过宽（token 过滤）、P1 zombie reap、P2 chain 竞态在真机 fixture 均通过；`no_survivors` 覆盖 token 登记组 + child PGID，无意义外的无关 kill。安全门 PASS；A14 large 可在 31 更新 stage-identity（window 9a31091b、identity 仍 fresh）后由 32 按原授权一次 GO；Grouped large/A13 仍暂停；A15 仅 CPU。
 
+## 35. A14 MRS large 执行：设备路径成立，run_probe/window 两缺陷（2026-11-19）
+
+31 归档 `a14-large-cell/`（19 文件，SUMS `a560be11…` 19/19，commit 4372c7f）；tuple a00edad/778c37af/0bd1fde8/9a31091b/101660f8/d181b15a/plan fac2d948/identity 1319033/399382752（执行前 fresh）。
+
+- **设备事实（两 rank 一致）**：`prepare_rc=0`、executor nonnull、workspace **115,818,496 B（约 110.5 MiB）**、`launch_rc=0`、Python `sync_return` **36.61861 / 9.46084 ms**；无 stream47/507046。→ **MRS V1 large 支持/workspace/同步成立**。
+- **缺陷 1（阻断数值）**：`run_probe.py 0bd1fde8` 的 A14 分支只计算 reference reduce_scatter，之后 `if a.arm not in ('A14','A15'): output=y`；A14 未赋值 `output`，`finite = torch.isfinite(output.float())` 抛 `UnboundLocalError`，reduced/reference/bit_equal 未产出。修复：A14 分支同样 `output=y`（在 norm/gate 前）；重冻 run_probe 后重跑同格取 actual reduced diff。
+- **缺陷 2（恢复身份误报）**：window `9a31091b` 在 `wait_health` 后立即检查 manifest pid 的 `ppid==1 && pgid==pid`；setsid wrapper（1323588）当时仍是父，root 1323589 已健康但检查抛 `restored root identity mismatch`（branch None）。manual-verification：root 1323589/start 399707126/ppid1/pgid1323589/sid1323589、tree 五 PID、branch aa3e-noop、health ready、info s1、text/image 200、clients 空；无第二棵树。修复：身份检查在 `restore_timeout` 内重试直到 wrapper 退出/reparent，或接受 manifest pid 的父为已登记 restore wrapper 且 tree 同 PGID（之后再复核 ppid1），**不得因此启动第二棵 restore**。
+- **判定**：A14 large 设备路径可行、workspace 约 110.5 MiB、同步正常；数值/精度**未取得**（UnboundLocalError）；window 恢复为 false negative，服务已健康 aa3e root 1323589。重跑需 run_probe + window 修复/重冻、新 stage/plan；Grouped large/A13 暂停；A15 仅 CPU。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
