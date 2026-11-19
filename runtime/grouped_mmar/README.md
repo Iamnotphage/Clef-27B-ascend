@@ -228,7 +228,7 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
 - 32：首包判据、snapshot/restore 收紧、A12 不可单独作为 C1 单因证据。
 - 本包不 import torch/NPU 做 CPU 测试；CPU 测试只验证控制流/资源生命周期/超时/元数据。
 
-## 9. release无Tensor dispatcher候选（27，未编译/未部署）
+## 9. release无Tensor dispatcher候选（CPU dispatcher及invalid-id已验证，未部署）
 
 来源为 `8f4b84357cc86cce97e08f011f8ad704dd0596da` 的隔离候选分支
 `ao/npu-handoff/release-dispatcher-cpu-20261120`。唯一binding改动是
@@ -236,31 +236,38 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
 schema、release函数体、invalid-id返回0、run/run_mmar/run_mrs、同步、Lists所有权及window算法均保持。
 旧8ec/v2与8f来源、远端stage和生产aa3e保持原件；本候选没有部署动作。
 
-`smoke_release_dispatcher.py` 由31在隔离目录完成AOT构建后执行。27仅做静态检查。
+冻结源码为 `698ba3d2ffacad0d1b089473b31c570c7456095e`。31已在隔离目录完成AOT构建及
+`smoke_release_dispatcher.py` 实际调用；27只读核对源码与记录，32最终原件复核PASS。
+本次更新仅归档CPU dispatcher可达及invalid-id早返回结论，候选保持未部署。
 每次调用使用新子进程（`-I`、`TORCH_DEVICE_BACKEND_AUTOLOAD=0`），先断言整个
 `clef_mmar_probe::` dispatcher namespace为空，再按完整SHA加载一个给定.so。代码中唯一
 自定义算子调用为`release(1)`：未调用任何run，fresh模块的g_states为空，1为确定不存在的正id。
 旧模块与候选分别运行，控制臂必须在release调用处得到包含算子名的`NotImplementedError`；
 候选必须实际返回Python int 0。父进程记录子进程原始stdout/stderr/RC，单次30秒截止。
 
-以下为待31填写绝对路径及新构建SHA的CPU检查模板，当前未执行：
+实际证据固定于 commit `12cb26616e015bb383ec0b732fd7679193d599c8` 的
+[`cpu-release-dispatcher-698ba3d/`](https://github.com/Iamnotphage/Clef-27B-ascend/tree/12cb26616e015bb383ec0b732fd7679193d599c8/Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/cpu-release-dispatcher-698ba3d)。
+`SHA256SUMS` 的SHA-256为
+`799ee13a90386a9541920514de95c3d4cfafe520b4e62826bf7c8f69a49d45a8`，10/10文件核对一致。
 
-```bash
-env TORCH_DEVICE_BACKEND_AUTOLOAD=0 /abs/venv/bin/python -I \
-  /abs/candidate/runtime/grouped_mmar/smoke_release_dispatcher.py \
-  --adapter /abs/frozen/probe_adapter.so \
-  --adapter-sha d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3 \
-  --expect not-implemented > /abs/fresh/control.json
+| 臂 | 实际加载.so SHA-256 | 调用结果 | 原件 |
+| --- | --- | --- | --- |
+| 旧模块控制 | `d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3` | release调用处`NotImplementedError`含`clef_mmar_probe::release`；parent/child passed，进程RC=0 | `control-old.json` |
+| 候选 | `83598d6e3873de30ef73593d2c79578e42752307cafae492ff9a813d8f56d139`（195880 B） | `release(1)`实际返回Python int 0；parent/child passed，进程RC=0 | `candidate.json` |
 
-env TORCH_DEVICE_BACKEND_AUTOLOAD=0 /abs/venv/bin/python -I \
-  /abs/candidate/runtime/grouped_mmar/smoke_release_dispatcher.py \
-  --adapter /abs/candidate/probe_adapter.so \
-  --adapter-sha "${CLEF_RELEASE_CANDIDATE_SO_SHA:?31填写新构建完整SHA}" \
-  --expect zero > /abs/fresh/candidate.json
-```
+两臂各使用独立fresh `-I`进程、autoload=0，namespace为空、schema及加载前后SHA门均通过；
+子进程stderr为空。构建位于 `/tmp/release-candidate-698ba3d`，沿用冻结
+`compile_probe.sh`（SHA-256 `53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb`）
+的单TU配方。`build.log`仅保存`set -e`配方末尾的.so SHA；独立build RC字段未归档，
+构建成功由该SHA及候选实际加载/调用支撑。
+
+首次构建缺`probe_trace.h`、首次未activate加载缺`libhccl.so`的失败仅有摘要；31补入同commit
+未改动header并在获准的同版activate+venv环境完成构建及两臂调用。首次加载失败的原始
+JSON/stderr未包含在10文件包内，该次失败不计control PASS；表中控制结果来自有效重跑。
 
 本smoke只证明无Tensor dispatcher可达及empty-registry/invalid-id分支。它不调用provider、
 native run、set_device、synchronize、torchrun、NPU Tensor或通信，不证明valid-state清理、
 SDK资源释放或H11 stream47/task13挂起已修复。Python脚本不能独立证明.so静态初始化的全部
-行为；31须维持CPU-only模块加载门。加载如要求设备操作/初始化，立即停报；脚本保留加载错误，
-不导入torch_npu或重试设备初始化。旧控制失败复现与候选成功记录须分列。
+行为；SDK内部所有权继续保持待证。31归档记录Python层无torch_npu导入、无设备操作请求、
+真实残留为0，服务root1355077/ppid1355076及health ready保持；27本次只读核档，未重新执行。
+`valid_state_cleanup_verified`、`sdk_resource_release_verified`、`task13_fix_verified`均保持false。

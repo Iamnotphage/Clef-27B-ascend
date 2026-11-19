@@ -6,13 +6,13 @@
   "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
   "files": {
     "runtime/grouped_mmar/binding_probe.cpp": {
-      "role": "native MMAR binding; candidate adds CatchAll release registration only; not built or deployed",
+      "role": "native MMAR binding; candidate adds CatchAll release registration only; CPU dispatcher/invalid-id verified; not deployed",
       "sha256": "d9435b3aa5b3bba32ebc6c043ff5b9b4430e6fe6bcf945636fb8809ee3d5e75f",
       "bytes": 34668,
       "candidate": true
     },
     "runtime/grouped_mmar/smoke_release_dispatcher.py": {
-      "role": "fresh-process CPU dispatcher smoke for release(1) in empty registry; old NotImplemented control and candidate zero run separately; not executed",
+      "role": "fresh-process CPU dispatcher smoke for release(1) in empty registry; old NotImplemented control and candidate zero passed in separate processes",
       "sha256": "c457b6efd1d94814b0344819ce0bc7148f086997c01a0e0b6c4b131014b59d4d",
       "bytes": 5909,
       "candidate": true
@@ -106,8 +106,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "package documentation including isolated release dispatcher candidate and CPU-only smoke scope",
-      "sha256": "13fad61b992a31ba054b494d083861598edf660258abd1644325315788da2dd3",
-      "bytes": 51446
+      "sha256": "53c0d1159de42fd41120dd7456ca48c60a844ad30085653a93d9f25edac53dff",
+      "bytes": 52773
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -894,25 +894,53 @@
 
   },
   "release_dispatcher_candidate": {
-    "status": "static_checks_only_not_built_or_deployed",
+    "status": "cpu_dispatcher_and_invalid_id_verified_not_deployed",
+    "source_commit": "698ba3d2ffacad0d1b089473b31c570c7456095e",
     "base_commit": "8f4b84357cc86cce97e08f011f8ad704dd0596da",
     "base_binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
     "registration": "m.def(\"release(int id) -> int\", &grouped_mmar_release)",
     "scope": "CatchAll dispatcher registration only; release body and all native run/window code unchanged",
     "smoke_script": "runtime/grouped_mmar/smoke_release_dispatcher.py",
-    "smoke_status": "not_executed",
+    "smoke_status": "executed_cpu_only",
     "smoke_scope": "dispatcher_and_invalid_id_only",
     "control_adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
-    "candidate_adapter_sha256": null,
-    "build_owner": "31_after_20_schedule",
+    "candidate_adapter_sha256": "83598d6e3873de30ef73593d2c79578e42752307cafae492ff9a813d8f56d139",
+    "candidate_adapter_bytes": 195880,
+    "deployment_status": "not_deployed",
+    "build_owner": "31_under_20_authorization",
+    "build_exit_code_archived": null,
+    "build_evidence": "build.log contains only the final .so SHA from the frozen set-e recipe; successful build is supported by that SHA and actual candidate load/call; no independent build RC field archived",
+    "evidence": {
+      "commit": "12cb26616e015bb383ec0b732fd7679193d599c8",
+      "directory": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/cpu-release-dispatcher-698ba3d",
+      "sums_file": "SHA256SUMS",
+      "sums_sha256": "799ee13a90386a9541920514de95c3d4cfafe520b4e62826bf7c8f69a49d45a8",
+      "verified_file_count": 10,
+      "control": {
+        "file": "control-old.json",
+        "sha256": "a070d24f5e88c5c33257f5892851d4f9d6c7bdd03eb43bb83aca7144f0469a17",
+        "passed": true,
+        "child_returncode": 0,
+        "observed": "call-site NotImplementedError containing clef_mmar_probe::release"
+      },
+      "candidate": {
+        "file": "candidate.json",
+        "sha256": "6e0a943fbeec99ee3ef1a79aada23a42f41fdd12604fb976044bfff614cc88cd",
+        "passed": true,
+        "child_returncode": 0,
+        "observed": "Python int 0 from release(1) in an empty registry"
+      },
+      "review_32": "final source and CPU dispatcher readiness PASS; dispatcher/invalid-id scope only",
+      "initial_failures": "missing probe_trace.h and unactivated libhccl.so load failure are summary-only; initial load JSON/stderr are absent from this bundle and excluded from control PASS; valid results used authorized same-version activate and venv"
+    },
     "valid_state_cleanup_verified": false,
     "sdk_resource_release_verified": false,
     "task13_fix_verified": false,
     "load_gate": "stop on load error or required device initialization; no torch_npu import or device fallback",
     "validation": {
       "binding_diff": "one registration line; all other binding bytes identical to base",
-      "smoke_python": "AST parse and compile-to-code-object only; module not imported or executed",
-      "unchanged_manifest_files": "all existing entries except binding and README matched before update"
+      "smoke_python": "27 static checks only; 31 executed the frozen script in two fresh -I processes with autoload=0, empty namespace, exact schema and adapter SHA gates; 27 read-only evidence verification and 32 final review passed",
+      "unchanged_manifest_files": "33 entries match their bytes/SHA; this evidence update changes README and manifest metadata only; binding/smoke and all other source bytes remain at 698ba3d"
     }
   }
 }
