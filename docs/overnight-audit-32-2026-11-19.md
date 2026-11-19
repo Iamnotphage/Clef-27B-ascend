@@ -410,6 +410,13 @@
 - **33 最终归档核（v3 收口）**：SUMS `88b823a4…` 16/16 OK；commit `064d469`（17 文件）；window `c291b877…`；rank0 result `33410194…`/trace `1fb6bf87…`、rank1 `300eebfd…`/`7e7b05a1…`、child stdout `cb1aa6ed…`/stderr `37177294…`、restore manifest `5deee436…`/joint `861044f4…` 均命中；restore branch aa3e-noop、root 1308632/start 398926792、五 PID、四检全 true、无残留。**A14 v3 收口 = KFC liveness 成立 + release harness 待修**；后续 35 修复重冻 → 31 v4 重跑完整数值 → large；Grouped-specific/依赖口径不变（supported_but_unproven）。
 - **release 修复方案（33 提出，32 确认采用）**：b7f255cb 中 release 在 reference/finite 之前；改为**先计算 reduced/reference/bit_equal/finite/versions 并原子写完整 result，再 try/except release**（记录 release_rc/release_error 后重写）；数值门只看 api/sync/finite/reference，release 失败记 harness_error 不抹数值；子进程正常退出、资源 teardown 回收。**run_probe-only，不改 binding/adapter**（d181b15a 复用）；schema 占位 Tensor/fallback 仅作未来显式 release 门，非本次必需。重冻 run_probe 新 SHA；31 以 root 1308632 重建 identity/plan v4、fresh out、port 29531 预检，重跑同小格取完整 result；large 等完整 small + 32 有限核。
 
+## 8.33 v4 审核清单与 matched Grouped H11 小格设计（2026-11-19）
+
+- **v4（run_probe-only release 修复）增量审核清单**（不重开 stage/不重编译）：release 移到 reference/finite/gate 之后；先原子写完整 result 再 release；release try/except 记录 `release_rc`/`release_error` 后原子重写；`pass`/numeric 只看 api/sync/finite/reference，release 失败记 harness_error、不抹 numeric；trace release 标记与 child rc 一致；window child_ok 仍 rc0+maps；KEEP_ALL 与 fresh out/rank_dir 门保留（prepare_out exist_ok=True + rank_dir exist_ok=False）；仅核新 run_probe SHA/identity 1308632/plan v4（fresh out、port 29531、adapter d181b15a 复用、window 2202165e）；binding 未变不重编译。35 新冻 + 31 v4 identity/plan 齐后直接给同小格 GO（无需二次确认）。
+- **matched BF16 单 group 小形状 Grouped（H11）**：flags=KEEP_ALL，M128/K256/N512、BF16 x/w、**FP32 zero bias**（Grouped 契约）、单 group、torch 多进程 comm、KEEP_ALL、240 s、fixed run_probe。与 A14 small 的 op 接口差异记录：bias null vs FP32 zero、output reduce-scatter vs all-reduce、op MRS vs Grouped。证据：trace prepare/launch/sync + result（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world/versions、release_rc/error）+ maps + plog + 恢复；reference=matmul+all_reduce（bias zero）。
+- **可判别性**：H11 小格同挂 stream47/507046 → Grouped op/kernel/tiling/rac_server/上下文为差异源（shape/comm/KEEP_ALL 已匹配）；若返回 → 挂起与较大 shape/tiling（M967/K8704/N5120）相关；若 prepare 失败 → 记录 op 形状约束、换合法匹配形状。顺序：A14 v4 完整 small → matched Grouped H11 小格（A14 v4 恢复后新 root identity、fresh out、port）→ large（A14 M968/K8704/N5120 等完整 small + 32 有限核）。
+- 口径：依赖 supported_but_unproven；H6 仅 user workspace 初值；A13 停跑；official/指标不变。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
