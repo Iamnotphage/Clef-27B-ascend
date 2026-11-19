@@ -168,6 +168,14 @@
   - restore label `d0-restore-20261119T020614Z-b57139dc`、source f810/guard pre、manifest_source=deploy_record、envmatch true、新 current_restore `a61bdf31…`。
 - **typed 全链结论**：三格 deploy→v5→restore 全 rc0、全部 client 退出/cleanup 干净；S2 两点小幅正收益（+0.46~0.65% 吞吐、p95 −0.24~−0.49%）、ERQA 完全同值、S1 中性；所有质量 Δ 在 2PP 内（B8 C8 −0.0259pp 最大负向，B16 略正）。最终 f810/s1 最佳服务已恢复：root 1279960、4096/seqs1/batched4096、OPP9/LD12 clean、仅 SINGLE_FIELD、source f810、guard 76595657。
 
+## 8.8 20 采用 aa3eON 为最终默认（2026-11-19）
+
+- 依据：S1 中性（逐轮 2 快 1 慢、组中位 +0.0366 ms）；S2 同窗口四点吞吐 +0.46~0.65%、p95 −0.24~−0.49%；ERQA 216/400 与 f810 同值；所有质量 Δ 在 2PP 内。20 明确不宣称稳定显著。
+- 实施：35 获授权按 rev3 + 两条实现细节做最小官方入口集成（仅本地 CPU、无 SSH）；31 唯一部署执行；旧 765/a1ca/31202/phase/v5 资产冻结不动；新 entry/inference SHA 作为新 tuple 项；无 PR 范围。
+- 我已给 31 最小必要验证闭合标准：**可继承**（aa3e/36/b09/f810 源资产与候选服务数值结论、manifest 31202d27/评分 2PP/S2 并发点/ERQA 分母）；**必须新测**（新入口 SHA 与 stage、197863d5→f810→aa3e 冷启动状态机、幂等重启三连、tree 解析/独立 backup/原子 manifest/fail-closed、bash start.sh 实际服务四检+双 worker、live env 恰为 FLAG=1/ALLOW=aa3e/SINGLE_FIELD=1 + OPP9/LD12、回退边界、客户端全空）。
+- 指标口径：只用官方 benchmark JSON `decisions_per_second`（successful/wall_seconds）；journal span（首 start→末 finish）重算仅交叉核对、末位差单注。
+- 收口：新 tuple 文件/SHA、冷启动/幂等/失败证据、服务身份与 env、selected profile 全 aa3e（不拼 f810 数字）、最终服务为所选 aa3e/s1、clients 全空、旧 f810 资产未改。我负责新 tuple 逐 SHA 与运行等价门；实施代码由 20 触发原生 review。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
