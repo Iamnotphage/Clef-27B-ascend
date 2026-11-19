@@ -63,8 +63,8 @@ ARMS = {
             'title': 'MatMulAllReduce (non-grouped MC2) control with torch multi-process comm'},
     'A14': {'flags': KEEP_ALL, 'native': True, 'rows': 128,
             'title': 'MatmulReduceScatter V1 AICPU MC2 control (A3-registered; full state kept until sync)'},
-    'A15': {'flags': 0, 'native': True, 'rows': 967,
-            'title': 'MRS V1 + all_gather reconstruction (bias-free, tail pad/crop, real local shape)'},
+    'A15': {'flags': KEEP_ALL, 'native': True, 'rows': 967,
+            'title': 'MRS V1 + all_gather reconstruction (bias-free, tail pad/crop, KEEP_ALL as the A14 baseline)'},
 }
 A12 = {
     'title': 'official A3 sample positive control (separate binary, fixed source from 33)',

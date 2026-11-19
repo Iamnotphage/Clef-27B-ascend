@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "071d38a24b5f84e682fea5ca01c65f372c03023929fc9cba36773bc7fbd592ac",
-      "bytes": 25598
+      "sha256": "0bd1fde8ac0c62d74c61e276df44cf6655e8f3a001d85911eacedfc06784cf72",
+      "bytes": 25617
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot/A15 tests (17)",
-      "sha256": "5fa5856338cce1a59e9ce54a746c1457c3e16483ce285fcb770460291bb34e87",
-      "bytes": 10808
+      "sha256": "1979bb23b0545a53cb96906c5cd2ee20fbde1d4d5aa5b9fa23b4a6f4293339c6",
+      "bytes": 10884
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "d414d454c5d30a432a248ddca0e87dcc445af069e0ae89d6e5df557b031f9bbd",
-      "bytes": 28264
+      "sha256": "0a5ef5387e482b93eb385b3f8b57bf482eb7ea833630f14c348147600a78fc21",
+      "bytes": 28277
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -425,11 +425,12 @@
     "unknowns": "MRS large support/performance, workspace, executor lifetime, NZ weight acceptance, mlp_bias config, vLLM TP group name/stream ordering",
     "a15": {
       "status": "implemented CPU-only; no device GO",
-      "arm": "A15 flags=0, bias=nullptr, rows default 967, K=8704, N=5120 reproducible",
+      "arm": "A15 flags=8 (KEEP_ALL, the A14 success baseline per 32), bias=nullptr, rows default 967, K=8704, N=5120 reproducible",
       "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
-      "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=0/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
-      "freeze": {"run_probe.py": "071d38a2", "test_probe_cpu.py": "5fa58563", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"}
+      "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
+      "freeze": {"run_probe.py": "0bd1fde8", "test_probe_cpu.py": "1979bb23", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "keep_note": "KEEP_ALL keeps group/workspace/descriptors until sync, matching the A14 success baseline and avoiding the early-release confound; the release op remains unregistered, so release_error=NotImplementedError/harness_pass=false is recorded while numeric_pass stays independent"
     },
     "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
     "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
