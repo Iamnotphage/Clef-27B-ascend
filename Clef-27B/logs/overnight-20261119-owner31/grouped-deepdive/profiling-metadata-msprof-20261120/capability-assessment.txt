@@ -14,14 +14,17 @@
 对目标的判断（help 层）：
 - 两份帮助均**没有 PC sampling、wait point、pending/in-flight task 查询**或类似字面入口；
   也没有“仅核 task start 事件”的独立选项。
-- msprof 的采集方式是启动应用（msprof [args] <app>）或 dynamic profiling 指定目标 pid（attach 类），
-  不能对一个已经提交且尚未完成的 task 做回溯式 PC/等待点采集。
+- msprof 的采集方式是启动应用（msprof [args] <app>）或 dynamic profiling 指定目标 pid（attach 类）；
+  两份 help **未说明/未提供**对已提交且未完成 task 的回溯式 PC/等待点采集入口
+  （这是 help 层“未说明”，不是“不可采/能力排除”）。
 - --task-time 是 task 级 timeline（task profiling data）；帮助未说明未完成 task 如何落盘，
   也未提供 pending-task 状态机；因此“仅完整 task timeline 不能解 pending PC”成立。
 - 硬件/A3 支持、超时是否丢数据、任务结束依赖：**帮助未明示**（超时丢数据无文档；硬件型号不在帮助中）。
 - 所需新实验（若将来授权）：需新的应用运行并显式开启 task-time/aic-mode/instr-profiling 或
   msopprof aic-metrics+dump；或 dynamic attach（本次明确禁止）。这些都不是对既有 pending task 的补采。
 
-结论：help/version 证据不足以支持“对已提交未完成 AICORE task 记录 PC 采样/等待点”；
-只能支持“新运行采集 task timeline/指令采样”的方向。精确缺口：无 pending-task/PC-sampling 入口，
-无可核开始事件的独立开关，超时数据保留策略未文档化。本报告不据此开设备。
+结论（边界更正，32 复核）：help/version **未说明/未提供** pending-task/PC-sampling/wait-point 或独立
+start 事件入口；task-time 是 task 级 timeline。此为 help 层未文档化，**不得**据此关闭观测设计或
+断言 PC/等待点不可采。sample-based/instr-profiling/Source/aic-metrics 是否提供 PC/等待点，以及硬件/A3
+支持、超时丢数据、任务结束依赖，均留待 27 隔离 instrumentation 可行性核实。new-run/dynamic attach
+只是 help 描述的新采集方向（dynamic attach 本次禁止），不是对既有 pending task 的补采。本报告不据此开设备。
