@@ -422,6 +422,17 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **35b4fbe test-only 复核（33 PASS）**：window `0ca36426` 未变；test_window `33961f36…`（34 个）、manifest `eceef30f…`；新增 protected 测试直接 `assertTrue(cleanup_blocks_restore(outcome))`；新增 Linux-only `test_drift_identity_is_not_signaled` 用错误 starttime，断言 drift、不在 singles/groups、进程仍存活。测试 34+17+9=**60**；macOS 60/60（5 Linux-only skip）。Linux 真实用例（含新增 drift）仍待 31 通道；设备暂缓。
 
+## 32. Linux fixtures 35b4fbe：3 个真实用例失败与修复要求（2026-11-19）
+
+31 归档 `fixtures-35b4fbe/`（unittest.log 10k、3 份 descendants.json、f2_f3_probe.py；SUMS 5/5）。**Ran 34, failures=3**：
+
+1. **收养过宽（高风险，必须先修）**：`grouped-mmar-registry-ffazbstj_descendants.json` 同时登记 pid 1322545（cmdline `python -c "import time; time.sleep(30)"`，无关进程）和 pid 1322547（worker，sleep 60），两者均 `ppid=1322540`（subreaper window）、`pgid=self`。`_record` 把所有 `ppid==self` 的孤儿加入 pids，未验证其是否曾属 child 子树；`cleanup_attributed` 会对这些独立 PGID 执行 `killpg`，**违反“无关进程不杀”**。测试 `test_orphan...` 在 zombie 断言处提前失败，未走到无关进程断言，所以未暴露该风险在用例中的直接失败。**修复**：收养/登记必须带 child 来源证明——如 spawn 时注入唯一 env token 并由 worker 继承，registry 读 `/proc/<pid>/environ` 校验；或至少 cmdline/path 允许列表（run_probe.py/torchrun + 本 cell temp/out、A12 binary）；仅 `ppid==self` 不足。未匹配的 ppid==self 进程不得登记/ kill，另记 unattributed。
+2. **Zombie 未 reap（两用例失败）**：`_attributed_targets` 的 `_live_verified` 排除 `state==Z`；SIGTERM 后 rescan 新 `targets` 中 verified 为空，`if reap: _reap(targets['verified'])` 空转；`/proc/<worker>` 以 Z 残留，`test_orphan...` L573、`test_stop_before_cleanup...` L609 `assertFalse(exists)` 失败。**修复**：reap 使用 kill 前的 verified PID 列表，或对所有登记 snapshot PID（含 Z）执行 `waitpid(WNOHANG)`，循环到无子进程；不得依赖 rescan 后的 verified。
+3. **Chain fixture 竞态**：`grouped-mmar-registry-chain-8to9sp8__descendants.json` 仅 1 条（pid 1322542，中间进程），无孙代；测试父退出后立即 `registry.start(); registry.stop()`，intermediate 尚未 spawn 孙代。**修复（test）**：intermediate 打印孙代 pid，测试等待 `/proc/<pid>` 出现后再 stop；**产品侧**可考虑 stop 前 settle/重复 record（不能证明未来 spawn）。
+4. 现场服务实核：root 1319033/start 399382752/ppid1/pgid1319033/health ready/config s1/TP2/4096/TP0+TP1/card7 chip0/1 phy14/15/boot 393ecc15 未变；fixtures 进程退出后无残留（系统 sleep 300 属既有无关进程未动）。
+
+**结论**：e75a858 代码级 F1-F4 修复仍不满足 Linux 真机安全门槛；P0 收养过宽、P1 zombie reap、P2 chain 竞态需修/补测。设备格继续暂缓；A14 large fac2d948 未执行；A15 仅 CPU；Grouped large/A13 暂停。
+
 ## 27. A14 MRS large preflight 合同核（2026-11-19）
 
 `a14-large-preflight/`：plan `fac2d948…`（arm A14、flags=KEEP_ALL、run_mrs、M968/K8704/N5120、output `(484,5120)`、240/90、out/run/restore `a14-large-v1`、plan_not_executed）；stage `0cd3531a…`（commit 0d3f7fb、manifest 21758ff5、run_probe 508e2931、window d7e73514、binding 101660f8、adapter d181b15a）；root identity `bf119527…`（1319033/399382752）；SUMS `1833d7bb…` 3/3；port 29531 FREE；stop/restore a14-large-v1、success aa3e、port 18143。形状合法：M968 为 rank2 整数倍（output 484×5120）、K8704/N5120、BF16、bias nullptr；用途仅 MRS V1 large 支持/workspace/数值可行性（非生产 NZ/性能、非 Grouped large）。合同无阻塞；32 核增量后可 GO（本记录不请求）。验收应记录 api/sync/finite、actual reduced max_abs/bit_equal、workspace/executor/资源、240s、plog、window/child、restore；失败/成功均保留原件。
