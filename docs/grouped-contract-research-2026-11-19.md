@@ -1768,3 +1768,21 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **冻结产品**：e38b541/8e308804/1f780bf8/d181b15a/101660f8 未变；rank helper `a4b76676` 同 blob。
 
 **状态**：v2 CPU 准备完成；操作来源仍只引用该 v2 包；32/35 增量复核后由 20 在既有 scope 内另发一次 v2 GO；**当前仅审核、无设备执行/无 GO**。静态 ABI/§15 不再重审，待 v2 实测证据再推根因。
+
+## 99. v2 最终文本与 preflight caller-env 假阳性（85ab351 / b5cec871）
+
+**v2 当前包**：commit `85ab351`（ea30cec 之后 doc-only 收口），`h11-observe-execution-v2/` 19 文件，SUMS `b5cec871…`（本地 19/19 OK）；远端 cell `execution-v2/` 19/19（31 报）。plan `9c2936c2…3137`、status `plan_not_executed`、identity `1347086/401212026`、五 PID 未变。模板已加“cd stage → source activate → export PATH venv → command -v → torchrun --help → preflight → window --execute，同 shell/SSH”硬性顺序。
+
+**35 新增阻断（preflight 假阳性）**：
+- `preflight-rescan.sh` 的 torchrun 段在**嵌套 `/bin/bash -c 'source activate; export PATH=...; command -v torchrun'` 自建 env** 中检查（line 139-142），**从未检查调用 preflight 的 shell 自身 `$PATH`/`command -v torchrun`**。
+- 后果：从未 source/未 export 的裸 shell 运行 `bash preflight-rescan.sh` 仍 `ALL PASS`；随后同一裸 shell 启动 window，child 继承裸 os.environ → 裸 `torchrun` FileNotFound，且 `--execute` 已先 stop，v1 故障模式复现。
+- 模板/README 的“固定顺序”只是操作说明，**未被预扫强制绑定到 window 的 shell**。
+
+**最小修复（31，脚本/文档层，不改 window）**：
+1. 预扫增加**调用方环境**检查（不嵌套 source/export）：
+   `caller=$(command -v torchrun 2>/dev/null || true); [ "$caller" = "$VENV/bin/torchrun" ] && ok "caller env torchrun" || bad "caller env torchrun ($caller)"`。
+2. 保留自建 env 检查时改标“recipe 检查”，避免与 caller 检查混淆。
+3. 或提供单一 wrapper：env → caller 检查 → preflight → `exec python … --execute`；模板要求只能走 wrapper，禁止手抄/split shell。
+4. 绝对 torchrun 写入 child_argv 可行，但受 `--child-argv`/`--arm` 冲突约束，需完整重建 argv 并在预扫校验 SHA/`--help`。
+
+**状态**：除该项外 v2 CPU 准备 PASS；该项未修前 **v2 命令准备未闭合，不能发 GO**。v1 原件封存、不改旧 plan；操作仍只引用 31 v2 包；无设备动作；静态 ABI/§15 不再重审，root cause 待 v2 实测。
