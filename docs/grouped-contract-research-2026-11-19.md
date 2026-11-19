@@ -888,7 +888,12 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 - 函数体（0x7d6800-0x7d68b4）：`0x7d6828 ldr x0,[x0,#24]` → **dest=*(this+0x18)**（entry this 与目的指针分开）；`str w4,[x0,#44]` 写 4 B valid `0x5CDF123A`；**`strb w1,[x0,#51]` 写 1 B = w1（PostMsg 的 uint 参数/turn；w1 在函数内未被改写）**；读 GOT+0xc90 的 +704(u16)/+706(u8) 仅用于 `AivAicpuOpParam::PrintMsg`；返回 1。**不写 +50**。
 - 程序序：`+44` 写 →（无屏障）→ `+51` 写 → `PrintMsg`/string dispose → **唯一 `dsb st` 在 0x7d6884**；无 `stlr`。即 ack 字节的可见性屏障在 PrintMsg 之后，二者之间只有程序序。
 - 直接调用者：0x7c7f44 与 0x7c7f90，均在 `AicpuKfcDeprecatedProcess::RunRpcServerTwoStageWait`（+0x198/+0x1e4）→ **stage-wait 协议的消息发布者**；参数分别为 `[ctx+352]-1` 与 `[ctx+352]`。
-- 与 getter 对齐：`GetRecvCnt` 读 `[ctx+184]+u32[ctx+192]+(u16[ctx+196]<<6)+51`；Init 零分支 `server+0x18=y+j+64T`；PostMsg 写 `dest+51`。**条件式同字节**需同时满足：P1 同一 server 对象；P2 Init4 零分支（`[server+816]=*(task+40)==0`，写 `server+0x18=C+j+64T`）；P3 无后续 `server+0x18` 写；P4 同一 ctx。非零分支（只写 server+8）不成立。gate `slot+48` 与 valid `+44` 要成同一字还需 `j+64T = 64*turn + 4`（即 slot=dest−4），**未证**。
+- 与 getter 对齐：`GetRecvCnt` 读 `[ctx+184]+u32[ctx+192]+(u16[ctx+196]<<6)+51`；Init 零分支 `server+0x18=y+j+64T`；PostMsg 写 `dest+51`。**条件式同字节**的 P1–P4 现状：
+  - **P1 已证**（abi11）：TwoStageWait 序言 0x7c7dc8 `mov x19,x1`，PostMsg this=x19=x1；RpcSrvLaunch 0x76197c/0x761980 置 x1=`server_A`。
+  - **P4 已证**：0x7c7dd0 `mov x20,x0`；RpcSrvLaunch 0x76198c x0=x28(ctx_R)，0x761994 bl。
+  - **P3 在本轮已审范围内成立**：方法区 0x7d66f0–0x7da9bc 定向 `str ..,[x?,#24]` 15 命中，除 Init4 零分支 `stp x0,x3,[x19,#16]`（server+0x18）外无 server+0x18 写者；`PrintMsg` 0x7c24e0/0x654 不写 dest。**仅限已审函数/指令形式，不作全库排除**。
+  - **P2 仍未证**：Init4 零分支取决于 `[server+816]=*(KFCTask+40)` 的首 u32 是否为 0。
+  - 因此同字节结论仍条件于 P2（以及已审范围外的可能写者）；非零分支只写 server+8，不成立。gate `slot+48` 与 valid `+44` 要成同一字还需 `j+64T = 64*turn + 4`（slot=dest−4），**未证**。
 - +44 valid 与 API gate 的 `slot+48` 不是同一字节：PostMsg 写 AivAicpuOpParam 的 +44，gate 读 64 B HcclMsg 的 +48；两者对象/协议不同，**不推断同一或冲突**。
 
 ### 66.2 ForApi 的调用链与 server 基址
@@ -1108,3 +1113,22 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 2. **若未来授权一次带日志的 cell（非本任务）**：只开现有全局/模块日志变量（取值待 31 文档），采集 device/plog，按 73.2 的 1/2 标记判定 API vs TwoStage；若两者都无标记，再考虑 OneStage/Unfold 格式串。
 3. **若字段值必须直接读**：仅能通过新增 host 侧 launch 日志或设备侧代码埋点（均属代码变更，需单独授权），**不是现有接口**；不把“快照”写成可执行命令。
 - 当前无新 GO/SSH/设备动作；root cause 仍 unresolved。
+
+## 74. abi-preflight11（88f9151，SUMS 50f82839）：P1/P4 补齐与 P3 范围
+
+- **TwoStageWait** nm `0x7c7dac`/`0x1028`；序言 `0x7c7dc8 mov x19,x1`、`0x7c7dd0 mov x20,x0` → PostMsg 的 this=x19=x1=`server_A`，ctx=x20=x0=`ctx_R`。与 RpcSrvLaunch 调用点（0x76197c/0x761980 置 x1=server_A；0x76198c x0=x28；0x761994 bl）一致，**P1/P4 证毕**。
+- **PrintMsg** nm `0x7c24e0`/`0x654`：完整体扫描未发现对入参对象 +24/+44/+51 的写，唯一 `strh w3,[sp,#24]` 是栈槽 → **PrintMsg 不改写 PostMsg dest，P3 不受影响**。
+- **server+0x18 写者**：方法区 0x7d66f0–0x7da9bc 定向 `str ..,[x?,#24]` 共 15 命中：
+  - Init4 零分支 `0x7d6758 stp x0,x3,[x19,#16]` 写 server+0x10/+0x18（x19=server），是本区唯一 server+0x18 写；
+  - `0x7d77f4 str x1,[x19,#24]` 属 `HcclMsg2AicAicpuOpParam`（x19=AivAicpuOpParam 输出参数）；
+  - `0x7d7ef0 str x0,[x19,#24]` 属 GenMsgByTaskParam 区（x19=AivAicpuOpParam 入参）；
+  - 其余 12 条为 `[sp,#24]` 栈槽。
+  - 结论：**在已审函数/指令形式范围内**除 Init4 外无 server+0x18 写者；param 对象的 +0x18 写属另一对象，不并入 server 结论。**P3 不升级为全库排除**，不再追加穷尽扫描/深层 helper。
+- 因此 §66.1 的条件式同字节更新为：P1/P4 已证，P3 限已审范围，**P2（KFCTask+40 首 u32==0）仍未证**；gate slot+48 与 valid+44 的 `j+64T=64*turn+4` 亦未证。
+
+## 75. 观测方案优先级的当前状态
+
+- §73 的现有标记仍有效；当前优先“可用观测接口/开关/已有分支标记”，**不再为 P3 或 Write*/helper 追加穷尽反汇编**。
+- 35 正在整理日志路径标记表，并将给出**最小 rodata 请求**（分支 Dlog 格式串/级别）；收到后由 33 合并为一次 abi12 请求交 31，避免多头取数。
+- 历史 cell 运行值缺测口径保持（F1–F12 无现成读取方式）；设备 AICPU 内存无可证只读接口；无新设备 GO/SSH。
+- 若 rodata 显示某路径无唯一标记，则明确记“无现有标记”，不把观测愿望写成命令。
