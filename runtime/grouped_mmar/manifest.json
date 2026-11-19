@@ -46,7 +46,7 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
+      "role": "CPU control-flow/path/release/watchdog/snapshot tests (14)",
       "sha256": "ea514245ded967c419ba47e31dd3c8b64373768e24df5ce0b66b71265e58f038",
       "bytes": 7708
     },
@@ -56,7 +56,7 @@
       "bytes": 9198
     },
     "runtime/grouped_mmar/test_cell_supervisor_cpu.py": {
-      "role": "CPU supervisor tests (8)",
+      "role": "CPU supervisor tests (9)",
       "sha256": "c5fb6f45e73c20dce2d55dad46152c0e5a97cfb53adcf596d4f53ae4e8036084",
       "bytes": 4514
     },
@@ -66,7 +66,7 @@
       "bytes": 31636
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (12)",
+      "role": "CPU window control-flow tests (22)",
       "sha256": "6d2ffc94b148fe8cd316bc53caaec3c22e31fda0fa21a17d13bfa2d3d5243aab",
       "bytes": 20478
     },
@@ -230,7 +230,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "13/13",
+      "test_probe_cpu.py": "14/14",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "22/22"
     },
@@ -399,7 +399,7 @@
     }
   },
   "a14_control": {
-    "status": "small_v2_aborted_pre_launch; fixed_d571641_v3_pending",
+    "status": "small_v2_invalid_harness_race; small_v3_plan_8782537a_pending_32_review",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -464,13 +464,30 @@
       "window_sha256": "2202165e",
       "adapter_sha256": "d181b15a",
       "child_timeout": 240,
-      "status": "plan_not_executed",
+      "status": "executed_aborted_pre_launch_harness_race",
       "stage": {
         "commit": "e0b06df",
         "run_probe_sha256": "6ae866b1",
         "binding_sha256": "101660f8"
       },
       "sums_sha256": "2e1086eb (13/13)"
+    },
+    "small_v3": {
+      "status": "plan_not_executed; pending 32 plan/identity/binary review then GO",
+      "freeze": "commit f087746, manifest 02fdd342, run_probe b7f255cb, binding 101660f8, window 2202165e",
+      "freeze_note": "f087746 differs from the 32-reviewed d571641/7d39461d only in manifest metadata; binding/run_probe/window are byte-identical",
+      "plan_sha256": "8782537a",
+      "superseded_plans": ["18fdf185 (v2 harness race)", "d88250e4 (v3 rebuilt from f087746)"],
+      "shapes": {"M": 128, "K": 256, "N": 512},
+      "flags": "KEEP_ALL",
+      "child_timeout": 240,
+      "identity": "1306695/start 398875478 (file a85ff9b8, health ready)",
+      "out": "probe-out-a14-small-v3 (fresh, not reused from v2)",
+      "adapter_sha256": "d181b15a",
+      "compile_log_sha256": "fc8efe47",
+      "master_port": "29531 (preflight FREE)",
+      "stage_archive": "a14-preflight/plan/stage-identity-v5.json + identity + plan; SUMS 17/17 (4eaf108e)",
+      "stage_commit": "9600e2a"
     },
     "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
     "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
@@ -489,6 +506,6 @@
     "fix_commit": "d571641",
     "fixed_run_probe_sha256": "b7f255cb",
     "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
-    "v3": "fresh identity 1306695, fresh probe-out path, bindings 101660f8/window 2202165e, master_port 29531 free; 32 review then GO"
+    "v3": "see small_v3: plan 8782537a, identity 1306695, fresh out probe-out-a14-small-v3, freeze f087746/02fdd342, bindings 101660f8/window 2202165e, master_port 29531 free; 32 review then GO"
   }
 }
