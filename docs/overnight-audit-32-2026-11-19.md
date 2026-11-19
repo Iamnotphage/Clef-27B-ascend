@@ -149,6 +149,18 @@
 - 31 报的原件 SHA 已全部实读命中：final restore complete `cdf40a37…`、restore `92b33040…`、ready-identities `8de57b1b…`、service-check `1f96a40c…`；phase restore s2b8 `931a46b4…`、s2b16 `5683086c…`、erqa `fe4db104…`；acceptance s2b8 `e2de2986…`、s2b16 `2f16f492…`、erqa `1f119678…`。
 
 
+## 8.6 候选 typed 相位（e20e128）执行与核验
+
+- 20 排程 31 串行执行 s2_b8→s2_b16→erqa；每格新 OUT：plan-only→deploy(from f810/s1)→同 phase v5（无 single）→自身 client 退出→restore(f810/s1)→新 current_restore 交接；禁 candidate→candidate。
+- **typed s2_b8（cell 闭合，已核）**：OUT `owner31-typed-s2b8-20261119T0150Z`。
+  - deploy：label `d0-cand-20261119T014340Z-ede30b98`、root 1271820、aa3e/36eaff44、from s1、current_restore=f810 s1 restore `92b33040…`、overrides 8/8192、manifest e20e128/31202d27、launch_env 2+2 键；五 PID 同 PGID、四检 ok；live argv/live 8/8192、OPP9 `7b79c5db…`/LD12 `ca27dbb7…`、FLAG=1/ALLOW=aa3e。
+  - v5：唯一队列（supervisor 1273095/client 1273096/bench 1273109；output `v5-s2b8`、records `v5-s2b8-records`、deadline 02:05Z、无 single）。
+  - C8：2352/0 异常、inflight 8；p50 474.575/p95 937.613/p99 1017.324；**14.7833 dec/s**（report 14.7832，wall 159.099 s，官方=successful/wall）；Cap 74.253107/Cal 82.6424/Int 65.8638/acc 1903/MAE 0.402792。
+  - C16：2352/0 异常、inflight 16；p50 851.255/p95 1764.774/p99 1861.114；**16.9038 dec/s**（report 16.9037，wall 139.141 s）；Cap 73.82501/Cal 81.8361/Int 65.814/acc 1905/MAE 0.402936。
+  - 对同窗 f810：吞吐 +0.47%/+0.46%、p95 −0.26%/−0.49%、Cap −0.0259/−0.0223 pp、acc +1/0；2PP 内；作者 scorer 重打分一致；supervision complete/clients_exited=true/rc0/cleanup 干净。
+  - restore：label `d0-restore-20261119T015105Z-05a535b7`、manifest_source=deploy_record、prior=候选自身 v5 supervision、source f810/guard 76595657、五 PID 四检 ok、envcompare match=true（9/12 哈希）；新 current_restore=restore.json `2f62529b…`。restored 服务随后由下一格 s2_b16 deploy 正常停止。
+- **typed s2_b16（deploy 已核，v5 运行中）**：OUT `owner31-typed-s2b16-20261119T0155Z`；label `d0-cand-20261119T015300Z-75005c96`、root 1274993、aa3e/36eaff44、from s1、current_restore=`2f62529b…`、prior=s2b8 supervision `70b1834f…`、overrides 16/16384；五 PID 四检 ok、effective 16/16384；v5 output `v5-s2b16`、records `v5-s2b16-records`、deadline 02:25Z。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
