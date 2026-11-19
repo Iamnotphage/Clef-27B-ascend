@@ -1,6 +1,7 @@
 # H11 matched Grouped control (CPU design only; not scheduled)
 
-Purpose: the A14 v5 rerun (plan `b6429191`, run_probe `0f90fd23`) has produced a
+Purpose: the A14 v5 rerun (plan `b6429191`, then-frozen run_probe `0f90fd23`;
+the current H11 tuple is `e38b541/8e308804/1f780bf8`) has produced a
 complete numeric result, so run one Grouped `aclnnGroupedMatMulAllReduce` cell
 matched to that cell on every axis the current harness can control, to decide
 whether the Grouped hang is op-specific or tied to the larger v4r1-like
@@ -12,7 +13,7 @@ Reuse the existing `H11` arm. No new arm, no adapter change, no binding change.
 
 `H11` already is `flags = KEEP_ALL`, `native = True`, grouped op through
 `torch.ops.clef_mmar_probe.run`, one tensor per list, `group_pointer` from the same
-HCCL comm, FP32 zero bias, and the shared 2202165e window. The only thing the plan
+HCCL comm, FP32 zero bias, and the shared `1f780bf8` window. The only thing the plan
 must add is the shape: `--rows 128 --k 256 --n 512`.
 
 ## Exact CLI (plan first; execution only after 32 GO)
@@ -33,8 +34,10 @@ binary reused for the A14 v5 rerun (`d181b15a...`), loaded through
 Preparation status (CPU-only, not executed): 31 built plan `68cc5a79` with
 identity `1311514/399079056`, out/run/restore `probe-out-h11` / `run-h11` /
 `restore-h11`, `port 29531` preflight FREE, `flags=KEEP_ALL`, `plan_not_executed`.
-The plan pins the frozen run_probe `0f90fd23`, binding `101660f8`, window
-`2202165e` and adapter `d181b15a`; 32/33 contract review then 32 GO.
+The plan pins the frozen tree `e38b541`, run_probe `8e308804`, binding `101660f8`,
+window `1f780bf8` and adapter `d181b15a`; 32/33 contract review then 32 GO. The
+earlier plan `68cc5a79` (run_probe `0f90fd23`, window `2202165e`) is historical and
+is not the tuple referenced by this document.
 
 ## Plan contract
 
@@ -114,7 +117,7 @@ Read `result.json` on both ranks together; no single field decides a cause.
    fields and full restore.
 2. 32 reviews the v4 result and gates H11.
 3. H11 small uses the post-v4 recovery root identity, a fresh
-   `probe-out-h11-small-v1`, port 29531 preflight, same window 2202165e.
+   `probe-out-h11-small-v1`, port 29531 preflight, same window `1f780bf8`.
 4. A14 large M968/K8704/N5120 only after a complete small result plus 32 limited
    review.
 
