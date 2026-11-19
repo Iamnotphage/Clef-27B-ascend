@@ -719,7 +719,7 @@ TORCH_LIBRARY(clef_mmar_probe, m) {
     m.def("run(Tensor x, Tensor weight_kn, Tensor bias, str group, int flags) -> (Tensor, int, int)");
     m.def("run_mmar(Tensor x, Tensor weight_kn, Tensor bias, str group, int flags) -> (Tensor, int, int)");
     m.def("run_mrs(Tensor x, Tensor weight_kn, str group, int rank_size, int flags) -> (Tensor, int, int)");
-    m.def("release(int id) -> int");
+    m.def("release(int id) -> int", &grouped_mmar_release);
     m.def("provider() -> str", &grouped_mmar_provider);
 }
 TORCH_LIBRARY_IMPL(clef_mmar_probe, PrivateUse1, m) {

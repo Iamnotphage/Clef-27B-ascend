@@ -227,3 +227,40 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
   glue `22edb89f…`、binary `37929ec4…`、stage manifest `1d529ca8…`。
 - 32：首包判据、snapshot/restore 收紧、A12 不可单独作为 C1 单因证据。
 - 本包不 import torch/NPU 做 CPU 测试；CPU 测试只验证控制流/资源生命周期/超时/元数据。
+
+## 9. release无Tensor dispatcher候选（27，未编译/未部署）
+
+来源为 `8f4b84357cc86cce97e08f011f8ad704dd0596da` 的隔离候选分支
+`ao/npu-handoff/release-dispatcher-cpu-20261120`。唯一binding改动是
+`m.def("release(int id) -> int", &grouped_mmar_release)`，与provider相同的CatchAll注册形式。
+schema、release函数体、invalid-id返回0、run/run_mmar/run_mrs、同步、Lists所有权及window算法均保持。
+旧8ec/v2与8f来源、远端stage和生产aa3e保持原件；本候选没有部署动作。
+
+`smoke_release_dispatcher.py` 由31在隔离目录完成AOT构建后执行。27仅做静态检查。
+每次调用使用新子进程（`-I`、`TORCH_DEVICE_BACKEND_AUTOLOAD=0`），先断言整个
+`clef_mmar_probe::` dispatcher namespace为空，再按完整SHA加载一个给定.so。代码中唯一
+自定义算子调用为`release(1)`：未调用任何run，fresh模块的g_states为空，1为确定不存在的正id。
+旧模块与候选分别运行，控制臂必须在release调用处得到包含算子名的`NotImplementedError`；
+候选必须实际返回Python int 0。父进程记录子进程原始stdout/stderr/RC，单次30秒截止。
+
+以下为待31填写绝对路径及新构建SHA的CPU检查模板，当前未执行：
+
+```bash
+env TORCH_DEVICE_BACKEND_AUTOLOAD=0 /abs/venv/bin/python -I \
+  /abs/candidate/runtime/grouped_mmar/smoke_release_dispatcher.py \
+  --adapter /abs/frozen/probe_adapter.so \
+  --adapter-sha d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3 \
+  --expect not-implemented > /abs/fresh/control.json
+
+env TORCH_DEVICE_BACKEND_AUTOLOAD=0 /abs/venv/bin/python -I \
+  /abs/candidate/runtime/grouped_mmar/smoke_release_dispatcher.py \
+  --adapter /abs/candidate/probe_adapter.so \
+  --adapter-sha "${CLEF_RELEASE_CANDIDATE_SO_SHA:?31填写新构建完整SHA}" \
+  --expect zero > /abs/fresh/candidate.json
+```
+
+本smoke只证明无Tensor dispatcher可达及empty-registry/invalid-id分支。它不调用provider、
+native run、set_device、synchronize、torchrun、NPU Tensor或通信，不证明valid-state清理、
+SDK资源释放或H11 stream47/task13挂起已修复。Python脚本不能独立证明.so静态初始化的全部
+行为；31须维持CPU-only模块加载门。加载如要求设备操作/初始化，立即停报；脚本保留加载错误，
+不导入torch_npu或重试设备初始化。旧控制失败复现与候选成功记录须分列。
