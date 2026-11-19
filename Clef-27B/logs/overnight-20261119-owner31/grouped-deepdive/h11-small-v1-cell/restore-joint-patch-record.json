@@ -1,0 +1,85 @@
+{
+ "schema": "joint-fused-entry/1",
+ "enabled": true,
+ "requested": true,
+ "mode": "joint-fused-attention",
+ "default_config": "s1",
+ "config": "s1",
+ "installer": "/workspace/yangchen/Clef-27B-ascend/runtime/apply_joint_fused_attention.py",
+ "installer_sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406",
+ "guard_installer": "/workspace/yangchen/Clef-27B-ascend/runtime/apply_joint_single_field_patch_fused.py",
+ "guard_installer_sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+ "schema_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+ "flag_env": "CLEF_JOINT_FUSED_ATTN",
+ "allow_env": "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA",
+ "pending_install": false,
+ "flag_value": "1",
+ "allow_value": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+ "at": "2026-11-19T07:51:04Z",
+ "output_dir": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1",
+ "record": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1/joint-patch-record.json",
+ "guard_backup": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1/patch-backup/joint-single-field",
+ "fused_backup": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1/patch-backup/joint-fused",
+ "guard_manifest": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1/patch-manifest-joint-single-field.json",
+ "fused_manifest": "/workspace/yangchen/work/grouped-deepdive-cell-h11/restore-h11-small-v1/patch-manifest-joint-fused.json",
+ "env_present": {
+  "CLEF_JOINT_FUSED_ATTN": "1",
+  "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+ },
+ "tree": "/workspace/yangchen/work/src/vllm",
+ "target": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+ "probe": {
+  "tree": "/workspace/yangchen/work/src/vllm",
+  "target": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+  "probe_rc": 0,
+  "probe_stdout": "/workspace/yangchen/work/src/vllm/vllm/__init__.py\n",
+  "probe_stderr": "triton.language.extra.cann.libdevice.isfinited instead.\n  @_deprecated(replacement=\"triton.language.extra.cann.libdevice.isfinited\")\n/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/triton/language/extra/cann/extension/math_ops.py:49: FutureWarning: triton.language.extra.cann.extension.finitef is deprecated and will be removed in the next release; use triton.language.extra.cann.libdevice.finitef instead.\n  @_deprecated(replacement=\"triton.language.extra.cann.libdevice.finitef\")\n"
+ },
+ "target_sha256_before": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+ "guard_check": {
+  "rc": 0,
+  "report": {
+   "tree": "/workspace/yangchen/work/src/vllm",
+   "at": "2026-11-19T07:51:07Z",
+   "action": "check",
+   "target": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+   "service_postimage_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+   "service_env": "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA",
+   "service_env_enabled": true,
+   "status_before": "single-field",
+   "status_after": "single-field",
+   "ready": true
+  },
+  "stdout": "{\n \"tree\": \"/workspace/yangchen/work/src/vllm\",\n \"at\": \"2026-11-19T07:51:07Z\",\n \"action\": \"check\",\n \"target\": \"/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py\",\n \"service_postimage_sha256\": \"aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503\",\n \"service_env\": \"CLEF_JOINT_ALLOWED_POSTIMAGE_SHA\",\n \"service_env_enabled\": true,\n \"status_before\": \"single-field\",\n \"status_after\": \"single-field\",\n \"ready\": true\n}\n",
+  "stderr": ""
+ },
+ "fused_check": {
+  "rc": 0,
+  "report": {
+   "schema": "joint-fused-attention-installer/1",
+   "tree": "/workspace/yangchen/work/src/vllm",
+   "file": "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py",
+   "at": "2026-11-19T07:51:07Z",
+   "action": "check",
+   "preimage_sha256": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
+   "postimage_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+   "env": {
+    "name": "CLEF_JOINT_FUSED_ATTN",
+    "default": "0",
+    "scope": "single-field cross-attention"
+   },
+   "state_before": "postimage",
+   "sha256_before": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+   "state_after": "postimage",
+   "ready": true
+  },
+  "stdout": "{\n \"schema\": \"joint-fused-attention-installer/1\",\n \"tree\": \"/workspace/yangchen/work/src/vllm\",\n \"file\": \"/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py\",\n \"at\": \"2026-11-19T07:51:07Z\",\n \"action\": \"check\",\n \"preimage_sha256\": \"f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863\",\n \"postimage_sha256\": \"aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503\",\n \"env\": {\n  \"name\": \"CLEF_JOINT_FUSED_ATTN\",\n  \"default\": \"0\",\n  \"scope\": \"single-field cross-attention\"\n },\n \"state_before\": \"postimage\",\n \"sha256_before\": \"aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503\",\n \"state_after\": \"postimage\",\n \"ready\": true\n}\n",
+  "stderr": ""
+ },
+ "target_sha256_after": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+ "guard_sha256_after": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+ "ok": true,
+ "guard_action": "noop",
+ "fused_action": "noop",
+ "branch": "aa3e-noop"
+}
