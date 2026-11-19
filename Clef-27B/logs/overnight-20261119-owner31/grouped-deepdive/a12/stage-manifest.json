@@ -20,5 +20,14 @@
   "ldd": "/workspace/yangchen/work/grouped-deepdive-a12-6c1a90ab/ldd.log"
  },
  "run_note": "official sample, FP16 default, ./a12_grouped_mmar 2 1 0,1; temp tree/logroot only; no production writes",
- "source_ref": "hicann/ops-transformer f5703e415b9be16a2af7ba85564c37414592fc03"
+ "source_ref": "hicann/ops-transformer f5703e415b9be16a2af7ba85564c37414592fc03",
+ "build_origin": "official sample source (f5703e4) + derived CMake glue built from the generic official compile_and_run_sample template; official examples/CMakeLists.txt not present in the frozen package",
+ "provider_delta": "A12 links libopapi_math/libopapi_transformer/libhccl/libhccl_fwk directly; v4r1 dlopens libopapi.so/libnnopbase.so",
+ "success_criteria": "API rc0 AND aclrtSynchronizeStreamWithTimeout returns (liveness/pathway control); no numeric reference in sample",
+ "deltas_vs_v4r1": [
+  "single process 2 threads + HcclCommInitAll",
+  "FP16 default with FP16 bias",
+  "2 groups shapes 256/1024",
+  "no torch_npu comm"
+ ]
 }
