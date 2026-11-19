@@ -1215,10 +1215,12 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 | 10 | 0x14f8290 | `[%s:%d] [%u]start to read the [%u] msg` | RunRpcServerApi 0x7b3a24；x6=[ctx+12756]=ctx+0xf31d4(turn) | **API 每轮入口**（打印 turn） |
 | 10 | 0x14f82b8 | `[%s:%d] [%u]ErrToWarn: fail to get addr msg, msgPos %u` | 0x7b3a24 区 | API 失败标记 |
 
-### 78.2 修正后的正向标记
+### 78.2 修正后的正向标记（按原文校正）
 
-- **API 路径（最强）**：`start to read the [%u] msg`（每轮，打印 turn）→ 直接证明 RunRpcServerApi；`reset valid value %u` → gate 匹配并消费；`Check msg equal failed` → gate 不匹配；`ReadValidMsg[%u] timeout %lus` → 无消息超时（20/40/80/160 s）。
-- **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg 等待失败）；`Post finishedTurnCnt[%u].cnt = %lu.` 与 `Run rpc error ... sndCnt ... rcvCnt ...` 是候选，站点未确认前不单独判路。
+- **API 路径（最强）**：`start to read the [%u] msg`（RunRpcServerApi 每轮，打印 `ctx+12756`=turn，按 0x7b3a24 site）→ 直接证明 API 每轮入口；`reset valid value %u`（0x7d71bc，gate 匹配且 consume=true 后的写回值）→ **条件式成功 consume 标记**；`[MC2] Check msg equal failed, rMsg:%s msg:%s`（0x1613b80）→ **消息检查失败标记**（具体 cmp 对象/一致性/valid 语义待 site 证实，35 正在核；**不写成“valid 魔数不匹配”**）；`ReadValidMsg[%u] timeout %lus`（0x7d8d20，turn/20 s）→ 无消息超时（20/40/80/160 s）。
+- **关于 `call trace: hcclRet -> %d`**：原文是 **TraceProfSubmit/内部返回码** 的 trace 日志（0x1613bd0/0x1613c00），**不能直接叫“valid mismatch”**；只能记“ReadApiValidMsg 在 gate 不匹配分支调用 TraceProfSubmit 后的返回码”。
+- **TwoStage 路径**：`ReadValidMsg timeout 6s...`（CheckRcvWorkMsg **单次调用**的 6 s 超时）；“每 6 s 输出”需 caller 循环/重试证据，否则只记“每次调用最多一条”。`Post finishedTurnCnt[%u].cnt = %lu.` 与 `Run rpc error ... sndCnt ... rcvCnt ...` 仍是候选，站点未确认前不单独判路。
+- **`[NsRecovery][MC2] Suspending`**：原文无 OneStage/22 字样，只能靠 site CFG 条件归属，**不作必经入口**。
 - **共享入口**：`AicpuKfcRpcServer::Init addr:%u`（Init4 每次，打印 y 低 32 位）可作“日志在目标 AICPU 生效”的必经标记。
 - **MC2**：`[NsRecovery][MC2] Suspending`、`Failed to run aicpu server, MC2 opIdx:%u`。
 - **OneStage/Unfold**：本轮 10 段内**没有**可唯一归属的入口串；§77 的 #7 OneStage 归因撤回，保持“无现有标记”。
@@ -1238,3 +1240,74 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 3. 有 `start to read the [%u] msg` / `reset valid value` → API 路径；有 `ReadValidMsg timeout 6s` → TwoStage 等待失败；两者都无 → 不排除，需看候选 `Post finishedTurnCnt`/`Run rpc error` 站点后再定。
 4. 若出现 `MC2` 串 → 该路径非 API/TwoStage（但同一进程可能多阶段，需按时间序列）。
 5. 仍无设备 GO/SSH；字段值（turn 等）仅在上述标记打印参数中出现，属日志 payload，不是内存读取。
+
+## 79. 具体有限观测计划（H11 small；可审核，不执行/不自动 GO）
+
+### 79.1 现有冻结 arm（无需改代码）
+
+- **arm H11**：M128/K256/N512、world=2、BF16 x/w、FP32 zero bias、单 group、`KEEP_ALL`、seed 20261119、child 240 s / comm 90 s；reference=local `x@w` + all_reduce。该 arm 在现有 `run_probe`（`--arm H11 --rows 128 --k 256 --n 512`）与 `supervised_probe_window`（choices 含 H11）中可直接表达。
+- **冻结 tuple**：run_probe `8e308804`（30,686 B）、window `1f780bf8`、binding `101660f8`、adapter `d181b15a`、test_probe `ad257b5f`；不修改代码/不新增 arm。
+- **恢复**：沿用既有 supervised window 的 aa3e-noop 恢复路径；root identity、service-root、official-start、activate、model-dir、restore-output、stop-script 由 31 按 fresh plan 生成（不在本计划中臆造路径/identity）。
+
+### 79.2 候选环境与命令（未执行）
+
+```bash
+# 1) fresh 日志目录（必须已存在、可写）
+mkdir -p <fresh>/cann-plog
+export ASCEND_GLOBAL_LOG_LEVEL=0          # 0=DEBUG（同版 msft/asys 文本；仅候选）
+export ASCEND_PROCESS_LOG_PATH=<fresh>/cann-plog
+unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
+source <activate_env.sh>                   # 现有 probe 运行前提（无 CANN env 会 torch_npu 段错误）
+
+# 2) probe child（由 supervised window 以 torchrun 2 ranks 启动；这里给可审核 argv 形状）
+python runtime/grouped_mmar/run_probe.py --execute --arm H11 \
+  --rows 128 --k 256 --n 512 --seed 20261119 \
+  --temp-root <fresh>/temp --out <fresh>/out \
+  --adapter <frozen>/probe_adapter.so \
+  --arm-timeout 240 --comm-timeout 90
+
+# 3) window 形状（其余 restore/identity 参数按既有 H11 plan 模板由 31 填）
+python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
+  --rows 128 --k 256 --n 512 --seed 20261119 \
+  --probe-temp-root <fresh>/temp --probe-out <fresh>/out \
+  --adapter <frozen>/probe_adapter.so \
+  --master-port 29531 --child-timeout 240 --comm-timeout 90 \
+  --run-dir <fresh>/run --root-identity <fresh identity json> \
+  --source-target <aa3e source target> --official-start <official start> \
+  --activate <activate_env.sh> --service-root <service root> \
+  --model-dir <model dir> --restore-output <fresh>/restore \
+  --stop-script /tmp/d0cc/d0_stop.py
+```
+- 端口 29531 执行前须 `ss -ltn` 预检空闲（既有前置）；不自动 GO。
+- `ASCEND_GLOBAL_LOG_LEVEL=0` 只是候选：**不假设 Init4/ReadApiValidMsg 的 guard 会被它满足**；未证模块/bit 不设置。
+
+### 79.3 采集与归属（本 cell）
+
+- **时间窗**：probe child 启动到 child 退出/被 watchdog 杀（≤240 s）；restore 阶段单独按时间/PID 排除。
+- **对象**：`<fresh>/cann-plog`、`/root/ascend/log/device-*/`（按 probe rank PID/TID 与时间窗筛选）、window/child/result/trace。
+- **归属字段**：rank/device（device-0/1 文件）、pid/tid、file:line（`aicpu_kfc_rpc_server.cc:27/226/241/285/360`、`aicpu_kfc_process.cc:1715` 等）、时间；有则记 stream/task/opIdx。
+- **排除**：aa3e 服务 root 五 PID 与 restore 日志（按 PID/时间），不作为本 cell 分支证据。
+- **注意**：240 s watchdog 杀进程时日志可能未完全 flush；只采用 kill 前已落盘行。
+
+### 79.4 期望证据与允许判读（正向标记；缺席不排除）
+
+| 观测 | 支持 | 限制 |
+| --- | --- | --- |
+| `AicpuKfcRpcServer::Init addr:%u`（line 27，Init4） | 该次运行进入 **Init4/RpcSrvLaunch** 且该级别 Dlog 生效 | 只证 Init4 路径；若实际走 `Init(y)`/ForApi 或 MC2，不要求它必现，**缺失不能判日志关闭** |
+| `start to read the [%u] msg`（line 1715，0x7b3a24） | RunRpcServerApi 每轮读 msg（API 路径） | 需该 site 实际执行；缺席不排除 |
+| `reset valid value %u`（0x7d71bc） | gate 匹配且 consume=true 的成功路径 | 条件标记；gate 失败/未读不出现 |
+| `[MC2] Check msg equal failed...`（0x1613b80） | **消息检查失败**标记 | cmp 对象/一致性/valid 语义待 site 证实；不写成“valid 魔数不匹配” |
+| `ReadValidMsg[%u] timeout %lus`（0x7d8d20） | API 无消息超时（20/40/80/160 s） | 非入口；消息到达后算法卡住不触发；缺席不排除 |
+| `ReadValidMsg timeout 6s...`（0x7d744c） | CheckRcvWorkMsg **单次调用** 6 s 超时 | **不宣称每 6 s 周期**；多次出现需 caller 循环/重试证据；缺席不排除 |
+| `[NsRecovery][MC2] Suspending`（0x762280） | 站点 CFG 条件证据（MC2/Suspending） | 文本无 OneStage/22；非必经入口 |
+| `Failed to run aicpu server, MC2 opIdx:%u`（0x7620e8） | post-Init 错误并走向清区 | 非入口 |
+| `Post finishedTurnCnt...` / `Run rpc error ... sndCnt/rcvCnt` | 候选（站点未定） | 未确认前不判路；确认后可能提供字段型证据 |
+| ATRACE KFCtaskAndTiling/AivAicpuOpParam | KFC vs MRS | 不分子分支 |
+
+**有效性判据（按实际路径）**：任一**适用**的 K-entry/循环标记（Init4 用于 RpcSrvLaunch；`start to read` 用于 RunRpcServerApi/ForApi；若实际为 MC2 则以 MC2 标记为适用入口）出现，才算该路径日志生效；**不能把 Init4 缺失当全局日志关闭**。没有任何适用正向标记 → 本次运行按**缺测**处理。
+
+### 79.5 允许结论与缺测退出
+
+- **可判**：出现 `start to read`/`reset valid` → API 路径；出现 6 s 单次超时 → TwoStage 等待失败（该次调用）；出现 MC2 串 → 该阶段 MC2；出现 Init4 但无任何分支标记 → 只证 RpcSrvLaunch Init4，不判子分支。
+- **不可判（缺测退出）**：无任何适用正向标记；或只有共享/候选标记；或日志未落盘/被 kill 截断。此时记录“缺测”，不排除任何路径，下一步才是 host launch 日志或代码埋点（需单独授权）。
+- **不执行**：本计划不运行设备、不自动 GO、不新增 arm；plan/identity/GO 由 31/32 按既有流程决定。
