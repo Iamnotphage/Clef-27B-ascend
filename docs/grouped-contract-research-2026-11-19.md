@@ -498,3 +498,11 @@ freeze `120d4e7`：manifest `4beba032…`、window **`b77530bc…`（47,325 B）
 **F5（中高）原 flag 未读取/未还原**：`_prctl_subreaper(enabled)` 只执行 `prctl(36, 1/0)`（L108-113），没有 `PR_GET_CHILD_SUBREAPER`（37）读取旧值；`disable_subreaper` 固定清零，docstring 的 “Restore the pre-cell subreaper state” 与实现不符。若 window 启动前原本就是 subreaper=1，清零后不会恢复原值；fixture 只测 enable→reparent window / disable→PID1，**未测 original=1**。修复：set 前 `prctl(37,&old)` 保存；restore 前清零以达成 ppid1，finally 再 `prctl(36,old)` 还原原状态；补 original=1 的 Linux fixture。若 original=1，清零期间 service 可 reparent PID1，但结束后必须恢复原状态；不能把“固定清零”称为 restore。
 
 **A14 v2 plan 状态**：`56441483`（window 52c10dce）未启动；新 window 为 b77530bc，故该 plan/stage 已不是当前 window，需 31 重出 stage/plan（run_probe d54584b7、window b77530bc、fresh identity 1323589/399707126），不能用旧 plan metadata-only 复用。A14 large 数值重跑待 F5 修复 + Linux 38 项 + 32/33 核。Grouped large/A13 暂停；A15 CPU。
+
+## 41. 3d8667a Linux 39 项与 fake_restore fixture 缺陷（2026-11-19）
+
+31 归档 `fixtures-3d8667a/`（unittest.log 11k，SHA **`ac816b00…`**；cleanup-note；SUMS 2/2）：`Ran 39 tests` → **38 OK / 1 FAIL**。唯一失败 `test_fake_restore_reaches_pid1_after_disable` L808：`live['pgid']=1325752 != pid=1325753`。
+
+**根因（fixture，不是产品）**：fixture fake_restore.py 在 `os.setsid()` 之后**又 fork 一次**；写 manifest 的是孙代 C，C 的 pgid 是中间进程 B 的 setsid 组（B 是 group leader），所以 `pgid != C.pid`。真实 restore argv 是 `setsid /bin/bash -c ...` → `exec start.sh` → python，root PID 即该新 session/PGID 的 leader；产品 `pgid==pid` 门与真实路径一致。**修复**：fixture 改“单 fork + setsid + 直接写 manifest/sleep”（模拟 setsid→exec），不要二段 fork；产品门不改。期间 fixture 遗留 daemon 1325746/1325749 已按身份 SIGKILL，无其它残留；服务未触 root 1323589 健康。
+
+**F5 仍开放**：原始 subreaper flag 未读/未还原（详见 §38/§40）；fixture 39 项也未测 original=1。最终冻需修 fixture + F5 重冻，31 Linux 39 全过后再出 v3 plan（window b77530bc/新 SHA、fresh identity 1323589、同形状、KEEP_ALL、真实 child SHA）；v2 56441483 superseded/未执行；设备暂停；Grouped large/A13 暂停；A15 CPU。
