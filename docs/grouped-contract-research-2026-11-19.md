@@ -233,3 +233,36 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 **归档核验（33）**：`a14-small-v3-cell/SHA256SUMS` SHA `88b823a4…`，16/16 OK；commit `064d469`（17 文件，message “A14 small v3 MC2 success with harness release failure”）；window `c291b877…`；rank0 result `33410194…`/trace `1fb6bf87…`、rank1 result `300eebfd…`/trace `7e7b05a1…`、child stdout `cb1aa6ed…`/stderr `37177294…`、restore manifest `5deee436…`/joint `861044f4…`；恢复 `branch=aa3e-noop`、root **1308632**/start 398926792、五 PID、四检全 true、无残留 probe。A14 v3 收口为“liveness 成立 + release harness 待修”；完整数值重跑门见上。
 
 **顺序根因（33 读 `b7f255cb` run_probe.py 约 L346–360）**：`sync_return` 后立即调用 `release`，之后才 `reduced = torch.matmul(x_n, w_n)`、`dist.reduce_scatter_tensor(reference, ...)` 与 `finite`；release 的 zero-Tensor dispatch 异常因此吞掉了全部数值/reference。**最低风险修复只需改 run_probe、不动 binding/adapter**：把 release 移到 reference/finite/gate 之后；先原子写完整 result.json；再 `try/except` 调 release 并记录 `release_rc/release_error`、重写 result；数值门只看 api/sync/finite/reference，release 失败记为 harness_error，子进程退出后由 teardown 回收（单格一次性，服务已 d0_stop）。若需“release 成功”作为门，再选做 schema 占位 Tensor/fallback（需重编 adapter、新 SHA/compile log）。这样 d181b15a 可继续复用，仅 run_probe SHA/stage identity 变化。
+
+## 17. Grouped-specific/H12 对照：plog 反证、provider/KFC/rac_server、H11 合法性与 v4 阻断（2026-11-19）
+
+**A12/A14 plog：同 chip:5 skip `mc2_server`，A14 仍成功**
+
+- A12 `a12-cell/plog-run-1301080.log`：device0 L84–86，`06:24:20.502.378` begin load → `06:24:20.502.380` `[package_loader.cpp:454][SupportLoadPkg] current device chip:5 does not support package:mc2_server.tar.gz` → `.381` does not need to load；device1 L168–170，`06:24:20.927.134/.136/.137` 同文。
+- A14 v3 `plog-run-1308495.log` L91–93，device0 `07:11:21.905.175/.177/.178`；`plog-run-1308496.log` L91–93，device1 `07:11:21.987.154/.156/.157`；均同 `chip:5` skip。
+- 结论：skip 是 host loader 的同一行为，A14 在同样 skip 下 prepare/launch/sync rc0 → **skip 不是 MC2/KFC 路径阻塞的充分原因**；Grouped 是否唯一依赖被拒包仍 `supported_but_unproven`。
+- **v4r1 plog 缺口**：owner27/owner31 本地归档无 plog；`grouped29-v4r1-first.json` 仅指远端 run_dir `/workspace/yangchen/logs/grouped29-first967-owner27-20261119-v4r1` 与 outer_dir `/tmp/owner31_grouped_outdir`，`first_call_trace_sha256=null`。需 31 补 PID/时间/plog 才能做同一三行对照；上述反证不依赖它。
+
+**provider/加载路径（事实）**
+
+- A14 `rank0-result.json` provider：prepare/launch=`/usr/local/Ascend/cann-9.2.1/aarch64-linux/lib64/libopapi.so`，metadata=`libnnopbase.so`；adapter `d181b15a`，`clef_mmar_probe::run_mrs` 经 `TORCH_LIBRARY_IMPL(..., PrivateUse1)` 派发。
+- H11/A0 用同一 adapter 的 `run(Tensor x, Tensor weight_kn, Tensor bias, str group, int flags)`，仅 aclnn 符号不同 → A14 与 H11 provider/加载路径匹配。A12 是直接 aclnn C++ 样例（同 libopapi/nnopbase，host 启动路径不同）。v4r1 用旧 adapter `23d9ab07`/binding `5db40ef9`/runner `dde68f34`，与当前 harness 在 op 与 harness 两代上不同，不能直接当 matched 对照。
+
+**KFC/rac_server/context（事实/推断）**
+
+- 事实：Grouped tiling 显式 `taskType=KFC_TASK_HCC_TASK_DELIVER`、`funID=ALL_REDUCE_FUNC_ID`、`commType=HCCL_CMD_ALLREDUCE`、`commOrder=1`、`commAlg=0`、`preparePosition=0`；kernel 含 `HcclServer`、`AivAicpuOpParam`、`rac_server.h`、`GetHcclContext<0>()`。
+- 事实：A14 tiling 用 `Mc2CcTilingConfig(groupName, opType, rsConfig, 0)` 生成 `mc2InitTiling/mc2CcTiling`；kernel `GetHcclContext<HCCL_GROUP_ID_0>()` + `MatmulReduceScatterFullMesh`；本地 kernel main/base 无 `HcclServer/rac_server/AivAicpuOpParam`。
+- 推断：Grouped 走 KFC server/rac_server 任务投递协议，A14 fullmesh 走标准 MC2 client 路径；A14 fullmesh 的 server 依赖未证（fullmesh 头未在本地归档，缺口）。context 由 runtime/HCCL 管理，两 kernel 均读 reserved context；精确 libhccl 初始化调用链未由本地符号证明。
+
+**H11 matched Grouped 小格（32 设计）合法性**
+
+- binding `run` 事实：x BF16 `[M,K]`、weight BF16 `[K,N]`、bias **FP32 `[N]`**、group 非空；aclnn `splitItem=0`、`groupList=null`、`comm_turn=0`、`streamMode=1`；docs 允许 BF16 x/w + FP32 bias、splitItem0 的 2D x/y、groupList 必须为空、32B 对齐上限。**M128/K256/N512 合法**。
+- H11 `flags=KEEP_ALL`，同 adapter `d181b15a`/binding `run`、同 torch 多进程 comm、240s → 正确 matched 控制。A8 是 torch matmul+all_reduce（`native=false`），只能作 reference/comm health；A0 是同 Grouped `run` flags=0，可复用其 CLI/参数化，但 KEEP_ALL 匹配选 H11。
+- 显式固有差异：A14 null bias vs H11 FP32 zero bias；output reduce_scatter vs all_reduce；op MRS vs Grouped。
+- 优先单变量：A14 small vs H11 small，仅 op 变化（其余 adapter/comm/M/K/N/BF16/KEEP_ALL/240s 全同）。H11 同挂 stream47/507046 → Grouped op/kernel/tiling/rac_server/context 为差异源；返回 → 转 M967/K8704/N5120 shape/tiling；prepare 失败 → 记录形状约束并最小调整一维保持两臂匹配。顺序按 32：A14 v4 完整 small → H11 small fresh plan → large。
+
+**v4 release 修复的执行阻断（33 读 `fdbfeb67`/commit `5ada848`）**
+
+- 已正确：result 先 `flush()` 再 release（L389–392）；`call_release` try/except 记录 `release_rc/release_error`；`numeric_pass` 只看 api/sync/finite/reference。
+- 阻断：`meta['pass']=numeric_pass and harness_release_ok`（L413）、`return 0 if pass else 1`（L420）、`destroy_process_group()` 仅在 pass 下。release schema 仍零 Tensor，v4 未改 binding/adapter，dispatch 必抛 `NotImplementedError` → `harness_release_ok=False` → `pass=False` → **child rc1、window child_ok false**；v4 会再次“数值完整但 harness 判失败”。
+- 二选一：①（推荐，run_probe-only）`return 0 if numeric_pass else 1`，`pass=numeric_pass`，另存 `harness_pass=numeric_pass and harness_release_ok`，`destroy_process_group()` 改在 numeric_pass/finally；②修 schema 占位 Tensor/fallback（需重编 adapter），再让 pass 含 release。32 的“numeric 只看 api/sync/finite/reference”与 35 当前 `pass` 语义冲突，需先统一再给 v4 GO。
