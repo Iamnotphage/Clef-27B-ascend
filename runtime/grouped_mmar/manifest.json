@@ -70,6 +70,11 @@
       "sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
       "bytes": 41364
     },
+    "runtime/grouped_mmar/abi_turn_fields.md": {
+      "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
+      "sha256": "062de195e742f2d8351b834df9a074c9e922b5b03e4b842d79c29b786d5384f8",
+      "bytes": 5789
+    },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
       "sha256": "a1df799cc6c83ae150e8c901db0bf4e6b608cb309df1e0b167b6db5143989346",
@@ -82,8 +87,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "fbb71fa00f1f48bf7440d41ede13164813f0e3b93ef8b918a1ed724acae9f9c7",
-      "bytes": 39358
+      "sha256": "f13291b0d2803a7373ad3f047bf8eecba96904c885bbba8cef4d5a7c94777cfb",
+      "bytes": 39982
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -451,6 +456,29 @@
     },
     "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
     "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
+  },
+  "abi_turn_analysis": {
+    "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
+    "source": "abi-preflight5 SUMS ae91a53073b9a5f323b903ce50c342ae1b3ccfc08d833be6a21f5416e5cff559; libccl_kernel 2281deca; Init 9cac74e1, WriteFinish/Turn 29027459; abi4 GetSendRecvCnt",
+    "doc": "runtime/grouped_mmar/abi_turn_fields.md",
+    "design_sha256": "062de195e742f2d8351b834df9a074c9e922b5b03e4b842d79c29b786d5384f8",
+    "proven": [
+      "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
+      "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
+      "WriteFinishWhenAllFinalize writes u64 0x112210f6ca9997ff at [server+8]+0x5008+64*turn",
+      "WriteTurnCnt zeroes u64 at [server+8]+0x4008+64*turn and increments u64 at [server+8]+0x5008+64*turn",
+      "WriteFinish and WriteTurn share the same u64 address base+0x5008+64*turn",
+      "GetSendCnt reads u8 at [ctx+184]+u32[ctx+192]+50; GetRecvCnt reads u8 at that base + u16[ctx+196]*64 + 51",
+      "sendCnt/rcvCnt (+50/+51, 1 B) differ from the server turn word (+8, 8 B); no same-address alias even if bases coincide"
+    ],
+    "unproven": [
+      "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
+      "which Init overload/branch the Grouped path uses (call sites absent)",
+      "semantic intent of the WriteFinish constant vs the incremented counter at the same address",
+      "ctx+0xf31d turn: no reference in abi5, so it cannot be equated with rcvCnt",
+      "AivAicpuOpParam population (33 consumer chain)"
+    ],
+    "request": "33 merges this with the consumer chain: 31 read-only fetch of Init call sites, AicpuComContext offsets 184/192/196 and any ctx+0xf31d reference, and the AivAicpuOpParam layout/size; 31 remains the sole remote fetcher"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
