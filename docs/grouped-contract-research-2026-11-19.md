@@ -2596,3 +2596,45 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 27 主责 comm/stream/nativehandles 与 SDK docs；33 不重复宿主审计；无新设备/GO。
 
 **状态**：root cause unresolved；宿主侧读法精确化（0 值≠执行），设备侧结论不变。
+
+## 128. 27 首表并入与 SDK metadata/native 资源对象表（源码已证 vs SDK 待证）
+
+**依据**：27 artifact `grouped-h11-attempt2-lifecycle-audit.md`（session27，SHA `5423fca2…`）+ 既有 9.2.1 静态/运行材料。无新取件/设备。
+
+### 128.1 27 首表事实（采纳）
+
+- 字节核：binding `101660f8…`、run `8e308804…`、manifest `8e324bea…`；adapter `d181b15a…` 仅 stage 记录、未本地复算。
+- `g_states` 保活与 32 窄核一致（§127）；`group_size0` 是 B336 字面传参，不证明字符串被清空；`result false` 是 R406 初始 flush（R403 初始化 `api_returned=false`，R529 置 true、R578 再 flush），不推翻 trace 已返回。
+- handler 两个 0 是 flags8 跳 sync/close 后的初始值（§127）。
+- **B722 release schema/noimpl 缺口**：B722 仅声明 `release(int id)->int` schema；B725–728 仅注册 run/run_mmar/run_mrs，未绑定 `grouped_mmar_release` 实现；C9–14 构建输入仅 binding_probe.cpp。R579–588 的调用会经 `call_release` 捕获清理异常。该缺口是**成功后路径**的清理问题；attempt2 未到达 R579，**当前无因果链连接到本次 sync 挂起**；20 已交 35 查覆盖/方案、32 窄核。
+
+### 128.2 9.2.1 SDK metadata / native 资源路径（给 27）
+
+| 材料 | 路径/SHA | 能证 | 待证 |
+| --- | --- | --- | --- |
+| op-info/kernel config | `grouped_mat_mul_all_reduce.json` `c9bd574a…`；BF16 kernel `90b5b6bb…`；`opParaSize=9216`、`coreType=MIX`、`taskRation=1:0`、`workspace.num=1/size=-1` | BF16+FP32 bias 选 90b5b6bb；op 参数/workspace 声明 | 运行时常量/notifyOff；executor/native 资源所有权 |
+| 运行 kernel launch metadata | device-0 `06023:91516`、device-1 `05927:95254`：`kernel_name=GroupedMatMulAllReduce_90b5b6bb…_0`、`arg_size=9544`、`coreDim=24`、`taskRation=0`、`funcType=4`、`addr1=0x12c09cc00000`、`mixType=1`、`prefetchCnt1=7` | 实际 kernel/参数规模/核数/混合模式 | `addr1` 的 arg/tiling 身份与生命周期；`taskRation=0` 与 op-info `1:0` 是不同字段，不可混用 |
+| 地址关系 | `addr1=0x12c09cc00000` = `workSpace 0x12c09bc00000` + `0x1000000`（16 MiB = workSpaceSize） | 精确算术关系 | 是否同一分配段/是否共享生命周期，未证 |
+| MC2 消息头 | `abi-preflight/rac_server.h` `f6b286d7…`（AivAicpuOpParam 64B；send 区/response 区 `win+64`） | 64B offsets、HcclServer 语义 | `rcvCnt`/response 写者；native 资源所有权 |
+| 初始化参数头 | `abi-preflight/aicpu_init_param.h` `e50f7a5b…` | 初始化参数布局 | executor 生命周期 |
+| HcclCombinOpParam | `mc2_common_def.h` 两版 `9c045a97…`/`a8969b7f…`（源级；非本地文件） | 24B 首四字段；与 kernel 本地大结构（源级 2248B）区分 | 本机编译 sizeof/offsetof；`workSpace` vs `WorkSpace` 已记为不同结构 |
+| libccl | `libccl_kernel.so` `2281deca…`；`libccl-resinit-disasm.txt`；nm 符号 | KFC/RPC 消费端/Init/端任务 | release/native handle 内部 |
+
+- **缺口**：本地无 `aclnn_base.h`/`acl_op.h`/`acl_rt.h`/`hccl.h` 副本、无 `two_phase_api.md`；executor auto-release/queuekeepalive、`aclCreateTensor/List` 拷贝语义、native handle 所有权/release 内部均无同版文档。
+
+### 128.3 对象/静态表（三类分开）
+
+| 对象/资源 | 源码已证（host/静态） | 设备日志/运行已证 | SDK 待证 |
+| --- | --- | --- | --- |
+| group/workspace/lists/x/w/bias/y | `g_states` 持有（§127）；27 B 表 | — | executor/native handle 所有权、release 内部 |
+| flags8 sync/close | binding L364–379；27 | handler_return 0 是初值 | — |
+| group_size0 / result false | B336 / R406；27 | result false=初始快照 | — |
+| release schema/noimpl | B722/B725–728/C9–14；27 | — | release 注册/实现；attempt2 未达 |
+| kernel args（arg_size 9544、addr1） | op-info/JSON；launch metadata | `StreamLaunchKernelV2` 91516/95254 | arg/tiling 生命周期、native 资源 |
+| AivAicpuOpParam 64B | `rac_server.h` f6b286d7 | AddrMsg valid/sendCnt/rcvCnt/isLast | `rcvCnt`/response 写者 |
+| executor | binding `aclOpExecutor*` | — | auto-release/queuekeepalive |
+| aclTensor 描述符 | 样例 `aclCreateTensor(shape.data(),…,strides.data())` | — | 拷贝 vs 持指针 |
+
+**边界**：源码/运行事实不证明设备侧 AllReduce/task13 完成；B722 未到调用点、非本轮 sync 挂因；SDK 缺口保留；27 继续 comm/stream/nativehandle 与 SDK docs，33 不重复实现/取件。
+
+**状态**：root cause unresolved；对象表三分；无新设备/新 GO。
