@@ -2663,3 +2663,25 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - SDK executor/stream/descriptor/native handles/设备 task 引用仍缺；27 主责其余 comm/stream/nativehandles 与 docs；35 查候选覆盖/最小修复/CPU 计划，暂不实现；33 不重复实现/取件；无新设备/GO。
 
 **状态**：root cause unresolved；release 缺口与 sync 挂起因果分离；B722 仍非本轮挂因。
+
+## 130. WaitTaskFinish→WaitMainStreamFinish 边闭合（35 只读核对）
+
+**依据**：35 只读核对；无新取件/设备。`WaitTaskFinish` nm **0x7b1b84/0x1c0**；mangled `_ZN16TaskOrchestrator20WaitMainStreamFinishEP15AicpuComContext`。
+
+### 130.1 静态边与前提
+
+- 0x7b1b9c BL `TraceProfSubmit`；0x7b1ba4 `cbnz w0,0x7b1c30`；**仅 w0==0** 才到 0x7b1bb8 → 0x7b1bbc BL `WaitMainStreamFinish@plt`（0x287720）。
+- b=1 路径：worker 0x7c9a90 `mov w1,#1`；WaitTaskFinish `and w21,w1,#0xff`；`tbnz w21,#0,0x7b1bb8`；b=0 时先查 `[ctx+0xF31B4]`。
+- 函数体未取；按 20 决定不补、不扩 callee/全库。
+
+### 130.2 运行证据（attempt2）
+
+- 同线程 7543/7533：`task_orchestrator.cc:1072 Start` → `:1162 loopCnt:0, head:11, tail:11` → `:1081 End`；sqid 92/93；**25 µs/652 µs**；随后 `aicpu_kfc_utils.cc:342` buffer 行与 PrintBuffer 一致（未逐行绑定）；无 worker line337/22 错误日志；该实例 WaitTaskFinish **返回 0**。
+
+### 130.3 归属边界与结论
+
+- 同线程 `line551`（OneStage wrapper）→ `line298/305`（Check#1）→ `WaitMainStreamFinish`；TwoStage 也在 0x7c7f0c/0x7c7f6c 调同一 PLT，故单条日志**不能唯一归因** WaitTaskFinish；**同线程 + line551 序列是最强归属依据，非 callsite 唯一**。
+- 结论：足以支持**本地主 stream 等待返回**（head11/tail11、25/652 µs），**不作为 H11 挂因**；CheckAivIsEnd/WaitTaskFinish 仅静态等待候选；须与 stream12/task7 `TaskFinished/retCode0`、`endRunRpcSrvLaunch`/ack `result0` 一致解释。
+- 与 §124/§125 的关系：worker 端路径 → WaitTaskFinish → WaitMainStreamFinish 的**静态边已闭**；运行时同线程序列支持 worker 到达端路径并返回，不再只是“可能停在 CheckAivIsEnd 循环”。但 callsite 非唯一，且**本地排空 ≠ AllReduce/task13 完成**；task13 pending 仍是唯一正证。
+
+**状态**：root cause unresolved；本地排空归属闭合（条件式、非 callsite 唯一）；设备侧结论不变；35 保持 `8f4b843` 冻结；release 已交 27；无新取件/设备/GO。
