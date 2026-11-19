@@ -893,10 +893,11 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 ### 66.2 ForApi 的调用链与 server 基址
 
 - `AicpuRunRpcServerForApi` 0x7b6770/0x430；真正 `@plt` 调用者 **0x760930**，位于 `RunAicpuKfcClearOpRes`（Base+0x400），传 `x0=x19(ctx)`、`x1=x21` → **ForApi 是 ClearOpRes 清理路径，不是正常 launch 分支**。
-- Server 基址（prologue）：
-  - `RunAicpuRpcSrvLaunch`：`0x7618dc adrp x23,0x191f000`；`0x7618e0 add x2,x23,#0xd00` → 静态全局 `0x191fd00`；`Init(y,j,t,KFCTask*)` 的 this 为 **0x191fd10**（r23+0xd10）。
-  - `ForApi`：`0x7b678c adrp x20,0x22c7000`；`0x7b6794 add x21,x20,#0xb50`；`x21+0x190=0x22c7ce0` 是 `ldar` 状态字；`Init(y)` 的 this 为 `x20+0xb50+0x1a0=` **0x22c7cf0**；随后 `RunRpcServerApi(ctx, 0x22c7cf0, ...)`。
-- 因此两条路径是**两个不同静态全局 server 对象**（0x191fd10 vs 0x22c7cf0）；但“server 基址 vs ctx 基址”的 S==C 仍未建立（ctx 是另一指针，Init 只建立 y/j/T 映射）。
+- Server 基址（用符号式，避免绝对地址在未定控制流前传播）：
+  - `server_A`：`0x7618dc adrp x23,0x191f000`；Init 前 `0x761918 add x0,x23,#0xd00`、`0x761928 add x0,x0,#0x10` → `server_A = ADRP(0x191f000)+0xd00+0x10 = 0x191fd10`。
+    *注意*：0x7620b4 还有一条 `add x23,x23,#0xd00`，但它位于 Init 之后的错误/日志分支（0x762008→0x76209c→0x7620b4，随后 `b 0x7614a4` 返回），**没有回到 0x76192c 的边**，因此不参与 Init 的 this 计算；若该 mutation 真的先于 Init，算术会是 0x1920a10——当前控制流不支持这一点。
+  - `server_B`：`0x7b678c adrp x20,0x22c7000`；`0x7b6794 add x21,x20,#0xb50`；`x21+0x190=0x22c7ce0` 是 `ldar` 状态字；`Init(y)` 的 this 为 `x20+0xb50+0x1a0 = 0x22c7cf0`；`0x7b67e8 add x20,x20,#0xb50` 之后调用 `RunRpcServerApi(ctx, x20+0x1a0=0x22c7cf0, ...)`，同一值。
+- 因此两条路径使用**两个不同静态全局 server 对象**（`server_A` vs `server_B`，按符号记）；但“server 基址 vs ctx 基址”的 S==C 仍未建立（ctx 是另一指针，Init 只建立 y/j/T 映射）。
 
 ### 66.3 计数器写者矩阵（更新）
 
@@ -929,7 +930,7 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 - 0x7c7f90：`GetRspPolicy` 非零时，先 `WaitMainStreamFinish(ctx)`、`ClearWorkMsg(server)`，再 `PostMsg(server, [ctx+352])` —— 回写 `+51 = ctx+352`。
 - 即 stage-wait 的 ack 链：**wait sendCnt≥turn → 执行 → PostMsg(turn-1) → 可选 PostMsg(turn)**；`ctx+352` 是轮次计数。
 
-**地址等价（条件式）**：PostMsg 的目的 `x0=[this+24]`；Init 零分支 `server+0x18 = y+j+64T`；`GetRecvCnt` 读 `y+j+64T+51`。若同一 server 对象（TwoStageWait 用 RpcSrvLaunch 的 0x191fd10）且走零分支，则 **PostMsg 写的 +51 与 GetRecvCnt 读的 rcvCnt 是同一字节**；非零分支不写 server+0x18，不成立。PostMsg 先写 4 B valid 再 `strb` +51，随后 `dsb st`，字节序/屏障上 ack 在后。
+**地址等价（条件式）**：PostMsg 的目的 `x0=[this+24]`；Init 零分支 `server+0x18 = y+j+64T`；`GetRecvCnt` 读 `y+j+64T+51`。若同一 server 对象（TwoStageWait 用 RpcSrvLaunch 的 `server_A`（0x191fd10））且走零分支，则 **PostMsg 写的 +51 与 GetRecvCnt 读的 rcvCnt 是同一字节**；非零分支不写 server+0x18，不成立。PostMsg 先写 4 B valid 再 `strb` +51，随后 `dsb st`，字节序/屏障上 ack 在后。
 
 **u8 截断约束**：`PostMsg strb w1` 把 `ctx+352`/`ctx+352-1` 截为 8 位；`CheckRcvWorkMsg` 用 `u8 opParam[50]` 与 **u32 `ctx+352`** 比较。若 `ctx+352 > 255`，比较永不满足 → 每轮 6 s 超时后继续（不是死锁，但轮次协议失配）。`ctx+352` 的写入/递增在已交付段中**只有 RpcSrvLaunch 的 `str wzr,[ctx+352]`（0x76187c）**，未见递增者；可能在 `TaskOrchestrator::ActiveRecordMain` 或未交付函数 → **来源/上界未证**。
 
@@ -943,3 +944,58 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 - 已证：stage-wait 下 PostMsg 是 +51 的 1 B 写者（值 turn-1/turn），与 GetRecvCnt 条件式同字节；sendCnt +50 的等待者是 CheckRcvWorkMsg，但 +50 的写者仍未找到。
 - 未证：Grouped 是否进入 TwoStageWait（取决于上述分派运行值）；若走 API 路径则 PostMsg 不参与，gate 是 HcclMsg+48，生产者仍在 host 侧。
 - 下一最小证据（不新反汇编整段）：①`ctx+352` 的递增者/上界（TaskOrchestrator 或指定函数的小窗口）；②Grouped 的 `GetPreparePosition/GetTaskType/ctx+0xf31dc` 来源（Init 字段映射/host tiling）。仍无设备/SSH。
+
+## 67. OP1/OP3/OP6 最小运行值字段表（为有限观测设计，不执行）
+
+**原则**：只列能区分“API valid 路径 / TwoStageWait ack 路径 / MC2 / CommKfc”的最小字段；每项注明现有静态证据与缺失来源，避免为未知支路继续全量反汇编。
+
+| # | 字段 | 来源/偏移（静态已知） | 用途（区分什么） | 现有证据 | 尚缺 | 最低成本取证（优先静态） |
+| --- | --- | --- | --- | --- | --- | --- |
+| F1 | `desc` qword | `*(u64*)KFCTask`；低 4 位、bits4-7、bit8、bits9-15 | SrvLaunch 顶层分支：CommKfcDispatcher / RpcSrvLaunch / MC2 | SrvLaunch 0x763108 分支谓词 | Grouped 实际 desc | host `aclnnGroupedMatMulAllReduce` 实现/结构体填充（静态） |
+| F2 | `sub` u32 | `task[(desc>>9)&0x7f]` 的首 u32 | sub=0/1/2/>2 的子分支 | SrvLaunch 0x763285c 起 | Grouped 实际 sub | 同 F1 |
+| F3 | `P[0]` u32 | `P=*(void**)(KFCTask+40)`；`P[0]` | Init 零/非零分支（决定 server+0x18 是否建立） | Init 0x7d671c-0x7d6738 | P 的结构体定义与 Grouped 值 | host tiling/KFCTask 填充（静态） |
+| F4 | `j` u32 | `*(u32*)(KFCTask+96)` → `ctx+192` | param 区偏移；别名/同址判定 | 写者 0x76182c | Grouped 值/范围 | 同 F3；可用符号 `j` |
+| F5 | `T` u16 | `*(u16*)(KFCTask+100)` → `ctx+196` | recv 槽索引；`+64*T` 项 | 写者 0x761834 | Grouped 值（是否 rank 数） | 同 F3 |
+| F6 | `y` u64 | `ctx+184`（AicpuRpcResInit 0x7b9f50） | workspace 基址；param/recv 的 base | 写者 0x7b9f50 | Grouped 运行值 | 运行期只读快照（未来授权）或 host 分配日志 |
+| F7 | `ctx_R+0x160` turn u32 | `ctx_R = AicpuGetComContext()`（0x7615ac/5b0，x28）；`0x76187c str wzr,[x28,#352]` → `*(u32*)(ctx_R+0x160)=0`；TwoStageWait 以 `x20=ctx_R` 读 `[x20,#352]`（callsite 0x76198c/0x761994 证明同一对象） | TwoStageWait 的期望/ack 轮次；u8 截断上界 | 清零与三次读取（0x7c7f10/38/88） | **递增者/上界** | `TaskOrchestrator::ActiveRecordMain` 等小窗口（已向 31 请求） |
+| F8 | `GetPreparePosition` | server 字段（getter 0x7d7b60，0xc） | API 路径 vs TwoStageWait/Unfold | getter 地址；Init 写入字段未映射 | server 偏移与 Grouped 值 | getter 小窗口 + Init 字段映射（已请求） |
+| F9 | `GetTaskType` | server 字段（getter 0x7d7b30，0xc） | `==6` 走 UnfoldStageWait；否则 TwoStageWait/OneStageWait | getter 地址 | 同上 | 同上 |
+| F10 | `*(u32*)(ctx_R+0xf31dc)` mode | `x26=ctx_R+0xf0000`（0x761654）；`0x761848/0x761978 ldr w0,[x26,#12732]` → `ctx_R+0xf31dc`；`==2` 允许 RunRpcServerApi，`&~2==1` 走 TwoStageWait | 决定 API 是否可达 | 两条 `ldr [x26,#12732]`；`ctx_R` 同 F7 | **写入者/取值** | 定向 grep/小窗口（已请求） |
+| F11 | `server_A` vs `server_B` | `server_A = ADRP(0x191f000)+0xd00+0x10`（Init 前 x23 未变；0x7620b4 的 `add x23,x23,#0xd00` 属 Init 后日志分支、无回边）；`server_B = ADRP(0x22c7000)+0xb50+0x1a0`（ForApi/ClearOpRes） | 正常 launch vs 清理路径 | adrp/add 指令与分支边 | 实际进入哪个 | 分派谓词（F1/F2/F8-F10）静态推导 |
+| F12 | `HcclMsg+48` valid 生产者 | gate 读 slot+48；PostMsg 写 AivParam+44，非同一结构 | API 路径是否有消息可读 | gate/consume、PostMsg/GenMsg | host 侧写者 | host 库指令立即数扫描（非数据字） |
+
+**观测设计建议（未来、需单独授权）**：若 F1–F10 的静态推导仍不能定支路，最小运行观测只需两组只读值：①launch 时 `desc/sub/P[0]/j/T`（host 或 KFC task 侧）；②server 的 `GetPreparePosition/GetTaskType` 与 `ctx+0xf31dc`、`ctx+352`。两组即可把四条路径区分开；不需要读 +50/+51 或做全量 workspace dump。
+**当前不执行**：无 SSH/设备/新 GO；root cause 仍 unresolved。
+
+## 68. ctx+352 / ctx+0xf31dc / server_A 的原始指令与地址式复核（abi9 对齐）
+
+**目的**：回应 31 的“未以字面 store 复现”和 server 地址歧义；所有表达式给出函数内寄存器来源与 callsite，不跨函数拼同偏移。
+
+### 68.1 `ctx_R + 0x160`（offset 352）
+
+- `ctx_R`：`RunAicpuRpcSrvLaunch` 0x7615ac `bl AicpuGetComContext`；0x7615b0 `mov x28,x0`。本函数内 ctx 即 x28。
+- 原始写：0x76187c `b901639f str wzr,[x28,#352]` → `*(u32*)(ctx_R + 0x160) = 0`；完整地址 `ctx_R+352`，宽度 4 B，值 0。前驱为 0x761860-0x761878 的 `[x24]`/`[x25]` 字段处理，不改变 x28。
+- 原始读：`RunRpcServerTwoStageWait` 0x7c7f10 `ldr w3,[x20,#352]`、0x7c7f38/0x7c7f88 `ldr w1,[x20,#352]`；`x20` 是该函数的 ctx 参数。
+- **同一性证据**：0x76198c `mov x0,x28`；0x761994 `bl RunRpcServerTwoStageWait`。即 TwoStageWait 的 ctx 参数就是 RpcSrvLaunch 的 ctx_R；跨函数同偏移成立有 callsite 依据，不是按偏移拼接。
+- 31 的字面检索未命中是**编码/范围问题**：该 store 用 `wzr`（非 wN）且偏移写作 `#352`，不是 `#0xf3,lsl#12` 形式；应能在 0x76187c 复现。**不据此推断另一 DSO**。
+- 仍缺：`ctx_R+352` 的递增者/上界；已交付段只有清零与三次读。
+
+### 68.2 `ctx_R + 0xf31dc`（mode）
+
+- 基址：0x761654 `add x26,x28,#0xf0,lsl#12` → `x26 = ctx_R + 0xf0000`。
+- 原始读：0x761848 `ldr w0,[x26,#12732]` → `*(u32*)(ctx_R+0xf31dc)`；0x761850 `cmp w0,#0x2`（`!=2` 时取 task 字段覆盖）。
+- 原始读 2：0x761978 `ldr w0,[x26,#12732]`；0x761984 `and w0,w0,#0xfffffffd`；0x761988 `cmp w0,#0x1`；0x761990 `b.ne` → OneStageWait，否则 0x761994 TwoStageWait。
+- 关系：0x761820 `str w0,[x26,#12752]` 写 `ctx_R+0xf31d0`；0x761880 `str wzr,[x26,#12756]` 清零 `ctx_R+0xf31d4`。这些是同一 `ctx_R` 的不同字段，不与其他函数的同偏移混用。
+- 31 的 `#0xf3,lsl#12` 站点写 `ctx+0xf3270` 等，是 `ctx_R+0xf3000` 基址的另一组；`0xf31dc` 用的是 `ctx_R+0xf0000+12732` 编码，故定向 grep 需按 `#12732` 或 `x26=...+0xf0000` 查。
+- 仍缺：`ctx_R+0xf31dc` 的写入者/取值。
+
+### 68.3 `server_A` 算术
+
+- 0x7618dc `adrp x23,0x191f000`（x23=page base）；Init 前 0x761918 `add x0,x23,#0xd00`、0x761928 `add x0,x0,#0x10` → `server_A = 0x191fd10`。
+- 0x7620b4 `add x23,x23,#0xd00` 位于 Init 之后的错误/日志分支（0x762008→0x76209c→0x7620b4→`b 0x7614a4`），**无回到 0x76192c 的边**；若它先于 Init，算术会是 0x1920a10，但控制流不支持。
+- 为避免绝对地址传播，报告统一用 `server_A` 符号，并在任何新引用处附“Init 前 x23 未变、0x7620b4 无回边”的前提。
+
+### 68.4 对字段表的影响
+
+- F7 改为 `ctx_R+0x160` 表达式，附 callsite 同一性；F10 改为 `x26=ctx_R+0xf0000`、`[x26,#12732]`；F11 用 `server_A` 符号与分支边说明。
+- 31 的字面未命中只记检索范围/编码差异；不据此判断其他 DSO。仍无设备/SSH。
