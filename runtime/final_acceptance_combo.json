@@ -1,0 +1,316 @@
+{
+  "schema": "final-acceptance-combo/1",
+  "captured_utc": "2026-11-19T00:35:00Z",
+  "roles": {
+    "coordinator": "clef-27b-ascend-20",
+    "service_owner": "clef-27b-ascend-31",
+    "independent_audit": "clef-27b-ascend-32",
+    "cpu_prep": "clef-27b-ascend-34"
+  },
+  "f810_production": {
+    "status": "frozen_existing_bytes_not_modified",
+    "code_stage": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab",
+    "runner": {
+      "path": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance.py",
+      "sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+    },
+    "manifest": {
+      "path": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json",
+      "sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2",
+      "s1_rounds": 3,
+      "s2_b8_concurrencies": [
+        8,
+        16
+      ],
+      "s2_b16_concurrencies": [
+        32,
+        64
+      ],
+      "erqa_total": 400
+    },
+    "supervisor": {
+      "path": "/workspace/yangchen/work/final-owner27-063109a4b1c8b2c3611b5850d7f1915046fd10df/final_acceptance_supervisor.py",
+      "sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876",
+      "test_sha256": "044a4ef7033a8a2d7929aa3ea3413a0b1f0b1883274a18ba3cd70fada82e3ff0"
+    },
+    "phase": {
+      "path": "/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916/final_service_phase.py",
+      "sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44",
+      "test_sha256": "901d50e3226d418b91d4abe801ab5d6e254d24ee9775e1e07dbbda3c2ac22bd1",
+      "default_mode": "plan_only",
+      "execute_flag": "--execute",
+      "client_gate": "prior_client_record_xor_first_phase_no_client",
+      "first_phase_rule": "first-phase-no-client only s1 to s1"
+    },
+    "helper_sha256": "9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5",
+    "stop_sha256": "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886",
+    "launch_sha256": "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321",
+    "wait_sha256": "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0",
+    "activate_sha256": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a",
+    "clean_parent": {
+      "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "CLEF_LAUNCH_CONFIG": "s1"
+    },
+    "clean_expected_manifest": {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+      "bytes": 12933,
+      "sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230",
+      "opp_items": 9,
+      "ld_items": 12
+    },
+    "phase_sequence": [
+      "s1",
+      "s2_b8",
+      "s2_b16",
+      "erqa",
+      "s1"
+    ],
+    "full_s1_client_argv_template": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "/workspace/yangchen/work/final-owner27-063109a4b1c8b2c3611b5850d7f1915046fd10df/final_acceptance_supervisor.py",
+      "--code",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab",
+      "--manifest",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json",
+      "--manifest-sha",
+      "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2",
+      "--phase",
+      "s1",
+      "--output-dir",
+      "${CLEF_S1_OUT}",
+      "--records-dir",
+      "${CLEF_S1_RECORDS}",
+      "--identities",
+      "${CLEF_READY_IDS}",
+      "--launch-manifest",
+      "${CLEF_READY_LAUNCH}",
+      "--owner-evidence",
+      "${CLEF_OWNER_EVIDENCE}",
+      "--deadline-utc",
+      "${CLEF_S1_DEADLINE_UTC}",
+      "--helper",
+      "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py",
+      "--execute"
+    ],
+    "forbidden_for_final_s1": [
+      "--single-baseline-round"
+    ],
+    "outputs": [
+      "c1-r1.json",
+      "c1-r1.jsonl",
+      "c1-r1-quality.json",
+      "c1-r2.*",
+      "c1-r3.*",
+      "execution.json",
+      "acceptance.json",
+      "supervision.json",
+      "client.stdout",
+      "client.stderr"
+    ]
+  },
+  "candidate_aa3e": {
+    "status": "cpu_prepared_device_not_executed",
+    "source": "24 independent source-control evidence; winner not decided",
+    "head_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "guard_post_sha256": "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7",
+    "guard_pre_sha256": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
+    "flag_env": {
+      "CLEF_JOINT_FUSED_ATTN": "1"
+    },
+    "allow_env": {
+      "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+    },
+    "manifest": {
+      "path": "<cc34-stage>/runtime/final_acceptance_candidate_manifest.json",
+      "sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+      "bytes": 77763,
+      "base_sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2",
+      "generator": "runtime/candidate_manifest.py",
+      "generator_sha256": "6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5",
+      "diff_report": "runtime/final_acceptance_candidate_manifest.diff.json",
+      "diff_report_sha256": "646ba8d89a07c9a647bea1a6429b617d22b409fb6aa9ca9f68b1fc37c6c9a9ab",
+      "whitelist": [
+        "source_files[5].sha256",
+        "source_files[47].sha256",
+        "source_selection.production_head_sha",
+        "source_selection.guard_sha",
+        "forbidden_environment",
+        "phases.s1.service_environment.CLEF_JOINT_FUSED_ATTN",
+        "phases.s1.service_environment.CLEF_JOINT_ALLOWED_POSTIMAGE_SHA",
+        "phases.s2_b8.service_environment.CLEF_JOINT_FUSED_ATTN",
+        "phases.s2_b8.service_environment.CLEF_JOINT_ALLOWED_POSTIMAGE_SHA",
+        "phases.s2_b16.service_environment.CLEF_JOINT_FUSED_ATTN",
+        "phases.s2_b16.service_environment.CLEF_JOINT_ALLOWED_POSTIMAGE_SHA",
+        "phases.erqa.service_environment.CLEF_JOINT_FUSED_ATTN",
+        "phases.erqa.service_environment.CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
+      ]
+    },
+    "service_phase_entry": {
+      "path": "runtime/candidate_service_phase.py",
+      "sha256": "feb17e35598a16c477c3812009b296ae375cbd707557165e85c8465e410828b9",
+      "test_path": "runtime/test_candidate_service_phase.py",
+      "test_sha256": "b65653af0dd9a19077bffa05dab62df1848e2f4d22b5002c574dff7d83faf048",
+      "installer_sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406",
+      "guardadapter_sha256": "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c",
+      "base_sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648",
+      "window_sha256": "700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473",
+      "default_mode": "plan_only",
+      "execute_flag": "--execute",
+      "actions": [
+        "deploy",
+        "restore"
+      ]
+    },
+    "deploy_argv_template": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "${CLEF_CC34_CODE}/runtime/candidate_service_phase.py",
+      "--action",
+      "deploy",
+      "--code",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab",
+      "--owner-code",
+      "/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916",
+      "--ab-code",
+      "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime",
+      "--repo",
+      "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb",
+      "--manifest",
+      "${CLEF_CC34_CODE}/runtime/final_acceptance_candidate_manifest.json",
+      "--manifest-sha",
+      "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+      "--base-manifest",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json",
+      "--run-dir",
+      "${CLEF_CAND_RUN}",
+      "--phase",
+      "s1",
+      "--from-phase",
+      "s1",
+      "--current-restore",
+      "${CLEF_CURRENT_RESTORE}",
+      "--current-restore-sha",
+      "${CLEF_CURRENT_RESTORE_SHA}",
+      "--first-phase-no-client"
+    ],
+    "restore_argv_template": [
+      "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "${CLEF_CC34_CODE}/runtime/candidate_service_phase.py",
+      "--action",
+      "restore",
+      "--code",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab",
+      "--owner-code",
+      "/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916",
+      "--ab-code",
+      "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime",
+      "--repo",
+      "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb",
+      "--manifest",
+      "${CLEF_CC34_CODE}/runtime/final_acceptance_candidate_manifest.json",
+      "--manifest-sha",
+      "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+      "--base-manifest",
+      "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json",
+      "--run-dir",
+      "${CLEF_CAND_RESTORE}",
+      "--from-phase",
+      "${CLEF_LAST_CAND_PHASE}",
+      "--deploy-record",
+      "${CLEF_LAST_DEPLOY_COMPLETE}",
+      "--deploy-record-sha",
+      "${CLEF_LAST_DEPLOY_SHA}",
+      "--prior-client-record",
+      "${CLEF_LAST_SUPERVISION}"
+    ],
+    "client_argv_template": "same supervisor argv as f810_production.full_s1_client_argv_template with --manifest and --manifest-sha replaced by the candidate manifest and 31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "quality_gates_unchanged": {
+      "od_absolute_points": 2.0,
+      "erqa_absolute_accuracy": 0.02,
+      "od_total": 2352,
+      "erqa_total": 400,
+      "erqa_correct_reference": 219,
+      "temperature_scaling": false
+    }
+  },
+  "invariants": [
+    "production f810 phase/supervisor/runner/manifest bytes unchanged",
+    "original d0_stop.py unchanged and only stop entry",
+    "fresh label and api.pid == new root",
+    "clients_exited=true before any service switch",
+    "full S1 requires >=3 rounds; single-baseline-round is f810-only and never final",
+    "candidate manifest differs only in the declared 13 leaves",
+    "data revisions, denominators, author scorer, 2pp gates unchanged",
+    "remote staging only under /workspace/yangchen/work/final-acceptance-cc34-<commit>/"
+  ],
+  "cpu_evidence": {
+    "manifest_tests": "8/8 (real cc7 base included): runtime/test_candidate_manifest.py",
+    "phase_tests": "17/17 (mocked service/stop/NPU): runtime/test_candidate_service_phase.py",
+    "manifest_check": "runtime/candidate_manifest.py --check -> 31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "no_npu_import": true,
+    "no_service_request": true
+  },
+  "prep_file_shas": {
+    "runtime/candidate_service_phase.py": "feb17e35598a16c477c3812009b296ae375cbd707557165e85c8465e410828b9",
+    "runtime/candidate_manifest.py": "6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5",
+    "runtime/test_candidate_service_phase.py": "b65653af0dd9a19077bffa05dab62df1848e2f4d22b5002c574dff7d83faf048",
+    "runtime/test_candidate_manifest.py": "8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a",
+    "runtime/final_acceptance_candidate_manifest.json": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
+    "runtime/final_acceptance_candidate_manifest.diff.json": "646ba8d89a07c9a647bea1a6429b617d22b409fb6aa9ca9f68b1fc37c6c9a9ab",
+    "runtime/verify_final_acceptance_combo.py": "3f367b8844b036a7531aa2f4e9dad0f39328a46058d039deabe4bc675ee26231",
+    "docs/final-acceptance-combo-2026-11-19.md": "70fc372db47b4355fbac183665cfdea9ba4e98620b49b184db8d258d6ffcf27e"
+  },
+  "remote_files": [
+    {
+      "path": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance.py",
+      "sha256": "7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab"
+    },
+    {
+      "path": "/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json",
+      "sha256": "0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2"
+    },
+    {
+      "path": "/workspace/yangchen/work/final-owner27-063109a4b1c8b2c3611b5850d7f1915046fd10df/final_acceptance_supervisor.py",
+      "sha256": "172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f31876"
+    },
+    {
+      "path": "/workspace/yangchen/work/final-phase-owner27-d4464ac2c32fc122a9c6a391a45806cdaac17916/final_service_phase.py",
+      "sha256": "888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44"
+    },
+    {
+      "path": "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime/joint_fused_service_ab.py",
+      "sha256": "127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648"
+    },
+    {
+      "path": "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime/apply_joint_fused_attention.py",
+      "sha256": "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406"
+    },
+    {
+      "path": "/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769/runtime/apply_joint_service_check.py",
+      "sha256": "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c"
+    },
+    {
+      "path": "/workspace/yangchen/work/scratch-24/joint-fused-5c045eb/runtime/joint_fused_attention_window.py",
+      "sha256": "9245e1a6504742dc4706eb466f8053cb3999ff3d80abfac960ed218a37a747d5"
+    },
+    {
+      "path": "/tmp/d0cc/d0_stop.py",
+      "sha256": "d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886"
+    },
+    {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
+      "sha256": "a737386119b89c5bc787e6f69e5017b83391934148528d08d498ff943a958321"
+    },
+    {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/wait.sh",
+      "sha256": "e3fb08882211aef6ea0fd4f3db3d37bba0a591034cc397ba95559e09d1f1ffa0"
+    },
+    {
+      "path": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+      "sha256": "3b363394536fbe2433a84b666170568fcb58848b1d8d24551ff6ae9f53b4044a"
+    },
+    {
+      "path": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+      "sha256": "fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230"
+    }
+  ]
+}
