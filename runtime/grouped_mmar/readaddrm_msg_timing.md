@@ -68,13 +68,13 @@ call long before ~1280 s; ReadAddrMsg itself does not return at 180 s.
 `57412224`, range `0x7d6f20-0x7d71cc`). The body contains **no
 sleep/nanosleep/usleep/select/poll** call. It calls `TraceProfSubmit`,
 `CopyAndCheckApiMsg@plt`, `CheckDebugMode`, `DlogRecord` and `syscall(178)` (gettid),
-and returns 0/1. This proves only that **no explicit blocking mechanism is visible**
-(no sleep/poll/syscall wait; the syscalls are gettid). The execution time of
-`DlogRecord`, `TraceProfSubmit`, `CopyAndCheckApiMsg` and `CheckDebugMode` is not
-bounded by this body; the derivation keeps the **single-round return premise** that
-each helper returns and control re-enters the loop. 31/33 checked
-`CopyAndCheckApiMsg` as a 64-byte copy/GenXor/memcmp with no +50/+51 access; only
-`CheckDebugMode` remains unchecked.
+and returns 0/1. The final merged wording is: only the **two layers** ReadAddrMsg and
+ReadApiValidMsg are checked, and they show **no explicit sleep/nanosleep/usleep/
+select/poll** (syscall 178 = gettid). Deep helper durations (`CopyAndCheckApiMsg`,
+`DlogRecord`, `TraceProfSubmit`, `CheckDebugMode`) are unknown; the derivation keeps
+the **single-round return premise** that each helper returns and control re-enters
+the loop. 31/33 checked `CopyAndCheckApiMsg` as a 64-byte copy/GenXor/memcmp with no
++50/+51 access.
 
 This also corrects 33's sequence at the 640 s point: w24 is 32 before the 640 s
 crossing and becomes **64** (not 128), so the next threshold is 1280 s. At the
@@ -87,7 +87,12 @@ reachable by the CFG" and "does elapsed exceed 2560 s because a callee blocked".
 The 960 s check lives inside the 1280 s branch, so the CFG reaches w24=128 and then
 returns; the 2560 s branch is **not reachable by CFG**, and a long callee only raises
 the wall time, it cannot be used as an exception that makes the threshold state
-reachable. 33 should confirm this CFG ordering.
+reachable. 33 confirmed the edges: w24 64->128, `cmp`, `b.hi 0x7d9240`, then
+`SetErrToWarnSwitch(0) -> 0x7d91c8 (w19=0) -> 0x7d8fcc -> ret`; 0x7d9240 has **no
+edge back to the read attempt 0x7d8d60**.
+
+The "1280 s + one poll" figure is therefore a derivation **only under the
+helper-returns/control-reenters premise**, not an actual upper bound for this cell.
 
 ## Conditional gap and merged request
 

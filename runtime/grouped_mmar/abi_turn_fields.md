@@ -99,6 +99,13 @@ recv base C+j+64T, matching `GetSendCnt/GetRecvCnt`. It does **not** set server+
 (+0xd10 vs +0xcf0), so S=C requires the same server object plus `Init(y)`; that
 link is still unproven.
 
+abi6 also shows the slot gate/consume fields (33 §63): ReadApiValidMsg reads
+`[slot+48]` and compares `0x5CDF123A`; on consume it writes `0xA320EDC5` at +48 and
+does **not** access +50/+51. The +50/+51 writes are attributed by 33 to
+`GenMsgByTaskParam` (constant 0x1234); `rac_server.h` has `sendCnt=curTurn` and
+`TurnWait` zeroing `rcvCnt`. This does not resolve the S/C/j alias question, but it
+separates the +50/+51 producer from the server turn word.
+
 Exact alias sets (S==C, t=0..63). The 8-byte writes are at `S+0x4008+64t` and
 `S+0x5008+64t`; the continuous ranges `[0x4008,0x4FD0)` and `[0x5008,0x5FD0)` are
 only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
