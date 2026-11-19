@@ -1376,3 +1376,37 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - **结论**：§79/§82 可作 **CPU 预审条件式闭环**；剩余仅 31 preflight（fresh identity/port/dirs、stop-script SHA、body 存在、log dir）与设备授权。当前不运行、不发 GO。
 - **env 边界**：window 只证 child_env 到 torchrun/ranks；AICPU daemon 传播仍未证，正向标记有效性前提不变。
 - **采集**：raw 默认 `/root/ascend/log` + candidate `PROCESS_LOG_PATH` + device 全量；关联视图另存，不删原件。
+
+## 83. 32 真实 window plan-only 结果：命令/计划兼容性闭环
+
+**实测（/tmp 夹具，不执行/NPU）**：
+- `child_argv`（由 window `build_child_argv` 生成）：
+  `[torchrun, --nproc_per_node=2, --master_port, 29531, run_probe.py, --arm, H11, --temp-root, <fresh>/temp, --out, <fresh>/out, --k, 256, --n, 512, --rows, 128, --seed, 20261119, --arm-timeout, 240.0, --comm-timeout, 90.0, --adapter, <frozen>/probe_adapter.so, --execute]`。
+- `child_timeout=240.0`；restore_argv=`env -i PATH=... CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c ...`；text/image body 均被 parser 接受。
+- 本机 plan-only 用 /tmp 临时 body，仅验证 parser；**不代表远端路径存在**。
+
+**两点答复（已并入 §79.2/§82.2）**：
+1. master-port 不重复/不冲突：window 自身消费 `--master-port`；child 的 `torchrun --master_port` 由 window 生成；run_probe 无 master-port 参数。独立 probe 命令须把 `--master_port` 放 torchrun 后/脚本前；31 预检 29531 空闲。
+2. body 用 A15-large cell 路径（A14-large 同名替代）；31 preflight `test -f`。
+
+**结论**：命令/计划兼容性**可闭环**；剩余为 31 只读 preflight + 条件项。
+
+### 83.1 31 只读 preflight 清单（不运行/不设备）
+
+1. `stop-script` SHA `d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886`。
+2. `source-target` 为 AA3E；三段 SHA 检查保留。
+3. fresh identity `1337814/400405818`（aa3e-noop 现网 root），实扫 `/proc`；health ready。
+4. 端口 `29531` FREE（`ss -ltn`）。
+5. fresh dirs：`<fresh>/temp`、`<fresh>/out`、`<fresh>/run`、`<fresh>/restore`、`<fresh>/cann-plog` 预创建（PROCESS_LOG_PATH 必须存在/可写）。
+6. body 存在：`.../grouped-deepdive-cell-a15-large/text-body.json`、`image-body.json`（或 A14-large 同名）；`test -f`。
+7. adapter `d181b15a`、run_probe `8e308804`、window `1f780bf8`、binding `101660f8`、runtime `e38b541` 一致。
+8. log dir：candidate `PROCESS_LOG_PATH` + 默认 `/root/ascend/log`/device 全量可写/可读。
+
+### 83.2 条件项（观测有效性，不阻断 plan-only）
+
+- AICPU daemon 的 env 传播未证；window 只证 child_env 到 torchrun/ranks。
+- Dlog guard 级别映射未证（w0/w1 不套 GLOBAL 0–4）。
+- 正向标记（`start to read`/`reset valid`/`ReadValidMsg timeout`）出现才算采到；否则缺测，不排除。
+- H11 hang 未解，本观测仅诊断。
+
+**当前不运行、不发 GO；H11 文档 SHA `fa62db6c`（35 2b5729e）。**
