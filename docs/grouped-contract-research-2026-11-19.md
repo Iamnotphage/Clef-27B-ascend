@@ -885,9 +885,10 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 ### 66.1 PostMsg 0x7d6800（`AicpuKfcRpcServer::PostMsg(uint)`，const）
 
 - **更正 abi7 归属**：0x7d67f4-0x7d67fc 是 3 条 nop；写者不是未导出局部函数，而是 `PostMsg(uint)` 0x7d6800。
-- 函数体（0x7d6800-0x7d68b4）：`x0 = [this+24]`（recv 槽指针，对应 Init 零分支 `server+0x18=y+j+64T`）；`str w4,[x0,#44]` 写 4 B valid `0x5CDF123A`；**`strb w1,[x0,#51]` 写 1 B = w1（PostMsg 的 uint 参数/turn）**；读 GOT+0xc90 的 +704(u16)/+706(u8) 仅用于 `AivAicpuOpParam::PrintMsg`；`dsb st`；返回 1。**不写 +50**。
-- 直接调用者：0x7c7f44 与 0x7c7f90，均在 `AicpuKfcDeprecatedProcess::RunRpcServerTwoStageWait`（+0x198/+0x1e4）→ **stage-wait 协议的消息发布者**。
-- 与 getter 对齐：`GetRecvCnt` 读 `[ctx+184]+u32[ctx+192]+(u16[ctx+196]<<6)+51`；Init 零分支 `server+0x18=y+j+64T`；PostMsg 写 `[this+24]+51`。**若同一 server 对象且走零分支，PostMsg 写的 +51 与 GetRecvCnt 读的 rcvCnt 是同一字节**。这是路径条件式的算术别名，不是无条件事实。
+- 函数体（0x7d6800-0x7d68b4）：`0x7d6828 ldr x0,[x0,#24]` → **dest=*(this+0x18)**（entry this 与目的指针分开）；`str w4,[x0,#44]` 写 4 B valid `0x5CDF123A`；**`strb w1,[x0,#51]` 写 1 B = w1（PostMsg 的 uint 参数/turn；w1 在函数内未被改写）**；读 GOT+0xc90 的 +704(u16)/+706(u8) 仅用于 `AivAicpuOpParam::PrintMsg`；返回 1。**不写 +50**。
+- 程序序：`+44` 写 →（无屏障）→ `+51` 写 → `PrintMsg`/string dispose → **唯一 `dsb st` 在 0x7d6884**；无 `stlr`。即 ack 字节的可见性屏障在 PrintMsg 之后，二者之间只有程序序。
+- 直接调用者：0x7c7f44 与 0x7c7f90，均在 `AicpuKfcDeprecatedProcess::RunRpcServerTwoStageWait`（+0x198/+0x1e4）→ **stage-wait 协议的消息发布者**；参数分别为 `[ctx+352]-1` 与 `[ctx+352]`。
+- 与 getter 对齐：`GetRecvCnt` 读 `[ctx+184]+u32[ctx+192]+(u16[ctx+196]<<6)+51`；Init 零分支 `server+0x18=y+j+64T`；PostMsg 写 `dest+51`。**条件式同字节**需同时满足：P1 同一 server 对象；P2 Init4 零分支（`[server+816]=*(task+40)==0`，写 `server+0x18=C+j+64T`）；P3 无后续 `server+0x18` 写；P4 同一 ctx。非零分支（只写 server+8）不成立。gate `slot+48` 与 valid `+44` 要成同一字还需 `j+64T = 64*turn + 4`（即 slot=dest−4），**未证**。
 - +44 valid 与 API gate 的 `slot+48` 不是同一字节：PostMsg 写 AivAicpuOpParam 的 +44，gate 读 64 B HcclMsg 的 +48；两者对象/协议不同，**不推断同一或冲突**。
 
 ### 66.2 ForApi 的调用链与 server 基址
@@ -1043,3 +1044,25 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 1. Host 侧一处 launch 日志：打印 `desc` 的 nibble/sub/idx、`KFCTask+40` 首 u32、`+96/+100`（即 j/T）；只读、无设备格变更。
 2. Device 侧一处只读快照或 verbose Dlog：`server+816` 的 u32[0]/u8[116]、`ctx_R+0xf31bc`、`ctx_R+0x160`；这是区分四条路径的最少字段。
 - 两组都到位即可判定 API/TwoStageWait/MC2/CommKfc；**当前不执行**，不新增 GO/SSH/设备动作。
+
+## 71. 与 35 的 abi8/abi9 独立交叉核收口（abb446f / 24992616）
+
+**一致项（指令级）**：
+- PostMsg 0x7d6800；`0x7d6828 ldr x0,[x0,#24]` → `dest=*(this+0x18)`；仅 `str w4,[x0,#44]`（4 B）与 `strb w1,[x0,#51]`（1 B）；w1 未被改写；调用点 `[ctx+352]-1`/`[ctx+352]`；`strb` 截低 8 位。
+- 屏障：`+44`→`+51` 之间无屏障；唯一 `dsb st` 在 0x7d6884（PrintMsg/string dispose 之后）；无 `stlr`。
+- 条件同字节 P1–P4（同 server、Init4 零分支、无后续 server+0x18 写、同 ctx）；非零分支不成立。gate `slot+48` 与 valid `+44` 同字需 `j+64T=64*turn+4`（slot=dest−4），未证。
+- CheckRcvWorkMsg：`0x7d73b8 ldrb [x19,#50]`（u8 零扩展）vs `0x7d73bc ldr w1,[sp,#36]`（u32，w3=[ctx+352]）；`ctx+352>255` 永不满足；6 s 预算（x24=`0x1_65a0_bc00` ns）后经 0x7d7408/0x7d7414 到 0x7d7450 同一续点，**非死锁**。
+
+**更正项（已并入 §68/§69）**：
+- `ctx+0xf31dc` 实为 **`ctx_R+0xF31BC`**：0x761654 `add x26,x28,#0xf0,lsl#12`（x28 全函数只写一次）；0x761848/0x761978 `ldr [x26,#12732]`；12732=0x31BC。0x31DC=12764 在 abi3–abi9 全存档无指令（scope negative）；要 f31dc 需额外 +0x20 基址证据。
+- ReadAddrMsg 同基址模式但不同字段：0x7d8bec `add x27,x23,#0xf0,lsl#12`；0x7d8c00 `ldr x0,[x27,#12784]` = `ctx+0xF31F0`（8 B，与 1 比较）——不要把 12784 与 12732 混为同一字段。
+- 两个 12732 写者：静态初值 0x2ea7b8 `str w8(=9)`（不同对象）；0x7edfc0 CopyCtxInfo 从另一 ctx 拷贝；无 +1。
+- server 算术：0x7618dc adrp 0x191f000；0x761918 +0xd00；0x761928 +0x10；**server_A=0x191fd10**；0x191fd00 只是外层结构基址（x2/x25）。35 对 `disasm-RpcSrvLaunch.txt`（SHA d92fee9d）做 CFG：入口→0x761904 必经 0x7618dc 且不含 0x7620b4；0x7620b4→0x7620ec b 0x7614a4→0x76153c ret，均到不了 0x761904/0x76192c，**0x1920a10 不可达**。
+- `0x76187c str wzr,[x28,#352]` 确为 ctx+352 清零；递增者仍未定位。
+
+**合并后的 abi10 最小请求（35 的四项，交 31 一次取；无全库扫）**：
+1. `RunRpcServerTwoStageWait` 序言是否 `x19 = arg2`（0x761994 已证 x1=`server_A`；PostMsg 的 this=x19 还需序言）。
+2. TwoStageWait 的调用者及传入的 server 对象（预期 0x761994 传 `server_A`，需原文确认）。
+3. 除 Init4 零分支外，是否有其它指令写 `server+0x18`（影响 P3）。
+4. `AivAicpuOpParam::PrintMsg` 体是否写 `dest`（影响 PostMsg 后 dest 内容）。
+- 说明：不做全库 store 扫描/跨 DSO 搜索；唯一写者结论保持撤回；不推断协议冲突；无设备动作。
