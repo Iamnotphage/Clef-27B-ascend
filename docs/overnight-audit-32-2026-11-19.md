@@ -297,6 +297,15 @@
 - **A12 preflight 本地 7/7**：plan `063e794b…`；stage-identity：commit 4653278/window 51d6bc0c/manifest e55eac00/binding 11baa2c6/run_probe c7e0410e/cell 3daa1455/adapter a9b01fd9/A12 binary 37929ec4/glue 22edb89f/bodies a7dd3f64+f3229f5c/clean_env fcbdcbf1。
 - **GO**：已下发 31 单格 A12（d0_stop→A12≤240s→精确清理→官方 aa3e-noop 恢复；fresh run/restore dirs；skip/blocked/restore 失败停报且绝不双启）。回传 window.json/stop.json/child stdout+stderr/restore.log/per-PID maps/launch-manifest+joint-record/final identity/plog/A12 rc+error+costtime。判定仅当 ok=true+A12 证据+maps 硬门+branch aa3e-noop+五 PID/双 worker/四检/env/joint/clients。**A12 仅 liveness/通路正对照，不外推 BF16 精度、不单因归因**；production restore（setsid）设备首次真实执行，异常按门停报。
 
+## 8.21 A12 单格结果（决定性负结果，2026-11-19 06:24Z）
+
+- **执行**：官方样例（6c1a90ab，派生 CMake）在 4653278/51d6bc0c 窗口下执行；旧 aa3e root 1287336 经 d0_stop 停止（stop.json identity verified、5 targets、refused 空）；A12 child 运行约 114 s（10 s 同步超时 + 2×50 s HCCL DestroyAicpuComm）<240 s；恢复官方 start.sh 成功，**新 root 1301295**、五 PID、branch aa3e-noop、四检/env/joint/clients 全 true。
+- **结果**：window ok=false（正确）；child rc0 是假成功（样例线程内 ACL_CHECK 被忽略，main rc0），被 `a12_evidence` 日志门拦下（errors=3、cost=0）。child.stdout：两 rank hcom 名对称、workspace 16777216、`[ERROR] ...:383 retcode 507046` + `TestCall execute AICPU failed`。plog-debug：两 device `stream_id=47, timeout=10000ms`、`current task type_name=KERNEL_AICORE, task_id=1`、`ErrCode=507046 InnerCode=0x7030010`；**HCCL DestroyAicpuComm 50 s×2 timeout**；AICPU scheduler 日志止于 KFC ResInit/SrvLaunch API 加载，无 task 处理进展。maps per-PID：libhccl/opapi_math/opapi_transformer/hcomm/ascendcl/nnopbase loaded，hccl_fwk absent。
+- **意义**：官方样例生命周期全部保活、显式 context/stream、单进程 HcclCommInitAll，仍复现同一 stream47/AICORE pending → **H1/H2/H3/H11 对“挂起”被决定性削弱**；H4/H5 亦削弱；H12 的“单 vs 多进程 comm 创建”不再是唯一差异（两者都挂），重心转为 **MC2 AICPU/KFC 公共路径**；H7 被样例 aligned shapes 削弱；H6 workspace 初值仍低成本可测；环境/SoC/op 路径上升。A12 不裁决 A3 不支持，但显著提高环境/op 风险；**不外推 BF16 精度、不单因归因**。
+- **监督/恢复链 PASS**：假 rc0 被日志门拦截；gate allow=restore（port111、旧 root gone、PGID/residual/runners 空、source aa3e）；恢复 identity/五 PID/双 worker/四检全过——真实失败下窗口与恢复链得到验证。
+- **下一步**：A8 纯 torch all_reduce+sync（基座 comm/stream）→ H6 workspace 零初始化（单变量）→ **A13 MatMulAllReduce（非 grouped MC2）控制臂**（API pack 有 v1/v2/v3 头；同 HCCL/AICPU 路径）区分“MC2 路径坏”vs“grouped op 坏”；AICPU/KFC 日志升 debug；H1–H3/H7 降为确认/低优先。
+- **新身份**：下一格必须基于恢复后的 root 1301295 重新出 fresh root-identity/snapshot（旧 1287336 已终止）；所有 plan/stop identity 需更新。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
