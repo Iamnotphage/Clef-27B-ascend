@@ -514,3 +514,11 @@ freeze `0cea506`：manifest `300d79e6…`、window **`1f780bf8…`（48,448 B）
 - **F5 代码级 PASS**：`get_subreaper()` 用 `prctl(37, &value)` 读取（L116-127），execute 在 enable 前保存 `original_subreaper`（L864-865），`begin_restore` 仅 restore 前 `disable_subreaper`（L158-167），主 finally/末尾 `restore_subreaper(original)` 并记录 final（L1087-1089）；原始=1 时 restore 后回 1，不再固定 0。`get_subreaper` 返回 None 时仅不恢复并记录，未阻断；可作为低风险备注。
 - **fixture 仍失败（阻断 Linux 40）**：`test_fake_restore_reaches_pid1_after_disable` 的脚本仍是 `os.fork()==0: os.setsid(); if os.fork()==0: write manifest`（L781-792），即 setsid 后**二次 fork**；manifest 的孙代 C 的 pgid 是中间进程 B 的组，`C.pgid != C.pid`。31 在 3d8667a 已见 `1325752 != 1325753`；0cea506 test_window 仍保留该二段 fork，Linux 40 预计同失败。**修复**：fixture 单 fork setsid 后直接写 manifest/sleep（父退出），或使用 `os.setsid()` 后不 fork、同进程写；产品 `pgid==pid` 门不改。F5 本身代码不需要再改 window，仅 fixture/测试。
 - **A14 v3**：v2 56441483 superseded/未执行；等 fixture 单 fork 重冻 + Linux 40 全过 + 31 v3 plan（window 新 SHA/run_probe d54584b7/fresh identity 1323589/同形状/KEEP_ALL/实际 child SHA）→ 32/33 核 → 一次 GO。Grouped large/A13 暂停；A15 CPU。
+
+## 43. 6dae03f 单 fork 修复复核：变量遮蔽仍在（2026-11-19）
+
+freeze `6dae03f`：manifest `83dd8e85…`、window `1f780bf8`（未变）、test_window `22f8297d…`（40，7 Linux-only skip）、test_probe `01fd2f54…`、run_probe `d54584b7…`；diff 仅 README/manifest/test_window。
+
+- **已修**：fake_restore 脚本改为**单 fork + setsid 后同进程写 manifest/sleep**（本轮 test L781-792：`if fork==0: setsid(); write manifest; sleep; _exit; exit`），root PID 即新 PGID leader，产品 `pgid==pid` 门正确。
+- **未修（阻断 Linux 40）**：测试变量遮蔽仍在：先 `original = win.start_restore`（函数），`counted()` 闭包调用 `original(...)`；随后 `original = win.get_subreaper()` 将其覆盖为 int 1，`begin_restore` 内 `counted()` 触发 `TypeError: 'int' object is not callable`（31 在 0cea506 已见同 ERROR；6dae03f 该段未改）。修复：分离命名，如 `start_restore_fn = win.start_restore`、`subreaper_original = win.get_subreaper()`；`counted` 用 `start_restore_fn`，`restore_subreaper(subreaper_original)`。仅测试改动，不改产品/F5/window。
+- **A14 v3**：仍待上述测试修复 + Linux 40 全过 + 31 v3 plan（window 1f780bf8、run_probe d54584b7、fresh identity 1323589/399707126、同 M968/K8704/N5120、KEEP_ALL、实际 child SHA）→ 32/33 核 → 一次 GO；v2 56441483 superseded/未执行；设备暂停；Grouped large/A13 暂停；A15 CPU。
