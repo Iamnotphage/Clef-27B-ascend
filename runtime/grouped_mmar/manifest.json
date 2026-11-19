@@ -62,18 +62,18 @@
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
       "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
-      "sha256": "80fd76f9be5c67617157b0fb9ba0ae38b2d1df52170c1c242b272835018f58d7",
-      "bytes": 28277
+      "sha256": "51d6bc0c3b9e307ae9cab51d338d8c73e67f8b06f3da25414694bbefcf0895d3",
+      "bytes": 31585
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
       "role": "CPU window control-flow tests (12)",
-      "sha256": "81523e6fbe76ab356dc574b901016937fdec57946fae6452e041c385feaf7400",
-      "bytes": 9577
+      "sha256": "a4f5d29d286ca090bd7c01368fbb49d07ab9f45a56f41e0a41a55c5163750fc6",
+      "bytes": 19482
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "186a3cae4bc5cf026b088e3a0f5709b4cd87b869314c7cec7c4d065fb7b0f800",
-      "bytes": 12404
+      "sha256": "a2037d105de943a33427dd66a483a2a8b815dbff27388ec4670c6daf569c8789",
+      "bytes": 13409
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -204,7 +204,7 @@
     "forbidden": "old 5c/restore_prod auto-revert to f810; service tree/guard/vendor writes"
   },
   "inputs": {
-    "33": "C1-C6, matrix v2, support research commits 2616628/334c67f/049b5ea; A12 frozen source 6c1a90ab (commit f5703e4); official examples/CMakeLists absent; pack v4 PACK_SHA256SUMS 6e9bc5f8 (65/65), binary_info_config d46acc38 + per-op c9bd574a; A12 archive 7/7",
+    "33": "C1-C6, E1/E2, support research commits 2616628/334c67f/049b5ea/d052acd; A12 frozen source 6c1a90ab; official examples/CMakeLists absent; pack v4 PACK_SHA256SUMS 6e9bc5f8 (65/65); binary_info_config d46acc38 + per-op c9bd574a",
     "31": "snapshot 39e52eb5..., restore-spec 224b0036..., API pack v4 6e9bc5f8 (65 payload 65/65), A12 authoritative stage manifest 088f05f6 (1d529ca8 superseded), glue 22edb89f, binary 37929ec4, ldd missing 0",
     "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof, derived-build labeling"
   },
@@ -212,7 +212,7 @@
     "suites": {
       "test_probe_cpu.py": "11/11",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "12/12"
+      "test_supervised_window_cpu.py": "20/20"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -228,16 +228,19 @@
     "f810_to_fused": "isolation failure, rescue only",
     "no_installer_guard_vendor_tree_writes": true,
     "p0_fixes": [
-      "restore starts via Popen and never waits; health+manifest decide",
-      "top-level finally restores after stop on all paths; alive service -> restore skipped",
-      "A12 requires rc0 + no [ERROR]/retcode lines + two mc2 costtime markers",
-      "child PGID maps with SHA/SONAME (A12 needs libhccl+opapi_math/transformer; native needs adapter)",
+      "restore Popen no wait; health+manifest decide",
+      "top-level finally after stop; old alive never Popen (healthy skip / partial blocked)",
+      "Popen pre-gate: port111, empty old PGID, no child/probe/runner residual, source aa3e",
+      "A12 rc0 + no error lines + two costtime + per-PID PGID maps",
+      "per-PID maps with pid/cmdline/libs(SHA/SONAME); coverage loaded/absent; hard gate hccl+opapi only",
       "restore_output fresh; manifest output_dir match + mtime after stop",
-      "binding keep flags split; cell_supervisor rejects official start.sh restore"
+      "stop script is_file; skip/blocked record health/identity/port/PGID/source",
+      "real foreground HTTP+manifest fixture; old_alive+port111 blocked no Popen"
     ]
   },
   "run_probe": {
     "default_arm_timeout_seconds": 240,
     "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
-  }
+  },
+  "priority_note": "33 E1/E2 binary evidence weakens H1/H4/H5/H11; prefer H2/H3/H6/H12; first order A8->A12->A0(M128)->A9->H2/H3"
 }

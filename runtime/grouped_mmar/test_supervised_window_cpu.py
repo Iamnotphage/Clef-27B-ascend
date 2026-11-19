@@ -1,14 +1,19 @@
 """CPU-only control-flow tests for the full supervised probe window.
 
-External boundaries (d0_stop, official start.sh, HTTP, /proc, npu-smi) are
-fakes; the window's own ordering, source checks, branch gate and cleanup are
-real.  No torch/NPU/service is touched.
+External boundaries (d0_stop, /proc, npu-smi, HTTP) are fakes except in the
+real foreground fixture, which starts a temporary HTTP + manifest service and
+verifies the window returns while that service is still alive.  The window's
+recovery gate, source checks, branch gate and cleanup are real.
 """
 import json
+import os
 from pathlib import Path
+import signal
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -19,12 +24,8 @@ class FakeProcess:
     def __init__(self, pid=5252):
         self.pid = pid
         self.returncode = None
-        self.timed_out = False
 
     def wait(self, timeout=None):
-        if self.timed_out and timeout is not None and timeout == 240.0:
-            self.timed_out = False
-            raise subprocess.TimeoutExpired('child', timeout)
         self.returncode = 0
         return 0
 
@@ -32,13 +33,24 @@ class FakeProcess:
         return self.returncode
 
 
-def table(pid, extra=()):
-    rows = {pid: {'pid': pid, 'ppid': 1, 'pgid': pid, 'state': 'S',
+def table(pid, extra=(), pgid=None):
+    pgid = pid if pgid is None else pgid
+    rows = {pid: {'pid': pid, 'ppid': 1, 'pgid': pgid, 'state': 'S',
                   'starttime': '1', 'boot_id': 'b', 'cmdline': ['vllm']}}
     for child in extra:
-        rows[child] = {'pid': child, 'ppid': pid, 'pgid': pid, 'state': 'S',
+        rows[child] = {'pid': child, 'ppid': pid, 'pgid': pgid, 'state': 'S',
                        'starttime': '2', 'boot_id': 'b', 'cmdline': ['worker']}
     return rows
+
+
+def maps(adapter='/x/clef_mmar_probe.so', binary=None, with_fwk=False):
+    libs = [{'path': adapter, 'sha256': 'a', 'soname': None},
+            {'path': '/x/libhccl.so', 'sha256': 'b', 'soname': 'libhccl.so'},
+            {'path': '/x/libopapi_math.so', 'sha256': 'c', 'soname': 'libopapi_math.so'}]
+    if with_fwk:
+        libs.append({'path': '/x/libhccl_fwk.so', 'sha256': 'd', 'soname': 'libhccl_fwk.so'})
+    cmd = [binary, '2', '1', '0,1'] if binary else ['probe']
+    return [{'pid': 7001, 'cmdline': cmd, 'libs': libs}]
 
 
 class WindowTest(unittest.TestCase):
@@ -54,6 +66,9 @@ class WindowTest(unittest.TestCase):
         self.image = self.root / 'image.json'; self.image.write_text('{"q":"y"}')
         self.restore_output = self.root / 'restore'
         self.run_dir = self.root / 'run'
+        self.stop_script = self.root / 'stop.py'
+        self.stop_script.write_text('#!/usr/bin/env python3\n')
+        self.stop_sha = win.sha256(self.stop_script)
 
     def args(self, execute=False, extra=()):
         return ['--run-dir', str(self.run_dir), '--root-identity', str(self.identity),
@@ -64,7 +79,7 @@ class WindowTest(unittest.TestCase):
                 '--service-root', str(self.root), '--model-dir', str(self.root / 'model'),
                 '--restore-output', str(self.restore_output),
                 '--text-body', str(self.text), '--image-body', str(self.image),
-                '--stop-script', str(self.root / 'stop.py'),
+                '--stop-script', str(self.stop_script), '--expect-stop-sha', self.stop_sha,
                 '--arm', 'A0', '--adapter', '/x/clef_mmar_probe.so', *extra] + (
                     ['--execute'] if execute else [])
 
@@ -72,11 +87,22 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(win.main(self.args()), 0)
         self.assertFalse(self.run_dir.exists())
 
+    def test_missing_stop_script_rejected(self):
+        argv = self.args()
+        argv[argv.index('--stop-script') + 1] = str(self.root / 'missing.py')
+        with self.assertRaises(ValueError):
+            win.main(argv)
+
     def test_missing_probe_body_rejected(self):
         argv = self.args()
         argv[argv.index('--text-body') + 1] = str(self.root / 'missing.json')
         with self.assertRaises(ValueError):
             win.main(argv)
+
+    def test_restore_output_must_be_fresh(self):
+        self.restore_output.mkdir()
+        with self.assertRaises(ValueError):
+            win.main(self.args())
 
     def full_success(self, branch='aa3e-noop', stop_rc=0):
         stopped = {'value': False}
@@ -97,12 +123,10 @@ class WindowTest(unittest.TestCase):
             return {'argv': argv, 'rc': 0, 'log': str(log)}
 
         def fake_scan():
-            if not stopped['value']:
-                return table(4242, (4243,))
-            return table(6262, (6263,))
+            return table(4242, (4243,)) if not stopped['value'] else table(6262, (6263,))
 
         with mock.patch.object(win, 'scan', side_effect=fake_scan), \
-                mock.patch.object(win, 'port_open', side_effect=[0, 111, 0]), \
+                mock.patch.object(win, 'port_open', side_effect=[0, 111, 111]), \
                 mock.patch.object(win, 'pending_clients', return_value=[]), \
                 mock.patch.object(win, 'run', side_effect=fake_run), \
                 mock.patch.object(win, 'start_restore', side_effect=fake_restore), \
@@ -113,13 +137,10 @@ class WindowTest(unittest.TestCase):
                 mock.patch.object(win, 'joint_env', return_value={'ok': True}), \
                 mock.patch.object(win, 'http_json', return_value={'status': 'ready', 'config': 's1'}), \
                 mock.patch.object(win, 'post_json', return_value=(200, {'ok': True})), \
-                mock.patch.object(win, 'proc_identity', return_value={
-                    'pid': 5252, 'ppid': 1, 'pgid': 5252, 'state': 'S',
+                mock.patch.object(win, 'proc_identity', side_effect=lambda pid: {
+                    'pid': pid, 'ppid': 1, 'pgid': pid, 'state': 'S',
                     'starttime': '1', 'boot_id': 'b', 'cmdline': ['child']}), \
-                mock.patch.object(win, 'maps_evidence', return_value=[
-                    {'path': '/x/libhccl.so', 'sha256': 'a', 'soname': 'libhccl.so'},
-                    {'path': '/x/libopapi_math.so', 'sha256': 'b', 'soname': 'libopapi_math.so'},
-                    {'path': '/x/clef_mmar_probe.so', 'sha256': 'c', 'soname': None}]), \
+                mock.patch.object(win, 'maps_evidence', return_value=maps()), \
                 mock.patch.object(win.subprocess, 'Popen', return_value=FakeProcess()):
             return win.main(self.args(execute=True))
 
@@ -130,6 +151,7 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(result['restore_branch'], 'aa3e-noop')
         self.assertEqual(result['source_sha256_after_restore'], self.sha)
         self.assertEqual(result['steps']['stopped']['port'], 111)
+        self.assertEqual(result['recovery_gate']['reason'], 'restore')
 
     def test_f810_to_fused_marks_isolation_failure(self):
         self.assertEqual(self.full_success('f810->fused'), 1)
@@ -137,17 +159,105 @@ class WindowTest(unittest.TestCase):
         self.assertTrue(result['isolation_failed'])
         self.assertFalse(result['ok'])
 
-    def test_restore_output_must_be_fresh(self):
-        self.restore_output.mkdir()
-        with self.assertRaises(ValueError):
-            win.main(self.args())
-
-    def test_stop_failure_still_restores(self):
+    def test_stop_failure_with_old_root_gone_still_restores(self):
         self.assertEqual(self.full_success(stop_rc=1), 1)
         result = json.loads((self.run_dir / 'window.json').read_text())
-        self.assertIn('restore', result)
         self.assertTrue(result['restore'].get('started'))
         self.assertFalse(result['ok'])
+
+    def blocked_case(self, port_sequence, pre_table, post_table, health=None):
+        stopped = {'value': False}
+        started = []
+
+        def fake_run(argv, timeout, log):
+            if 'stop.py' in ' '.join(argv):
+                stopped['value'] = True
+            return {'argv': argv, 'rc': 0, 'log': str(log)}
+
+        def fake_scan():
+            return post_table if stopped['value'] else pre_table
+
+        def fake_health(*a, **k):
+            if health is None:
+                raise RuntimeError('no health')
+            return health
+
+        with mock.patch.object(win, 'scan', side_effect=fake_scan), \
+                mock.patch.object(win, 'port_open', side_effect=port_sequence), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, 'run', side_effect=fake_run), \
+                mock.patch.object(win, 'start_restore', side_effect=lambda *a: started.append(a)), \
+                mock.patch.object(win, 'http_json', side_effect=fake_health), \
+                mock.patch.object(win.subprocess, 'Popen', return_value=FakeProcess()):
+            code = win.main(self.args(execute=True))
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        return code, result, started
+
+    def test_live_service_blocks_second_start(self):
+        code, result, started = self.blocked_case([0, 0, 0], table(4242, (4243,)),
+                                                  table(4242, (4243,)))
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'old_root_alive_partial')
+        self.assertFalse(result['ok'])
+
+    def test_live_healthy_service_is_skipped_not_restarted(self):
+        code, result, started = self.blocked_case(
+            [0, 0, 0], table(4242, (4243,)), table(4242, (4243,)),
+            health={'status': 'ready'})
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'skipped_service_alive_healthy')
+        self.assertEqual(result['restore']['health'], {'status': 'ready'})
+
+    def test_live_service_with_port_111_is_blocked(self):
+        code, result, started = self.blocked_case([0, 0, 111], table(4242, (4243,)),
+                                                  table(4242, (4243,)))
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'old_root_alive_partial')
+
+    def test_port_open_without_root_blocks(self):
+        code, result, started = self.blocked_case([0, 111, 0], table(4242, (4243,)), {})
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'blocked_port_0')
+
+    def test_old_pgid_remnant_blocks(self):
+        remnant = {4343: {'pid': 4343, 'ppid': 1, 'pgid': 4242, 'state': 'S',
+                          'starttime': '2', 'boot_id': 'b', 'cmdline': ['old']}}
+        code, result, started = self.blocked_case([0, 111, 111], table(4242, (4243,)), remnant)
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'blocked_old_pgid_members')
+
+    def test_runner_residual_blocks(self):
+        started = []
+        stopped = {'value': False}
+
+        def fake_run(argv, timeout, log):
+            if 'stop.py' in ' '.join(argv):
+                stopped['value'] = True
+            return {'argv': argv, 'rc': 0, 'log': str(log)}
+
+        def fake_scan():
+            return table(4242, (4243,)) if not stopped['value'] else {}
+
+        calls = {'n': 0}
+        def fake_pending(*a, **k):
+            calls['n'] += 1
+            return [] if calls['n'] == 1 else [777]
+        with mock.patch.object(win, 'scan', side_effect=fake_scan), \
+                mock.patch.object(win, 'port_open', side_effect=[0, 111, 111]), \
+                mock.patch.object(win, 'pending_clients', side_effect=fake_pending), \
+                mock.patch.object(win, 'run', side_effect=fake_run), \
+                mock.patch.object(win, 'start_restore', side_effect=lambda *a: started.append(a)), \
+                mock.patch.object(win.subprocess, 'Popen', return_value=FakeProcess()):
+            code = win.main(self.args(execute=True))
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        self.assertEqual(code, 1)
+        self.assertEqual(started, [])
+        self.assertEqual(result['restore']['reason'], 'blocked_runner_residual')
 
     def test_a12_evidence_rejects_error_lines(self):
         out = self.root / 'a12.out'; err = self.root / 'a12.err'
@@ -158,12 +268,18 @@ class WindowTest(unittest.TestCase):
         err.write_text('[ERROR] acl interface return err x:1, retcode: 507033\n')
         self.assertFalse(win.a12_evidence(out, err, 0)['ok'])
 
-    def test_required_maps(self):
-        maps = [{'path': '/x/libhccl.so'}, {'path': '/x/libopapi_math.so'}]
-        self.assertTrue(win.required_map_ok('A12', None, maps))
-        self.assertFalse(win.required_map_ok('A12', None, maps[:1]))
-        self.assertTrue(win.required_map_ok('A0', '/x/clef_mmar_probe.so',
-                                            maps + [{'path': '/x/clef_mmar_probe.so'}]))
+    def test_maps_per_pid_and_coverage(self):
+        entries = maps(binary='/x/a12_grouped_mmar')
+        self.assertTrue(win.required_map_ok('A12', None, entries))
+        coverage = win.map_coverage(entries)
+        self.assertTrue(coverage['libhccl'])
+        self.assertTrue(coverage['opapi_math'])
+        self.assertFalse(coverage['hccl_fwk'])
+        self.assertEqual(win.binary_processes(entries), [7001])
+        self.assertTrue(win.required_map_ok('A0', '/x/clef_mmar_probe.so', entries))
+        self.assertFalse(win.required_map_ok(
+            'A12', None, [{'pid': 1, 'cmdline': ['x'],
+                           'libs': [{'path': '/x/libhccl.so'}]}]))
 
     def test_npu_rows_parser(self):
         text = ('Process id in container\n'
@@ -196,6 +312,96 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(argv[:3], ['env', '-i', f'PATH={win.CLEAN_PATH}'])
         self.assertIn('setsid', argv)
         self.assertIn('/start', argv[-1])
+
+    def test_real_foreground_http_restore_keeps_service_alive(self):
+        with socket.socket() as s:
+            s.bind(('127.0.0.1', 0))
+            port = s.getsockname()[1]
+        service = self.root / 'service.py'
+        service.write_text(f'''import argparse, json, os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+p = argparse.ArgumentParser(); p.add_argument('--output-dir'); p.add_argument('--port', type=int)
+a = p.parse_args()
+os.makedirs(a.output_dir, exist_ok=True)
+with open(os.path.join(a.output_dir, 'launch-manifest.json'), 'w') as f:
+    json.dump({{'pid': os.getpid(), 'output_dir': os.path.abspath(a.output_dir)}}, f)
+with open(os.path.join(a.output_dir, 'joint-patch-record.json'), 'w') as f:
+    json.dump({{'branch': 'aa3e-noop'}}, f)
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *args): pass
+    def do_GET(self):
+        body = json.dumps({{'status': 'ready', 'model': 'clef', 'revision': 'x'}}
+                          if self.path == '/health' else {{'config': 's1'}}).encode()
+        self.send_response(200); self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+    def do_POST(self):
+        body = json.dumps({{'ok': True}}).encode()
+        self.send_response(200); self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
+HTTPServer(('127.0.0.1', a.port), H).serve_forever()
+''')
+        start = self.root / 'start.sh'
+        start.write_text(f'''#!/bin/bash
+out=""
+port=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --output-dir) out="$2"; shift 2;;
+    --port) port="$2"; shift 2;;
+    --model-dir) shift 2;;
+    *) shift;;
+  esac
+done
+exec "{sys.executable}" "{service}" --output-dir "$out" --port "$port"
+''')
+        start.chmod(0o755)
+        (self.root / 'activate.sh').write_text('#!/bin/bash\ntrue\n')
+        (self.root / 'activate.sh').chmod(0o755)
+        (self.root / 'model').mkdir()
+        stopped = {'value': False}
+
+        def fake_run(argv, timeout, log):
+            if 'stop.py' in ' '.join(argv):
+                stopped['value'] = True
+            return {'argv': argv, 'rc': 0, 'log': str(log)}
+
+        def fake_scan():
+            if not stopped['value']:
+                return table(4242, (4243,))
+            manifest = self.restore_output / 'launch-manifest.json'
+            if manifest.is_file():
+                pid = json.loads(manifest.read_text())['pid']
+                return table(pid, (pid + 1,))
+            return {}
+
+        restore_argv = ['/bin/bash', str(start), '--output-dir', str(self.restore_output),
+                        '--port', str(port)]
+        with mock.patch.object(win, 'build_restore_argv', return_value=restore_argv), \
+                mock.patch.object(win, 'scan', side_effect=fake_scan), \
+                mock.patch.object(win, 'port_open', side_effect=[0, 111, 111]), \
+                mock.patch.object(win, 'pending_clients', return_value=[]), \
+                mock.patch.object(win, 'run', side_effect=fake_run), \
+                mock.patch.object(win, 'npu_evidence', return_value=[]), \
+                mock.patch.object(win, 'env_evidence', return_value={'match': True}), \
+                mock.patch.object(win, 'read_root_env', return_value={}), \
+                mock.patch.object(win, 'joint_env', return_value={'ok': True}), \
+                mock.patch.object(win, 'proc_identity', side_effect=lambda pid: {
+                    'pid': pid, 'ppid': 1, 'pgid': pid, 'state': 'S',
+                    'starttime': '1', 'boot_id': 'b', 'cmdline': ['child']}), \
+                mock.patch.object(win, 'maps_evidence', return_value=maps()):
+            rc = win.main(self.args(execute=True, extra=('--restore-timeout', '5', '--port', str(port))))
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        self.assertIn('restore_checks', result, result.get('error'))
+        pid = result['restore_checks']['pid']
+        try:
+            self.assertEqual(rc, 0, result.get('error'))
+            self.assertTrue(result['ok'])
+            os.kill(pid, 0)
+        finally:
+            try:
+                os.killpg(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
 
 
 if __name__ == '__main__':

@@ -30,6 +30,7 @@ AA3E = 'aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503'
 CLEAN = 'fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230'
 CLEAN_PATH = ('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:'
               '/usr/games:/usr/local/games:/snap/bin')
+_RESTORE_LOG_HANDLES = []
 RUNNER_NAMES = {'final_acceptance.py', 'bench_ready.py', 'run_cell.py',
                 'window_probe.py', 'supervised_window.py',
                 'joint_fused_attention_window.py', 'joint_fused_service_ab.py',
@@ -117,8 +118,11 @@ def port_open(port):
     return rc
 
 
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def http_json(base, suffix, timeout=10):
-    with urllib.request.urlopen(base + suffix, timeout=timeout) as response:
+    with _OPENER.open(base + suffix, timeout=timeout) as response:
         return json.loads(response.read())
 
 
@@ -126,7 +130,7 @@ def post_json(base, suffix, body, timeout=120):
     data = body.encode() if isinstance(body, str) else json.dumps(body).encode()
     request = urllib.request.Request(base + suffix, data=data,
                                      headers={'Content-Type': 'application/json'})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with _OPENER.open(request, timeout=timeout) as response:
         return response.status, json.loads(response.read())
 
 
@@ -238,6 +242,8 @@ def build_plan(a):
             raise ValueError(f'{name} must be absolute')
     if Path(a.run_dir).exists():
         raise ValueError('run-dir must be fresh')
+    if not Path(a.stop_script).is_file():
+        raise ValueError(f'stop script missing: {a.stop_script}')
     if Path(a.restore_output).exists():
         raise ValueError('restore-output must be fresh')
     if not Path(a.source_target).is_file():
@@ -313,33 +319,68 @@ def wait_health(a, state):
 
 
 def maps_evidence(pgid, names):
-    paths = set()
+    """Per-PID maps for every member of the owned child PGID."""
+    per_pid = {}
     for pid, row in scan().items():
-        if row['pgid'] != pgid:
+        if row['pgid'] != pgid or row['state'] == 'Z':
             continue
         try:
             text = (Path('/proc') / str(pid) / 'maps').read_text(errors='replace')
         except OSError:
             continue
+        libs = []
         for line in text.splitlines():
             parts = line.split()
             path = parts[-1] if parts else ''
-            if path.startswith('/') and any(name in Path(path).name for name in names):
-                paths.add(path)
+            if not path.startswith('/') or not any(name in Path(path).name for name in names):
+                continue
+            if not Path(path).is_file():
+                continue
+            entry = {'path': path, 'sha256': sha256(path), 'soname': None}
+            try:
+                text_d = subprocess.run(['readelf', '-d', path], capture_output=True, text=True,
+                                        timeout=10).stdout
+                match = __import__('re').search(r'\(SONAME\).*\[(.+?)\]', text_d)
+                entry['soname'] = match.group(1) if match else None
+            except (OSError, subprocess.SubprocessError):
+                pass
+            if entry not in libs:
+                libs.append(entry)
+        if libs:
+            per_pid[pid] = {'pid': pid, 'cmdline': row.get('cmdline') or [], 'libs': libs}
+    return list(per_pid.values())
+
+
+def all_libs(maps):
+    return [lib for entry in maps for lib in entry['libs']]
+
+
+def map_coverage(maps):
+    names = [Path(lib['path']).name for lib in all_libs(maps)]
+    return {token: any(token in name for name in names) for token in
+            ('libhccl', 'opapi_math', 'opapi_transformer', 'hccl_fwk', 'hcomm',
+             'libascendcl', 'libnnopbase')}
+
+
+def binary_processes(maps):
     out = []
-    for path in sorted(paths):
-        if not Path(path).is_file():
-            continue
-        entry = {'path': path, 'sha256': sha256(path), 'soname': None}
-        try:
-            text = subprocess.run(['readelf', '-d', path], capture_output=True, text=True,
-                                  timeout=10).stdout
-            match = __import__('re').search(r'\(SONAME\).*\[(.+?)\]', text)
-            entry['soname'] = match.group(1) if match else None
-        except (OSError, subprocess.SubprocessError):
-            pass
-        out.append(entry)
+    for entry in maps:
+        cmd_list = entry.get('cmdline') or []
+        cmd = ' '.join(cmd_list)
+        first = Path(cmd_list[0]).name if cmd_list else ''
+        if 'a12_grouped_mmar' in cmd or first == 'timeout':
+            out.append(entry['pid'])
     return out
+
+
+def required_map_ok(arm, adapter, maps):
+    names = [Path(lib['path']).name for lib in all_libs(maps)]
+    if arm == 'A12':
+        return (any('libhccl' in name for name in names) and
+                any('opapi_math' in name or 'opapi_transformer' in name for name in names))
+    if adapter is None:
+        return False
+    return any(Path(adapter).name == name for name in names)
 
 
 def a12_evidence(stdout, stderr, rc):
@@ -357,18 +398,52 @@ def a12_evidence(stdout, stderr, rc):
             'ok': bool(rc == 0 and not errors and len(cost) >= 2)}
 
 
-def required_map_ok(arm, adapter, maps):
-    names = [Path(entry['path']).name for entry in maps]
-    if arm == 'A12':
-        return (any('libhccl' in name for name in names) and
-                any('opapi_math' in name or 'opapi_transformer' in name for name in names))
-    if adapter is None:
-        return False
-    return any(Path(adapter).name == name for name in names)
+def recovery_gate(a, plan, saved, stopped, child_pid, source_after):
+    """Never start a second tree while the original root is alive."""
+    table = scan()
+    live = table.get(saved['pid'])
+    old_alive = bool(live and live['state'] != 'Z' and same_identity(saved, live))
+    try:
+        port = port_open(a.port)
+    except Exception:  # noqa: BLE001
+        port = None
+    health = None
+    if old_alive and port == 0:
+        try:
+            health = http_json(f'http://127.0.0.1:{a.port}', '/health')
+        except Exception as exc:  # noqa: BLE001
+            health = {'error': f'{type(exc).__name__}: {exc}'}
+    residual = sorted(p for p, row in table.items()
+                      if child_pid and row['pgid'] == child_pid and row['state'] != 'Z')
+    old_pgid = sorted(p for p, row in table.items()
+                      if row['pgid'] == saved['pid'] and row['state'] != 'Z')
+    try:
+        runners = pending_clients(table)
+    except Exception as exc:  # noqa: BLE001
+        runners = [f'error: {type(exc).__name__}: {exc}']
+    context = {'port': port, 'health': health, 'old_identity': live,
+               'old_pgid_members': old_pgid, 'probe_residual': residual,
+               'runner_residual': runners, 'source_after': source_after}
+    if old_alive:
+        if port == 0 and isinstance(health, dict) and health.get('status') == 'ready':
+            return False, 'skipped_service_alive_healthy', context
+        return False, 'old_root_alive_partial', context
+    if port != 111:
+        return False, f'blocked_port_{port}', context
+    if old_pgid:
+        return False, 'blocked_old_pgid_members', context
+    if residual:
+        return False, 'blocked_probe_residual', context
+    if runners:
+        return False, 'blocked_runner_residual', context
+    if source_after != a.expected_source_sha:
+        return False, 'blocked_source_unknown', context
+    return True, 'restore', context
 
 
 def start_restore(plan, run_dir, result):
     log = (run_dir / 'restore.log').open('xb')
+    _RESTORE_LOG_HANDLES.append(log)  # keep the foreground service log open
     proc = subprocess.Popen(plan['restore_argv'], stdin=subprocess.DEVNULL,
                             stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     result['restore'] = {'wrapper_pid': proc.pid, 'argv': plan['restore_argv'],
@@ -420,14 +495,6 @@ def execute(a, plan):
     source_ok = False
     stop_started_ns = time.time_ns()
 
-    def stopped_service_needs_restore():
-        try:
-            port = port_open(a.port)
-        except Exception:  # noqa: BLE001
-            port = None
-        old_alive = same_identity(saved, scan().get(saved['pid']))
-        return (stopped or port == 111 or not old_alive), port, old_alive
-
     try:
         stop_called = True
         stop = run(plan['stop_argv'], a.stop_timeout, run_dir / 'stop.log')
@@ -466,6 +533,8 @@ def execute(a, plan):
             time.sleep(0.1)
         child_state['maps'] = maps
         child_state['maps_ok'] = required_map_ok(a.arm, a.adapter, maps)
+        child_state['map_coverage'] = map_coverage(maps)
+        child_state['binary_pids'] = binary_processes(maps)
         step('child_started', child_state)
         try:
             rc = child.wait(timeout=a.child_timeout)
@@ -488,6 +557,7 @@ def execute(a, plan):
             evidence = a12_evidence(run_dir / 'child.stdout', run_dir / 'child.stderr', rc)
             child_state['a12_evidence'] = evidence
         child_ok = bool(rc == 0 and not timed and child_state['maps_ok'] and
+                        (a.arm != 'A12' or child_state['binary_pids']) and
                         (evidence is None or evidence['ok']))
         if not child_ok:
             result['error'] = 'child failed or missing A12/maps evidence'
@@ -513,10 +583,12 @@ def execute(a, plan):
         if not source_ok:
             result['error'] = 'source changed during child'
         needs_restore = False
-        port = None
-        old_alive = True
+        reason = 'stop_not_called'
+        context = {}
         if stop_called:
-            needs_restore, port, old_alive = stopped_service_needs_restore()
+            needs_restore, reason, context = recovery_gate(
+                a, plan, saved, stopped, child.pid if child is not None else None, source_after)
+            result['recovery_gate'] = {'allow': needs_restore, 'reason': reason, **context}
         if needs_restore:
             try:
                 start_restore(plan, run_dir, result)
@@ -573,8 +645,10 @@ def execute(a, plan):
             except BaseException as exc:
                 result['error'] = f'{type(exc).__name__}: {exc}'
         else:
-            result['restore'] = {'skipped': True, 'port': port, 'old_root_alive': old_alive,
-                                 'reason': 'service still alive or stop not called'}
+            result['restore'] = {'skipped': True, 'blocked': reason != 'skipped_service_alive_healthy',
+                                 'reason': reason, **context}
+            if stop_called:
+                result['error'] = f'restore_blocked: {reason}' 
         result['finished_monotonic_ns'] = time.monotonic_ns()
         flush()
         return 0 if result['ok'] else 1

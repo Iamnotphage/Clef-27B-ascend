@@ -14,6 +14,8 @@
 | 4 | H1 | **prepare 前**创建同一 `std::string` 对象、直接传其 `c_str`、保活到 sync 后 | 同上；trace 记录 group object/data 指针 |
 | 5 | H2 | workspace tensor 保活到 sync 后，release 仅在 sync 返回后 | 同上 |
 
+33 的本机 9.2.1 二进制证据（E1：prepare 阶段 group 被 executor 复制；E2：handler 在设备消费线程、primary context，使用 prepare-time stream）把 H1/H4/H5/H11 降为确认项；优先 H2 workspace 提前释放、H3 descriptor 早销毁、H6 workspace 初值、H12 多进程 comm/MC2 上下文。首批顺序保持 A8→A12→A0(M128)→A9→H2/H3；H1 保留为低成本运行时确认。
+
 A12 是通路正对照：源字节官方、构建为派生（`a12/BUILD_NOTE.md`）；它与旧桥接有 C1–C5 多个差异，**不能单凭其通过宣布单因根因**；成功仅是 liveness（API rc0 + sync 返回）。
 第二批（按结果增量）：H3 描述符保活、H4/H5 线程/context/stream 直接 launch、H6 零初始化、H7 M sweep；
 H11（executor/tiling）已降级——旧 binding 从未销毁 executor，tiling 缓冲不是“被释放”，除非头文件证明
@@ -134,8 +136,10 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
 ## 6. 预期观测 / 失败分支
 
 - A8 成功：两 rank sync 返回，`both_finite=true`。
-- A12 成功：`main` 退出 0、两 rank 线程 sync 返回、样例自检通过；挂起则说明环境/SoC/通信路径问题，
-  先于 binding 归因。
+- A12 成功：`main` 退出 0、stdout/stderr 无 `[ERROR]/retcode:/TestCall execute AICPU failed`、
+  ≥2 行 `mc2 costtime`、child PGID 子树 per-PID maps 含 libhccl+opapi_math/transformer；挂起则说明
+  环境/SoC/通信路径问题，先于 binding 归因。maps 记录 opapi_math/transformer/hccl_fwk/hcomm/
+  ascendcl/nnopbase 实际 loaded/absent；hccl_fwk 不作硬门。
 - A0 若挂起：与 33 现象一致；进入 H1/H2 单变量。A0 返回而旧 run_probe 挂起：差异在 norm/包装/输入，
   按增量臂定位。
 - H1 返回：支持“group 名生命周期”为候选根因，A1 可作修复形态；H1 仍挂起：排除该假设。
@@ -149,7 +153,10 @@ A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mm
 - 每臂 fresh 进程；前置 snapshot 用 31 的 `snapshot-and-restore-spec.json`
   （`39e52eb5…`，恢复 spec 新 SHA `224b0036…`；正常成功仅 `branch=aa3e-noop`）；32 已核 snapshot PASS。
 - routine finally 必须用**官方 start.sh** 恢复 **aa3e/s1**：`record branch=aa3e-noop`、tree 前后
-  `aa3e1758…`；不得调用旧 5c/`restore_prod` 自动 revert f810。
+  `aa3e1758…`；不得调用旧 5c/`restore_prod` 自动 revert f810。恢复是带门状态机：old root 仍活时
+  **绝不 Popen**（health ready+端口 open 记 skip，否则记 `old_root_alive_partial` blocked）；old root
+  不在时 Popen 前再门 port==111、旧 PGID 非 Z 空、无 child/probe/runner 残留、source==aa3e；任一
+  不满足 blocked+停报。skip/blocked 都写 `window.json` 并返回非 0。
 - `f810->fused` 只允许作为已知源异常的救援路径：必须记录漂移前后 SHA/trace/plog/时间戳，该格判隔离
   失败并即报 20/32，再按已授权 aa3e 方案救回；不得静默计成功。unknown 源状态先停报，不猜不改。
 - 保留所有 run-dir/raw/trace/plog；不写服务 tree/guard/vendor；服务当前在线不改。
