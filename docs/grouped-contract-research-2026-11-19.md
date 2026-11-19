@@ -1105,10 +1105,15 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 
 **已有最小替代**：`KFCtaskAndTilingTraceData`/`AivAicpuOpParam` ATRACE 对象有/无只区分 KFC vs MRS，不能分 API/TwoStage/MC2。
 
-### 73.3 精确开关/命令（只列有来源的）
+### 73.3 精确开关/命令（同版文档证据，cf9f1d6）
 
-- 现有来源：plog 的 TSD 行与 HCCL 行证明变量名；**取值语义/推荐级别在公开文档不可得**（hiascend 页面返回空），也未在本地仓库文档中找到。因此**不写具体级别数值**；候选变量为 `ASCEND_GLOBAL_LOG_LEVEL`、`ASCEND_MODULE_LOG_LEVEL`、`ASCEND_GLOBAL_EVENT_ENABLE`、`HCCL_DEBUG_CONFIG`。
-- 需 31 从同版安装文档补：变量取值表、模块名格式、HCCL_DEBUG_CONFIG 位含义；在得到之前，任何“设 X=0 即 DEBUG”的命令都属未证，不列入可执行步骤。
+- **ASCEND_GLOBAL_LOG_LEVEL**：安装文本给出 `0:DEBUG、1:INFO、2:WARNING、3:ERROR（默认）、4:NULL（不输出）`（`python/site-packages/msopst/scripts/msopst.ini:16-22`；`asys/config/config_parser.py:44-49` 同映射，asys 默认 INFO）。这是工具自身默认的映射，**不能直接当作 CANN 核心/AICPU 的默认级别或传播效果**。
+- **ASCEND_GLOBAL_EVENT_ENABLE**：`asys/config/config_parser.py:50-52` 为 `{"FALSE":"0","TRUE":"1"}`，asys 默认 TRUE；`asc_op_compile_base/common/utils/log_utils.py:151-155` 仅 `int(值)==1` 时做 detail/event 打印。同为工具侧证据。
+- **ASCEND_PROCESS_LOG_PATH**：路径型；`asys/drv/env_var.py:26,34-43` 要求存在且为目录并取 abspath；`asys/common/task_common.py:128-137` 作为 CANN/plog 日志目录，缺省回退 `ASCEND_WORK_PATH/<log_type>`。
+- **ASCEND_MODULE_LOG_LEVEL**：安装树仅 `pkg_inc/mmpa/sub_inc/mmpa_env_define.h:94` 枚举 ID 6005；**无取值表/模块名格式**，不猜。
+- **HCCL_DEBUG_CONFIG**：安装树 3 处（`mmpa_env_define.h:142` 枚举 ID 11025；`aicpu_operator_pub.h:660` 与 `moe_distribute_base.h:240` 仅是 `u64 debugConfig=0` 字段注释）；**无 bit 语义**。
+- **边界**：检索为文本级（`grep -rIn -I`，跳过二进制），未检索 devlib 内字符串；`/usr/local/Ascend/driver/{include,tools}` 与 `nnal` 0 命中；安装树无 doc 目录/相关 PDF/MD。故“无”只限本次范围。
+- **可用候选命令（未执行）**：`ASCEND_GLOBAL_LOG_LEVEL=0`（DEBUG）+ `ASCEND_PROCESS_LOG_PATH=<已存在目录>`；可选 `ASCEND_GLOBAL_EVENT_ENABLE=1` 仅用于 event/ATRACE。**观测有效性条件**：必须在目标 AICPU 日志中看到已知必经标记（如 Init4 line 27 或 RpcSrvLaunch 的共享标记），否则“配置生效”未证，缺日志仍按缺测。
 - 设备侧 AICPU ctx/task/workspace/HcclMsg **无受支持的只读内存接口**证据；不提供 `devmem`/自定义读内存命令。字段值 F1–F12 继续标缺测。
 
 ### 73.4 最小有限观测设计（条件式，当前不执行）
@@ -1140,3 +1145,45 @@ Grouped op-info/kernel json 与 `.o` strings 中**未检出** `rac_server`/`Turn
 - 31 的同版版本/开关文档检索归档另交，不为此重复请求；在文档到位前不写精确 env/级别/bit 值。
 - 历史 cell 运行值缺测口径保持（F1–F12 无现成读取方式）；设备 AICPU 内存无可证只读接口；无新设备 GO/SSH。
 - 若 rodata 显示某路径无唯一标记，则明确记“无现有标记”，不把观测愿望写成命令；最小计划只选**已证可触发**的标记。
+
+## 76. abi12 rodata 清单（35 定位，待 31 取文本）
+
+`libccl_kernel.so` 2281deca 固定；每段按 NUL 终止取，跨边界顺延到首个 NUL；不反汇编整函数、不全库扫描。
+
+| # | 地址范围 | 长度 | 调用 site | 路径 | guard（HcclCheckLogLevel） | 备注 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 0x1613b80–0x1613d40 | 0x1C0 | 0x7d6fec / 0x7d7074 / 0x7d70b8 / 0x7d71bc | ReadApiValidMsg gate 不匹配（API） | (2,3)@0x7d6f8c；(2,0x01000003)@0x7d6ffc + IsErrorToWarn | fmt 0x1613bd0/0x1613c00/0x1613ce0；file 0x1613cc8；x6=0x1613bc0；line 226/241 |
+| 2 | 0x1613f00–0x1613f60 | 0x60 | 0x7d67cc | Init4（RpcSrvLaunch） | (0,3)@0x7d6728 → 0x7d67a0 | fmt 0x1613f20；file 0x1613cc8；x6=y；line 27 |
+| 3 | 0x1614040–0x16140a0 | 0x60 | 0x7d744c | CheckRcvWorkMsg 6 s 超时（TwoStage 条件） | (3,3)@0x7d7410 + IsErrorToWarn | fmt 0x1614060；file 0x1613cc8；line 285 |
+| 4 | 0x16143e0–0x1614440 | 0x60 | 0x7d8d20 | ReadAddrMsg 等待超时（API，20 s 首触发） | (2,0x01000003)@0x7d8ce4 | fmt 0x1614408；file 0x1613cc8；x6=turn、x7=20；line 360 |
+| 5 | 0x14eb190–0x14eb200 | 0x70 | 0x7615a4 | RpcSrvLaunch arg0==NULL | (3,3)@0x761568 | fmt 0x14eb1b0；file 0x14edee8；line 433 |
+| 6 | 0x14ede80–0x14edf20 | 0xA0 | 共享 file 串（0x7615a4/0x7620e8/0x762280） | 多路径 | — | file 0x14edee8 |
+| 7 | 0x14ee630–0x14ee690 | 0x60 | 0x762280 | OneStage 返回 0x16(22) | (1,0x01000003)@0x76224c | fmt 0x14ee650；file 0x14edee8；line 98 |
+| 8 | 0x14ee700–0x14ee790 | 0x90 | 0x7620e8 | post-Init 错误/告警路径 | gate@0x7620a4（module 未全解析） | fmt 0x14ee728；file 0x14edee8；x6=[0x191fd04]；line 544 |
+| 9 | 0x14f7160–0x14f71f0 | 0x90 | 0x7b3a24 | ForApi 每轮 | (1,3)@0x7b39f0 | file 0x14f71a8 |
+| 10 | 0x14f8270–0x14f82e0 | 0x70 | 0x7b3a24 | ForApi 每轮 | (1,3)@0x7b39f0 | fmt 0x14f8290；x6=[ctx+12756]；line 1715 |
+
+**用途**：确认各标记的格式串/级别/是否含字段，决定 73.2 哪些可作正向判别标记。字符串本身不改静态结论。
+
+## 77. 具体有限观测计划（候选命令+有效性条件；不执行）
+
+**候选配置（单次未来 cell，需单独授权）**：
+```
+ASCEND_GLOBAL_LOG_LEVEL=0            # 0=DEBUG（同版 msopst/asys 文本映射）
+ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
+# 可选：ASCEND_GLOBAL_EVENT_ENABLE=1  # 仅当需要 event/ATRACE 细节
+```
+不设 `ASCEND_MODULE_LOG_LEVEL`/`HCCL_DEBUG_CONFIG`（本范围无语义）。**观测有效性条件**：设备/plog 必须出现至少一个已知必经标记（优先 #2 Init4 line 27；若未进 RpcSrvLaunch 则看 #9/#10 ForApi），否则“日志配置在目标 AICPU 生效”未证，缺日志仍按缺测。
+
+**判别逻辑（正向标记；缺席不排除）**：
+| 观测结果 | 支持 | 仍需注意 |
+| --- | --- | --- |
+| #1 ReadApiValidMsg gate failure（line 226/241） | API 路径，且 gate `+48` 不匹配（可立即出现，不必等 20 s） | 若 gate 匹配则不出现；缺席不排除 API |
+| #4 ReadAddrMsg timeout（line 360，20/40/80/160 s） | API 路径且当时无有效消息 | 消息到达后算法卡住不触发 |
+| #3 CheckRcvWorkMsg timeout（line 285，每 6 s） | TwoStageWait 且 `sendCnt<ctx+352` | sendCnt 追平即不出现；缺席不排除 |
+| #2 Init4 line 27 | 进入 RpcSrvLaunch（共享，不分子分支）；可作“日志生效”证据 | 需 #1/#4/#3 才能分 API/TwoStage |
+| #9/#10 ForApi 每轮 | ForApi/ClearOpRes 路径 | 与正常 launch 区分 |
+| #7 OneStage 0x16 / #8 post-Init error | OneStage 返回/错误路径 | 需格式串确认语义 |
+| ATRACE KFC 对象 | KFC vs MRS | 不分子分支 |
+
+**若 #1/#4/#3 均未出现**：不能排除 API/TwoStage（可能 gate 匹配、消息到达、等待满足或采集未生效）；只能记录“无正向标记”，下一步才是 host launch 日志或代码埋点（需单独授权）。**当前不执行**；无设备 GO。
