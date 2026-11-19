@@ -282,6 +282,12 @@ def arm_output(arm, y, full=None, rows=None):
     return y
 
 
+def all_reduce_sum(dist, tensor):
+    """torch.distributed.all_reduce returns None; keep the reduced tensor."""
+    dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
+    return tensor
+
+
 def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
              all_gather, final_sync, matmul, all_reduce, flags, trace=None):
     """One real A15 pass: tail pad, MRS, sync, all-gather, crop, full-row reference."""
@@ -438,7 +444,7 @@ def execute(a, plan):
                     run_mrs=a15_run_mrs, sync=a15_sync, all_gather=a15_gather,
                     final_sync=torch.npu.synchronize,
                     matmul=torch.matmul,
-                    all_reduce=lambda t: dist.all_reduce(t, op=dist.ReduceOp.SUM),
+                    all_reduce=lambda t: all_reduce_sum(dist, t),
                     flags=plan['flags'], trace=trace)
                 meta.update(info)
                 run_id = info['run_id']

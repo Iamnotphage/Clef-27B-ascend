@@ -208,6 +208,24 @@ class F821Test(unittest.TestCase):
         self.assertIn(('execute', 'k'), f821_violations(old))
 
 
+class AllReduceSumTest(unittest.TestCase):
+    def test_returns_the_tensor_when_dist_returns_none(self):
+        class FakeDist:
+            class ReduceOp:
+                SUM = 'sum'
+
+            def all_reduce(self, tensor, op):
+                self.seen = (tensor, op)
+                tensor.append('reduced')
+                return None  # torch.distributed.all_reduce is in-place
+
+        dist = FakeDist()
+        tensor = []
+        self.assertIs(run_probe.all_reduce_sum(dist, tensor), tensor)
+        self.assertEqual(tensor, ['reduced'])
+        self.assertEqual(dist.seen[1], 'sum')
+
+
 class A15FlowTest(unittest.TestCase):
     def test_a15_rows127_pad_gather_crop_with_stubs(self):
         rows, k, n, world, rank = 127, 256, 512, 2, 1
