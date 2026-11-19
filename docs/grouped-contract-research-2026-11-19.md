@@ -340,6 +340,20 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **可判别候选（更新）**：H5K 返回 → stream/context 绑定候选；H5K 同挂 + H4K 返回 → 调用线程+显式同步；H5K/H4K 均挂 → AivAicpu KFC producer/consumer 的 `rcvCnt` 初始化/递增/可见性优先。libccl 符号证明消费端存在，不证明其在本机 kernel 路径被正确调用/响应；本机 kernel 源与上游不同是新的 ABI 缺口。H6 仍只清 user workspace，不覆盖 context KFC 区。
 
+## 23. 布局/语义 diff 与通知区（2026-11-19，20 口径）
+
+**负结果（可证实）**：本机 `rac_server.h` 与上游 f5703e4 的 `diff -w` **为空**；`AivAicpuOpParam` 与 `HcclServer`（`SetMsg/TurnNotifyRun/TurnWait`）语义一致，差异仅空格/指针星号。源级布局（LP64、无 pragma pack）：`AivAicpuOpParam` 总 **64 B**；offset：commType 0、opType 4、sendBuffer 8、recvBuffer 16、count 24、strideLen 32、hcclDataType 40、valid 44、isLast 48、funID 49、**sendCnt 50、rcvCnt 51**、everyTurnRsp 52、everyTurnWait 53、totalTurnCnt 54、res[9] 55-63。`HCCL_PARAM_SIZE=sizeof=64`，`HcclServer::Init(win)` 的 send 区在 `win`、response 区在 `win+64`；`workspaceMsg=context->WorkSpace+notifyOff`，故 response 地址 = context->WorkSpace + notifyOff + 64。
+
+**HcclCombinOpParam 两结构区分（关键）**：`mc2_common_def.h` 的 `AscendC::HcclCombinOpParam` 只有 `uint64_t workSpace; uint64_t workSpaceSize; uint32_t rankId; uint32_t rankDim;`（24 B，offsets 0/8/16/20）；Grouped kernel 源 L29-43 **另定义本地大结构** `HcclCombinOpParam`（`WorkSpace/WorkSpaceSize/rankId/rankDim/winSize/windowsIn[8]/windowsOut[8]/hcomId[128]/streamInfo[8]/signalInfo/config`），首四字段类型/顺序/offset 与 24B 结构一致（0/8/16/20），尾部按 `rac_server.h` 定义源级计算为 **2248 B**（windowsIn 32、windowsOut 96、hcomId 160、streamInfo 288、signalInfo 352-2239、config 2240，尾部对齐 8）。**`workSpace` vs `WorkSpace` 仅是不同结构/字段名，不是 ABI 冲突证据**；本机 kernel 源 `1db26125…` 与上游不同，完整本地结构仍需 31 源码确认。
+
+**通知区/轮次（源级值，本机 config 未证）**：`KFCMsgBody` = `HcclAicpuOpParam msgSndArea[64][16] + msgRcvArea[64][16]`，每项 64 B → **notifyOff = 2×64×16×64 = 131,072 B**（tiling `set_notifyOff(sizeof(KFCMsgBody))`）；send 区在 +131,072，response 在 +131,136；`workspaceOff=libApiWorkSpaceSize_`（值未归档）。本机 tiling config `c9bd574a…` 与 kernel `.json` 尚未取内容，**不能把上游 notifyOff/结构大小直接当本机 config 事实**；需 31 提供内容后核实际 constants/struct。
+
+**consumer 存在 vs dispatch 版本（分开）**：libccl 符号/strings 证明 `AivAicpuOpParam` 消费代码存在（`AicpuKfcProcess::AicpuCcOpExe`、`AddTaskForHcclMsg`、`AicpuKfcRpcServer::ReadWorkMsg/CheckRcvWorkMsg`、`AivAicpuOpParam::PrintMsg`、`HcclKFCTilingData.sendCnt`、`rcvCnt/sendCnt`），`RunAicpuKfcResInit` 反汇编调用 `AicpuRpcResInit(HcclCombinOpParam*)`；但**未证明**本次 H11 的 KFC task 实际 dispatch 到哪个版本/哪个函数（日志只有 API load 与 V1/V2 名称，非调用证据）。`AivAicpuOpParam` 字段（除 kernel 写的 sendCnt/valid）与 rcvCnt 初始化/递增仍无源。
+
+**已证/未证**：已证——rac_server 语义/布局一致、AivAicpuOpParam 64B offsets、两 HcclCombinOpParam 首四字段 offsets、libccl 消费端存在、KFCMsgBody 源级 131,072B。未证——本机 Grouped kernel 源与上游差异内容、本机实际使用哪个 HcclCombinOpParam/rac_server 版本、本机 tiling constants/actual config、完整 struct sizeof/offsetof 的编译器结果、KFC task dispatch 版本、rcvCnt 初始化/递增。**不把候选升级为结案**。
+
+**最小 31 请求（H5K 后）**：本机 Grouped kernel `.cpp`（`1db26125…`）全文/关键行；两版 `mc2_common_def.h` 的 struct 原文；本机 tiling config `c9bd574a…` 与 kernel `.json` 内容；如可行补 `AicpuCcOpExe/AddTaskForHcclMsg/ReadWorkMsg` 反汇编。已有 pack 足够确认 rac_server/64B offsets 与首四字段，不等待更多归档即可保留这些负结果。
+
 **优先方向修正（32/35 审阅后）**：原 H4（flags=DIRECT_LAUNCH=16）**不是单变量**——它同时改变 ①调用线程 vs OpCommand consumer 线程 ②body 内真实 `aclrtSynchronizeStream` vs handler 默认 sync_rc0 ③失去 KEEP_ALL 保活/cleanup/id。H5（flags=REFETCH_STREAM=32）也不是单变量——同时改 handler 线程内 stream 重取与失去 KEEP_ALL 保活。正确匹配变体需显式组合：**H4K=DIRECT_LAUNCH|KEEP_ALL=24**（仍同时改线程+真实同步，是组合臂）与 **H5K=REFETCH_STREAM|KEEP_ALL=40**（对 H11 仅改 handler 流来源，是单一 stream/context 变量），需在 run_probe `ARMS` 与 window `--arm choices` 加两行（CPU-only，binding/flags 零改），**等 H11 raw + 32 审查后再决定，当前不写码/不排设备**。零代码用原 H4/H5 只能作“线程+同步+保活”/“stream+保活”组合交互臂，不能隔离 context/线程。判别顺序（未来）：H5K 返回→handler 重取 stream/context 绑定为差异；H11 挂 + H5K 挂 + H4K 返回→调用线程+显式同步路径可行，OpCommand consumer 线程/无 sync 为候选（同步与线程仍纠缠）；三者全挂→投递/AivAicpu-KFC 协议候选更强；**不得由 H4K 单独证明 context**。跨进程 stream 指针不可比，只比同进程 prepare/handler 关系与 device；C++ sync trace 与 Python sync 需标 `source=cpp|python`。
 
 ## 20. H11 matched small 结果：Grouped 同形状仍挂起（2026-11-19）
