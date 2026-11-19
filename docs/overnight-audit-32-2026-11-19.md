@@ -325,6 +325,18 @@
 - **结案记录**：31 conclusion `d95a2d52…`（confirmed_environment_blocked，commit cb90bc3）；35 `98fc132`；32 `34ccde7`；服务 aa3e/s1 root 1301295 在线；入口/指标/默认/CSV 不变；无新设备臂。
 - **33 最终记录（已核）**：`docs/grouped-contract-research-2026-11-19.md` commit `87ffb96`、文件 SHA `f2326783…`，第 9–11 节确认 mc2_server/chip:5 证据与结案。**A13 更正**：`aclnnMatmulAllReduce`（V1/V2/V3）在 A3 文档不支持且本机 A3 op-info 未注册（仅 AllGatherMatmul/V2、MatmulReduceScatter/V2），运行会停在 op 查找（161001 类），不能作 MC2 路径控制；A13 代码保留未执行。若未来需要 A3 AICPU 控制，用 `aclnnMatmulReduceScatter` V1（A3 仅 AI CPU/KFC 路径，bias 非 0 不支持）与 V2 commMode="aiv"（A3 仅 aiv、通信缓冲 ≥200MB）；但 loader 直接拒绝证据已足够，当前不安排设备臂。
 
+## 8.24 结论收窄（按 20，2026-11-19）：环境首因线索，非最终结案
+
+- **修订说明**：8.21–8.23 的“decisive/closed/环境阻塞结案”表述为**历史轨迹**，按 20 的复核收窄；不删除原件与旧结论，只在此声明当前状态。
+- **已确立事实（仅两项）**：① A12 官方样例失败（stream47/KERNEL_AICORE pending，507046@10s；两 rank）；② `mc2_server.tar.gz` 在 TDT 启动阶段因 chip:5 被 skip-load（device0/1，op launch 前），`cann-tsch-compat` 同被 skip。
+- **未确立（不得当作已证）**：`mc2_server` 是 **optional**，且 AICPU scheduler 已从 `libccl_kernel.so` 加载 `RunAicpuKfcResInit/RunAicpuKfcSrvLaunch` 并完成 `AicpuRpcResInit`——**Grouped 是否实际依赖被拒的 mc2_server 包尚未证明**；H6（workspace 零初始化）与 MC2 context/AICPU 绑定（H12 的核心）仍未证伪。A13 的 MatMulAllReduce 在 A3 未注册（161001 类），**不能**作为公共 MC2 反证，停跑。
+- **当前状态**：**环境首因线索（environment first-cause clue）；服务依赖/合法控制待核**。任何“H1–H12 全部结案”“Grouped 不可运行”的最终定性暂不成立。
+- **后续必要控制（preflight 判据）**：
+  - **A14（MatmulReduceScatter V1，A3 合法 AICPU 控制）**：33 先在本机 CANN 确认该 op 的 A3 op-info/kernel 注册与所需 AICPU 包（mc2_server vs aicpu_hccl）及 header/样例同版；35 实现最小 A14（x1/x2/bias/group/sum/commTurn0/streamMode1/output；A3 bias 非 0 不支持→零/空 bias；先小合法 shape，再 v4r1-like shape）；成功=API rc0+两 rank sync 返回+finite+实际 binary maps（libhccl/opapi/apapi 族/ascendcl/nnopbase）+无错误行+完成标记；失败同 stream47/mc2_server skip 记录。解释：A14 通过→合法 AICPU MC2 控制可用，被拒 mc2_server 非普遍阻断；A14 同挂→路径阻塞更广，但仍须先证明 A14 与 Grouped 同依赖该被拒包。
+  - **A12-H6（最小派生）**：35 在官方 A12 源（6c1a90ab 不变）上只加 `aclrtMemsetAsync(workspace,0,size,stream)`（launch 前、同 stream、全 16,777,216 B、ACL_CHECK 记录 rc），diff/source/binary SHA 冻结、明确“官方源+最小派生”标签；其余（10s sync、args 2 1 0,1、build glue）不变；用 A12 臂同一窗口/a12_evidence（错误行/≥2 costtime/maps）。H6 返回=workspace 初值被支持；同挂=H6 削弱。单变量仅为 memset。
+  - 设备门（任何新格）：fresh root-identity/snapshot（当前 1301295）、run/restore fresh、safe window（old_alive 绝不 Popen/pre-Popen 门/官方 aae-noop 恢复/240s/精确 PGID）、32 ready 后 31 执行；服务保持 aa3e。
+- **A13**：停跑（未注册）；代码保留；未来 A3 控制只用确认注册的 MatmulReduceScatter V1/V2。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
