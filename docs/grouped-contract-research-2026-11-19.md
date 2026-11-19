@@ -1261,6 +1261,8 @@ source <activate_env.sh>                   # 现有 probe 运行前提（无 CAN
 
 # 2) probe child（必须由 torchrun 2 ranks 启动；不能直接 python run_probe --execute，
 #    否则 world/RANK/LOCAL_RANK 未注入会 ValueError。window build_child_argv 生成如下形状：）
+#    注意：torchrun 用下划线 --master_port，且必须放在 run_probe.py 之前；
+#          run_probe 本身没有 master-port 参数，不要放到脚本后。
 torchrun --nproc_per_node=2 --master_port 29531 \
   runtime/grouped_mmar/run_probe.py --arm H11 \
   --rows 128 --k 256 --n 512 --seed 20261119 \
@@ -1279,8 +1281,12 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
   --activate <activate_env.sh> --service-root <service root> \
   --model-dir <model dir> --restore-output <fresh>/restore \
   --stop-script /tmp/d0cc/d0_stop.py \
-  --text-body <existing cell text body> --image-body <existing cell image body>
+  --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json \
+  --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
 ```
+- body 证据：A15-large cell 已验证 plan 使用的路径；A14-large 同名文件为有效替代；31 preflight 必须 `test -f`（window `build_plan` 也检查 `is_file()`）。最终实路径由 31 给。
+- `--master-port` 只给 **window**（window argparse）；child 的 `torchrun --master_port` 由 `build_child_argv` 生成；run_probe 不接受 master-port。
+- env：必须在**启动 window 前**导出到进程环境；window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → torchrun→ranks 继承；fresh abs log dir 预创建；`/proc/<rank>/environ` 只读核对，白名单只取 `ASCEND_GLOBAL_LOG_LEVEL`/`ASCEND_PROCESS_LOG_PATH`/`CLEF_WINDOW_OWNER`。
 - 端口 29531 执行前须 `ss -ltn` 预检空闲（既有前置）；不自动 GO。
 - `ASCEND_GLOBAL_LOG_LEVEL=0` 只是候选：**不假设 Init4/ReadApiValidMsg 的 guard 会被它满足**；未证模块/bit 不设置。
 
@@ -1359,3 +1365,14 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - window argv 已补 `--text-body` / `--image-body`；
 - env 顺序、restore `env -i`、采集口径不变。
 请以当前 §79.2/§82 复核；若仍看到旧文本，说明审阅快照未更新。H11 文档新 SHA 为 `fa62db6c`（35 2b5729e）。
+
+### 82.2 32 预审两点答复（已并入 §79.2）
+
+- **master-port**：window 的 `--master-port 29531` 是 window 自己的 argparse；`build_child_argv` 生成 child 的 `torchrun --nproc_per_node=2 --master_port 29531 run_probe.py ...`。run_probe **没有** master-port 参数；独立 probe child 的 `--master_port` 必须在 `torchrun` 后、脚本前（下划线），不要用连字符别名。两层同值 29531，只有一个 torchrun 实例；执行前 `ss -ltn` 预检。
+- **text/image body**：用 A15-large cell 已验证路径
+  `/workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json`、
+  `/workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json`；
+  A14-large 同名文件为有效替代；31 preflight `test -f`。内容不影响 H11 观测。
+- **结论**：§79/§82 可作 **CPU 预审条件式闭环**；剩余仅 31 preflight（fresh identity/port/dirs、stop-script SHA、body 存在、log dir）与设备授权。当前不运行、不发 GO。
+- **env 边界**：window 只证 child_env 到 torchrun/ranks；AICPU daemon 传播仍未证，正向标记有效性前提不变。
+- **采集**：raw 默认 `/root/ascend/log` + candidate `PROCESS_LOG_PATH` + device 全量；关联视图另存，不删原件。
