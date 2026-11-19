@@ -265,3 +265,28 @@ If a later cell needs scale-aware equivalence, add to `result.reduced`:
 These are field proposals only; they are not part of the current freeze and do not
 change the A14 large v3 record, which remains numeric-complete but not a precision
 pass.
+
+## 15. Bounded steady-state benchmark plan (CPU design only; no device authorization)
+
+Compare A15 (MRS V1 + all_gather, ND weights) with the current BF16 NZ
+matmul+all_reduce down path. Same seed, x/w hashes, TP2 group, stream ordering and
+per-iteration synchronization; the native AddRMSNorm boundary is measured as a
+separate optional stage, not mixed into the matmul comparison.
+
+- **Shapes**: real local shape M968/K8704/N5120 and the small M127/K256/N512; fixed
+  input/weight hashes; same adapter/provider and HCCL group.
+- **Order**: ABBA per pair, W warmups, N measured iterations, per-iteration Python
+  sync; report per-stage and total median/p95 for both arms, plus paired deltas.
+  No single-run adoption claim.
+- **KEEP_ALL leak budget**: the probe still leaks one executor/workspace per call
+  because the release op is unregistered. At small shape the workspace is
+  17,170,432 B/rank; at large shape it is 115,818,496 B/rank. Bound the cell so the
+  accumulated workspace stays under 1 GiB/rank (about 32 small or 8 large
+  iterations), then let the process exit reclaim everything. This budget is part of
+  the plan, not a claim that the leak is solved.
+- **Production lifecycle**: a long-running service still needs executor destruction
+  and workspace pooling/ownership; using flags=0 and relying on early release is not
+  a solution and is not measured here.
+- **Reporting**: raw per-iteration durations and amplitudes stay with the run; any
+  comparison remains a diagnostic of this bounded cell, not a production throughput
+  or precision claim. No official entry/CSV change.

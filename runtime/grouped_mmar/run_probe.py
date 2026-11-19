@@ -321,7 +321,43 @@ def _shape_of(tensor):
         return None
 
 
-def a15_record(output, reference, rows, n, *, diff, equal):
+def relative_l2(diff_norm, ref_norm):
+    """Explicit zero-denominator rule for relative L2."""
+    if ref_norm == 0:
+        return ((0.0, True) if diff_norm == 0 else (None, True))
+    return diff_norm / ref_norm, False
+
+
+def tensor_error_stats(output, reference):
+    """Minimal raw error statistics for A15 (torch tensors; no new pass gate)."""
+    out = output.float()
+    ref = reference.float()
+    diff = (out - ref).abs()
+    element_count = int(diff.numel())
+    flat_index = int(diff.reshape(-1).argmax().item())
+    diff_norm = float(diff.pow(2).sum().sqrt().item())
+    ref_norm = float(ref.pow(2).sum().sqrt().item())
+    rel_l2, denom_zero = relative_l2(diff_norm, ref_norm)
+    return {
+        'max_abs': float(diff.max().item()),
+        'mean_abs': float(diff.mean().item()),
+        'output_abs_max': float(out.abs().max().item()),
+        'reference_abs_max': float(ref.abs().max().item()),
+        'reference_rms': float(ref.pow(2).mean().sqrt().item()),
+        'reference_abs_mean': float(ref.abs().mean().item()),
+        'nonzero_count': int((diff != 0).sum().item()),
+        'element_count': element_count,
+        'max_error_index': flat_index,
+        'max_error_position': [flat_index // output.shape[1],
+                               flat_index % output.shape[1]],
+        'max_error_reference': float(ref.reshape(-1)[flat_index].item()),
+        'max_error_output': float(out.reshape(-1)[flat_index].item()),
+        'relative_l2': rel_l2,
+        'relative_l2_denominator_zero': denom_zero,
+    }
+
+
+def a15_record(output, reference, rows, n, *, stats, equal):
     """Build the A15 record; missing or wrong-shaped inputs fail closed."""
     if reference is None:
         return None, 'missing_equivalence_record'
@@ -330,7 +366,7 @@ def a15_record(output, reference, rows, n, *, diff, equal):
     if (output_shape != (rows, n) or reference_shape != (rows, n) or
             output_shape != reference_shape):
         return None, 'invalid_equivalence_shape'
-    item = diff(output, reference)
+    item = stats(output, reference)
     item['bit_equal'] = bool(equal(output, reference))
     return {'reduced': item,
             'equivalence': {'reference': 'matmul+all_reduce full rows',
@@ -519,14 +555,9 @@ def execute(a, plan):
             finite = bool(torch.isfinite(output.float()).all())
             if reference is not None:
                 if a.arm == 'A15':
-                    def diff_item(out, ref):
-                        delta = (out.float() - ref.float()).abs()
-                        return {'max_abs': float(delta.max()),
-                                'mean_abs': float(delta.mean())}
-
                     record, error = a15_record(
                         output, reference, rows, a.n,
-                        diff=diff_item,
+                        stats=tensor_error_stats,
                         equal=lambda out, ref: torch.equal(out, ref))
                     if record is not None:
                         meta.update(record)

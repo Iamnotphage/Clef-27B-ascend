@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "f7c5f8605e784a85d529c9e1c4734c8c1588fbcd001487dc359f419a48c0f9c3",
-      "bytes": 29346
+      "sha256": "21d4ebc704e2215e999b471d8a645768bc54bafd12d0b1df80e4debe42322553",
+      "bytes": 30652
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record-shape/F821/arm_output tests (25)",
-      "sha256": "d7b6d0c4a2a36ec84a242a1afedba6d19b4db766c450496be0fc94184fa589de",
-      "bytes": 18651
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record-shape/error-stats/F821/arm_output tests (27)",
+      "sha256": "500d338736af3232824932b6345cff89b06224b84b8315284bfaf2808e4f4ca6",
+      "bytes": 20713
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
-      "sha256": "87498b28d7b79710a12fc4742d8f81832d5c2d917543ee0c3c5b8671b2ea5988",
-      "bytes": 15493
+      "sha256": "cccaccc8e83aaabb23a8df69df2607f5027a8ead51b8d805a3f28bfd194e32ea",
+      "bytes": 17093
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "31940aa6870eed2c220ad715d7cdd2d959c0dd36809362c37ab0c6f2d1e338e8",
-      "bytes": 35687
+      "sha256": "11fa82e1a3502735db17c72a912d98a540428c3bf31aebf979b38322241e416c",
+      "bytes": 36322
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -240,7 +240,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "25/25",
+      "test_probe_cpu.py": "27/27",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "40/40 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "d7b6d0c4", "run_probe": "f7c5f860", "cpu": "74/74 (25+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "500d3387", "run_probe": "21d4ebc7", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -455,9 +455,9 @@
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
     "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
-    "design_sha256": "87498b28d7b79710a12fc4742d8f81832d5c2d917543ee0c3c5b8671b2ea5988",
+    "design_sha256": "cccaccc8e83aaabb23a8df69df2607f5027a8ead51b8d805a3f28bfd194e32ea",
     "a15_contract": "the current freeze expresses rows 127 via parameters only: --arm A15 --rows 127 --k 256 --n 512; flags 8 KEEP_ALL, bias nullptr, pad 128, RS blocks 64/64, AG 128, crop 127; plan-only verified, no code change needed",
-    "production_plan": "CPU design sections 13/14: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan; error-stat fields (max_rel/mean_rel/ulp_at_max/counts) are proposals only, not implemented",
+    "production_plan": "CPU design sections 13/15: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan; the bounded steady-state plan is A15 vs BF16 NZ matmul+all_reduce, ABBA with fixed input/weight/TP/sync, KEEP_ALL leak budget <=1 GiB/rank (about 32 small or 8 large iterations) and process-exit reclaim; production executor/workspace lifecycle remains pending and flags=0 early release is not treated as a solution",
     "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
     "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
     "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
@@ -472,7 +472,8 @@
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
       "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
-      "candidate_freeze_after_v3": {"status": "CPU-only shape guard for later review; NOT the v3 execution tuple", "run_probe.py": "f7c5f860", "test_probe_cpu.py": "d7b6d0c4", "cpu": "74/74 (25+9+40; 7 Linux-only skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
+      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields for later review; NOT the v3 execution tuple", "run_probe.py": "21d4ebc7", "test_probe_cpu.py": "500d3387", "cpu": "76/76 (27+9+40; 7 Linux-only skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
+      "error_stats": "a15_record's stats callback now records output_abs_max, reference_abs_max, reference_rms, reference_abs_mean, nonzero_count, element_count, max_error_index/position, max_error_reference/output, and relative_l2 with an explicit zero-denominator rule (0/0 -> 0.0, nonzero/0 -> null + denominator_zero=true). These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
       "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
       "v3_result": {
         "status": "executed on the locked tuple; diagnostic success only, not a production or precision-pass claim",

@@ -208,41 +208,84 @@ class F821Test(unittest.TestCase):
         self.assertIn(('execute', 'k'), f821_violations(old))
 
 
+def list_error_stats(output, reference):
+    out = [value for row in output for value in row]
+    ref = [value for row in reference for value in row]
+    diffs = [abs(o - r) for o, r in zip(out, ref)]
+    max_abs = max(diffs)
+    index = diffs.index(max_abs)
+    diff_norm = sum(value * value for value in diffs) ** 0.5
+    ref_norm = sum(value * value for value in ref) ** 0.5
+    rel_l2, denom_zero = run_probe.relative_l2(diff_norm, ref_norm)
+    return {
+        'max_abs': max_abs,
+        'mean_abs': sum(diffs) / len(diffs),
+        'output_abs_max': max(abs(value) for value in out),
+        'reference_abs_max': max(abs(value) for value in ref),
+        'reference_rms': (sum(value * value for value in ref) / len(ref)) ** 0.5,
+        'reference_abs_mean': sum(abs(value) for value in ref) / len(ref),
+        'nonzero_count': sum(1 for value in diffs if value != 0),
+        'element_count': len(diffs),
+        'max_error_index': index,
+        'max_error_position': [index // len(output[0]), index % len(output[0])],
+        'max_error_reference': ref[index],
+        'max_error_output': out[index],
+        'relative_l2': rel_l2,
+        'relative_l2_denominator_zero': denom_zero,
+    }
+
+
 class A15RecordTest(unittest.TestCase):
     def test_missing_reference_is_fail_closed(self):
         record, error = run_probe.a15_record(
-            [1.0], None, 1, 1, diff=lambda o, r: {}, equal=lambda o, r: False)
+            [1.0], None, 1, 1, stats=lambda o, r: {}, equal=lambda o, r: False)
         self.assertIsNone(record)
         self.assertEqual(error, 'missing_equivalence_record')
 
     def test_wrong_shape_is_fail_closed(self):
         record, error = run_probe.a15_record(
             [[0.0] * 512], [[0.0] * 512], 127, 512,
-            diff=lambda o, r: {'max_abs': 0.0, 'mean_abs': 0.0},
+            stats=lambda o, r: {'max_abs': 0.0, 'mean_abs': 0.0},
             equal=lambda o, r: True)
         self.assertIsNone(record)
         self.assertEqual(error, 'invalid_equivalence_shape')
+
+    def test_relative_l2_zero_denominator_rule(self):
+        self.assertEqual(run_probe.relative_l2(0.0, 0.0), (0.0, True))
+        self.assertEqual(run_probe.relative_l2(1.0, 0.0), (None, True))
+        self.assertEqual(run_probe.relative_l2(2.0, 4.0), (0.5, False))
 
     def test_record_contains_equivalence_and_diagnostic(self):
         output = [[1.0] * 512 for _ in range(127)]
         reference = [[2.0] * 512 for _ in range(127)]
         record, error = run_probe.a15_record(
             output, reference, 127, 512,
-            diff=lambda o, r: {'max_abs': 0.01, 'mean_abs': 1e-5},
-            equal=lambda o, r: False)
+            stats=list_error_stats, equal=lambda o, r: False)
         self.assertIsNone(error)
-        self.assertEqual(record['reduced'], {'max_abs': 0.01, 'mean_abs': 1e-5,
-                                             'bit_equal': False})
+        reduced = record['reduced']
+        self.assertEqual(reduced['max_abs'], 1.0)
+        self.assertEqual(reduced['mean_abs'], 1.0)
+        self.assertEqual(reduced['nonzero_count'], 127 * 512)
+        self.assertEqual(reduced['max_error_position'], [0, 0])
+        self.assertEqual(reduced['max_error_reference'], 2.0)
+        self.assertEqual(reduced['max_error_output'], 1.0)
+        self.assertAlmostEqual(reduced['relative_l2'], 0.5)
+        self.assertFalse(reduced['relative_l2_denominator_zero'])
         self.assertEqual(record['equivalence']['shape'], [127, 512])
-        self.assertTrue(record['diagnostic_gate']['within_bounds'])
+        self.assertFalse(record['diagnostic_gate']['within_bounds'])
         self.assertEqual(record['diagnostic_gate']['status'],
                          'diagnostic_only_not_an_official_gate')
+
+    def test_zero_reference_records_finite_neutral_rule(self):
+        output = [[0.0] * 512 for _ in range(127)]
+        reference = [[0.0] * 512 for _ in range(127)]
         record, error = run_probe.a15_record(
             output, reference, 127, 512,
-            diff=lambda o, r: {'max_abs': 2.0, 'mean_abs': 5e-5},
-            equal=lambda o, r: False)
+            stats=list_error_stats, equal=lambda o, r: True)
         self.assertIsNone(error)
-        self.assertFalse(record['diagnostic_gate']['within_bounds'])
+        self.assertEqual(record['reduced']['relative_l2'], 0.0)
+        self.assertTrue(record['reduced']['relative_l2_denominator_zero'])
+        self.assertTrue(record['diagnostic_gate']['within_bounds'])
 
 
 class A15FlowTest(unittest.TestCase):
