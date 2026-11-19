@@ -1814,3 +1814,22 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
      并注明必须在 ranks 存活期运行、读取 v2 的 `run-h11-observe-v2/descendants.json`，不得依赖默认路径；
   3. 同时修 C（collect-raw 标题/注释 v1）与 D（README 索引 wrapper/validation 文件缺失/入 SUMS）。
 - helper 源 SHA `a4b76676` 不变、18/18 替身有效；阻断仅在 v2 操作步骤的调用配置。修 B+C+D 后重生成 SUMS/commit，32/35 复审；无 GO/设备。
+
+## 102. v2 5923f7e/f5cf839e 复审：A/D 闭，B/C 与新增 SUMS 完整性阻断
+
+**A/D 已闭（32/35）**：
+- A：preflight 增加 **caller 强制检查**（`command -v torchrun`=venv、PATH 含 venv bin、caller `--help` rc0）；裸 shell `RESULT: FAIL rc=1`（validation-caller-bare-fail.txt），activate+PATH 后 `ALL PASS rc=0`（validation-prepared-pass.txt）；`run-h11-observe-v2.sh` 单一 wrapper 同 shell 完成 env→caller→preflight→window；模板 B 段只支持 wrapper。
+- D：wrapper/validation 文件已入 21 文件包。
+
+**新增 E（SUMS 完整性，33 实测）**：
+- `shasum -c SHA256SUMS` 为 **20/21 OK，`rank-env-read.py` FAILED**：SUMS 仍列旧 `a4b76676…`，实际文件已改为 `68dc9e2c…`（v2 default CELL/RUN + `--run` 参数）。
+- 这是**包完整性失败**，必须重生成 SUMS 并 commit；当前不能作为固定包。
+
+**B（仍未闭）**：
+- helper 已支持 v2：`DEFAULT_CELL=...h11-observe-v2`、`DEFAULT_RUN_NAME=run-h11-observe-v2`、`--run` 覆盖；但 README 仍写“与 v1 同 blob（a4b76676）”，且 README/模板无**精确 v2 调用命令**。
+- 需 README/模板写入：`<venv>/python -I <execution-v2>/rank-env-read.py /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2 --watch 180`（或 `--run .../run-h11-observe-v2`），注明 ranks 存活期、读 v2 descendants；删除“同 blob a4b76676”旧描述。
+- helper 逻辑有变（default/paths/arg parsing），35 的 18/18 替身需对新 blob `68dc9e2c` 重跑或证明仅默认/参数层差异；不能直接沿用旧 SHA 结论。
+
+**C（仍未闭）**：`collect-raw.sh` 注释源 SHA 仍 v1（`de780872/a6a3c4a4/c95ae5c3`），v2 实际为 `84c9edb2/2474b487/9c2936c2`；路径已 -v2，需改注释。
+
+**修复（31）**：B（README 新 SHA/精确调用）、C（注释）、E（重生成 21 文件 SUMS 并 commit）；35 对新 helper 重核/等价证明；32 复审。**修好前 v2 未闭、无 GO/设备。**
