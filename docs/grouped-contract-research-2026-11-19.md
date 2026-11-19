@@ -1553,7 +1553,7 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 
 **当前不执行、无 GO；以上交 31 补齐实路径/既有采集脚本后由 20/32 审。**
 
-## 87. h11-observe-execution-v1 包状态（未闭，待 31 补齐）
+## 87. h11-observe-execution-v1 包状态（已由 §88 补齐，39f30b9）
 
 **当前实际文件（6 个，未提交 `??`）**：`README.txt`、`window-planonly-argv.json`、`window-execute-argv.json`、`window-launch-template.txt`、`collect-raw.sh`、`rank-env-read.py`。
 **README 索引仍缺 3 个**：`planonly-rerun.txt`、`preflight-rescan.sh`、`restore-and-failure.txt`；**无 SHA256SUMS、无 commit**。
@@ -1575,3 +1575,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - `#16 0x14f7160` 保持 MC2Trace 条件失败、非 MC2 入口；`0x7b3a24` 仍只作 start-to-read。
 - `0x1614098` 仍未知，保留不用、不阻塞；env 两项 sidecar 与基线口径不变。
 与 §78/§85 当前判读一致；无设备动作。
+
+## 88. h11-observe-execution-v1 完成核验（39f30b9，SUMS b88f9242 10/10）
+
+**包**：commit `39f30b9`，SHA256SUMS `b88f9242…` **10/10 OK**；目录 `h11-observe-execution-v1/`，不覆盖 `01e8631` preflight；同包已复制到远端 cell `execution-v1/` 并核对 SHA（31 报）。
+
+**独立核验（只读）**：
+- `window-planonly-argv.json` 60 项、`window-execute-argv.json` 61 项（仅多顶层 `--execute`）；venv python、**e38b541 stage 绝对 window 路径**；全 required + `--python/--expect-stop-sha/--stop-timeout 120/--restore-timeout 900/--port 18143/--clean-env-expect`；未传 `--child-argv`/`--a12-binary`。
+- `planonly-rerun.txt`：复核输出与原 plan **逐字节相同**，两者 SHA 均 `c95ae5c3…`，`diff IDENTICAL`，未手改 plan。
+- `collect-raw.sh`：CELL 绝对、先 mkdir archive、`start-utc/start-epoch`、START/START_SLACK(-300s) 与 END/END_SLACK(+300s) marker、按时间窗整文件复制（不按 PID）、覆盖 fresh LOGDIR + `/root/ascend/log/run/device-0|1/device-<pid>_<ts>.log` + `plog` + `vllm_ascend` + cell；`end` 可重复补收；SUMS + correlation。
+- `rank-env-read.py`：`descendants.json entries` + pgid 扫描；三白名单；缺失 MISSING；只读 /proc。
+- `preflight-rescan.sh`：identity/boot/ppid/pgid/sid/starttime、五 PID、health/info、`/proc/net/tcp` clients、29531 tcp/udp×127/0.0.0.0、四路径 ABSENT、logdir、stop/source/body/window/run_probe/binding/adapter/test/manifest/plan/root-identity SHA、无其他 probe/torchrun；**只读实跑 RESULT: ALL PASS（rc=0）**；`rank-env-read` 空结果符合当前无 run 目录。
+- `restore-and-failure.txt`：唯一 `env -i` + `start.sh` restore argv、fresh restore 输出、失败留现场、禁止第二棵 restore。
+- env 仅两项 sidecar（GLOBAL=0/PROCESS_LOG_PATH），不再 unset MODULE/HCCL_DEBUG_CONFIG；official/activate/service-root/model-dir 已 test/ls。
+
+**状态**：命令/计划/采集/白名单/预扫/restore 包**完成**；plan-only=c95ae5c3 逐字节；preflight ALL PASS。**仍无设备 GO/未执行 cell**；交 32 最终复审理，之后由 20 决定；条件项（AICPU daemon env 传播/guard 映射/正向标记）保持。
