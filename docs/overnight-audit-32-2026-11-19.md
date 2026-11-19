@@ -982,6 +982,14 @@
 - **manifest/README（符合 20 裁定）**：files 记本分支实际新字节 SHA 并标 `candidate: true`；`frozen_baseline` 明示 1f780bf8/228150e4 为远端 v2/stage 历史冻结基线、not adopted/未部署；diff 统计已改为 +107/−10、+294/−9。
 - **结论**：8f4b843 **代码/fixture 增量 PASS**；整体仍 **NOT READY**，待 31 在 Linux 跑全量 50（0 skip），确认 orphan 测试转绿、daemon 无残留后方可 readiness。默认 30 s 不覆盖 attempt2 退出延迟的 caveat 不变；不声称修复 attempt2。无设备、无新 GO、v2 包未改。
 
+## 8.127 8f4b843 最终 CPU readiness：PASS（2026-11-19，非设备 GO、未部署）
+
+- **Linux 回归（31，commit ab397b2）**：证据包 `cpu-candidate-8f4b843-validation/` SUMS **3/3 OK**、自哈希 **210beca38e7a68f9dd23967f4db7fd215c44ec92c253854f2497680060a03a72**；Python 3.10.12 / Linux aarch64 上 `Ran 50 tests in 18.104s → OK`，**50 pass / 0 fail / 0 skip**，日志无 FAIL/ERROR；必测 4 项（orphan、daemon、两条 gate 回归）均 ok；跑后 `os.fork|time.sleep(30/60)` 残留 **none**；仅 fake d0_stop/npu-smi/HTTP + 临时 HTTP/manifest，无 torch/torchrun/NPU、未访问 18143。
+- **代码未再变**：35 doc-only commit **62d9012** 的 window/test 仍为 **d2576c63 / 5840a0d3**，与 8f4b843 一致；macOS 50 项（43 pass + 7 skip）与 Linux 50/50 共同覆盖两平台。
+- **增量审结论（8.126）**：gate 在无 settle 表时恢复真实 `_scan_direct` attribution；显式 settle 表才用同一快照；两条新回归有效；daemon double-fork 改 exact-PID kill；另一处 fake_restore pgid=pid 无需改；manifest/README 符合 20 口径。
+- **最终 CPU readiness**：候选 **8f4b843（window d2576c63 / test 5840a0d3）CPU 代码、fixture、macOS 与 Linux 回归均 PASS**。该结论**仅限 CPU 生命周期候选**：not adopted、not deployed；默认 30 s settle 不证明覆盖 attempt2 退出延迟，超期仍 fail-closed，**不声称修复 attempt2**；不构成设备 GO；v2 包 8ecf8f9 / SUMS bed3a6e6、frozen 1f780bf8/228150e4 均未改。
+- 服务保持 root 1355077 / ppid 1355076 / health ready（31 独占）；无新 window、无设备动作。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
