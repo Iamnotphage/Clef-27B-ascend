@@ -662,7 +662,7 @@ def main(argv=None):
     p.add_argument('--expect-stop-sha', default='d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886')
     p.add_argument('--python', default=sys.executable)
     p.add_argument('--child-argv', help='JSON string array; overrides --arm')
-    p.add_argument('--arm', choices=('A12', 'A13', 'A14', 'A8', 'A0', 'H1', 'H2', 'H3', 'H6', 'H7', 'H4', 'H5', 'H4K', 'H5K', 'H11'), default=None)
+    p.add_argument('--arm', choices=('A12', 'A13', 'A14', 'A15', 'A8', 'A0', 'H1', 'H2', 'H3', 'H6', 'H7', 'H4', 'H5', 'H4K', 'H5K', 'H11'), default=None)
     p.add_argument('--a12-binary', type=Path)
     p.add_argument('--a12-runner', type=Path, default=Path(__file__).with_name('a12') / 'run_a12.sh')
     p.add_argument('--adapter', type=Path)

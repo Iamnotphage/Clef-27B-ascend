@@ -113,10 +113,10 @@ class WindowTest(unittest.TestCase):
         self.assertIn('A14', plan['child_argv'])
         self.assertIn('--adapter', plan['child_argv'])
 
-    def test_h4k_h5k_arms_build_torchrun_child(self):
+    def test_h4k_h5k_a15_arms_build_torchrun_child(self):
         import contextlib
         import io
-        for arm in ('H4K', 'H5K'):
+        for arm in ('H4K', 'H5K', 'A15'):
             argv = self.args(extra=('--arm', arm))
             index = argv.index('--child-argv')
             del argv[index:index + 2]

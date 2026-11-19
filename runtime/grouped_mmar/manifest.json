@@ -61,14 +61,14 @@
       "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include H4K/H5K",
-      "sha256": "d7e735149f88de212762ed944e0ec4e8c0e587110f2b62a16da8c20e8766e2fa",
-      "bytes": 31650
+      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include A15/H4K/H5K",
+      "sha256": "f05f352fbd8c51b1b203ddb72ea87e138af4b33b36305c5bab9d9eaf9a23e5e2",
+      "bytes": 31657
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (23)",
-      "sha256": "0fcdf991f9a162aa89a6af1ee10a9540df7a5c62d354512883d04cbeefe32eb0",
-      "bytes": 21047
+      "role": "CPU window control-flow tests (23; H4K/H5K/A15 arm choices)",
+      "sha256": "74ccdcb2c7533a347ea8fcd5d9dab92eecce489d6042d2419b54557cfc2a984c",
+      "bytes": 21058
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "0a5ef5387e482b93eb385b3f8b57bf482eb7ea833630f14c348147600a78fc21",
-      "bytes": 28277
+      "sha256": "47bd5b06e6238ba21d9dfa68e0cb667c032379b816ff74502a959b8185fefd9a",
+      "bytes": 28407
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -429,7 +429,8 @@
       "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
-      "freeze": {"run_probe.py": "0bd1fde8", "test_probe_cpu.py": "1979bb23", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "freeze": {"run_probe.py": "0bd1fde8", "test_probe_cpu.py": "1979bb23", "window": "f05f352f (A15 in choices)", "test_window": "74ccdcb2", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "window_note": "A15 was missing from the window --arm choices; added with a CPU plan-only child-argv test. The H4K executed cell keeps its original window d7e73514; the new window SHA is for A15 and later cells only",
       "keep_note": "KEEP_ALL keeps group/workspace/descriptors until sync, matching the A14 success baseline and avoiding the early-release confound; the release op remains unregistered, so release_error=NotImplementedError/harness_pass=false is recorded while numeric_pass stays independent"
     },
     "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
