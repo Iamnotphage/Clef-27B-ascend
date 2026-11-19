@@ -1943,3 +1943,17 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **GO/现场**：上一条 GO 停在 collect begin 的 prestart 校验，**未启动 wrapper/window、无 stop/torchrun/NPU**；服务 root 1347086 health ready，run/probe/restore 仍 ABSENT。原 GO **挂起、不自动续跑**；31 封存 prestart1 后完成 collector 修复与 CPU 正负 smoke。**无算子/分派证据**，本格记“采集准备失败”，不排除支路。
 
 **状态**：32/35 独立复审新包；20 之后对尚未发生的单次 window 给明确续行；操作仍只引用 31 包；**无新 GO/设备动作**；root cause 待真正 v2 实测。
+
+## 109. 4cbe23a 两个准备缺口与工作树中间态（未闭）
+
+**32 缺口（针对已提交 4cbe23a）**：
+- A：唯一 wrapper 未在 window `--execute` 前强制 `collect-raw.sh begin`/identity；仍靠手工。
+- B：旧失败 canonical archive `archive-h11-observe-v2` 仍存在；`begin mkdir -p` 复用；需 prestart1 保全 + 干净重建。
+- 已交 31 补；35 独立审待；无 GO/不执行。
+
+**33 本地实测（重要）**：
+- 已提交 `4cbe23a` 当时 SUMS `8f4bca74` 23/23；但当前工作树对 `README.txt`、`collect-raw.sh`、`run-h11-observe-v2.sh`、`window-launch-template.txt` 有**未提交修改**，`shasum -c` 现为 **19/23（4 FAILED）** → 工作树是 31 正在修 A/B 的中间态，**不能当固定包**。
+- 工作树 wrapper 已出现 `collect-raw.sh begin || exit 6`，且 `ARCH=archive-h11-observe-v2-attempt2`（与旧 canonical 分离），但**未 commit/未入 SUMS**；不能据此声称 A/B 已闭。
+- 旧 canonical archive 仍保留；attempt2 命名是否最终采用、prestart1 如何封存，待 31 提交文本。
+
+**要求（31）**：完成 A/B 修改 → 重生成 23 文件 SUMS → commit/push → 32/35 按新 commit 复审；wrapper 必须强制 begin/identity 失败即停，archive 必须与旧失败目录分离/先保全；旧空 archive 留证。**当前无 GO/设备；root cause 待真 v2 实测。**
