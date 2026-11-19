@@ -1,0 +1,16 @@
+plan-only 复核记录（同一 argv 去 --execute；2026-11-19）
+=========================================================
+
+命令：window-launch-template.txt 的 A 段（与 window-planonly-argv.json 完全一致；工作目录
+为 e38b541 stage）。仅执行 plan-only，未停服、未启动 torchrun。
+
+结果：
+- 复核输出 SHA-256 = c95ae5c366a370423fdc42c99d5c94d35892c78f98a7b40dacf9b5bf85b21d15
+- 原 plan 文件 SHA-256 = c95ae5c366a370423fdc42c99d5c94d35892c78f98a7b40dacf9b5bf85b21d15
+- `diff` 结果：IDENTICAL（逐字节相同；无易变元数据差异，未手改 plan）
+
+说明：
+- 复核使用与原生成完全相同的显式参数集（含 --python、--expect-stop-sha、--stop-timeout 120.0、
+  --restore-timeout 900.0、--port 18143、--clean-env-expect），因此 build_plan 输出一致。
+- 若未来复核出现差异，应按字段列出差异（identity/run_dir/argv/probes 等）并重新评审，
+  不得直接手改原 plan 或强行覆盖 c95ae5c3。

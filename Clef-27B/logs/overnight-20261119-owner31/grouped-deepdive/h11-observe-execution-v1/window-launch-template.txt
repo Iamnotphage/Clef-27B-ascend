@@ -1,0 +1,28 @@
+H11-observe-v1 window 启动模板（doc-only；当前无 GO，不执行）
+================================================================
+
+环境（仅 sidecar 两变量；不 unset 其它变量）
+--------------------------------------------
+export ASCEND_GLOBAL_LOG_LEVEL=0
+export ASCEND_PROCESS_LOG_PATH=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/logs-h11-observe-v1
+
+A. plan-only（安全；输出应为 plan_not_executed，SHA c95ae5c3）
+--------------------------------------------------------------
+实际执行过并已核对的命令（工作目录 /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar）：
+
+/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py --python /workspace/yangchen/venvs/clef-py312/bin/python --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1 --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 --arm H11 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-temp-h11-observe-v1 --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-out-h11-observe-v1 --k 256 --n 512 --rows 128 --seed 20261119 --master-port 29531 --comm-timeout 90.0 --child-timeout 240.0 --stop-timeout 120.0 --restore-timeout 900.0 --port 18143 --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py --expected-source-sha aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503 --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh --service-root /workspace/yangchen/Clef-27B-ascend --model-dir /workspace/yangchen/models/Clef-27B --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v1 --clean-env-expect /workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
+
+B. 授权后 execute（仅在人工明确 GO 后使用；本包从未执行）
+---------------------------------------------------------
+与 A 完全相同，只在末尾追加顶层 `--execute`：
+
+/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py --python /workspace/yangchen/venvs/clef-py312/bin/python --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/run-h11-observe-v1 --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/root-identity-h11-observe-v1.json --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 --arm H11 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-temp-h11-observe-v1 --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/probe-out-h11-observe-v1 --k 256 --n 512 --rows 128 --seed 20261119 --master-port 29531 --comm-timeout 90.0 --child-timeout 240.0 --stop-timeout 120.0 --restore-timeout 900.0 --port 18143 --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py --expected-source-sha aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503 --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh --service-root /workspace/yangchen/Clef-27B-ascend --model-dir /workspace/yangchen/models/Clef-27B --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v1 --clean-env-expect /workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json --execute
+
+说明
+----
+- 工作目录必须是 e38b541 stage 目录（window 用 `Path(__file__).with_name('run_probe.py')` 定位
+  run_probe 与 adapter 的默认相邻关系；adapter 已显式给出）。
+- plan JSON 是输出，不是输入；不要在命令行引用 plan 文件。
+- 不要同时传 `--child-argv`（会覆盖 `--arm`）；`--a12-binary` 仅 A12 使用。
+- execute 前先跑 preflight-rescan.sh；任一不符即停。
+- restore 由 window 按 plan 内唯一 `restore_argv` 执行，不得手工另起第二棵 restore。
