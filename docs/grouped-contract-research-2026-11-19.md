@@ -1495,7 +1495,7 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 
 ### 86.1 操作命令来源（31 `h11-observe-execution-v1`）
 
-- **唯一操作命令以 31 产出的 `h11-observe-execution-v1` 包为准**（由真实 `c95ae5c3` argv 与本机实路径统一），本节不再给第二套 placeholder argv，避免与 31 包不一致。
+- **唯一操作命令以 31 的 `h11-observe-execution-v1` 固定包为准**：commit `a31e044`、SUMS `afb741c7…`（11/11）、plan `c95ae5c3`、rank-env-read.py `a4b76676`；32 终审 PASS（§91）。本节不再给第二套 placeholder argv。
 - 该包必须满足：① venv 绝对 python `/workspace/yangchen/venvs/clef-py312/bin/python`；② window 脚本用 **e38b541 stage 绝对路径** `/workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py`（不是 repo 相对）；③ 全部 argparse、plan JSON 非输入、`--execute` 才执行；④ 同命令去 `--execute` 应复现 plan SHA `c95ae5c3…`；⑤ `--python` 显式 venv。
 - env 只有两项 sidecar：启动同一 window 前 `export ASCEND_GLOBAL_LOG_LEVEL=0`、`export ASCEND_PROCESS_LOG_PATH=/workspace/.../logs-h11-observe-v1`；**其他环境变量保持基线，不额外 unset**；fresh dir 预创建；child_env 继承到 torchrun/ranks。
 - 包内需列全：run-dir、root-identity、source-target、official-start、activate、service-root、model-dir、restore-output、text-body/image-body、stop-script 的实路径，以及 plan-only/execute 两条命令。
@@ -1614,3 +1614,23 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - argv 60/61、stage/venv 绝对、env 仅两项 sidecar、唯一 restore 不变。
 
 **状态**：包内容与证据**补齐**；仍无设备 GO/未执行 cell；交 32 按 `a31e044`/`afb741c7` 复审原件，给 readiness/包 SHA。条件项保持。
+
+## 91. 最终 readiness：execution-v1 固定包（32 终审 PASS；无 GO）
+
+**固定包**：commit `a31e044`、SHA256SUMS `afb741c7e9d77dc1ffc819995d251f5df2f44920ac483babfdc1d9ee43991803`（**11/11**）、plan `c95ae5c3…`、`rank-env-read.py` `a4b76676…`（与 35 目标同 SHA）；远端 cell `execution-v1/` 11 文件同 SHA（31 报）。操作来源**仅此包**。
+
+**32 终审 PASS**：
+- argv 60/61（execute 仅多顶层 `--execute`）、e38b541 stage/venv 绝对、全 argparse、plan 非输入；
+- env 仅两项 sidecar、无 unset；
+- `collect-raw` 实际源映射 + 缺失 exit1 + `meta/sources.txt`、START/END marker、不按 PID、SUMS；
+- `rank-env-read.py` `entries` + 三键；
+- `preflight-rescan` **ALL PASS**（精确五 PID 1337814/1337961/1337962/1337979/1337980）；
+- restore 唯一 `env -i`、attributed survivors；timeouts 120/240/900。
+
+**条件式闭合（仍开放）**：
+1. 35 的 `rank-env-read.py` 同 SHA CPU 替身验证待并入；并入前该项为条件。
+2. AICPU daemon env 传播、HcclCheckLogLevel/DlogRecord w0/w1 与级别枚举映射、模块级/HCCL_DEBUG_CONFIG bit 仍为观测条件。
+3. 真实执行前必须重跑 `preflight-rescan.sh`（fresh 目录/identity/port/服务未重启）。
+4. 正向标记才计数，缺席不排除；设备 AICPU 内存无可证只读接口。
+
+**状态**：命令/计划准备**闭合**；**仍无 GO/未执行 cell/无设备动作**；是否执行由 20 授权。现有 `c95ae5c3` preflight、ABI 结论与 §15 结论保持不变；root cause 仍 unresolved。
