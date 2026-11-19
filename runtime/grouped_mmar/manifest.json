@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "062de195e742f2d8351b834df9a074c9e922b5b03e4b842d79c29b786d5384f8",
-      "bytes": 5789
+      "sha256": "ae7289842d124bf30e8f0df6fd3fd7ad9ebf3cea06b2da2bf77e9ed93f1a283e",
+      "bytes": 6260
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -87,8 +87,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "f13291b0d2803a7373ad3f047bf8eecba96904c885bbba8cef4d5a7c94777cfb",
-      "bytes": 39982
+      "sha256": "a470418c5a53e8db01c64639428d1d4ea80509c1878365896eec1bcbb9eb23c8",
+      "bytes": 40102
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -461,7 +461,7 @@
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
     "source": "abi-preflight5 SUMS ae91a53073b9a5f323b903ce50c342ae1b3ccfc08d833be6a21f5416e5cff559; libccl_kernel 2281deca; Init 9cac74e1, WriteFinish/Turn 29027459; abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "062de195e742f2d8351b834df9a074c9e922b5b03e4b842d79c29b786d5384f8",
+    "design_sha256": "ae7289842d124bf30e8f0df6fd3fd7ad9ebf3cea06b2da2bf77e9ed93f1a283e",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
@@ -469,10 +469,11 @@
       "WriteTurnCnt zeroes u64 at [server+8]+0x4008+64*turn and increments u64 at [server+8]+0x5008+64*turn",
       "WriteFinish and WriteTurn share the same u64 address base+0x5008+64*turn",
       "GetSendCnt reads u8 at [ctx+184]+u32[ctx+192]+50; GetRecvCnt reads u8 at that base + u16[ctx+196]*64 + 51",
-      "sendCnt/rcvCnt (+50/+51, 1 B) differ from the server turn word (+8, 8 B); no same-address alias even if bases coincide"
+      "sendCnt/rcvCnt are 1-byte reads at +50/+51; the server turn word is 8 bytes at +8 of a 64-byte slot. The literal offsets/widths differ, but the base relation and the dynamic offset j are unproven, so a byte-range alias is NEITHER established nor excluded"
     ],
     "unproven": [
       "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
+      "whether C+j+50/51 intersects S+0x5008+64*t for the actual j/t (dynamic byte-range alias not established or excluded)",
       "which Init overload/branch the Grouped path uses (call sites absent)",
       "semantic intent of the WriteFinish constant vs the incremented counter at the same address",
       "ctx+0xf31d turn: no reference in abi5, so it cannot be equated with rcvCnt",

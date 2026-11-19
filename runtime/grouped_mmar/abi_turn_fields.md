@@ -41,15 +41,20 @@ Widths follow the load/store opcodes (`ldrb`/`strb` = 1 B, `ldrh` = 2 B,
    WriteFinish stores the constant `0x112210f6ca9997ff`; WriteTurnCnt increments the
    same word. The intent (finalize flag vs counter) is not proven, but the address,
    width and slot arithmetic are.
-2. **sendCnt/rcvCnt are different fields**: they are 1-byte reads at `+50` and `+51`
-   of the record selected by `[ctx+184] + u32[ctx+192]` (recv adds
-   `u16[ctx+196]<<6`). The server's turn field is 8 bytes at `+8` of a 64-byte slot
-   in fixed regions `0x4008`/`0x5008`. Offsets 8 vs 50/51 and widths 8 B vs 1 B
-   differ, so even if the bases coincided there is no same-address alias.
+2. **sendCnt/rcvCnt are literal 1-byte fields**: reads are at `+50` and `+51` of
+   the record selected by `[ctx+184] + u32[ctx+192]` (recv adds
+   `u16[ctx+196]<<6`). The server's turn word is 8 bytes at `+8` of a 64-byte slot
+   in fixed regions `0x4008`/`0x5008`. The literal offsets and widths differ, but
+   the base relation S vs C and the dynamic offset j (`u32[ctx+192]`) are unproven;
+   for some j the byte ranges could overlap (for example if `C+j+50` equals
+   `S+0x5008+64*t`, the 8-byte word covers +50). **No alias relation is established
+   or excluded**; base, dynamic-offset and slot constraints are required.
 3. **Shared stride, unproven base relation**: both use 64-byte turn slots, but the
    server uses `[server+8] + 0x5000 + 64*turn` while the counter path uses
    `[ctx+184] + u32[ctx+192] + u16[ctx+196]*64`. There is no evidence in abi5 that
-   `[server+8] == [ctx+184]` or how `u32[ctx+192]` maps to `0x4000`/`0x5000`.
+   `[server+8] == [ctx+184]` or how `u32[ctx+192]` maps to `0x4000`/`0x5000`, and the
+   dynamic j/t combinations could in principle shift a 1-byte field into the 8-byte
+   word.
 4. **Init overload ambiguity**: overload `Init(y,j,t,KFCTask*)` writes the base to
    `server+0` in the zero branch but to `server+8` in the non-zero branch;
    `Init(y)` writes `server+8`. WriteTurnCnt/WriteFinish read `[server+8]`, so which
@@ -65,12 +70,14 @@ Proven by disassembly: the offsets, widths and read/write directions in the tabl
 the WriteFinish/WriteTurn same-address `base+0x5008+64*turn` alias; sendCnt/rcvCnt
 are 1-byte fields at +50/+51 with the ctx field arithmetic; the group tiling source
 `sendCnt = curTurn` (rac_server.h) and the consumer `rcvCnt >= totalTurn` are
-consistent with u8 counters but do not prove the same object as the server slots.
+consistent with u8 counters. The consumer chain does not prove the same object as
+the server slots.
 
-Unproven: the relation `[server+8]` vs `[ctx+184]+u32[ctx+192]`; which Init overload
-and branch Grouped uses; the meaning of the WriteFinish constant and whether it is
-meant to overwrite the counter; `ctx+0xf31d`; the AivAicpuOpParam population path
-(33's consumer chain).
+Unproven: the relation `[server+8]` vs `[ctx+184]+u32[ctx+192]`; whether
+`C+j+50/51` intersects `S+0x5008+64*t` for the actual j/t (byte-range alias not
+established or excluded); which Init overload and branch Grouped uses; the meaning of
+the WriteFinish constant and whether it is meant to overwrite the counter;
+`ctx+0xf31d`; the AivAicpuOpParam population path (33's consumer chain).
 
 ## Minimal merged request (33 to merge; 31 sole remote fetch)
 
