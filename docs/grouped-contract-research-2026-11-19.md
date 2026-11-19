@@ -2338,3 +2338,47 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 4. 两 PLT stub `0x29c040`/`0x297570` 的 BL/B 补片段已由 20 交 31；本包不重复请求。
 
 **状态**：root cause unresolved；本轮仅整合入口身份与覆盖边界，无设备/快照/新 GO。
+
+## 121. abi15+PLT 整合：唯一 CheckRcv 站点、dispatch 负约束与 §120 更正
+
+**包核**：`2e8d4c0`（SUMS `18e6338b`、4/4）+ `8d4a708`（SUMS `bed1a298`、4/4）；源 ELF `2281deca…`。仅并原件，无新取件/设备。
+
+### 121.1 §120 更正
+
+- **line 121 零命中不能只归因 level**：RcvMsg 序言内有**两个局部 gate**——`NeedAutoGenMsg(this)@0x7d80b0` + `b.eq 0x7d8164@0x7d80c0`，随后才是 `HcclCheckLogLevel(0,3)@0x7d80cc`。零命中可能是 NeedAutoGenMsg=false、level 不通过、或 RcvMsg 未调用；三者未区分。
+- **gate 值与 Dlog 值不同**：line121 gate `(0,3)` / Dlog `(3,0)`；line298/551 gate `(1,3)` / Dlog `(3,1)`。此前“w1=0 vs 1”是 Dlog module 参数，不是 gate 参数，不能混用。
+- **0x762228 后的 cmp/ccmp 是返回码处理**：`cmp w0,#0 / ccmp w0,#0x16 / b.ne 0x761fe8 / cmp w0,#0x16 / b.ne 0x7619ac` 都在 BL 之后，w0 是 `TryRun…` 的返回值；w0==22 进入 0x762240 的 `HcclCheckLogLevel(1,0x01000003)`（NsRecovery/Suspending）块，**不是调用前置谓词**。`NsRecovery][MC2` 0 命中=缺测，不反证。
+- “函数入口直接 BL/B=0”由 PLT 解释：TryRun@plt `0x29c040` 唯一 BL @0x762228（`RunAicpuRpcSrvLaunch+0xea8`）；CheckRcv@plt `0x297570` 5 处（TwoStage×2、OneStage×2、Unfold×1）。
+
+### 121.2 已闭合的精确关系
+
+1. **dispatch 负约束**：`v=*(u32*)(ctx+0xF31BC)`；`(v&~2)==1` → TwoStage，否则（`b.ne`）→ OneStage。attempt2 有 OneStage 551 正日志 ⇒ 走了 `b.ne` 分支 ⇒ **`(v&~2)!=1`（v 不是 1 或 3）**；v 的具体值未落盘。
+2. **唯一 CheckRcv 站点**：两 rank 各只有 **1 条** `RcvMsg by task param 1`（298）与 **1 条** `CheckRcvAddrMsg, genTaskNum 1`（305）；305 的值是 CheckRcv 后处理中 `server+800` 自增后的 u8（`0x7d8338-0x7d8340`），第二次 CheckRcv 会使其变 2 并再打一条。故**只执行了一次 CheckRcv**。
+3. **站点归属**：298 在 `14:49:06.259.477/.258.746`，早于 AicpuCcOpExe 起点 `.259.533/.258.805`；与 OneStage worker 两个站点（0x7c98b4 `+0xf4`，前调 CallMC2MaintenanceThread；0x7c9a14 `+0x254`，前调 AicpuCcOpExe）对照，**执行的是第一个站点 0x7c98b4**；第二个站点 `+0x254` 未执行（无第二条 298/305，server+800 未到 2）。
+4. **CheckRcv 后处理（静态确定）**：`GenMsgByTaskParam(param)@0x7d8334` → `server+800++@0x7d8338-0x7d8340` → `param+48(isLast)!=0` 时 `server[0x220+idx*4]=1@0x7d834c-0x7d8358` → 第二 gate(1,3) → line305。运行 AddrMsg `isLast 1`、idx=0 ⇒ **`server+800=1`、`server+0x220=1`、`CheckAivIsEnd(0)=true`**（推导值，未直接打印）。
+5. **对象身份**（abi15 已证）：OneStage x21=ctx、x22=server&；CheckRcv x19=this、x20=param、w21=idx；RcvMsg `[sp,#40]=this`。`round=*(ctx+0xF3208)=0`；`x6=*(*(this+816)+80)=1`。
+
+### 121.3 边界（不完整窗口）
+
+- `RunRpcServerOneStageWait` worker 的 **+0x150..+0x80c 未覆盖**；第一个 CheckRcv（+0xf4）→ CheckAivIsEnd → AicpuCcOpExe → 是否/为何跳过第二个 CheckRcv（+0x254）→ 返回，**CFG 未覆盖**。不能从“第二个站点未执行”推“worker 已返回”或“response 写缺失”。
+- `TryRun…` 包装器 entry..+0x150 已覆盖；line551 在调用 worker **之前**，只证包装器入口。
+- `RcvMsg` 仅序言+line121 窗口；其 caller/NeedAutoGenMsg 值未证。
+- 缺失 ack（AICORE `rcvCnt`）仍未证；worker 的 `+0x254` 之后/返回路径是主要未覆盖面。
+
+### 121.4 下一最小证明问题（分列）
+
+**A. 现有材料能解决/已解决**
+- 唯一 CheckRcv 站点：第一个（0x7c98b4），第二个未执行——已由 298/305 各 1 条 + server+800=1 + 时间序闭合。
+- dispatch 负约束：`v&~2 != 1`（v 不是 1/3）——已闭合；v 具体值仍需设备。
+- CheckRcv 后处理 flag：`server+800=1`、`server+0x220=1`、`CheckAivIsEnd(0)=true`——已由静态 + `isLast 1` 推导。
+- 0x762228 的 cmp 是返回码处理，不是入口 dispatch——已闭合。
+
+**B. 仍需静态函数范围**
+- `RunRpcServerOneStageWait`：从 +0xf4 到 +0x254 及返回/循环的反汇编（含 CheckAivIsEnd 分支、AicpuCcOpExe 后的控制流、是否到达 +0x254、尾部是否调用 `PostMsg/WriteFinish/WriteTurnCnt` 或写 response+51）。这是“缺失 rcvCnt 回写”能否升级的关键。
+- `RcvMsg` 的 caller 与 `NeedAutoGenMsg` 值（解释 line121 零命中；可选）。
+
+**C. 仍需实际 tiling 数据**
+- `notifyOff`/`j`/`T`、`kfcNotifyId`、`workspaceOff`（本机 config）；用于钉死 response 地址 `0x12c09bc20040..007f` 候选与 AICORE `TurnWait` 绑定。
+- `ctx+0xF3200`/`F3208`/`F31BC` 运行值（仅设备可读；当前不请求）。
+
+**状态**：root cause unresolved；本轮整合 abi15+PLT 并闭合“唯一 CheckRcv 站点”与 dispatch 负约束，无设备/快照/新 GO；候选封存。
