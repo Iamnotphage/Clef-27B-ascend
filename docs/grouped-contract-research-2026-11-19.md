@@ -1246,7 +1246,7 @@ ASCEND_PROCESS_LOG_PATH=<已存在目录>  # 目录，abspath
 ### 79.1 现有冻结 arm（无需改代码）
 
 - **arm H11**：M128/K256/N512、world=2、BF16 x/w、FP32 zero bias、单 group、`KEEP_ALL`、seed 20261119、child 240 s / comm 90 s；reference=local `x@w` + all_reduce。该 arm 在现有 `run_probe`（`--arm H11 --rows 128 --k 256 --n 512`）与 `supervised_probe_window`（choices 含 H11）中可直接表达。
-- **冻结 tuple**：run_probe `8e308804`（30,686 B）、window `1f780bf8`、binding `101660f8`、adapter `d181b15a`、test_probe `ad257b5f`；不修改代码/不新增 arm。
+- **冻结 tuple**：commit `e38b541`/manifest `8e324bea`、run_probe `8e308804`（30,686 B）、window `1f780bf8`、binding `101660f8`、adapter `d181b15a`、test_probe `ad257b5f`；H11 文档需从旧 run_probe/window 引用更新到该 tuple（doc-only，由 35/31 负责）；不修改代码/不新增 arm。
 - **恢复**：沿用既有 supervised window 的 aa3e-noop 恢复路径；root identity、service-root、official-start、activate、model-dir、restore-output、stop-script 由 31 按 fresh plan 生成（不在本计划中臆造路径/identity）。
 
 ### 79.2 候选环境与命令（未执行）
