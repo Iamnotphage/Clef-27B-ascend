@@ -1647,3 +1647,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 未改源/未改 31 包；无设备动作。
 
 **结论**：§91 条件 1 关闭；剩余条件为 AICPU daemon env/guard 映射、执行前 preflight-rescan、正向标记才计数。仍无 GO/未执行 cell。
+
+## 92. 哈希口径与空 entries 判读（最终文本 953eb2d/754859dc）
+
+**两个 doc 快照**：
+- `a31e044` / SUMS `afb741c7…`（11/11）：32 终审 PASS 的命令准备闭包。
+- `953eb2d` / SUMS `754859dc…`（11/11，本地 `sha256sum -c` OK；远端 execution-v1 同步 11/11）：在 a31e044 之上的 **doc-only** 收口——`collect-raw.sh` 显式 `SRC_ID/SRC_SIDECAR/SRC_PLAN/BODIES` 变量、`restore-and-failure.txt` 改为“child PGID 无 survivor + attributed survivors 为空”、`planonly-rerun.txt` 补完整原始命令；README/SUMS 同步。
+- `diff a31e044..953eb2d` 仅 5 个文件（README/SUMS/collect-raw/planonly-rerun/restore）；**argv 60/61、env 两项、240/120/900/90、window 1f780bf8/run_probe 8e308804/adapter d181b15a 均未变**；`rank-env-read.py` 仍 `a4b76676…`。
+- 建议：后续引用以 **953eb2d/754859dc 为最终文本**，a31e044/afb741c7 作为 32 已审闭包；二者执行字节一致，不重开文件。由 20/32 确认固定引用口径。
+
+**空 entries 判读（32 要求，已写入 §85.1/§86.3）**：
+- fallback `scan_pgid(root_pid)` 仅覆盖 `pgid==root_pid`；独立 PGID rank **只能来自 `descendants.json entries`**。
+- **空/缺失 `entries` 或空 `rows` → 缺测**（rc0 空行集），不得写成“无 rank”或据此排除路径；死 PID `alive=false`+`MISSING(not_alive)`；缺键 `MISSING`。
+- 35 CPU 替身 18/18 PASS 与该边界一致；`rank-env-read.py` `a4b76676…` 不变。
+
+**状态**：命令准备闭合（32 PASS），最终文本 953eb2d/754859dc；仍无 GO/未执行 cell/设备暂停；AICPU env/guard 映射、执行前 preflight-rescan、正向标记才计数仍为条件。
