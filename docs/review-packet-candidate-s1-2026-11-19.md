@@ -10,6 +10,17 @@ The unit `build_deps` regression now also asserts `deps.ab.prod_env == {}`; unit
 
 The rev4 statement that the production head is f810 was true at 00:57:51Z, immediately after cc34's audited revert. At 00:59:5x owner31 legitimately started the candidate deploy and installed head aa3e + guard 36eaff44; during that window **head=aa3e and guard=36eaff are the expected owner state**. No external party, including cc34, may run `--check`/`--apply`/`--revert` or any "restore" against `/workspace/yangchen/work/src/vllm` or `/workspace/yangchen/Clef-27B-ascend/runtime` until owner31 announces closure. cc34 has stopped all production reads/writes and uses only temporary stages/trees.
 
+## rev4.3 addendum (32 independent confirmation, candidate window)
+
+32 independently verified owner31's candidate deploy with the frozen entry `a1ca26cf`:
+- `deploy-run/complete.json` ok=true, label `d0-cand-20261119T010007Z-ead542f1`, root `1260810`, source `aa3e1758…`, guard `36eaff44…`;
+- five PIDs same PGID, `root_identity_stable=true`, health/workers/text/image all rc0/ok;
+- live env OPP 9 / LD 12 + `CLEF_JOINT_FUSED_ATTN=1` + allow `aa3e` + `CLEF_LAUNCH_CONFIG=s1`;
+- the candidate `source-deploy-aa3e.json` (01:00:13Z) shows `state_before=preimage` / `sha256_before=f8101b98…`, proving cc34's 00:57:51Z revert was effective before the legitimate candidate switch;
+- 32 reran the rev4.1 suite on audit stage `91314b3` (unit `53d984ec`, integration `7d209b26`, manifest): 30 tests OK (1 skip), all in temporary tree/guard, production tree/guard SHA unchanged before/after (read-only check only).
+
+This confirms the `state`+`prod_env` fix end to end for deploy; v5 S1 and the candidate restore originals are pending. cc34 remains barred from all production tree/guard reads/writes until owner31 closes the window.
+
 ## 0. Frozen identities (rev4)
 
 | Object | Path | SHA-256 |
