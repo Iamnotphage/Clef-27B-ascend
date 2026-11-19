@@ -506,3 +506,11 @@ freeze `120d4e7`：manifest `4beba032…`、window **`b77530bc…`（47,325 B）
 **根因（fixture，不是产品）**：fixture fake_restore.py 在 `os.setsid()` 之后**又 fork 一次**；写 manifest 的是孙代 C，C 的 pgid 是中间进程 B 的 setsid 组（B 是 group leader），所以 `pgid != C.pid`。真实 restore argv 是 `setsid /bin/bash -c ...` → `exec start.sh` → python，root PID 即该新 session/PGID 的 leader；产品 `pgid==pid` 门与真实路径一致。**修复**：fixture 改“单 fork + setsid + 直接写 manifest/sleep”（模拟 setsid→exec），不要二段 fork；产品门不改。期间 fixture 遗留 daemon 1325746/1325749 已按身份 SIGKILL，无其它残留；服务未触 root 1323589 健康。
 
 **F5 仍开放**：原始 subreaper flag 未读/未还原（详见 §38/§40）；fixture 39 项也未测 original=1。最终冻需修 fixture + F5 重冻，31 Linux 39 全过后再出 v3 plan（window b77530bc/新 SHA、fresh identity 1323589、同形状、KEEP_ALL、真实 child SHA）；v2 56441483 superseded/未执行；设备暂停；Grouped large/A13 暂停；A15 CPU。
+
+## 42. 0cea506 F5 修复复核：代码闭合，fixture 仍二段 fork（2026-11-19）
+
+freeze `0cea506`：manifest `300d79e6…`、window **`1f780bf8…`（48,448 B）**、test_window `f45baef5…`（40，7 Linux-only skip）、test_probe `01fd2f54…`（18）、run_probe `d54584b7…`；CPU 67/67。
+
+- **F5 代码级 PASS**：`get_subreaper()` 用 `prctl(37, &value)` 读取（L116-127），execute 在 enable 前保存 `original_subreaper`（L864-865），`begin_restore` 仅 restore 前 `disable_subreaper`（L158-167），主 finally/末尾 `restore_subreaper(original)` 并记录 final（L1087-1089）；原始=1 时 restore 后回 1，不再固定 0。`get_subreaper` 返回 None 时仅不恢复并记录，未阻断；可作为低风险备注。
+- **fixture 仍失败（阻断 Linux 40）**：`test_fake_restore_reaches_pid1_after_disable` 的脚本仍是 `os.fork()==0: os.setsid(); if os.fork()==0: write manifest`（L781-792），即 setsid 后**二次 fork**；manifest 的孙代 C 的 pgid 是中间进程 B 的组，`C.pgid != C.pid`。31 在 3d8667a 已见 `1325752 != 1325753`；0cea506 test_window 仍保留该二段 fork，Linux 40 预计同失败。**修复**：fixture 单 fork setsid 后直接写 manifest/sleep（父退出），或使用 `os.setsid()` 后不 fork、同进程写；产品 `pgid==pid` 门不改。F5 本身代码不需要再改 window，仅 fixture/测试。
+- **A14 v3**：v2 56441483 superseded/未执行；等 fixture 单 fork 重冻 + Linux 40 全过 + 31 v3 plan（window 新 SHA/run_probe d54584b7/fresh identity 1323589/同形状/KEEP_ALL/实际 child SHA）→ 32/33 核 → 一次 GO。Grouped large/A13 暂停；A15 CPU。
