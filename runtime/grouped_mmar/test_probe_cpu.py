@@ -147,12 +147,17 @@ class ReleaseOrderingTest(unittest.TestCase):
         self.assertIsNone(rc)
         self.assertTrue(error.startswith('NotImplementedError: no fallback'))
         # The numeric gate is api/sync/finite/reference and must not depend on release;
-        # overall pass additionally requires clean cleanup.
+        # harness_pass additionally requires clean cleanup, and pass/exit follow numeric.
         source = Path(run_probe.__file__).read_text()
         numeric = source.split('numeric_pass = bool(', 1)[1].split('\n', 1)[0]
         self.assertNotIn('release', numeric)
-        overall = source.split("meta['pass'] = bool(", 1)[1].split('\n', 1)[0]
-        self.assertIn('harness_release_ok', overall)
+        harness = source.split("meta['harness_pass'] = bool(", 1)[1].split('\n', 1)[0]
+        self.assertIn('harness_release_ok', harness)
+        self.assertIn("meta['pass'] = numeric_pass", source)
+        # Teardown covers both ranks on success and failure paths, without a new collective.
+        self.assertIn('finally:', source)
+        self.assertIn('dist.is_initialized()', source)
+        self.assertIn("meta['harness_cleanup_error']", source)
 
 
 class WatchdogTest(unittest.TestCase):

@@ -408,16 +408,16 @@ def execute(a, plan):
         numeric_pass = bool(meta['api_returned'] and meta['sync_returned'] and finite and
                             all(both) and (not a.norm or meta.get('gate', {}).get('pass')))
         meta['numeric_pass'] = numeric_pass
-        # Overall pass additionally requires clean cleanup: a release error means the
-        # numbers are valid but this is not a complete harness PASS.
-        meta['pass'] = bool(numeric_pass and meta['harness_release_ok'])
-        trace.emit('done', passed=meta['pass'])
+        # pass/exit follow the numeric gate so a known cleanup defect cannot mask valid
+        # numbers; harness_pass additionally requires clean cleanup and is reported apart.
+        meta['harness_pass'] = bool(numeric_pass and meta['harness_release_ok'])
+        meta['pass'] = numeric_pass
+        trace.emit('done', passed=meta['pass'],
+                   harness_release_ok=meta['harness_release_ok'])
         timer.cancel()
         trace.close()
         flush()
-        if meta['pass']:
-            dist.destroy_process_group()
-        return 0 if meta['pass'] else 1
+        return 0 if numeric_pass else 1
     except BaseException as exc:
         timer.cancel()
         meta['error'] = traceback.format_exc()
@@ -429,6 +429,19 @@ def execute(a, plan):
             pass
         flush()
         return 1
+    finally:
+        # Both ranks always attempt the existing teardown, on success and failure paths.
+        # No new collective/barrier; a cleanup failure is a harness record, and the
+        # already-flushed numeric result stays intact. The 240 s window remains the backstop.
+        try:
+            if dist is not None and dist.is_initialized():
+                dist.destroy_process_group()
+        except Exception as exc:
+            meta['harness_cleanup_error'] = f'{type(exc).__name__}: {exc}'[:512]
+            try:
+                flush()
+            except Exception:
+                pass
 
 
 def watchdog_selftest(seconds, temp_root, out):

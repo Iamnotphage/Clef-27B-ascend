@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "fdbfeb677aa7a3842ecc6518cd4a3232f7870cc2685d8b28d0692d247f06f5a0",
-      "bytes": 21183
+      "sha256": "0f90fd23f06fbe4221eaa646b897460144a93d2bc92c6e000bc9cce68bc9e0b9",
+      "bytes": 21854
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot tests (15)",
-      "sha256": "805c4315fe4381437db0f84e447357e5e097046f43bbf46062384ea36a081484",
-      "bytes": 8739
+      "sha256": "a8bf075f154b47db34e7c78aaba21ef2fc11032bfa29bde0f34da61053d0e822",
+      "bytes": 9091
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -70,10 +70,15 @@
       "sha256": "6d2ffc94b148fe8cd316bc53caaec3c22e31fda0fa21a17d13bfa2d3d5243aab",
       "bytes": 20478
     },
+    "runtime/grouped_mmar/h11_matched_control.md": {
+      "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
+      "sha256": "1294559daf1be1eaf63cdc4841f13fa5000755f9961244f8e50ec1f5755e7eb6",
+      "bytes": 4707
+    },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "a3447ca29ae8cd0f89ca1f17622b811853d61ed672309ea8d42bd33cfecdc7fe",
-      "bytes": 20688
+      "sha256": "d671e6eed407dbe6d5f36f01f473a42758bae95a567b6c0ecfe3ba1006cbc45c",
+      "bytes": 23569
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -399,6 +404,19 @@
       "commit": "f176183"
     }
   },
+  "matched_grouped_control": {
+    "status": "CPU design only; not scheduled",
+    "design": "runtime/grouped_mmar/h11_matched_control.md",
+    "design_sha256": "1294559daf1be1eaf63cdc4841f13fa5000755f9961244f8e50ec1f5755e7eb6",
+    "arm": "H11 (existing arm; no new code, no adapter/binding change)",
+    "cli": "torchrun --nproc_per_node=2 --master_port=<29531 free> run_probe.py --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root <fresh> --out <fresh probe-out-h11-small-v1> --adapter <d181b15a> --arm-timeout 240",
+    "match": "M128/K256/N512, BF16 x/w, FP32 zero bias, single group, same HCCL comm domain/group name, same adapter/provider, same window 2202165e, KEEP_ALL, 240s",
+    "op_differences": "bias nullptr vs FP32 zero; output reduce-scatter [64,512] vs all-reduce [128,512]; op MRS vs Grouped",
+    "reference": "local x @ w then dist.all_reduce SUM (zero bias); records reduced.max_abs/bit_equal, not a pass condition",
+    "numeric_gate": "numeric_pass = api/sync/finite/both_finite; pass/exit follow numeric_pass; harness_pass also needs harness_release_ok; release NotImplementedError and any cleanup error are recorded and do not erase numbers",
+    "discriminability": "H11 hang -> Grouped op-specific; H11 returns -> small shape insufficient, move to v4r1-like large; H11 prepare failure -> record op shape constraint, pick nearest legal shape",
+    "order": "after A14 small v4 complete result + 32 gate; use post-v4 recovery root identity, fresh out, port 29531 preflight; large after complete small + 32 limited review"
+  },
   "a14_control": {
     "status": "small_v3_executed_liveness_pass_release_harness_crash; numeric rerun pending release fix",
     "op": "aclnnMatmulReduceScatter V1",
@@ -503,11 +521,12 @@
     "release_fix": {
       "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
       "run_probe": "numeric result (reduced/reference/bit_equal/finite/versions) computed and atomically flushed before release; call_release wraps release in try/except and records release_rc/release_error/harness_release_ok, then re-flushes",
-      "pass_gate": "numeric_pass = api/sync/finite/reference (no release term, completed numbers never discarded); pass = numeric_pass and harness_release_ok, so a cleanup error is not a complete harness PASS (20)",
-      "shas": {"run_probe.py": "fdbfeb67", "test_probe_cpu.py": "805c4315", "binding_probe.cpp": "101660f8 (unchanged)", "window": "2202165e (unchanged)", "adapter": "d181b15a (reused)"},
+      "pass_gate": "numeric_pass = api/sync/finite/reference (no release term, completed numbers never discarded); pass/exit follow numeric_pass; harness_pass = numeric_pass and harness_release_ok, so a release/cleanup error is recorded but is not a complete harness PASS (20/33)",
+      "cleanup": "existing destroy_process_group runs in a finally guarded by dist.is_initialized(), so both ranks attempt teardown on success and failure paths; no new collective/barrier; a cleanup exception is stored as harness_cleanup_error and the flushed result is kept; the 240 s window remains the backstop (20)",
+      "shas": {"run_probe.py": "0f90fd23", "test_probe_cpu.py": "a8bf075f", "binding_probe.cpp": "101660f8 (unchanged)", "window": "2202165e (unchanged)", "adapter": "d181b15a (reused)"},
       "cpu_tests": "15/15 + 9/9 + 22/22 = 46/46",
       "known_limitation": "the release op stays unregistered for zero-tensor dispatch; v4 records the NotImplementedError as harness_release_ok=false. A CatchAll registration plus adapter recompile can be done later if an explicit release success gate is ever required.",
-      "v4_requirement": "31 keeps adapter d181b15a, stages run_probe fdbfeb67, rebuilds identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, reruns the same small cell"
+      "v4_requirement": "31 keeps adapter d181b15a, stages run_probe 0f90fd23, rebuilds identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, reruns the same small cell"
     },
     "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
     "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
@@ -527,6 +546,6 @@
     "fixed_run_probe_sha256": "b7f255cb",
     "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
     "v3": "executed at identity 1306695; liveness pass (KFC path works), release harness crash; see small_v3.result",
-    "v4": "pending 31: adapter d181b15a reused, run_probe fdbfeb67, identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, same small cell"
+    "v4": "pending 31: adapter d181b15a reused, run_probe 0f90fd23, identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, same small cell"
   }
 }
