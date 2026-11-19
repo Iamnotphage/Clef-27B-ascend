@@ -282,6 +282,33 @@ def arm_output(arm, y, full=None, rows=None):
     return y
 
 
+def a15_flow(rows, k, n, world, rank, x, w, *, ones, empty, run_mrs, sync,
+             all_gather, final_sync, matmul, all_reduce, flags, trace=None):
+    """One real A15 pass: tail pad, MRS, sync, all-gather, crop, full-row reference."""
+    m_pad = padded_rows(rows, world)
+    if m_pad != rows:
+        x_mrs = ones((m_pad, k))
+        x_mrs[:rows] = x
+    else:
+        x_mrs = x
+    start, end = row_block(rank, rows, world)
+    if trace is not None:
+        trace.emit('pad_ready', rows=rows, padded_rows=m_pad)
+    y, workspace_bytes, run_id = run_mrs(x_mrs, w, world, flags)
+    sync()
+    full = empty((m_pad, n), y)
+    all_gather(full, y)
+    reference = all_reduce(matmul(x, w))
+    final_sync()
+    output = full[:rows]
+    info = {'pad': {'rows': rows, 'padded_rows': m_pad,
+                    'pad_value': 1.0 if m_pad != rows else None},
+            'row_block': {'rank': rank, 'start': start, 'end': end,
+                          'padded_end': m_pad},
+            'workspace_bytes': workspace_bytes, 'run_id': run_id}
+    return output, reference, info
+
+
 def execute(a, plan):
     rank = int(os.environ.get('RANK', '-1'))
     world = int(os.environ.get('WORLD_SIZE', '-1'))
@@ -376,60 +403,73 @@ def execute(a, plan):
             run_id = 0
         else:
             trace.emit('arm_enter', flags=plan['flags'])
-            if a.arm == 'A14':
-                y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
-                    x_n, w_n, group, world, plan['flags'])
-            elif a.arm == 'A15':
-                m_pad = padded_rows(rows, world)
-                if m_pad != rows:
-                    # Non-zero tail pad rows prove that a pad row cannot change a real row.
-                    x_mrs = torch.ones((m_pad, k), dtype=x_n.dtype, device=x_n.device)
-                    x_mrs[:rows] = x_n
+            if a.arm == 'A15':
+                def a15_sync():
+                    sync_begin = time.monotonic_ns()
+                    trace.emit('sync_enter')
+                    torch.npu.synchronize()
+                    trace.emit('sync_return',
+                               sync_ms=(time.monotonic_ns() - sync_begin) / 1e6)
+                    meta['sync_returned'] = True
+
+                def a15_run_mrs(xm, wm, world_, flags_):
+                    y, ws, rid = torch.ops.clef_mmar_probe.run_mrs(
+                        xm, wm, group, world_, flags_)
+                    trace.emit('api_return', workspace_bytes=ws, run_id=rid)
+                    meta['api_returned'] = True
+                    meta['workspace_bytes'] = ws
+                    meta['run_id'] = rid
+                    return y, ws, rid
+
+                def a15_gather(out, inp):
+                    begin = time.monotonic_ns()
+                    trace.emit('gather_enter')
+                    dist.all_gather_into_tensor(out, inp)
+                    torch.npu.synchronize()
+                    meta['gather_ms'] = (time.monotonic_ns() - begin) / 1e6
+                    trace.emit('gather_return', gather_ms=meta['gather_ms'])
+
+                output, reference, info = a15_flow(
+                    rows, a.k, a.n, world, rank, x_n, w_n,
+                    ones=lambda shape: torch.ones(shape, dtype=x_n.dtype,
+                                                  device=x_n.device),
+                    empty=lambda shape, like: torch.empty(
+                        shape, dtype=like.dtype, device=like.device),
+                    run_mrs=a15_run_mrs, sync=a15_sync, all_gather=a15_gather,
+                    final_sync=torch.npu.synchronize,
+                    matmul=torch.matmul,
+                    all_reduce=lambda t: dist.all_reduce(t, op=dist.ReduceOp.SUM),
+                    flags=plan['flags'], trace=trace)
+                meta.update(info)
+                run_id = info['run_id']
+            else:
+                if a.arm == 'A14':
+                    y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
+                        x_n, w_n, group, world, plan['flags'])
                 else:
-                    x_mrs = x_n
-                start, end = row_block(rank, rows, world)
-                meta['pad'] = {'rows': rows, 'padded_rows': m_pad,
-                               'pad_value': 1.0 if m_pad != rows else None}
-                meta['row_block'] = {'rank': rank, 'start': start, 'end': end,
-                                     'padded_end': m_pad}
-                trace.emit('pad_ready', rows=rows, padded_rows=m_pad)
-                y, workspace_bytes, run_id = torch.ops.clef_mmar_probe.run_mrs(
-                    x_mrs, w_n, group, world, plan['flags'])
-            else:
-                op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
-                      else torch.ops.clef_mmar_probe.run)
-                y, workspace_bytes, run_id = op(x_n, w_n, bias_n, group, plan['flags'])
-            trace.emit('api_return', workspace_bytes=workspace_bytes, run_id=run_id)
-            meta['api_returned'] = True
-            meta['workspace_bytes'] = workspace_bytes
-            meta['run_id'] = run_id
-            sync_begin = time.monotonic_ns()
-            trace.emit('sync_enter')
-            torch.npu.synchronize()
-            trace.emit('sync_return', sync_ms=(time.monotonic_ns() - sync_begin) / 1e6)
-            meta['sync_returned'] = True
-            full = None
-            reduced = torch.matmul(x_n, w_n)
-            if a.arm == 'A14':
-                reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
-                                        device=reduced.device)
-                dist.reduce_scatter_tensor(reference, reduced, op=dist.ReduceOp.SUM)
-            elif a.arm == 'A15':
-                gather_begin = time.monotonic_ns()
-                trace.emit('gather_enter')
-                full = torch.empty((padded_rows(rows, world), a.n),
-                                   dtype=y.dtype, device=y.device)
-                dist.all_gather_into_tensor(full, y)
+                    op = (torch.ops.clef_mmar_probe.run_mmar if a.arm == 'A13'
+                          else torch.ops.clef_mmar_probe.run)
+                    y, workspace_bytes, run_id = op(x_n, w_n, bias_n, group,
+                                                    plan['flags'])
+                trace.emit('api_return', workspace_bytes=workspace_bytes, run_id=run_id)
+                meta['api_returned'] = True
+                meta['workspace_bytes'] = workspace_bytes
+                meta['run_id'] = run_id
+                sync_begin = time.monotonic_ns()
+                trace.emit('sync_enter')
                 torch.npu.synchronize()
-                meta['gather_ms'] = (time.monotonic_ns() - gather_begin) / 1e6
-                trace.emit('gather_return', gather_ms=meta['gather_ms'])
-                reference = reduced
-                dist.all_reduce(reference, op=dist.ReduceOp.SUM)
-            else:
-                reference = reduced
-                dist.all_reduce(reference, op=dist.ReduceOp.SUM)
-            torch.npu.synchronize()
-            output = arm_output(a.arm, y, full, rows)
+                trace.emit('sync_return', sync_ms=(time.monotonic_ns() - sync_begin) / 1e6)
+                meta['sync_returned'] = True
+                reduced = torch.matmul(x_n, w_n)
+                if a.arm == 'A14':
+                    reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
+                                            device=reduced.device)
+                    dist.reduce_scatter_tensor(reference, reduced, op=dist.ReduceOp.SUM)
+                else:
+                    reference = reduced
+                    dist.all_reduce(reference, op=dist.ReduceOp.SUM)
+                torch.npu.synchronize()
+                output = arm_output(a.arm, y, None, rows)
         if a.norm:
             from fixed_gate import evaluate
             cand = dict(zip(('y', 'residual', 'rstd'),

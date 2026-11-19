@@ -4,6 +4,7 @@ No torch/torch_npu import, no device, no installer.  Device behavior is
 validated by 31 under the frozen manifest; these tests only cover the plan,
 path guards, release ordering, timeout watchdog and metadata checklist.
 """
+import builtins
 import contextlib
 import hashlib
 import io
@@ -11,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import symtable
 import sys
 import tempfile
 import unittest
@@ -18,6 +20,36 @@ from unittest import mock
 
 import run_probe
 import validate_snapshot
+
+
+def f821_violations(path):
+    """Equivalent F821 check via symtable (ruff/pyflakes are not installed)."""
+    source = Path(path).read_text()
+    top = symtable.symtable(source, str(path), 'exec')
+    module_names = {s.get_name() for s in top.get_symbols()
+                    if s.is_assigned() or s.is_imported() or s.is_namespace()}
+    allowed = (set(dir(builtins)) | module_names |
+               {'__name__', '__file__', '__doc__', '__builtins__'})
+    bad = []
+
+    def walk(table, enclosing):
+        local = {s.get_name() for s in table.get_symbols()
+                 if s.is_assigned() or s.is_parameter() or s.is_imported()}
+        scope = enclosing | local
+        for sym in table.get_symbols():
+            if sym.is_referenced():
+                name = sym.get_name()
+                if (sym.is_assigned() or sym.is_parameter() or sym.is_imported()
+                        or sym.is_free()):
+                    continue
+                if name in scope or name in allowed:
+                    continue
+                bad.append((table.get_name(), name))
+        for child in table.get_children():
+            walk(child, scope)
+
+    walk(top, set())
+    return bad
 
 
 def plan_args(root, arm='A0', extra=()):
@@ -111,8 +143,8 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan['rows'], 967)
         self.assertEqual(plan['bias'], 'nullptr')
         source = Path(run_probe.__file__).read_text()
+        self.assertIn('a15_flow(', source)
         self.assertIn('all_gather_into_tensor', source)
-        self.assertIn('torch.ones((m_pad, k)', source)
         self.assertIn("'diagnostic_only_not_an_official_gate'", source)
 
     def test_arm_output_keeps_a14_and_crops_a15(self):
@@ -152,6 +184,84 @@ class PlanTest(unittest.TestCase):
         a = run_probe.parse_args(plan_args(self.root, extra=('--weight-bin', str(weight))))
         with self.assertRaises(ValueError):
             run_probe.build_plan(a)
+
+
+class F821Test(unittest.TestCase):
+    def test_probe_and_window_have_no_undefined_names(self):
+        for name in ('run_probe.py', 'supervised_probe_window.py'):
+            self.assertEqual(f821_violations(Path(__file__).with_name(name)), [], name)
+
+    def test_checker_catches_an_undefined_name(self):
+        root = Path(tempfile.mkdtemp(prefix='grouped-mmar-f821-'))
+        bad = root / 'bad.py'
+        bad.write_text('def f(a):\n    return k + a\n')
+        self.assertIn(('f', 'k'), f821_violations(bad))
+
+
+class A15FlowTest(unittest.TestCase):
+    def test_a15_rows127_pad_gather_crop_with_stubs(self):
+        rows, k, n, world, rank = 127, 256, 512, 2, 1
+        x = [[float(i)] * k for i in range(rows)]
+        w = [[0.0] * n for _ in range(k)]
+        calls = {}
+
+        def ones(shape):
+            m, width = shape
+            self.assertEqual(width, k)
+            return [[1.0] * width for _ in range(m)]
+
+        def empty(shape, like):
+            m, width = shape
+            self.assertEqual(width, n)
+            self.assertEqual(len(like[0]), n)
+            return [[9.0] * width for _ in range(m)]
+
+        def run_mrs(xm, wm, world_, flags):
+            calls['mrs'] = (len(xm), len(xm[0]), flags)
+            calls['pad_row'] = xm[rows]
+            calls['orig_ok'] = xm[:rows] == x
+            self.assertEqual(wm, w)
+            self.assertEqual(world_, world)
+            return [[5.0] * n for _ in range((rows + 1) // world)], 123, 7
+
+        def sync():
+            calls['sync'] = calls.get('sync', 0) + 1
+
+        def all_gather(out, y):
+            calls['gather'] = (len(out), len(y))
+            self.assertEqual(len(y), (rows + 1) // world)
+            for offset, row in enumerate(y):
+                out[64 + offset] = row
+
+        def matmul(xx, ww):
+            calls['matmul_len'] = len(xx)
+            self.assertEqual(ww, w)
+            return [[1.0] * n for _ in range(len(xx))]
+
+        def all_reduce(tensor):
+            calls['all_reduce'] = len(tensor)
+            return tensor
+
+        output, reference, info = run_probe.a15_flow(
+            rows, k, n, world, rank, x, w, ones=ones, empty=empty,
+            run_mrs=run_mrs, sync=sync, all_gather=all_gather,
+            final_sync=lambda: None, matmul=matmul, all_reduce=all_reduce,
+            flags=run_probe.KEEP_ALL)
+        self.assertEqual(calls['mrs'], (128, k, run_probe.KEEP_ALL))
+        self.assertEqual(calls['pad_row'], [1.0] * k)
+        self.assertTrue(calls['orig_ok'])
+        self.assertEqual(calls['sync'], 1)
+        self.assertEqual(calls['gather'], (128, 64))
+        self.assertEqual(calls['matmul_len'], rows)
+        self.assertEqual(calls['all_reduce'], rows)
+        self.assertEqual(len(output), rows)
+        self.assertEqual(len(reference), rows)
+        self.assertEqual(info['pad'], {'rows': rows, 'padded_rows': 128,
+                                       'pad_value': 1.0})
+        self.assertEqual(info['row_block'], {'rank': rank, 'start': 64, 'end': 128,
+                                             'padded_end': 128})
+        self.assertEqual(info['workspace_bytes'], 123)
+        self.assertEqual(info['run_id'], 7)
 
 
 class ReleaseOrderingTest(unittest.TestCase):

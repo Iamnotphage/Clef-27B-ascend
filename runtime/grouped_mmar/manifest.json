@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "d54584b76b8a8e5b4983e87ef73f02b92667da04fbcffe0705d9c7e6a47a9763",
-      "bytes": 25772
+      "sha256": "7afd7799ac89fba8533ad2780799bb482c6d70e894747011d2407a8dba169c71",
+      "bytes": 27430
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot/A15/arm_output tests (18)",
-      "sha256": "01fd2f54bc01cb34dd0655698576c6a0ec9f0b543b914f1ed22037c877e79e9b",
-      "bytes": 11437
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow/F821/arm_output tests (21)",
+      "sha256": "284974b3da4cc125d082e1fd65c685d1f762bba075cacd362e48b36eb59d209d",
+      "bytes": 15812
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "02152268f653200edfa8ebb8d8e3701573bf89e1142dcffcd95e63249f2895c0",
-      "bytes": 33611
+      "sha256": "b40a43b11f38e308146b5c9e9d3e20e6cc1ebb87657b85bc514119fb5db9b06c",
+      "bytes": 34028
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -240,7 +240,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "18/18",
+      "test_probe_cpu.py": "21/21",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "40/40 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
     },
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "01fd2f54", "cpu": "67/67 (18+9+40; 7 Linux-only skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "284974b3", "run_probe": "7afd7799", "cpu": "70/70 (21+9+40; 7 Linux-only skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -471,7 +471,15 @@
       "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
-      "freeze": {"run_probe.py": "0bd1fde8", "test_probe_cpu.py": "1979bb23", "window": "f05f352f (A15 in choices)", "test_window": "74ccdcb2", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "freeze": {"run_probe.py": "7afd7799", "test_probe_cpu.py": "284974b3", "window": "1f780bf8 (unchanged)", "test_window": "228150e4 (unchanged)", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "h4k_executed_freeze": "0d3f7fb/508e2931/d7e73514 unchanged"},
+      "v1_result": {
+        "plan_sha256": "99db4369",
+        "failure": "NameError: name 'k' is not defined at the old run_probe.py:386 in the A15 tail-pad branch; no pad_ready/gather/equivalence/numeric",
+        "window": "child rc1, timed_out false, survivors [], cleanup_final killed with empty sets",
+        "restore": "branch aa3e-noop, root 1328734/399924959, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-small-v1-cell SUMS 18/18 (e185265f, 31 commit 2cb8fdd)"
+      },
+      "v1_fix": "use a.k; factor the real A15 path into a15_flow (pad -> run_mrs -> sync -> all_gather -> crop -> full-row reference) and add a CPU stub that runs rows 127 with NPU/comm stubs; add an F821-equivalent symtable check over run_probe.py and supervised_probe_window.py",
       "window_note": "A15 was missing from the window --arm choices; added with a CPU plan-only child-argv test. The H4K executed cell keeps its original window d7e73514; the new window SHA is for A15 and later cells only",
       "keep_note": "KEEP_ALL keeps group/workspace/descriptors until sync, matching the A14 success baseline and avoiding the early-release confound; the release op remains unregistered, so release_error=NotImplementedError/harness_pass=false is recorded while numeric_pass stays independent"
     },
