@@ -76,6 +76,30 @@ binary reused for A14 v4 (`d181b15a...`), loaded through
 - H11 prepare fails → record the op shape constraint and pick the nearest legal
   matched shape; do not reinterpret a prepare failure as a hang.
 
+## Result interpretation (one small cell)
+
+Read `result.json` on both ranks together; no single field decides a cause.
+
+- `numeric_pass=true`, `reduced.bit_equal=true` (or small `max_abs`), child rc0,
+  window ok → the Grouped op returned at M128/K256/N512. The small shape is not
+  sufficient to trigger the hang; the next cell is the v4r1-like
+  M968/K8704/N5120. `release_error=NotImplementedError` and
+  `harness_pass=false` are the known release-op limitation and are reported apart.
+- `numeric_pass=true` but `bit_equal=false` with a small `max_abs` → return with
+  benign BF16 reduction-order divergence; record, do not call it a hang.
+- `prepare rc != 0` / `api_returned=false` with an aclnn error → op shape or
+  interface constraint. Record the rc and `aclGetRecentErrMsg`, adjust one
+  dimension to the nearest legal matched shape, and do not reinterpret it as a
+  hang.
+- Sync never returns / watchdog 124 / window timeout → hang. Expect
+  `stream_id=47`, 507046 (or the 3-minute timeout line) in plog; Grouped-specific
+  op/kernel/tiling/rac_server/context stays the prioritized candidate, but one
+  cell does not single out a cause.
+- `group_names` differ between ranks → comm-domain mismatch, not an MC2 result;
+  fix the group and rerun.
+- `harness_cleanup_error` present → cleanup issue only; the numeric result was
+  already flushed and stays valid.
+
 ## Order and gates
 
 1. A14 small v4 (run_probe fdbfeb67, adapter d181b15a, identity from root 1308632,

@@ -72,13 +72,13 @@
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
-      "sha256": "1294559daf1be1eaf63cdc4841f13fa5000755f9961244f8e50ec1f5755e7eb6",
-      "bytes": 4707
+      "sha256": "1670bc9bfbd23fcd5acb8f62a8578f2609f19f7bf7c3214cbf946f851117cc09",
+      "bytes": 6088
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "d671e6eed407dbe6d5f36f01f473a42758bae95a567b6c0ecfe3ba1006cbc45c",
-      "bytes": 23569
+      "sha256": "1423cd63bbb2678cb2bad5ea53f063ed14c7ff2c335ec6809c5425e765027ff0",
+      "bytes": 23596
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -407,7 +407,7 @@
   "matched_grouped_control": {
     "status": "CPU design only; not scheduled",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
-    "design_sha256": "1294559daf1be1eaf63cdc4841f13fa5000755f9961244f8e50ec1f5755e7eb6",
+    "design_sha256": "1670bc9bfbd23fcd5acb8f62a8578f2609f19f7bf7c3214cbf946f851117cc09",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
     "cli": "torchrun --nproc_per_node=2 --master_port=<29531 free> run_probe.py --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root <fresh> --out <fresh probe-out-h11-small-v1> --adapter <d181b15a> --arm-timeout 240",
     "match": "M128/K256/N512, BF16 x/w, FP32 zero bias, single group, same HCCL comm domain/group name, same adapter/provider, same window 2202165e, KEEP_ALL, 240s",
@@ -526,7 +526,7 @@
       "shas": {"run_probe.py": "0f90fd23", "test_probe_cpu.py": "a8bf075f", "binding_probe.cpp": "101660f8 (unchanged)", "window": "2202165e (unchanged)", "adapter": "d181b15a (reused)"},
       "cpu_tests": "15/15 + 9/9 + 22/22 = 46/46",
       "known_limitation": "the release op stays unregistered for zero-tensor dispatch; v4 records the NotImplementedError as harness_release_ok=false. A CatchAll registration plus adapter recompile can be done later if an explicit release success gate is ever required.",
-      "v4_requirement": "31 keeps adapter d181b15a, stages run_probe 0f90fd23, rebuilds identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, reruns the same small cell"
+      "v4_requirement": "final plan v5 b6429191 with out/run/restore v5 (20 naming), identity 1308632/398926792, stage-identity v7, adapter d181b15a reused, run_probe 0f90fd23, port 29531 preflight; plan v4 6da7309c kept unexecuted"
     },
     "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
     "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
@@ -546,6 +546,7 @@
     "fixed_run_probe_sha256": "b7f255cb",
     "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
     "v3": "executed at identity 1306695; liveness pass (KFC path works), release harness crash; see small_v3.result",
-    "v4": "pending 31: adapter d181b15a reused, run_probe 0f90fd23, identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, same small cell"
+    "v4": "final execution plan is v5 b6429191 (20 naming decision): fresh out/run/restore v5, identity 1308632/398926792, stage-identity v7, adapter d181b15a reused, run_probe 0f90fd23, port 29531 preflight; plan v4 6da7309c and out v4 are kept unexecuted"
+
   }
 }
