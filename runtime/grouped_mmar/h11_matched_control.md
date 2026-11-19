@@ -1,9 +1,10 @@
 # H11 matched Grouped control (CPU design only; not scheduled)
 
-Purpose: after A14 small v4 produces a complete numeric result, run one Grouped
-`aclnnGroupedMatMulAllReduce` cell matched to the A14 small cell on every axis the
-current harness can control, to decide whether the Grouped hang is op-specific or
-tied to the larger v4r1-like shape/tiling.
+Purpose: the A14 v5 rerun (plan `b6429191`, run_probe `0f90fd23`) has produced a
+complete numeric result, so run one Grouped `aclnnGroupedMatMulAllReduce` cell
+matched to that cell on every axis the current harness can control, to decide
+whether the Grouped hang is op-specific or tied to the larger v4r1-like
+shape/tiling.
 
 ## Decision (20/32)
 
@@ -20,14 +21,20 @@ must add is the shape: `--rows 128 --k 256 --n 512`.
 torchrun --nproc_per_node=2 --master_port=<29531 preflight FREE> \
   runtime/grouped_mmar/run_probe.py \
   --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 \
-  --temp-root <abs fresh> --out <abs fresh probe-out-h11-small-v1> \
+  --temp-root <abs fresh> --out <abs fresh probe-out-h11> \
   --adapter <abs path to binding adapter> --arm-timeout 240
 ```
 
 Add `--execute` only in the gated execution step. The adapter must be the same
-binary reused for A14 v4 (`d181b15a...`), loaded through
+binary reused for the A14 v5 rerun (`d181b15a...`), loaded through
 `torch.ops.load_library`; its `provider()` must report
 `prepare/launch=libopapi.so;metadata=libnnopbase.so`.
+
+Preparation status (CPU-only, not executed): 31 built plan `68cc5a79` with
+identity `1311514/399079056`, out/run/restore `probe-out-h11` / `run-h11` /
+`restore-h11`, `port 29531` preflight FREE, `flags=KEEP_ALL`, `plan_not_executed`.
+The plan pins the frozen run_probe `0f90fd23`, binding `101660f8`, window
+`2202165e` and adapter `d181b15a`; 32/33 contract review then 32 GO.
 
 ## Plan contract
 

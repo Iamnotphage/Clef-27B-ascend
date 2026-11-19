@@ -72,13 +72,13 @@
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
-      "sha256": "1670bc9bfbd23fcd5acb8f62a8578f2609f19f7bf7c3214cbf946f851117cc09",
-      "bytes": 6088
+      "sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
+      "bytes": 6503
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "1423cd63bbb2678cb2bad5ea53f063ed14c7ff2c335ec6809c5425e765027ff0",
-      "bytes": 23596
+      "sha256": "284b89e4ea5443fa0c6812d05307347a84ce64195bff363dd2a6c03342f412da",
+      "bytes": 24661
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -339,7 +339,8 @@
     "established": [
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
       "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
-      "31: Mc2ServerKernel exists only in the rejected package; no installed AICPU .so exports it; libccl_kernel provides KFC/ResInit; runtime dependency unproven (suspected_environment_blockage_pending_dependency_control)"
+      "31: Mc2ServerKernel exists only in the rejected package; no installed AICPU .so exports it; libccl_kernel provides KFC/ResInit; runtime dependency unproven (suspected_environment_blockage_pending_dependency_control)",
+      "A14 small v5 (MRS V1): prepare/launch/sync rc0, sync 20.65 ms, reduced.max_abs=0.0 and bit_equal=true on both ranks under the same chip:5 mc2_server skip; Grouped still stream47/507046"
     ],
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
@@ -348,8 +349,8 @@
       "Grouped-specific cause of stream47/507046 while A14 MRS V1 KFC path returns synchronously at small shape"
     ],
     "pending": [
-      "A14 numeric rerun (v4) with run_probe 8804be5d, adapter d181b15a reused, identity from root 1308632",
-      "A14 large M968/K8704/N5120 after a complete small numeric result and 32 limited review"
+      "H11 matched Grouped small (plan e159c897, identity 1311514/399079056, out h11-small-v1) after 32 GO",
+      "A14 large M968/K8704/N5120 after the H11 small result and 32 limited review"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -407,18 +408,21 @@
   "matched_grouped_control": {
     "status": "CPU design only; not scheduled",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
-    "design_sha256": "1670bc9bfbd23fcd5acb8f62a8578f2609f19f7bf7c3214cbf946f851117cc09",
+    "design_sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
     "cli": "torchrun --nproc_per_node=2 --master_port=<29531 free> run_probe.py --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root <fresh> --out <fresh probe-out-h11-small-v1> --adapter <d181b15a> --arm-timeout 240",
+    "plan_sha256": "e159c897ac93287e08ca5e53658d24ac1277bf96b530bb3b673b290c98232b1e",
+    "identity": "1311514/399079056 (9802c322, health ready)",
+    "superseded_plans": ["68cc5a79 (renamed before execution)"],
     "match": "M128/K256/N512, BF16 x/w, FP32 zero bias, single group, same HCCL comm domain/group name, same adapter/provider, same window 2202165e, KEEP_ALL, 240s",
     "op_differences": "bias nullptr vs FP32 zero; output reduce-scatter [64,512] vs all-reduce [128,512]; op MRS vs Grouped",
     "reference": "local x @ w then dist.all_reduce SUM (zero bias); records reduced.max_abs/bit_equal, not a pass condition",
     "numeric_gate": "numeric_pass = api/sync/finite/both_finite; pass/exit follow numeric_pass; harness_pass also needs harness_release_ok; release NotImplementedError and any cleanup error are recorded and do not erase numbers",
     "discriminability": "H11 hang -> Grouped op-specific; H11 returns -> small shape insufficient, move to v4r1-like large; H11 prepare failure -> record op shape constraint, pick nearest legal shape",
-    "order": "after A14 small v4 complete result + 32 gate; use post-v4 recovery root identity, fresh out, port 29531 preflight; large after complete small + 32 limited review"
+    "order": "A14 small v5 numeric is complete; H11 plan e159c897 is prepared with root 1311514 identity, fresh h11-small-v1 out, port 29531 preflight; 32 increments then GO; large after H11 + 32 limited review"
   },
   "a14_control": {
-    "status": "small_v3_executed_liveness_pass_release_harness_crash; numeric rerun pending release fix",
+    "status": "small_v5_numeric_pass_complete; maps gate is a window sampling artifact, per-rank result.libraries prove actual loads",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -517,6 +521,32 @@
         "interpretation": "MRS V1 A3 AICPU/KFC path works at small shape; refused mc2_server not a universal blocker; Grouped still 507046/stream47; dependency supported_but_unproven",
         "blocker": "run_probe.py release(run_id) zero-tensor dispatch NotImplementedError after sync; result.json stub only; reduced/reference/bit_equal not computed"
       }
+    },
+    "small_v5": {
+      "status": "executed; numeric_pass complete, bit_equal on both ranks",
+      "plan_sha256": "b6429191f75d0b66f32404a0fa62d751d44750670b28aac9a22032efb03c8080",
+      "out": "probe-out-a14-small-v5 / run-a14-small-v5 / restore-a14-small-v5 (fresh)",
+      "identity": "1308632/start 398926792 (eb3a4b42)",
+      "freeze": "f3e76cc / manifest 5531e104 / run_probe 0f90fd23 / test a8bf075f / binding 101660f8 / window 2202165e / adapter d181b15a",
+      "result": {
+        "numeric": "api/sync/finite/both_finite true; numeric_pass=true; pass=true; reduced.max_abs=0.0, bit_equal=true on both ranks; sync 20.65 ms; no stream47, no 507046",
+        "harness": "release_rc=null, release_error=NotImplementedError, harness_release_ok=false, harness_pass=false, harness_cleanup_error=null; numbers were flushed before release",
+        "window": "child rc0, survivors []; ok=false only because the external PGID maps sample caught the torchrun parent before the ranks loaded libraries (sampling artifact)",
+        "libraries": "each rank result has 17 in-process /proc/self/maps entries incl. adapter probe_adapter.so d181b15a, libhccl da6dd17f, libascendcl 1c06b9c4, libopapi eb1c788e, libnnopbase 72cd43b4, libtorch_npu 65e6be19",
+        "provider": "prepare/launch=libopapi.so, metadata=libnnopbase.so; dladdr provenance checked in binding api()",
+        "restore": "branch aa3e-noop, root 1311514, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue"
+      },
+      "evidence": {
+        "cell": "a14-small-v5-cell (SUMS 16/16, 5524942b, 31 commit 74eb92f)",
+        "window_sha256": "319be929",
+        "rank0_result_sha256": "bed2e1c6",
+        "rank0_trace_sha256": "4ce37e08",
+        "rank1_result_sha256": "0c81f74a",
+        "rank1_trace_sha256": "8b62c55f",
+        "restore_manifest_sha256": "d5cc432c",
+        "restore_joint_sha256": "abdb1953"
+      },
+      "maps_gate_note": "result.libraries is actual in-process mapping evidence; the window.ok=false is an external sampling-timing artifact, not a missing load. A rank-local maps_self persistence is a future harness improvement only (20: no code change now)."
     },
     "release_fix": {
       "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
