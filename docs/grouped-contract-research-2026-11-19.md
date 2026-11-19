@@ -614,3 +614,67 @@ freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B
 ## 58. ed12a12 A15 large 误差字段：生产 tensor 路径未被 CPU 直测（2026-11-19）
 
 32 finding 核：ed12a12（manifest 8e5846de、run_probe 8e308804、test 07e5a5b4）已实现 `relative_l2`（denominator=max(ref_norm,TINY)，0/0→0、zero_reference）和 `tensor_error_stats`（torch tensor：max/mean、ref/out abs max、nonzero/total、max_error index/position+值、max_rel_abs、relative_l2/denominator/zero_reference），但 **CPU 测试仍用 `list_error_stats` 或 `stats=lambda`**；`tensor_error_stats` 的真实 torch 张量路径未被直接执行。故生产字段的数学/边界仅由 list helper 证明，非生产实现证明；需 torch-available 直测（Linux venv 可跑）后重冻。A15 large c482f3f plan d1b02bcd/stage 已 superseded，ed12a12 预检 plan 34bfb3aa/stage39ffb333/identity1334752 元数据待最终冻；GO 应等 torch 直测重冻。A15 bench/生产仍由 32/35 范围；Grouped 研究不受影响；设备暂停。
+
+## 59. abi-preflight3（c1f5a41，SUMS 20fc3ed8）consumer 控制流与 rcvCnt 数据流
+
+**材料**：`libccl_kernel.so` SHA `2281deca…`（9.2.1 `aarch64-linux/devlib/device`）完整区间反汇编（ReadWorkMsg 53 行、CheckRcvWorkMsg 239、AddTaskForHcclMsg 968、AicpuCcOpExe 403、SrvLaunch 1090、RpcSrvLaunch 1480、RpcSrvLaunchV2 608）+ nm 部分符号。31 的日志 grep 结果：**仅有 2026-11-18 旧实验 6 个 plog 命中 `kernel_type=TS_AICPU_KERNEL_AICPU_KFC(5)`**（device 0/1、stream 13、task 6/28/3）；11-19 Grouped 各格无 `kernel_type=`、无 `ConstructAICpuSqeForDavinciTask`、无 `CUSTKFC/CUSTAICPU/cust_aicpu_sd`。这是现有归档中**唯一**观察到的 KFC kernel type，且为 5；但属另一实验，**不能**据此判定 Grouped 也是 5，也不能反证 type6 类比。
+
+### 59.1 已证（静态反汇编事实）
+
+**A. SrvLaunch 顶层分派 `0x763108`**：
+- `desc=*(u64*)task`；`(desc&0xf)==2` → `CommKfcDispatcher::Run(task+8,(desc>>4)&0xf)`（0x763564）。
+- 否则 `idx=(desc>>9)&0x7f`、`arg=task[idx]`、`sub=*(u32*)arg`：
+  - `sub==0`：若 `(desc&~0xffff)==0x170000` 且 `*(u32*)(arg+8196)==0x63` 且 `count=*(u32*)(arg+8192)>0`，逐子 op 调 `RunAicpuRpcSrvLaunch`（0x763368）；否则转局部函数 `0x762a84`。
+  - `sub==1` → 同一 `0x762a84`。
+  - `sub==2` → MC2 分支：按 `(desc>>4)&0xf` 循环后，`subcount-1<=2` 时 `AicpuRunRpcServerForMC2V2(task_v2,tiling)`（0x763880），否则 `AicpuRunRpcServerForMC2(task_v2)`（0x7639dc），随后调 0x75e3c0 helper。
+  - `sub>2`：`sub==0x64` 时按 `AicpuGetInnerDevType()==4` 转向 0x763704，否则 `ClearOpRes` 路径（0x760624+0x124）；其余报错。
+- **未证**：Grouped/A12 运行期的 `desc`、`idx`、`sub` 值；因此不能确定走 RpcSrvLaunch、MC2 RPC 还是 CommKfcDispatcher。
+
+**B. RpcSrvLaunch 初始化与分支 `0x761380`**：
+- `ctx=AicpuGetComContext()`；要求 `[task+24]`、`[task+40]` 非空；要求 **`ctx+0xf31d2` bit0=1**；`strcmp(ctx, [task+24]+0x220)==0`（组名/上下文匹配），否则错误返回。
+- `mode=*(u32*)[task+40]`，`mode>1` 报错；写入 **`ctx+0xf31d0`**（0x761820）；随后清零 **`ctx+0xf31d4`**（0x761880）、**`ctx+0xf31d8`**（0x761884）、**`ctx+0xf32d8`**（0x7618a0）。
+- `GetSendCnt(ctx)` → **`ctx+0xf3240`**、`GetRecvCnt(ctx)` → **`ctx+0xf3250`**（0x761888/0x761894）；再 `PrintTilingData`/`PrintMC2AicpuContext`（与 device 日志 `KFCtaskAndTilingTraceData`/`AivAicpuOpParam` 的出现时机一致，但无字符串 xref 证明同一处）。
+- `AicpuKfcRpcServer::Init(ctx+184, ctx+192, u16 ctx+196, task)`（0x76192c）。
+- 分支（0x761954-0x761994）：`GetPreparePosition()==1` → **`RunRpcServerApi(ctx,server,0)`**（0x761f80）；否则 `GetTaskType()==6` → **`AICPU_RpcServerUnfoldStageWait`**（0x7622e4）；否则 **`ctx+0xf31dc & ~2 == 1`** → `RunRpcServerTwoStageWait`（0x761994），不满足 → `TryRunRpcServerOneStageWait`（0x762228）。
+- 返回后再次 `GetSendCnt` → **`ctx+0xf324c`**、`GetRecvCnt` → **`ctx+0xf325c`**（0x7619b0/0x7619bc），随后 `DealReturnValue`。
+
+**C. ReadWorkMsg `0x7d71cc`**：`ctx=*(void**)(this+16)`；校验 **`ctx+44==0x5cdf123a`**，不等则**立即返回 0**；相等则 `memcpy(opParam,ctx,0x306=774)`、`dsb st`，返回 **`opParam[50] >= arg3`**（u8），arg2 未使用。
+
+**D. CheckRcvWorkMsg `0x7d7284`**：同样以 `ctx+44` 魔数 + 774 字节拷贝 + `opParam[50]>=arg3` 轮询；上限 **10001 次迭代或 6,000,000,000 ns（0x165a0bc00）**；**成功与超时都返回 1**（超时仅 verbose 日志），不会返回 0。
+
+**E. AddTaskForHcclMsg `0x7b2800`**：`count=msg[52]`；循环下标在 **`ctx+0xf31d8`**（u8，每轮 +1 后写回）；每轮调 `AicpuCcOpExe(opParam,NULL,ctx)`，再 `TaskOrchestrator::ActiveRecordMain(GetActiveSqId)`。当 `msg[0]==6` 且 `(msg[40]&~8)==3` 时，先调 **`CheckRcvAddrMsg(msg_local, [ctx+0xf31d4]+1)`**（0x7b2e80-0x7b2e98）；成功后才 `HcclMsg2AicAicpuOpParam` 并比对 msg/opParam 的 type 与 opcode。`msg[0]==7` 且 `msg[32] < msg[52]*msg[24]` → 错误 1646 并返回 1。调试日志（0x7b2f9c-0x7b3028）分别打印 `opParam` 的 **+44、+48、+49、+50、+51、+52、+53、+54、+56**。
+
+**F. AicpuCcOpExe `0x7b21d0`**：写 `ctx+156`（dtype size）、`ctx+160`（count×size）、`ctx+144/148`（type/subtype）；读取 **`ctx+0xf31d9`** 与 **`ctx+0xf31dc`**；校验字节量 ≤0x3ffff 或 ≤0xfffff、2 的幂；把 `opParam+54/+55/+56` 写入 `ctx+4452/+200/+208`；调 **`TaskOrchestrator::RunConcreteAlgorithm(opParam, workspace, ctx)`**（0x7b247c）；成功后按 `ctx+352` 与 `ctx+4452` 比较，必要时 **`AicpuDispatcher::AddAllEndTaskOnMainStream(GetActiveSqId(ctx))`**（0x7b24c8）释放 AICore；rc=0x14 走特殊日志。
+
+### 59.2 rcvCnt 的数据流：事实与缺口
+
+- **事实**：`ctx+44` 是魔数 `0x5cdf123a`；`ctx+50`（u8）是 ReadWorkMsg/CheckRcvWorkMsg 唯一比较的接收计数；`ctx+0xf31d4`（u32）在每次 RpcSrvLaunch 初始化时**清零**，并被 AddTask 以 `当前值+1` 作为 `CheckRcvAddrMsg` 的期望值；`ctx+0xf3240/0xf324c` 与 `ctx+0xf3250/0xf325c` 分别保存 `GetSendCnt`/`GetRecvCnt` 的前后值。
+- **未证**：`ctx+50` 与 `GetRecvCnt` 的返回值是否同一字段（GetRecvCnt/GetSendCnt 仅 0x28/0x20 字节，未反汇编）；`ctx+48..55` 各字节语义（AddTask 日志逐字节打印，说明可能是多个 u8 计数器，而 getter 返回 u32，宽度需实测）；**谁在运行期递增 `ctx+50` 或 `ctx+0xf31d4`**——已交付函数中没有任何写 `ctx+50` 的指令，`ctx+0xf31d4` 只有清零与读；写者可能在未交付的 `RunRpcServerApi`/`CheckRcvAddrMsg`/`ResetSqBuff`/`WaitTaskFinish`/`DealReturnValue`/`AicpuRpcResInit`，也可能在 host/runtime/TS 侧写共享 context（后者不能由 libccl 反汇编证否）。
+
+### 59.3 与 Grouped 挂起的可能映射（均未证）
+
+- 若走 `RunRpcServerApi`：魔数不匹配会让 ReadWorkMsg 恒返 0（立即返回、无日志），或计数长期达不到期望，均表现为 AICPU KFC kernel 不返回；与 H11/H4K `stream_id=47 task_id=13 sqHead=13 pendingNum=1` 三分钟超时**相容**，但无运行期证据指向具体分支。
+- 若 `GetTaskType()==6`：走 `AICPU_RpcServerUnfoldStageWait`，与公开 issue #822 的 cust-KFC 握手问题**形式上相似**，但该 `GetTaskType()` 是 RpcServer 任务类型（0..6），**不能等同于** TS `kernel_type` 5/6。
+- 若 sub==2：走 `AicpuRunRpcServerForMC2(V2)`，同样可能不返回；现有 plog 无法区分。
+- A14（MRS V1）未出现 `KFCtaskAndTilingTraceData/AivAicpuOpParam` 且小/大形状均返回，提示其 launch 路径不同，但这不是对 Grouped 分支的证明。
+
+### 59.4 下一项最小可判别只读请求（不重复已交付区间）
+
+1. `RunRpcServerApi` **0x7b3704–0x7b4604（0xf00）** 完整反汇编——它应包含对 ReadWorkMsg/CheckRcvWorkMsg/AddTaskForHcclMsg 的调用点及计数写入。
+2. `AicpuKfcUtils::GetSendCnt` **0x797450（0x20）** 与 `GetRecvCnt` **0x797470（0x28）**——定位 `ctx+48..55` 的真实字段/宽度。
+3. `AicpuKfcRpcServer` 的真实起址/size（nm）：`CheckRcvAddrMsg`、`HcclMsg2AicAicpuOpParam`、`Init`、`GetTaskType`、`GetPreparePosition`；随后只反汇编 `CheckRcvAddrMsg`（若 size≤0x400）。
+4. 仅当 1–3 仍无写者时，再补 `ResetSqBuff` 0x7b1d44（0x484）、`WaitTaskFinish` 0x7b1b84（0x1c0）、`DealReturnValue` 0x7b62e0（0x490）。
+- 明确**不重复**请求 ReadWorkMsg/CheckRcvWorkMsg/AddTaskForHcclMsg/AicpuCcOpExe/SrvLaunch/RpcSrvLaunch/RpcSrvLaunchV2（已完整交付）。
+
+**结论**：consumer 侧“读什么、等什么、何时分派”的骨架已由反汇编证实；**rcvCnt 的写入者/递增条件仍未定位**，Grouped 运行期实际分支未证；root cause 仍 **unresolved**，不回到 `confirmed_environment_blocked`；`mc2_server` 依赖仍 `supported_but_unproven`。设备暂停。
+
+## 60. A15-large-v1 原件独立复核（有限统计联审）
+
+复核 31 归档 `grouped-deepdive/a15-large-v1-cell/`（commit 0d8cc1a）：`SHA256SUMS` 自身 `2adc7ef64b035b01d820a3523026dc8c4e043e4946b216e4a44a2fb17c0becf3`，`shasum -c` **17/17 OK**。两 rank result 逐字段一致：`pad{967→968,1.0}`、`row_block 0(0,484)/1(484,968)`、`equivalence.shape [967,5120]`、`workspace_bytes 115,818,496`、`gather_ms 1.13913/1.21021`、`sync_returned=true`、`wall_ms 423.578`。统计：`max_abs=2.0`、`mean_abs=5.1305116357980296e-5`、`ref_abs_max=out_abs_max=744.0`、`diff_nonzero=510/4,951,040`、`max_error_index=1040755`、`position=[203,1395]`、`ref=400.0/out=402.0`、`max_rel_abs=1.0`、`relative_l2=4.9197991043609655e-5`（denom 293,496.6875、zero_reference=false）、`bit_equal=false`。**算术自洽**：`203*5120+1395=1040755`；`mean_abs*diff_total=254.0137`，与 510 个非零元素均值 0.498 一致；`max_rel_abs=1.0` 不可能来自 ref=400（该点 2/400=0.005），来自近零参考 clamp，**不得与 max_error 位置混用、不得作门**。35 的 `run_probe 8e308804` 第 379-380 行确为 **AND**：`within_bounds = max_abs<=0.03125 and mean_abs<=1e-4`；两 rank 原件均 **`within_bounds=false`**（max 2.0 超限、mean 5.13e-5 在限内），31 此前“true”为转述笔误，原件/SUMS 未回填。plog 两 rank `[ERROR]` 0 条；device 日志 3 条匹配均为 INFO（`Not set aicpu model timeout`、`halGrpAttach timeout:0ms`、`Get enable op execute timeout config ... timeout[547]s`），无 507046/507015。**判读**：仅 large 形状功能/尺度诊断；`max_abs=2.0` 在 ref≈400 处约 1 个 BF16 ulp（7 fraction bits，ulp=2），仅该 max 样本，不代表其余 509 个差异；逐元素分布/ULP、max_rel 位置、其它形状/生产/性能均未证；不称精度通过；A16/benchmark 未授权；official/CSV 未动。
+
+## 61. §15.1 KEEP_ALL 预算复核（条件式 PASS，含两处数字待统一）
+
+核 35 `e9b2c4a`（设计文档 `db6fc7b8`、manifest `59dfd432`）：
+- **算术正确**：大 per-call 137,625,600 = 115,818,496+16,850,944+4,956,160；+X=138,674,176（132.25 MiB）；resident 105,962,496（101.05 MiB）；`floor((1024−101.05−99.17)/132.25)=6`；W2/N6=8 → 1,058 MiB retained >1 GiB，确实放不下；W1/N4=5 → 693,370,880 B（661.3 MiB）retained。小 per-call 17,301,504（16.50 MiB）+X=18,350,080（17.5 MiB）；resident 327,168（0.31 MiB）；`floor((1024−1.5)/17.5)=58`；W3/N20=23 成立。X 明确为未验证预留、1 GiB 明确不是进程 RSS 保证、allocator/adapter/runtime 未计、两臂共享需相加、ABBA 进程顺序与 `max_rel_abs` 语义均已写入——32 的条件满足。
+- **两处待统一（不影响 PASS）**：①“transient about 104 MiB”实为 103,987,200 B = **99.17 MiB**（103.99 MB）；按 MiB 计 W1/N4 peak ≈ **861.5 MiB**，文中“near 866 MiB”是把 104 MB 当作 104 MiB 的保守写法。②同节仍保留旧 ~50 MiB transient 的数字：“shared W1/N3 … about 676 MiB”与“peak near 807 MiB”用的是 ~50 MiB；若按 99.17 MiB 统一，应为 ≈730 MiB 与 ≈861.5 MiB。③小 W3/N20“about 398 MiB”实为 379.5 MiB（397.9 MB），同类单位标注。④`y` 4,956,160 同时计入 per-call retained 与 transient peak，属保守重复计数，建议注明。以上均不改变“5 次大调用可放、8 次不可放”的结论。
+- 结论：**条件式 PASS**；benchmark 前需统一 transient 口径与 MB/MiB 标注；A16 未实现、设备未授权。
