@@ -295,10 +295,11 @@ separate optional stage, not mixed into the matmul comparison.
   warmups, all A15 calls, retries and auxiliary calls against the same 1 GiB/rank cap.
   If both arms run in one process they share the A15 budget; separate processes
   isolate it and reclaim at exit. Suggested bounded cells after 15.1: small W=3/N=20
-  (23 calls, about 398 MiB retained peak) in one process; large **W=1/N=4 (5 calls,
-  about 807 MiB peak including shared weight/input and transient)** per arm in
-  independent processes. Large cannot fit W2/N6 (8 calls, about 1,050 MiB retained
-  alone) once the pad input and RS output are counted.
+  (23 calls, about 400 MiB ledger estimate) in one process; large **W=1/N=4 (5 calls,
+  about 866 MiB conditional tensor+reserve estimate including resident and transient;
+  not a process-RSS guarantee)** per arm in independent processes. Large cannot fit
+  W2/N6 (8 calls, about 1,050 MiB retained alone) once the pad input and RS output
+  are counted.
 - **Production lifecycle**: a long-running service still needs executor destruction
   and workspace pooling/ownership; using flags=0 and relying on early release is not
   a solution and is not measured here.
@@ -306,9 +307,12 @@ separate optional stage, not mixed into the matmul comparison.
   comparison remains a diagnostic of this bounded cell, not a production throughput
   or precision claim. No official entry/CSV change.
 - **max_rel_abs semantics**: the denominator is `clamp_min(|reference|, 1e-12)`, so a
-  near-zero reference can produce a large value. It is not a gate; always read it
-  together with `max_error_reference` and `max_error_output`, which identify the
-  sample that produced the maximum absolute error.
+  near-zero reference can produce a large value. It is not a gate. The record does
+  not persist the position of the max_rel_abs sample: `max_error_reference/output`
+  identify the sample of the maximum **absolute** error, not necessarily the maximum
+  relative error. The A15-large-v1 `max_rel_abs=1.0` therefore cannot be located or
+  explained from the persisted record; only the max-absolute sample [203,1395]
+  (ref 400 / out 402) is identified.
 
 ### 15.1 KEEP_ALL budget from the actual retained objects
 
@@ -342,22 +346,61 @@ order; peak transient is roughly 40-60 MiB and belongs in peak RSS, not in the
 cumulative leak sum. The benchmark must not append per-iteration outputs to a list;
 if it does, those tensors become retained and must be counted.
 
+**1 GiB definition and what it counts**: 1 GiB = 2^30 B = 1,073,741,824 B per rank.
+The ledger below counts tensor allocations that are retained, the concurrent
+transient tensor peak, and a planning reserve X. It does **not** include adapter
+library mappings, CANN runtime, PyTorch/HCCL allocator overhead or fragmentation;
+those are unmeasured, so a strict process-RSS cap is not guaranteed by this ledger.
+
+**Exact byte ledger (per rank)**:
+
+| Item | Small (M128,K256,N512) | Large (M968,K8704,N5120) |
+| --- | --- | --- |
+| workspace | 17,170,432 | 115,818,496 |
+| pad input x_mrs | 65,536 | 16,850,944 |
+| RS output y | 65,536 | 4,956,160 |
+| per-call retained subtotal | 17,301,504 | 137,625,600 |
+| planning reserve X (unverified) | 1,048,576 | 1,048,576 |
+| per-call ledger | 18,350,080 | 138,674,176 |
+| resident x_n (once) | 65,024 | 16,833,536 |
+| resident weight (once) | 262,144 | 89,128,960 |
+| adapter/runtime | unmeasured | unmeasured |
+
+**Concurrent statistical temporary peak** (allocator-dependent estimate, not an
+upper-bound proof). At large shape, while `tensor_error_stats` runs, live tensors
+include `full` 9,912,320 B, BF16 `reference` 9,902,080 B, retained `y` 4,956,160 B,
+float32 `out`/`ref` views 19,804,160 B each, float32 `diff` 19,804,160 B, and one
+`pow(2)` temporary 19,804,160 B, about 104 MiB in this estimate before allocator
+overhead. Small shape is about 1.2 MiB. The benchmark must not append per-iteration
+outputs to a list; any such retention is additional.
+
+**X = 1 MiB/call is an unverified planning reserve**, not a proven descriptor/executor
+upper bound. The descriptor/executor data structure sizes were not measured and the
+executor's internal allocator is unknown, so all totals that include X are
+conditional estimates.
+
 Budget formula (per rank, with resident and transient subtracted):
 
 ```
 max_calls = floor((1 GiB - resident - transient_peak) / (per_call_retained + X))
 ```
 
-Large: resident about 101.1 MiB (x + w), transient_peak about 50 MiB,
-per_call_retained 131.255 MiB, X = 1 MiB:
-floor((1024 - 101.1 - 50) / 132.255) = 6 calls. W1/N4 = 5 calls retains 656 MiB and
-peaks near 808 MiB; W1/N5 = 6 peaks near 940 MiB (about 92%), so W1/N4 is the
-recommended large cell. Small: resident about 0.31 MiB, transient under 1 MiB,
-per_call_retained 16.5 MiB, X = 1 MiB: floor((1024-0.31-1)/17.5) = 58 calls; W3/N20
-= 23 is safe. If both arms share one process, sum the A15 retained growth and the
-A16 allocator high-water against the same cap; per-arm processes avoid the sum.
-These are code-derived values with X as an explicit upper-bound allowance, not
-measured executor/descriptor sizes.
+Large: resident 101.0 MiB (x + w), transient_peak about 104 MiB, per-call ledger
+132.25 MiB: floor((1024 - 101 - 104) / 132.25) = 6 calls. W1/N4 = 5 calls gives
+5 * 138,674,176 = 693,370,880 B (661.3 MiB) retained, plus resident 105,962,496 B
+(101.0 MiB) and transient about 104 MiB, for a **conditional tensor+reserve estimate
+near 866 MiB**. This is not a process total or RSS guarantee; adapter/runtime and
+allocator overhead are excluded. W1/N5 = 6 calls adds another 132.25 MiB and is not
+recommended. Small: resident 0.31 MiB, transient about 1.2 MiB, per-call ledger
+17.5 MiB: floor((1024 - 1.5) / 17.5) = 58 calls; W3/N20 = 23 is safe.
+
+**Process accounting**: with one fresh process per arm, each A15 process uses the
+formula above independently and process exit reclaims its retained objects; A16 has
+its own process and allocator high-water. With one shared process, sum the A15
+retained growth and the A16 allocator high-water against the same 1 GiB; the
+recommended shared cap is W1/N3 = 4 A15 calls (4 * 138,674,176 = 554,696,704 B,
+529.1 MiB retained, plus resident and transient). These are planning estimates, not
+measured process peaks.
 
 Capacity under 1 GiB/rank (1,073,741,824 B):
 
