@@ -66,6 +66,9 @@ abi11 caller and body windows, all libccl `2281deca`.
 | 11 | K-cond (6 s timeout) | `CheckRcvWorkMsg` budget expired with `sendCnt < turn` (e.g. turn > 255); text `ErrToWarn: ReadValidMsg timeout 6s... ` | 0x7d744c | `HcclCheckLogLevel(3,3)` at 0x7d7410, `tbz -> 0x7d7450`, then `IsErrorToWarn` at 0x7d7418 | w0=0x01000003, w1=2, x2=0x1614060, x3=0x1613cc8, w4=285, x5=tid | shared method; called at 0x7c7f20 in TwoStageWait among others (caller set not enumerated) | 6 s per call; no caller-loop evidence, so periodic repetition is not claimed; in a 180 s window, one event per call at most | presence: the condition held for 6 s (the loop still reached the same continuation as the success jump); absence: no 6 s expiry, or guard failed. **Not a TwoStage entry marker; an empty log cannot exclude TwoStage** |
 | 12 | K-entry (per response, not Dlog) | `PostMsg` response; `AivAicpuOpParam::PrintMsg(dest, stack string)` | 0x7d6868 | none | x0=dest, x1=&stack string built from global 0x1613c90 +704 (u16) / +706 (u8) | abi8 reports only two direct PostMsg callers (0x7c7f44/0x7c7f90), both in TwoStageWait | every PostMsg call | presence/visibility unknown: PrintMsg's body (abi11, 0x7c24e0/0x654) does not write dest +24/+44/+51, but whether it emits a Dlog and at which level is not established here |
 | 13 | K-cond (periodic consistency) | `CopyAndCheckApiMsg`, `memcmp(rMsg,msg,64)` at 0x7d6d40 unequal (after `dsb ld`); log only when the global failure counter `% 10000 == 0` (0x7d6d60–0x7d6d7c) | 0x7d6e14 | `HcclCheckLogLevel(2,3)` at 0x7d6d88 | w0=3, w1=2, x2=0x1613b80, x3=0x1613cc8, w4=207, x5=tid, x6=GetMsgSimpleStr(rMsg), x7=GetMsgSimpleStr(msg) | called from `ReadApiValidMsg` at 0x7d70e4; stage = API valid-message copy/check | only at a multiple of 10000 cumulative unequal memcmps (counter at 0x22ca000+0xe64); in 180 s only if that many occur | presence: a persistent 64 B message mismatch (the count hit a multiple of 10000); absence: fewer than 10000 cumulative mismatches or guard off — does not exclude a mismatch; **not a slot+48 valid-word comparison** |
+| 14 | K-entry (per finish call) | `WriteFinishWhenAllFinalize(turn)` writes the u64 at `[server+8]+0x5000+64*turn+8` and logs the turn plus the read-back value; text `Post finishedTurnCnt[%u].cnt = %lu.` | 0x7d6984 | `HcclCheckLogLevel(1,3)` at 0x7d6930, `tbnz -> 0x7d694c` | w0=3, w1=1, x2=0x1613f58, x3=0x1613cc8, w4=74, x5=tid, w6=turn, x7=read-back u64 | function 0x7d68ec; caller scope not enumerated | fires on each finish call, immediate | presence: the finish word was written for that turn (value printed); absence: not called or guard off; it is not a branch entry marker |
+| 15 | K-cond (run rpc error) | `RunAicpuRpcSrvLaunch` when `[ctx+12752]==0` and error-to-warn; text `ErrToWarn: Run rpc error, opIdx:%u, sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d` | 0x762098 | `[ctx+12752]==0` at 0x762008; `HcclCheckLogLevel(3,3)` at 0x762018, then `IsErrorToWarn` at 0x762020 | w0=0x01000003, w1=2, x2=0x14ee680, x3=0x14edee8, w4=539, x5=tid, x6=`[0x191fd04]` (opIdx), x7=sndCnt[0], stack sndCnt[1..3], rcvCnt[0..3] from ctx+12864..12892 | RpcSrvLaunch only | immediate when the condition holds | presence: the run-rpc error branch ran with the four send and four receive counters; absence: condition false or guard off |
+| 16 | K-cond (sqe query failure) | `MC2TraceUtils::SubmitBatchSqeInfo`; text `Query sqe info failed, stream:%u, id:%u` | 0x7aa204 | gate at 0x7aa1d0 (`tbz w0,#0,0x7aa184`; w0 source is not in the window — unknown) | w0=3, w1=2, x2=0x14f7160, x3=0x14f5b68, w4=746, x5=tid, x6=stream, x7=id | MC2Trace; caller scope not enumerated | immediate on the failure condition | presence: an sqe query failure in the MC2 trace path; absence: no such failure or guard off; **not an MC2 entry marker** |
 
 ## Resolved format strings (abi12, libccl 2281deca)
 
@@ -76,11 +79,14 @@ abi11 caller and body windows, all libccl `2281deca`.
 | 0x1613c00 | `[%s:%d] [%u]ErrToWarn: [%s]call trace: hcclRet -> %d` | x6=`ReadApiValidMsg`, x7=ret |
 | 0x1613ce0 | `[%s:%d] [%u]reset valid value %u` | `[slot+48]` |
 | 0x1613f20 | `[%s:%d] [%u]AicpuKfcRpcServer::Init addr:%u` | x6=y (printed as %u) |
+| 0x1613f58 | `[%s:%d] [%u]Post finishedTurnCnt[%u].cnt = %lu.` | x6=turn, x7=read-back u64 |
 | 0x1614060 | `[%s:%d] [%u]ErrToWarn: ReadValidMsg timeout 6s... ` | none |
 | 0x1614408 | `[%s:%d] [%u][AicpuKfcRpcServer][ReadAddrMsg] ReadValidMsg[%u] timeout %lus` | x6=turn, x7=20 |
 | 0x14eb1b0 | `[%s:%d] [%u]ErrToWarn: args is null.` | none |
 | 0x14ee650 | `[%s:%d] [%u][NsRecovery][MC2] Suspending` | none |
 | 0x14ee728 | `[%s:%d] [%u]ErrToWarn: Failed to run aicpu server, MC2 opIdx:%u` | x6=`[0x191fd04]` |
+| 0x14ee680 | `[%s:%d] [%u]ErrToWarn: Run rpc error, opIdx:%u, sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d` | x6=opIdx, x7..stack = sndCnt[0..3], rcvCnt[0..3] |
+| 0x14f7160 | `[%s:%d] [%u]Query sqe info failed, stream:%u, id:%u` | x6=stream, x7=id |
 | 0x14f8290 | `[%s:%d] [%u]start to read the [%u] msg` | x6=`[ctx+12756]` |
 
 File strings: 0x1613cc8 `aicpu_kfc_rpc_server.cc`; 0x14eb198
@@ -93,12 +99,14 @@ text; the OneStage-return-22 site prints `[NsRecovery][MC2] Suspending` (a recov
 semantics clue, not a OneStage label); the 6 s site prints `ReadValidMsg timeout
 6s...` (the function is `CheckRcvWorkMsg`).
 
-Unassigned strings present in the dumped ranges (text known, call site not in the
-audited marker set; do not assign): 0x14ee680 `ErrToWarn: Run rpc error, opIdx:%u,
-sndCnt:%d %d %d %d, rcvCnt:%d %d %d %d`; 0x1613f58 `[%s:%d] [%u]Post
-finishedTurnCnt[%u].cnt = %lu.`; 0x1614098 `ReadValidMsg timeout 6s... `
-(non-ErrToWarn variant). The former "unassigned" 0x1613b80 is now assigned to #13
-inside `CopyAndCheckApiMsg`.
+The three former candidates are now assigned — 0x1613f58 → #14
+(WriteFinishWhenAllFinalize 0x7d6984), 0x14ee680 → #15 (RunAicpuRpcSrvLaunch
+0x762098), 0x14f7160 → #16 (MC2TraceUtils SubmitBatchSqeInfo 0x7aa204). One string
+in the dumped ranges remains **unassigned**: 0x1614098 `[%s:%d] [%u]ReadValidMsg
+timeout 6s... ` (the non-ErrToWarn variant; its site is not in the audited windows).
+abi13's xref model covers ADRP+ADD materialization only (no movz/movk, no 8-byte
+pointers, no LDR-literal); the "unique site" claim is within that model and the
+audited windows, not a formal whole-library proof.
 
 ## Positive-control rule for any observation run
 
@@ -143,8 +151,10 @@ MC2 (33 §73).
   and the earlier text-based attribution is retracted. Treat #2 as a
   suspend/recovery status marker, not an OneStage marker, and not an entry marker.
   No distinct "Unfold" window or marker exists in the delivered material.
-- **MC2 / CommKfc**: not audited here (no MC2Trace/CommKfc windows in the marker
-  set); 33's §73 covers it. Do not fill this row with a wish.
+- **MC2 / CommKfc**: #16 is a conditional `MC2TraceUtils::SubmitBatchSqeInfo`
+  query-failure log (site 0x7aa1f4/0x7aa204, `stream`/`id` fields); it is **not** an
+  MC2 entry marker, and the MC2/CommKfc path otherwise remains unaudited here
+  (33's §73). Do not fill this row with a wish.
 
 ## Minimal rodata request (one dump, no full scan)
 
