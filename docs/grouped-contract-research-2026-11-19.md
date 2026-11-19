@@ -2070,3 +2070,30 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - CPU fixtures F1 parent-exit-first、F2 exit-delay、F3 zombie、F4 sampling race、F5 persistent non-Z、F6 protected/baseline/PID-reuse + 唯一 restore。
 
 **状态**：cleanup 属 harness 恢复门问题，不是算子根因证据；D-state 未证；32/35 结论一致。标记 grep 仍待 31；无设备/产品改动/新 GO。
+
+## 115. attempt2 标记原文判读（bce9ce2 / 1aae8f57）
+
+**正标记（92 文件全量 grep）**：
+- `AicpuKfcRpcServer::Init addr` **2/2**：rank0 debug/device-0 1354310 @14:49:06.259Z、rank1 debug/device-1 1354311 @14:49:06.258Z；值为 `2613051392 = 0x9BC00000`（两 rank 相同，low32 of y）。
+- `KFCtaskAndTiling` **4/4**、`AivAicpuOpParam` **4/4**：debug/run device-0/1 各一，ring buffer 参数 192/176 B（KFCtask）、792/776 B（AivParam，bufferSize 128），时间 14:49:06.25x。
+- `RunAicpuKfcSrvLaunch` **8/6**：plog `[indv_mc2_aicpu.cpp:388][NnopbasePrepareMC2Params] OpName:[GroupedMatMulAllReduce_0] MC2 params are soName[libccl_kernel.so], apiName[GroupedMatMulAllReduceMc2AicpuKernel], aicpuKernelName[RunAicpuKfcSrvLaunch]`；首行 14:49:06.285.921。
+- `stream_id=47` **451/8**、`task_id=` **761/8**：14:49:05.110 → 14:52:06.287。
+
+**关键任务链（runtime，原文）**：
+- 14:49:04.6 两 device 分配 `stream_id=47`；14:49:06.286 两 rank `task_id=12 task_type=15(NOTIFY_RECORD)`（IPC notify，notify_id 2387/2437，remote phy 14/15）→ `task_id=13 task_type=0(KERNEL_AICORE)`（ConstructFftsMixSqe，taskResId 12/head12/tail14）。
+- **14:52:06.286 两 rank `SynchronizeExecutedTask: report three minutes timeout! stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1`**。
+- 另见 stream48 `task_id=2/3 task_type=1(KERNEL_AICPU) kernel_type=2` 于 14:49:03.86 提交并 `TaskFinished`（早期 AICPU task，可能是 init/launch，不与 KFC server 直接对应，需再核）。
+
+**0 命中（缺测，不排路）**：`start to read the`、`reset valid value`、`ReadValidMsg[`、`ReadValidMsg timeout 6s`、`Check msg equal failed`、`Post finishedTurnCnt`、`Run rpc error`、`NsRecovery][MC2`、`ReadAddrMsg`、`TwoStage`、`PostMsg`、`507046`。Init 标记 guard (0,3) 已触发，证明该级别日志生效；其它标记 guard 不同，0 不代表路径不存在。
+
+**runtime 可证据边界**：
+- 已证：Grouped 以 MC2 AICPU 形态进入 `RunAicpuKfcSrvLaunch`；两 rank 都执行 `AicpuKfcRpcServer::Init`（4 参，y low32=0x9BC00000）；KFCtask/AivParam ring 建立；AICORE task13 提交后 3 min 未完成。
+- 未证：Init4 零/非零分支（P2）、j/T（F4/F5）、server 对象（F11）、f31bc（F10）、getter 值（F8/F9）、PostMsg/TwoStage（P1/P4）、HcclMsg+48（F12）；`RunAicpuRpcSrvLaunch` 已进入，但其后子分支（API/TwoStage/OneStage/Unfold）仍无正向标记。
+- 结论边界：挂起发生在 **AICORE task13 提交后、完成前**；AICPU KFC server 已 Init，但无法从现有标记确定它在等 API 消息、work 消息、算法执行还是 notify 握手；无 507046，不称 retcode 根因。
+
+**下一最小只读分析（31，一次合并）**：
+1. 从 archive 提取 AICPU KFC 任务自身：`RunAicpuKfcSrvLaunch`、`InternalLaunchWithKernelAndArgs`（kernel_type=2）、`TaskFinished`、`task_type=1(KERNEL_AICPU)` 在 14:49:03–14:49:08 与 14:52:06 前后的完整上下文，确定 AICPU KFC task id/stream 及是否完成。
+2. 提取 task13 周边：`notify_record`/`notify_wait`、`ConstructFftsMixSqe`、`TaskFinished`、`RecycleTask`、`pendingNum`、`sqHead` 在 14:49:06–14:52:06 的状态行，判断 AICORE 在等哪个 notify/任务。
+3. grep `GetPreparePosition|GetTaskType|AicpuKfcRpcServer|WaitTaskFinish|RunConcreteAlgorithm|AicpuCcOpExe` 是否任何行；无则记缺测。
+4. 仅静态补：`AicpuRunRpcServerForMC2/V2` 是否调用 `RunAicpuRpcSrvLaunch`（解释 Init4 标记的路径归属）。
+- 不新增运行/开关/设备；不从 0 命中排路；root cause 仍 unresolved。
