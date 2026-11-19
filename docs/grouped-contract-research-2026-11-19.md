@@ -1957,3 +1957,18 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 - 旧 canonical archive 仍保留；attempt2 命名是否最终采用、prestart1 如何封存，待 31 提交文本。
 
 **要求（31）**：完成 A/B 修改 → 重生成 23 文件 SUMS → commit/push → 32/35 按新 commit 复审；wrapper 必须强制 begin/identity 失败即停，archive 必须与旧失败目录分离/先保全；旧空 archive 留证。**当前无 GO/设备；root cause 待真 v2 实测。**
+
+## 110. v2 加固重冻 3c4bdc5 / 7f24f88b（24/24）：wrapper begin 硬门与 prestart1 保全
+
+**包**：commit `3c4bdc5`，SUMS `7f24f88b…`（24 行），本地 `shasum -c` **rc=0，24/24 OK**；远端 execution-v2 24/24（31 报）。prestart1 证据 SUMS `73963a05…`。
+
+**修复**：
+- wrapper `run-h11-observe-v2.sh`：activate→PATH→caller torchrun resolve→`--help`→**preflight**→**`collect-raw.sh begin`（ARCH=…attempt2）失败 exit 6**→`exec window --execute`；不再依赖人工。
+- collect begin metadata fail-closed：identity 从 `$SRC_ID` 读+`/proc` 校验+tmp→mv；health ready/clef；info config=s1；29531 4 行 FREE；plan 可解析且 `status=plan_not_executed`；sidecar/body 可解析；begin/end need_identity。
+- CPU smoke：good rc0（888B/pid 1347086/start 401212026/boot 393ecc15）；starttime 不符 rc1 无 identity；已退出 pid 999999 rc1 无 identity；plan 状态非法 rc1。
+- prestart1 封存：远端原 `archive-h11-observe-v2` 未删未改（0B identity 保留）；独立快照 `archive-h11-observe-v2-prestart1`（SUMS 4c370713…）；仓库 `h11-observe-v2-prestart1/`（identity.json.zero e3b0c442…、START 空标记、prestart1-live-facts、远端 SUMS 副本），SUMS `73963a05`；canonical 采集改用 attempt2。
+- 不变：plan `9c2936c2`、identity 1347086/401212026 五 PID、helper `68dc9e2c`、冻结产品未变；四 fresh 路径仍 ABSENT；无 window/stop/torchrun/设备动作。
+
+**审查注意（顺序口径）**：32/35 的最小修复措辞为“preflight **之前**同 shell begin rc0 硬门”；当前 wrapper 实际顺序是 **preflight → begin → exec**（仍在 stop/window 前，begin 失败 exit6）。若要求字面“begin before preflight”，需 31 调整顺序；若只要求“停服前 begin 成功”，当前满足。请 32/35 明确口径后决定是否需再改。
+
+**状态**：A/B 实质修复已落盘；旧 GO 挂起，20 需对尚未发生的单次 window 发绑定新包的明确续行；**无新 GO/设备**；root cause 待真 v2 实测。
