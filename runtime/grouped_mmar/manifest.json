@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record-shape/error-stats/torch-direct/F821/arm_output tests (30)",
-      "sha256": "9abfbcab2c51b89d3ad70cc659cb0586fa9d9fceeee43b27b3cc7aa06abcc4d4",
-      "bytes": 23441
+      "sha256": "23409fcb5f9531310176ba97d7f7670eea7351106a1391e3e38f268b3e405284",
+      "bytes": 23525
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "f281fdf61abd462978b2d077ef1174a22379330bdc30b236860e5c03243d5506",
-      "bytes": 36931
+      "sha256": "483c871c8e397653d1b9fd14bd756cc30bf80e55abd92035785c3e79b4acb951",
+      "bytes": 37188
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -423,7 +423,7 @@
       "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
       "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
     },
-    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "9abfbcab", "run_probe": "8e308804", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)"},
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "23409fcb", "run_probe": "8e308804", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)"},
     "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
     "linux_fixture_result": {
       "version_under_test": "a00edad (window 9a31091b)",
@@ -472,8 +472,8 @@
       "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
       "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
-      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields with torch-direct tests; NOT the executed v3 tuple", "run_probe.py": "8e308804", "test_probe_cpu.py": "9abfbcab", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
-      "torch_direct_test": "TensorErrorStatsTest runs tensor_error_stats and a15_record(stats=tensor_error_stats, equal=torch.equal) on small CPU tensors (normal, zero reference, None/wrong shape) and cross-checks the list helper; skipped when torch is absent (macOS) and executed by 31 on Linux",
+      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields with torch-direct tests; NOT the executed v3 tuple", "run_probe.py": "8e308804", "test_probe_cpu.py": "23409fcb", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
+      "torch_direct_test": "TensorErrorStatsTest runs tensor_error_stats and a15_record(stats=tensor_error_stats, equal=torch.equal) on small CPU tensors (normal, zero reference, None/wrong shape) and cross-checks the list helper; float fields use assertAlmostEqual(delta=1e-5) because torch float32 accumulation differs from the double helper. Skipped when torch is absent (macOS); on the Linux venv the suite must first source activate_env.sh, otherwise torch_npu's entry point tries to load CANN and segfaults (rc 139, environment precondition, not a product defect)",
       "error_stats": "a15_record's stats callback records max_abs/mean_abs/bit_equal plus ref_abs_max, out_abs_max, diff_nonzero_count, diff_total_count, max_error_index/position and values, max_rel_abs, and relative_l2 = ||out-ref||_2 / max(||ref||_2, 1e-12); it also stores relative_l2_denominator and relative_l2_zero_reference. These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
       "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
       "v3_result": {
