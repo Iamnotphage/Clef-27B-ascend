@@ -154,3 +154,29 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 （MatMulAllReduce 头/文档事实备查：x1/x2/bias/output 同为 BF16 或 FP16，bias shape `(n)` 可空；示例 streamMode=1、commTurn=0；V2 增 x3，V3 增 x3+commMode。）
 
 **结案**：GroupedMatMulAllReduce 的 MC2 AICPU/KFC 路径在本机 A3（Ascend910_9382）/CANN 9.2.1 因 `mc2_server.tar.gz` 在 chip:5 不被加载而环境阻塞；A12 官方样例与 v4r1 同因；H1–H12 对“挂起”结案（非 binding/生命周期/comm 创建缺陷）。官方 aa3e/f810 默认、入口、指标与 CSV 不变；无 PR；服务保持 aa3e/s1（root 1301295）健康在线。关联记录：31 mc2-support `e33d5f7`、32 `34ccde7`、35 `98fc132`/`d4b600c`、33 `2616628`/`334c67f`/`049b5ea`/`d052acd`/`8b584d1`。
+
+## 12. 反证式收窄：mc2_server 依赖 supported_but_unproven（2026-11-19，20 要求）
+
+> 第 11 节的操作性结案仅基于 loader 拒绝证据；20/32 已将其收窄为“environment first-cause clue / 服务依赖与合法控制待核”（32 `0be6809`）。本节保留为修订轨迹与新增证据，旧文本不删。
+
+**支持“Grouped 依赖被拒包”的证据**：`Mc2ServerKernel` 实现只存在于 `mc2_server.tar.gz` 内（磁盘无 libmc2_server.so）；Grouped kernel 源码含 `rac_server.h`（HcclServer + AivAicpuOpParam/MC2 buffer 协议），说明其期望一个 AICPU server 对接；libccl_kernel.so 无 `Mc2ServerKernel`/`RacServer` 符号。
+
+**削弱“必要依赖”的证据（新增）**：
+
+- Grouped tiling（f5703e4 `grouped_mat_mul_all_reduce_tiling.cpp`）明确设置 `commType=HCCL_CMD_ALLREDUCE`、`taskType=KfcTaskType::KFC_TASK_HCC_TASK_DELIVER`、`funID=ALL_REDUCE_FUNC_ID`、`commAlg=0`、`commOrder=1`；AICPU 侧对应 KFC 任务。
+- A12 device 日志只显示从 `libccl_kernel.so` 成功加载 `RunAicpuKfcResInit`/`RunAicpuKfcSrvLaunch` 并完成 `AicpuRpcResInit`；**无任何 `Mc2ServerKernel`/`HcclLaunchAicpuKernel`/`libmc2_server` 的加载、请求或失败行**。
+- 31 磁盘/符号对照：全 CANN 仅 `libmc2_server.json` 引用 `Mc2ServerKernel`，op-info/binary_info/op 配置均无引用；libccl_kernel.so 导出 46 个 KFC/HCCL kernel 与 MC2 机制符号（`HcomMc2AiCpuStreamAllocAndGet`、`HcclMc2ComOpResCtx` 等）。
+- 未解释线索：plog `LoadSysOpKernel: cannot find aicpu packages`（device0/1），待 31 核是否正常。
+
+**判定**：`dependency_status = supported_but_unproven`。被拒包是环境首因线索，但“包被拒 → Grouped 必挂”的必要性未证；不能以“包被拒 + op 挂起”单独结案。证明所需：`libccl_kernel.so`/（可解时）libmc2_server 符号映射、Grouped 任务类型到 server 的对应、MatmulReduceScatter V1 kernel `.o` 符号串、A14 控制；不建议改白名单强载。
+
+**A14 MatmulReduceScatter V1 事实（待 31 补本机头/kernel）**：
+
+- 本机 A3 op-info 注册 `MatmulReduceScatter`（x1/x2 f16/bf16、bias optional、y 同、ND、`mc2.ctx=mc2_context_0`）与 `MatmulReduceScatterV2`。
+- 上游头（f5703e4 `mc2/matmul_reduce_scatter/op_api/aclnn_matmul_reduce_scatter.h`，SHA `6e49c20f…`，3,158 B）：`GetWorkspaceSize(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`；bias 可空、A2/A3 非 0 不支持；output `(m/rank_size,n)`；x1 `(m,k)`、x2 `(k,n)`/转置 `(n,k)`；dtype 全链一致；sum/commTurn 0/streamMode 1；**m 必须为 rank_size 整数倍**；2/4/8 卡、hccs all-mesh、同通信域；默认非确定性。
+- 样例：`mc2/matmul_reduce_scatter/examples/test_aclnn_matmul_reduce_scatter.cpp`，SHA `0996d6f4…`，8,873 B。
+- kernel：arch22 full-mesh，`GetHcclContext<HCCL_GROUP_ID_0>`、mc2InitTiling/mc2CcTiling、KFCNotify/KFCMsgBody → 与 Grouped 同 KFC 家族；是否依赖 mc2_server 未证。
+- 建议形状：小合法 M=128/K=256/N=512；v4r1-like 用 **M=968**（967 非 rank2 整数倍）、K=8704、N=5120，输出 (484,5120)；判据同 A12。
+- 兼容提示：V1 文档要求驱动/固件与 CANN 配套（≥8.0.RC2）；本机 Software 26.1.1 / Firmware 9.0.0.9.220、CANN 9.2.1 `compatible_version_fw=[7.0.0,9.9.9]`；无本机官方矩阵，待核不下结论。
+
+**A12-H6 workspace 约定**：GWS 仅返回大小、调用方 aclrtMalloc；官方样例不初始化。Grouped kernel `GetUserWorkspace(workspace)` 仅作 GEMM scratch；MC2 消息区在 `GetHcclContext<0>()->WorkSpace`。无证据要求预置/必须未初始化 → memset 清零在契约上安全。建议同 stream `aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream)`，紧随 aclrtMalloc、launch 前；同流顺序足够，勿额外 sync（第二变量）。签名（待 31 用本机 `acl/acl_rt.h` 确认）：`aclrtMemset(void*, size_t maxCount, int32_t value, size_t count)`；`aclrtMemsetAsync(void*, size_t maxCount, int32_t value, size_t count, aclrtStream)`；成功 0。H6 未被 A12 证伪；仅 memset 的派生仍是单变量。
