@@ -1,0 +1,13 @@
+candidate 8f4b843 (on 7d371a1), window d2576c63, test 5840a0d3
+command: cd /tmp/cpu8f4b843-remote && python3 -m unittest -v test_supervised_window_cpu
+python 3.10.12; Linux aarch64
+result: Ran 50 tests in 18.104s -> OK; unittest_rc=0; 50 pass, 0 fail, 0 skip
+required subset:
+- AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned: ok
+- AttributedProcessTest.test_daemon_reparents_to_window_only_while_subreaper: ok
+- AttributedTargetsTest.test_gate_without_settle_uses_real_proc_attribution: ok
+- AttributedTargetsTest.test_gate_with_settle_table_uses_snapshot_without_real_read: ok
+post-run leftovers: none (os.fork|time.sleep(30/60) grep empty)
+notes: ResourceWarnings for unclosed temp restore.log / fixture pipes are test noise; no torch/torchrun/NPU;
+fake d0_stop/npu-smi/HTTP boundaries + temp HTTP/manifest only.
+scope: CPU regression only; default 30 s settle does not prove attempt2 exit-delay coverage; attempt2 not claimed fixed.
