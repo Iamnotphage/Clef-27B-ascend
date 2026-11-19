@@ -972,6 +972,16 @@
 - **32 判读**：可确证“Grouped 进入 MC2 AICPU KFC 路径；stream47 task13 从未完成；runtime 在 14:52:06 报三分钟超时 pendingNum=1；python sync 在超时后仍卡约 53 s 直至外部 SIGTERM”。这**定位了挂起点**，但**不能证明**超时后 sync 为何不返回、也不能单独给出 root cause；不新增因果断言。
 - 服务与包保持原样（root 1355077 / ppid 1355076 / health ready）；无新 window、无设备、无 GO。
 
+## 8.126 8f4b843 增量审：gate 修复与 daemon exact-PID（2026-11-19，无 GO）
+
+- **固定件**：35 commit **8f4b843**（在 7d371a1 之上）；window **d2576c63…（53,078 B）**、test **5840a0d3…（54,483 B）**；vs base 1f780bf8/228150e4 **+107/−10、+294/−9**，vs 7d371a1 **+8/−2、+60/−9**，均逐字节核对；仅 README/manifest/window/test 4 文件。v2 包 8ecf8f9 SUMS 仍 **bed3a6e6**，未改。
+- **gate 修复（正确）**：`settle_table = table` 保存原参数；`settle_table is not None` 时 `attributed_survivors(..., table=settle_table, reader=settle_table.get)`；否则 `attributed_survivors(registry, child_pid)` 走 base 的真实 `_scan_direct`。无 settle 路径恢复第二次独立 `/proc` 读取，mock `scan()` 不能再隐藏存活 descendant；settle 路径仍同一快照。`reader` 旧变量已移除。
+- **新回归（有效）**：①无 settle 表、`scan()={}`、`_scan_direct` 含 777 → gate `allow=False/blocked_probe_residual` 且 attributed 含 777；②显式 settle 表 `{}` + `settle={'clean':True}`、`_scan_direct/_read_proc` 置 AssertionError → gate `allow=True/restore`，证明不读真实 `/proc`。两条均本地通过。
+- **daemon 清理（正确）**：double-fork 的孙进程 pid ≠ PGID（PGID 为 setsid 子进程），改为 `_read_proc` 后 `os.kill(exact pid, SIGKILL)` + `_reap`；另一处 double-fork fake_restore 的 manifest pid 是 setsid 子进程本身（pgid=pid），killpg 本就有效，无需改。**非阻断**：`kill_exact` 只验存在、未比对 starttime；测试生命期内 PID 复用概率极低，若要严格可加 starttime 比对。
+- **本地测试**：macOS `Ran 50 tests, OK (skipped=7)`（43 pass + 7 Linux-only skip），原 48 项全过，新增 2 条 gate 回归通过。
+- **manifest/README（符合 20 裁定）**：files 记本分支实际新字节 SHA 并标 `candidate: true`；`frozen_baseline` 明示 1f780bf8/228150e4 为远端 v2/stage 历史冻结基线、not adopted/未部署；diff 统计已改为 +107/−10、+294/−9。
+- **结论**：8f4b843 **代码/fixture 增量 PASS**；整体仍 **NOT READY**，待 31 在 Linux 跑全量 50（0 skip），确认 orphan 测试转绿、daemon 无残留后方可 readiness。默认 30 s 不覆盖 attempt2 退出延迟的 caveat 不变；不声称修复 attempt2。无设备、无新 GO、v2 包未改。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
