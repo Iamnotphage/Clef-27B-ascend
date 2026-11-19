@@ -1,0 +1,48 @@
+libccl_kernel.so SHA256=2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c (checked before extraction)
+命令：nm -D -S -n；objdump -d 指定区间；python3 字节级 BL/B 扫描（仅 .text）。
+
+符号边界（nm）
+- 0x7ca220 size 0x80c  TryRunRpcServerOneStageWait(AicpuComContext*, AicpuKfcRpcServer&)
+- 0x7d82e8 size 0x19c  CheckRcvAddrMsg(AivAicpuOpParam*, j)   ← line298 所在重载
+- 0x7d7624 size 0x144  CheckRcvAddrMsg(HcclMsg*, j)          ← 另一个重载，本包不涉及
+- 0x7d8000 size 0x2e8  RcvMsg(AivAicpuOpParam*, j, h)
+
+① OneStageWait entry..+0x150（0x7ca220–0x7ca370）
+- 序言：sp-=0x70；x21=arg0(ctx)@0x7ca244；x22=arg1(RpcServer)@0x7ca248；
+  x20=ctx+0xF3000+0x1E0=ctx+0xF31E0（DfxExtendInfo*）@0x7ca238/0x7ca23c；
+  x23=ctx+0xF0000@0x7ca250；canary 取自 0x191b000+2184，存 [sp,#40]。
+- line551 前条件：0x7ca298 `mov w1,#3; mov w0,#1; bl HcclCheckLogLevel`，0x7ca2a4 `tbz w0,#0 → 0x7ca264`（不打印）。
+  首次进入 line551 块由 0x7ca260 `b 0x7ca298` 直接到达；后续由 0x7ca290 `b.ne 0x7ca468` 跳过该块。
+- 打印块：syscall(178) 取 tid→x5@0x7ca2ac-0x7ca2b4；file x3=0x14fa618@0x7ca2b8/0x7ca2c0；
+  fmt x2=0x14fa9c0@0x7ca2bc/0x7ca2c4；x6=[ctx+0xF0000+0x3208]@0x7ca2b0/0x7ca2c8；w4=551；w0=3,w1=1；
+  bl DlogRecord@0x7ca2d8。
+- 返回路径：0x7ca338 w19=4 起进入尾声；函数体到 0x7caa2c（size 0x80c），**+0x150 之后未覆盖**（记未覆盖）。
+- 与“round”相关：本窗口内 line553 块（fmt 0x14fa9e8, w4=553）出现在 0x7ca30c-0x7ca334；
+  round 计数/重试谓词在窗口内仅见 [ctx+0xF3200]==3 与 TryRestart* 分支；更后路径未覆盖。
+
+② CheckRcvAddrMsg(Aiv) entry..+0x1a0（0x7d82e8–0x7d8488，函数 size 0x19c → 实际覆盖整函数）
+- 序言：x19=arg0(this, AicpuKfcRpcServer*)@0x7d8300；x20=arg1(param)@0x7d8304；w21=arg2@0x7d8310。
+- line298 块条件：0x7d8320 `mov w1,#3; mov w0,#1; bl HcclCheckLogLevel`；0x7d8328 `tbnz w0,#0 → 0x7d83e4`（日志块）。
+- 日志块：syscall(178) tid→x5；x1=[x19,#816]（server+816 指针）；file x3=0x1613cc8=（base 0x1613c90+0x38）；
+  fmt x2=0x1614250=（base+0x5c0）；w4=298；x6=[x1,#80]；w0=3,w1=1；bl Dlog@0x7d8414；随后 b 0x7d832c（正常路径）。
+- 另一分支 0x7d8438 为 w4=305/fmt base+0x5e8，非本次目标。
+
+③ RcvMsg 序言 0x7d8000–0x7d80f0（与 7b99846 的 0x7d80f0–0x7d8180 日志窗口相接）
+- 序言：sp-=0x90；this 存 [sp,#40]@0x7d8010；param [sp,#32]@0x7d8014；w2 [sp,#28]；w3 [sp,#27]；
+  canary [sp,#104]@0x7d802c；x19 [sp,#128]@0x7d800c。
+- line121 gate：0x7d80cc `mov w1,#3; mov w0,#0; bl HcclCheckLogLevel`；0x7d80ec `b.eq 0x7d8140`（跳过日志）。
+  落穿即进入旧窗口 0x7d80f0：syscall(178) tid→x5；x6=[[sp,#40]+800]+1；x7=[[[sp,#40]+816]+80]；
+  fmt 0x1613c38、file 0x1613cc8、w4=121、w0=3,w1=0；bl Dlog@0x7d813c。
+- 连接点明确：gate（0x7d80cc-0x7d80ec）→ 旧窗口起点 0x7d80f0 → Dlog 0x7d813c；未扩全函数。
+
+直接 BL/B 调用者（仅 .text 扫描，目标为函数入口地址）
+- TryRunRpcServerOneStageWait @0x7ca220: 0
+- CheckRcvAddrMsg(Aiv) @0x7d82e8: 0
+- RcvMsg(Aiv,j,h) @0x7d8000: 0
+PLT 覆盖：.plt 范围内找到 TryRunRpcServerOneStageWait@plt 0x29c040 与 CheckRcvAddrMsg(Aiv)@plt 0x297570；
+RcvMsg 无 PLT stub。经 PLT/间接/函数指针/dlsym 的调用未枚举；**0 直接命中不外推“无调用”**。
+
+范围与未覆盖
+- 仅上述三段 + 三入口直接调用扫描；未复制整 so、未扩全库证明。
+- OneStageWait 仅覆盖到 +0x150，其后未覆盖；CheckRcvAddrMsg(Aiv) 覆盖全函数；RcvMsg 仅序言+旧窗口连接。
+- 未做运行日志与新 fmt 的进一步绑定；服务未接触。

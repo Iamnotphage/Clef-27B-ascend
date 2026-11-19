@@ -1,0 +1,262 @@
+=== OneStageWait entry..+0x150 ===
+Disassembly of section .text:
+
+00000000007ca220 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base>:
+  7ca220:	d101c3ff 	sub	sp, sp, #0x70
+  7ca224:	b0008a82 	adrp	x2, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7ca228:	f9444442 	ldr	x2, [x2, #2184]
+  7ca22c:	a9037bfd 	stp	x29, x30, [sp, #48]
+  7ca230:	9100c3fd 	add	x29, sp, #0x30
+  7ca234:	a90453f3 	stp	x19, x20, [sp, #64]
+  7ca238:	9143cc14 	add	x20, x0, #0xf3, lsl #12
+  7ca23c:	91078294 	add	x20, x20, #0x1e0
+  7ca240:	a9055bf5 	stp	x21, x22, [sp, #80]
+  7ca244:	aa0003f5 	mov	x21, x0
+  7ca248:	aa0103f6 	mov	x22, x1
+  7ca24c:	f90033f7 	str	x23, [sp, #96]
+  7ca250:	9143c017 	add	x23, x0, #0xf0, lsl #12
+  7ca254:	f9400040 	ldr	x0, [x2]
+  7ca258:	f90017e0 	str	x0, [sp, #40]
+  7ca25c:	d2800000 	mov	x0, #0x0                   	// #0
+  7ca260:	1400000e 	b	7ca298 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x78>
+  7ca264:	aa1403e0 	mov	x0, x20
+  7ca268:	97eaf5de 	bl	2879e0 <_ZN3dfx19DfxExtendInfoHelper22TryRestartTooManyTimesERK13DfxExtendInfo@plt>
+  7ca26c:	370003e0 	tbnz	w0, #0, 7ca2e8 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0xc8>
+  7ca270:	aa1603e1 	mov	x1, x22
+  7ca274:	aa1503e0 	mov	x0, x21
+  7ca278:	97eb1722 	bl	28ff00 <_ZN25AicpuKfcDeprecatedProcess24RunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@plt>
+  7ca27c:	2a0003f3 	mov	w19, w0
+  7ca280:	340007c0 	cbz	w0, 7ca378 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x158>
+  7ca284:	f95902e0 	ldr	x0, [x23, #12800]
+  7ca288:	f1000c1f 	cmp	x0, #0x3
+  7ca28c:	aa1403e0 	mov	x0, x20
+  7ca290:	54000ec1 	b.ne	7ca468 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x248>  // b.any
+  7ca294:	97eae0f7 	bl	282670 <_ZN3dfx19DfxExtendInfoHelper18TryRestartOnceMoreER13DfxExtendInfo@plt>
+  7ca298:	52800061 	mov	w1, #0x3                   	// #3
+  7ca29c:	52800020 	mov	w0, #0x1                   	// #1
+  7ca2a0:	97eb090c 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7ca2a4:	3607fe00 	tbz	w0, #0, 7ca264 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x44>
+  7ca2a8:	d2801640 	mov	x0, #0xb2                  	// #178
+  7ca2ac:	97eb05d5 	bl	28ba00 <syscall@plt>
+  7ca2b0:	9143c2a1 	add	x1, x21, #0xf0, lsl #12
+  7ca2b4:	aa0003e5 	mov	x5, x0
+  7ca2b8:	90006983 	adrp	x3, 14fa000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xf094>
+  7ca2bc:	90006982 	adrp	x2, 14fa000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xf094>
+  7ca2c0:	91186063 	add	x3, x3, #0x618
+  7ca2c4:	91270042 	add	x2, x2, #0x9c0
+  7ca2c8:	b9720826 	ldr	w6, [x1, #12808]
+  7ca2cc:	528044e4 	mov	w4, #0x227                 	// #551
+  7ca2d0:	52800021 	mov	w1, #0x1                   	// #1
+  7ca2d4:	52800060 	mov	w0, #0x3                   	// #3
+  7ca2d8:	97eb3f86 	bl	29a0f0 <DlogRecord@plt>
+  7ca2dc:	aa1403e0 	mov	x0, x20
+  7ca2e0:	97eaf5c0 	bl	2879e0 <_ZN3dfx19DfxExtendInfoHelper22TryRestartTooManyTimesERK13DfxExtendInfo@plt>
+  7ca2e4:	3607fc60 	tbz	w0, #0, 7ca270 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x50>
+  7ca2e8:	52800061 	mov	w1, #0x3                   	// #3
+  7ca2ec:	2a0103e0 	mov	w0, w1
+  7ca2f0:	97eb08f8 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7ca2f4:	36000220 	tbz	w0, #0, 7ca338 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x118>
+  7ca2f8:	97eb109e 	bl	28e570 <_Z13IsErrorToWarnv@plt>
+  7ca2fc:	36001c60 	tbz	w0, #0, 7ca688 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x468>
+  7ca300:	9143c2b5 	add	x21, x21, #0xf0, lsl #12
+  7ca304:	d2801640 	mov	x0, #0xb2                  	// #178
+  7ca308:	97eb05be 	bl	28ba00 <syscall@plt>
+  7ca30c:	aa0003e5 	mov	x5, x0
+  7ca310:	52800060 	mov	w0, #0x3                   	// #3
+  7ca314:	90006983 	adrp	x3, 14fa000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xf094>
+  7ca318:	b9720ea6 	ldr	w6, [x21, #12812]
+  7ca31c:	90006982 	adrp	x2, 14fa000 <_ZN15ChannelAicpuMgr6ResumeEP18HcclChannelUrmaRes@@Base+0xf094>
+  7ca320:	91186063 	add	x3, x3, #0x618
+  7ca324:	9127a042 	add	x2, x2, #0x9e8
+  7ca328:	72a02000 	movk	w0, #0x100, lsl #16
+  7ca32c:	52804524 	mov	w4, #0x229                 	// #553
+  7ca330:	52800041 	mov	w1, #0x2                   	// #2
+  7ca334:	97eb3f6f 	bl	29a0f0 <DlogRecord@plt>
+  7ca338:	52800093 	mov	w19, #0x4                   	// #4
+  7ca33c:	d503201f 	nop
+  7ca340:	b0008a80 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7ca344:	f9444400 	ldr	x0, [x0, #2184]
+  7ca348:	f94017e2 	ldr	x2, [sp, #40]
+  7ca34c:	f9400001 	ldr	x1, [x0]
+  7ca350:	eb010042 	subs	x2, x2, x1
+  7ca354:	d2800001 	mov	x1, #0x0                   	// #0
+  7ca358:	54003601 	b.ne	7caa18 <_ZN25AicpuKfcDeprecatedProcess27TryRunRpcServerOneStageWaitEP15AicpuComContextR17AicpuKfcRpcServer@@Base+0x7f8>  // b.any
+  7ca35c:	f94033f7 	ldr	x23, [sp, #96]
+  7ca360:	2a1303e0 	mov	w0, w19
+  7ca364:	a9437bfd 	ldp	x29, x30, [sp, #48]
+  7ca368:	a94453f3 	ldp	x19, x20, [sp, #64]
+  7ca36c:	a9455bf5 	ldp	x21, x22, [sp, #80]
+=== CheckRcvAddrMsg entry..+0x1a0 ===
+Disassembly of section .text:
+
+00000000007d82e8 <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base>:
+  7d82e8:	d10183ff 	sub	sp, sp, #0x60
+  7d82ec:	f0008a03 	adrp	x3, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7d82f0:	f9444463 	ldr	x3, [x3, #2184]
+  7d82f4:	a9037bfd 	stp	x29, x30, [sp, #48]
+  7d82f8:	9100c3fd 	add	x29, sp, #0x30
+  7d82fc:	a90453f3 	stp	x19, x20, [sp, #64]
+  7d8300:	aa0003f3 	mov	x19, x0
+  7d8304:	aa0103f4 	mov	x20, x1
+  7d8308:	f9002bf5 	str	x21, [sp, #80]
+  7d830c:	52800061 	mov	w1, #0x3                   	// #3
+  7d8310:	2a0203f5 	mov	w21, w2
+  7d8314:	f9400060 	ldr	x0, [x3]
+  7d8318:	f90017e0 	str	x0, [sp, #40]
+  7d831c:	d2800000 	mov	x0, #0x0                   	// #0
+  7d8320:	52800020 	mov	w0, #0x1                   	// #1
+  7d8324:	97ead0eb 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7d8328:	370005e0 	tbnz	w0, #0, 7d83e4 <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0xfc>
+  7d832c:	aa1303e0 	mov	x0, x19
+  7d8330:	aa1403e1 	mov	x1, x20
+  7d8334:	97eada97 	bl	28ed90 <_ZN17AicpuKfcRpcServer17GenMsgByTaskParamEP15AivAicpuOpParam@plt>
+  7d8338:	f9419260 	ldr	x0, [x19, #800]
+  7d833c:	91000400 	add	x0, x0, #0x1
+  7d8340:	f9019260 	str	x0, [x19, #800]
+  7d8344:	3940c280 	ldrb	w0, [x20, #48]
+  7d8348:	340000a0 	cbz	w0, 7d835c <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x74>
+  7d834c:	2a1503e2 	mov	w2, w21
+  7d8350:	52800020 	mov	w0, #0x1                   	// #1
+  7d8354:	91022042 	add	x2, x2, #0x88
+  7d8358:	b8227a60 	str	w0, [x19, x2, lsl #2]
+  7d835c:	52800061 	mov	w1, #0x3                   	// #3
+  7d8360:	52800020 	mov	w0, #0x1                   	// #1
+  7d8364:	97ead0db 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7d8368:	370005a0 	tbnz	w0, #0, 7d841c <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x134>
+  7d836c:	528c8822 	mov	w2, #0x6441                	// #25665
+  7d8370:	d2800083 	mov	x3, #0x4                   	// #4
+  7d8374:	72ae4c82 	movk	w2, #0x7264, lsl #16
+  7d8378:	910023f5 	add	x21, sp, #0x8
+  7d837c:	910063f3 	add	x19, sp, #0x18
+  7d8380:	aa1403e0 	mov	x0, x20
+  7d8384:	aa1503e1 	mov	x1, x21
+  7d8388:	a9008ff3 	stp	x19, x3, [sp, #8]
+  7d838c:	b9001be2 	str	w2, [sp, #24]
+  7d8390:	390073ff 	strb	wzr, [sp, #28]
+  7d8394:	97eaebd7 	bl	2932f0 <_ZN15AivAicpuOpParam8PrintMsgERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE@plt>
+  7d8398:	f94007e0 	ldr	x0, [sp, #8]
+  7d839c:	eb13001f 	cmp	x0, x19
+  7d83a0:	54000080 	b.eq	7d83b0 <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0xc8>  // b.none
+  7d83a4:	f9400fe1 	ldr	x1, [sp, #24]
+  7d83a8:	91000421 	add	x1, x1, #0x1
+  7d83ac:	97ead6d9 	bl	28df10 <_ZdlPvm@plt>
+  7d83b0:	f0008a00 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7d83b4:	f9444400 	ldr	x0, [x0, #2184]
+  7d83b8:	f94017e2 	ldr	x2, [sp, #40]
+  7d83bc:	f9400001 	ldr	x1, [x0]
+  7d83c0:	eb010042 	subs	x2, x2, x1
+  7d83c4:	d2800001 	mov	x1, #0x0                   	// #0
+  7d83c8:	54000581 	b.ne	7d8478 <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x190>  // b.any
+  7d83cc:	f9402bf5 	ldr	x21, [sp, #80]
+  7d83d0:	52800020 	mov	w0, #0x1                   	// #1
+  7d83d4:	a9437bfd 	ldp	x29, x30, [sp, #48]
+  7d83d8:	a94453f3 	ldp	x19, x20, [sp, #64]
+  7d83dc:	910183ff 	add	sp, sp, #0x60
+  7d83e0:	d65f03c0 	ret
+  7d83e4:	d2801640 	mov	x0, #0xb2                  	// #178
+  7d83e8:	97eacd86 	bl	28ba00 <syscall@plt>
+  7d83ec:	f9419a61 	ldr	x1, [x19, #816]
+  7d83f0:	f00071c2 	adrp	x2, 1613000 <_ZZNSt19_Sp_make_shared_tag5_S_tiEvE5__tag@@Base+0x978>
+  7d83f4:	91324042 	add	x2, x2, #0xc90
+  7d83f8:	aa0003e5 	mov	x5, x0
+  7d83fc:	9100e043 	add	x3, x2, #0x38
+  7d8400:	52802544 	mov	w4, #0x12a                 	// #298
+  7d8404:	b9405026 	ldr	w6, [x1, #80]
+  7d8408:	91170042 	add	x2, x2, #0x5c0
+  7d840c:	52800060 	mov	w0, #0x3                   	// #3
+  7d8410:	52800021 	mov	w1, #0x1                   	// #1
+  7d8414:	97eb0737 	bl	29a0f0 <DlogRecord@plt>
+  7d8418:	17ffffc5 	b	7d832c <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x44>
+  7d841c:	d2801640 	mov	x0, #0xb2                  	// #178
+  7d8420:	97eacd78 	bl	28ba00 <syscall@plt>
+  7d8424:	f9419266 	ldr	x6, [x19, #800]
+  7d8428:	f00071c2 	adrp	x2, 1613000 <_ZZNSt19_Sp_make_shared_tag5_S_tiEvE5__tag@@Base+0x978>
+  7d842c:	91324042 	add	x2, x2, #0xc90
+  7d8430:	aa0003e5 	mov	x5, x0
+  7d8434:	9100e043 	add	x3, x2, #0x38
+  7d8438:	52802624 	mov	w4, #0x131                 	// #305
+  7d843c:	9117a042 	add	x2, x2, #0x5e8
+  7d8440:	52800021 	mov	w1, #0x1                   	// #1
+  7d8444:	52800060 	mov	w0, #0x3                   	// #3
+  7d8448:	97eb072a 	bl	29a0f0 <DlogRecord@plt>
+  7d844c:	17ffffc8 	b	7d836c <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x84>
+  7d8450:	aa0003f3 	mov	x19, x0
+  7d8454:	aa1503e0 	mov	x0, x21
+  7d8458:	97eae336 	bl	291130 <_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE10_M_disposeEv@plt>
+  7d845c:	f0008a00 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7d8460:	f9444400 	ldr	x0, [x0, #2184]
+  7d8464:	f94017e2 	ldr	x2, [sp, #40]
+  7d8468:	f9400001 	ldr	x1, [x0]
+  7d846c:	eb010042 	subs	x2, x2, x1
+  7d8470:	d2800001 	mov	x1, #0x0                   	// #0
+  7d8474:	54000040 	b.eq	7d847c <_ZN17AicpuKfcRpcServer15CheckRcvAddrMsgEP15AivAicpuOpParamj@@Base+0x194>  // b.none
+  7d8478:	97eaaea6 	bl	283f10 <__stack_chk_fail@plt>
+  7d847c:	aa1303e0 	mov	x0, x19
+  7d8480:	97eb03a8 	bl	299320 <_Unwind_Resume@plt>
+
+00000000007d8484 <_ZNK17AicpuKfcRpcServer12ClearWorkMsgEv@@Base>:
+  7d8484:	f9400801 	ldr	x1, [x0, #16]
+=== RcvMsg 0x7d8000-0x7d80f0 ===
+Disassembly of section .text:
+
+00000000007d8000 <_ZN17AicpuKfcRpcServer6RcvMsgEP15AivAicpuOpParamjh@@Base>:
+  7d8000:	d10243ff 	sub	sp, sp, #0x90
+  7d8004:	a9077bfd 	stp	x29, x30, [sp, #112]
+  7d8008:	9101c3fd 	add	x29, sp, #0x70
+  7d800c:	f90043f3 	str	x19, [sp, #128]
+  7d8010:	f90017e0 	str	x0, [sp, #40]
+  7d8014:	f90013e1 	str	x1, [sp, #32]
+  7d8018:	b9001fe2 	str	w2, [sp, #28]
+  7d801c:	39006fe3 	strb	w3, [sp, #27]
+  7d8020:	f0008a00 	adrp	x0, 191b000 <_ZTVN4hccl39CollAllReduceMeshOpbasePipelineExecutorE@@Base+0x1d600>
+  7d8024:	f9444400 	ldr	x0, [x0, #2184]
+  7d8028:	f9400001 	ldr	x1, [x0]
+  7d802c:	f90037e1 	str	x1, [sp, #104]
+  7d8030:	d2800001 	mov	x1, #0x0                   	// #0
+  7d8034:	f94013e0 	ldr	x0, [sp, #32]
+  7d8038:	f100001f 	cmp	x0, #0x0
+  7d803c:	54000061 	b.ne	7d8048 <_ZN17AicpuKfcRpcServer6RcvMsgEP15AivAicpuOpParamjh@@Base+0x48>  // b.any
+  7d8040:	52800000 	mov	w0, #0x0                   	// #0
+  7d8044:	1400008c 	b	7d8274 <_ZN17AicpuKfcRpcServer6RcvMsgEP15AivAicpuOpParamjh@@Base+0x274>
+  7d8048:	f94017e0 	ldr	x0, [sp, #40]
+  7d804c:	b9401fe1 	ldr	w1, [sp, #28]
+  7d8050:	91002021 	add	x1, x1, #0x8
+  7d8054:	b8617800 	ldr	w0, [x0, x1, lsl #2]
+  7d8058:	b9003fe0 	str	w0, [sp, #60]
+  7d805c:	f94017e0 	ldr	x0, [sp, #40]
+  7d8060:	f9400003 	ldr	x3, [x0]
+  7d8064:	b9403fe0 	ldr	w0, [sp, #60]
+  7d8068:	aa0003e1 	mov	x1, x0
+  7d806c:	d37ff821 	lsl	x1, x1, #1
+  7d8070:	8b000021 	add	x1, x1, x0
+  7d8074:	d37be821 	lsl	x1, x1, #5
+  7d8078:	8b000021 	add	x1, x1, x0
+  7d807c:	d37df020 	lsl	x0, x1, #3
+  7d8080:	aa0003e1 	mov	x1, x0
+  7d8084:	b9401fe2 	ldr	w2, [sp, #28]
+  7d8088:	aa0203e0 	mov	x0, x2
+  7d808c:	d37ff800 	lsl	x0, x0, #1
+  7d8090:	8b020000 	add	x0, x0, x2
+  7d8094:	d37be800 	lsl	x0, x0, #5
+  7d8098:	8b020000 	add	x0, x0, x2
+  7d809c:	d377d800 	lsl	x0, x0, #9
+  7d80a0:	8b000020 	add	x0, x1, x0
+  7d80a4:	8b000060 	add	x0, x3, x0
+  7d80a8:	f90023e0 	str	x0, [sp, #64]
+  7d80ac:	f94017e0 	ldr	x0, [sp, #40]
+  7d80b0:	97eadb14 	bl	28ed00 <_ZN17AicpuKfcRpcServer14NeedAutoGenMsgEv@plt>
+  7d80b4:	12001c00 	and	w0, w0, #0xff
+  7d80b8:	12000000 	and	w0, w0, #0x1
+  7d80bc:	7100001f 	cmp	w0, #0x0
+  7d80c0:	54000520 	b.eq	7d8164 <_ZN17AicpuKfcRpcServer6RcvMsgEP15AivAicpuOpParamjh@@Base+0x164>  // b.none
+  7d80c4:	52800061 	mov	w1, #0x3                   	// #3
+  7d80c8:	52800000 	mov	w0, #0x0                   	// #0
+  7d80cc:	97ead181 	bl	28c6d0 <_Z17HcclCheckLogLevelii@plt>
+  7d80d0:	12001c00 	and	w0, w0, #0xff
+  7d80d4:	92401c00 	and	x0, x0, #0xff
+  7d80d8:	f100001f 	cmp	x0, #0x0
+  7d80dc:	1a9f07e0 	cset	w0, ne  // ne = any
+  7d80e0:	12001c00 	and	w0, w0, #0xff
+  7d80e4:	12000000 	and	w0, w0, #0x1
+  7d80e8:	7100001f 	cmp	w0, #0x0
+  7d80ec:	540002a0 	b.eq	7d8140 <_ZN17AicpuKfcRpcServer6RcvMsgEP15AivAicpuOpParamjh@@Base+0x140>  // b.none
