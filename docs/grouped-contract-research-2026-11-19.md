@@ -557,3 +557,7 @@ freeze `22346ec`：manifest `35bc507a…`、run_probe **`7afd7799…`（27,430 B
 - **A15 v2**：v1 invalid；31 用 fresh identity **1328734/399924959** 出 plan（rows127/k256/n512、flags8、bias null、window 1f780bf8、run_probe 7afd7799、adapter d181b15a、fresh a15-small-v2、port 预检）→ 32/33 核 → 一次 GO。A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
 
 **0146129 test-only 复核（33 PASS）**：commit `0146129`、manifest `47976c76…`、run_probe 7afd7799/window 1f780bf8 未变、test_probe **4418a835…（22）**、test_window 228150e4（40）；CPU 71/71（7 Linux-only skip）。新增 `test_checker_catches_the_old_a15_pad_line` 内嵌旧 `torch.ones((m_pad,k))` 并断言 symtable 报 `('execute','k')`；A15 rows127 桩断言 pad 行=1、原行保留、run_mrs 128、sync 1、AG 128/64、matmul/reference 127、output 127、max_abs=8.0、info pad/row_block/workspace/run_id。产品代码沿用 22346ec PASS；A15 v2 plan 待 31，32/33 核后一次 GO；A15 v1 invalid；设备暂停。
+
+## 50. A15-small-v2 preflight 元数据核（2026-11-19）
+
+`a15-preflight/SHA256SUMS` `9bceab86…` **9/9**；plan `a9ea5fe2…`：A15、rows127/k256/n512、seed 20261119、fresh `run/temp/out/restore-a15-small-v2`、240/90、plan_not_executed；child argv 指向 `grouped-deepdive-35-0146129` 的 run_probe（7afd7799）/adapter（d181b15a）；root identity **1328734/399924959**（8ecd96b6）。stage-v6 `bf21fabb…`：commit 0146129、manifest 47976c76（Linux **29/29** exact）、run_probe 7afd7799、window 1f780bf8（Linux 40 未重跑，test-only）、binding 101660f8、adapter d181b15a；test_probe 4418a835、Linux probe **22/22 OK**（log 3429b5f9）、F821 负例通过；port 29531 FREE；v1 99db4369 invalid、99abe352 superseded。元数据一致；A15 v2 未执行，32 一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
