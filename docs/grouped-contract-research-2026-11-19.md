@@ -2417,3 +2417,45 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 无新设备/GO；只现有日志 + 有限 CPU 静态读取。
 
 **状态**：root cause unresolved；§121 的站点/selector 结论已降级为条件式，待 abi16 + 32 复核。
+
+## 123. selector CFG 原件核实：条件 C 升级为“边已证、分支结果有支持、v 值未知”
+
+**原件**：`abi-preflight3/disasm-RpcSrvLaunch.txt` 第 385–397 行；SHA-256 `d92fee9d…`、git blob `c62f5182…`（32 报，已本地复核）。该文件在 `8d4a708`/`2e8d4c0` 均存在，引入 commit `c1f5a41`。无新取件/设备。
+
+### 123.1 原始指令与完整 dispatch
+
+```
+761968 bl  GetTaskType
+761970 cmp w0,#6
+761974 b.eq 7622d8            ; GetTaskType==6 → UnfoldStageWait
+761978 ldr w0,[x26,#12732]    ; x26=ctx+0xF0000 → v=u32[ctx+0xF31BC]
+76197c add x1,x23,#0xd00
+761980 add x1,x1,#0x10        ; x1=server_A
+761984 and w0,w0,#0xfffffffd  ; v & ~2
+761988 cmp w0,#1
+76198c mov x0,x28             ; x0=ctx
+761990 b.ne 762228            ; (v&~2)!=1 → OneStage（TryRun@plt）
+761994 bl RunRpcServerTwoStageWait@plt  ; (v&~2)==1 → TwoStage
+```
+
+- 分支前 x0=ctx、x1=server_A 已设好，两分支共用；`b.ne` 直接以 `0x762228` 为目标，中间无其它块。
+- 完整三段：`GetPreparePosition`（API，前文）→ `GetTaskType==6` → Unfold@0x7622d8 → 否则 v selector → TwoStage/OneStage。
+- 必须分开：0x761978–0x761990 是 **pre-call selector**；0x76222c `cmp w0,#0` / 0x762238 `cmp #0x16` / 0x762240 log gate 是 **post-call return 处理**（w0 是 TryRun 返回值，w0==22 → NsRecovery）。
+
+### 123.2 状态升级（相对 §122 条件 C）
+
+| 项 | 状态 | 依据/边界 |
+| --- | --- | --- |
+| selector CFG 边 | **已证**（现有归档原件） | 0x761978–0x761994 指令 + b.ne 0x762228 直边；无缺失块 |
+| 分支结果 `(v&~2)!=1` | **有支持**（非 v 数值） | 551 OneStage 正日志 + 0x762228 唯一直接 BL（`RunAicpuRpcSrvLaunch+0xea8`）；间接/vtable/dlsym 未扫，不能写“唯一上层选择” |
+| v 的运行值/语义 | **仍未知** | writer：0x2ea7b8 静态初始化 w8=9、0x7edfc0 CopyCtxInfo ctx-copy；无 increment；运行值未落盘 |
+| `GetTaskType==6` 分支 | 边已证；取值未落盘 | 0x761974 b.eq 0x7622d8；运行时未记录 GetTaskType |
+
+### 123.3 与 §122 的关系
+
+- §122 条件 C 升级为：**CFG 边已证；`(v&~2)!=1` 是分支结果（有支持，不是 v 值）；v 值仍未知**。
+- §122 条件 A/B（唯一 CheckRcv 站点/时序对应第一站点）**仍为条件式**，待 abi16 完整 `RunRpcServerOneStageWait` 判两 Check 顺序/退出/完成通知。
+- 不变：0x762228 后 cmp 是返回码处理；line121 两 gate；CheckRcv 后处理静态链；缺失 ack 无 response 写证据；task13 3 min pending 唯一正证；候选地址/jT/TurnWait 与 task13 绑定分开。
+- 无新设备/GO；只现有归档 + 有限 CPU 静态读取。
+
+**状态**：root cause unresolved；selector 边闭合，站点判别仍待 abi16。
