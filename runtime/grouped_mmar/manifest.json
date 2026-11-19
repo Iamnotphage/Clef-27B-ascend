@@ -1,0 +1,186 @@
+{
+  "schema": "grouped-mmar-probe-package/1",
+  "status": "cpu_frozen_device_pending",
+  "branch": "ao/resume-cc/grouped-mmar-research-20261119",
+  "base_commit": "0db4d21",
+  "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
+  "files": {
+    "runtime/grouped_mmar/binding_probe.cpp": {
+      "role": "native MMAR binding with single-variable lifetime/thread/stream flags",
+      "sha256": "8ec3642d046f73f78cd27a966664fa4e2aabe46cf94459b43cbe8427011884ba",
+      "bytes": 17459
+    },
+    "runtime/grouped_mmar/probe_trace.h": {
+      "role": "C++ CLOCK_MONOTONIC trace header",
+      "sha256": "3e07139f1cd93085dd43fa1f394eabeb398934c9af2ae0eb23f8c749dbd82da9",
+      "bytes": 2979
+    },
+    "runtime/grouped_mmar/probe_trace.py": {
+      "role": "Python CLOCK_MONOTONIC trace, same fd",
+      "sha256": "13a9519862de0c69c14a921c06f773044b425a019d55cb176c7e16b21bc32cc2",
+      "bytes": 1781
+    },
+    "runtime/grouped_mmar/run_probe.py": {
+      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
+      "sha256": "f5b6c347a206ac144b3953860a110099f00b463c4d513ce07d7ed2d314c4d7f4",
+      "bytes": 18853
+    },
+    "runtime/grouped_mmar/compile_probe.sh": {
+      "role": "AOT adapter build (no load/device)",
+      "sha256": "53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb",
+      "bytes": 879
+    },
+    "runtime/grouped_mmar/fixed_gate.py": {
+      "role": "frozen original gate 041a66aa (not relaxed)",
+      "sha256": "041a66aa81c52d2a53bd825cf406323d7185759242669dff64b3551f86eba849",
+      "bytes": 4119
+    },
+    "runtime/grouped_mmar/snapshot_contract.json": {
+      "role": "31/32 snapshot checklist contract",
+      "sha256": "a954e1a0563fd14526ffe98ae7184bdcd3bc2aa5ade08af7e0d935fc1d32c7c4",
+      "bytes": 2600
+    },
+    "runtime/grouped_mmar/validate_snapshot.py": {
+      "role": "CPU snapshot validator",
+      "sha256": "817375325ae86d0a8329b7aa04c79ee002b10b2ce7770452585850ecefb36a5b",
+      "bytes": 2346
+    },
+    "runtime/grouped_mmar/test_probe_cpu.py": {
+      "role": "CPU control-flow/path/release/watchdog/snapshot tests",
+      "sha256": "a8426375560ca63e4d5fef92e298cd8115c1eb6f9219aee26ff9654bf84808b3",
+      "bytes": 6400
+    },
+    "runtime/grouped_mmar/README.md": {
+      "role": "first-package review, matrix, CLI, expected, recovery",
+      "sha256": "248c4b55814c19be58a73397a789345e8c20a79d8e5fcd8b3688f84df770b4d3",
+      "bytes": 8911
+    },
+    "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
+      "role": "A12 frozen official sample (byte copy)",
+      "sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "bytes": 21723
+    },
+    "runtime/grouped_mmar/a12/SOURCE.md": {
+      "role": "A12 provenance (commit f5703e4, path, SHAs)",
+      "sha256": "cde9e9f2b376ddb51ba38ac83c001c01cc2bb783a1dddaa39500a0aa3b4f26b6",
+      "bytes": 4367
+    },
+    "runtime/grouped_mmar/a12/SHA256SUMS": {
+      "role": "A12 package SHA256SUMS",
+      "sha256": "22cf61353bfe5d0111226577009ea07e9f125007501d1e20e99f66b33ba4d8c6",
+      "bytes": 493
+    },
+    "runtime/grouped_mmar/a12/aclnnGroupedMatMulAllReduce.docs.md": {
+      "role": "A12 reference docs (not compiled)",
+      "sha256": "31333c59bf5b5bd733a0d08520fa17859def52784d4e1176232a374b8cb8078f",
+      "bytes": 33451
+    },
+    "runtime/grouped_mmar/a12/aclnnGroupedMatMulAllReduce.sample.cpp": {
+      "role": "A12 doc-embedded sample (not compiled)",
+      "sha256": "d59a49e5277d577d294b2e8fc2324f3b49199a5389042db9acb1c03d2154610a",
+      "bytes": 21993
+    },
+    "runtime/grouped_mmar/a12/compile_and_run_sample.md": {
+      "role": "A12 build recipe reference",
+      "sha256": "c591f0e34f223c4ee4acea0dc3aaa9b90ebdb59f19da61090de14108236e979d",
+      "bytes": 8438
+    },
+    "runtime/grouped_mmar/a12/compile_a12.sh": {
+      "role": "A12 CMake build wrapper",
+      "sha256": "f86c5b50e8382eb5bd46dfa7c8db81c6e89dbd885bf32f6a807e6d6f210e3a9f",
+      "bytes": 1608
+    },
+    "runtime/grouped_mmar/a12/run_a12.sh": {
+      "role": "A12 run wrapper (2 devices, 1 loop, 0,1)",
+      "sha256": "087b4cef870ceb24fdd3bd69f91e22e6bc9145cee8055ff4ce9bc87444dc8044",
+      "bytes": 374
+    }
+  },
+  "first_matrix": [
+    {
+      "arm": "A8",
+      "flags": 0,
+      "rows": 128,
+      "success": "both ranks sync returned + finite"
+    },
+    {
+      "arm": "A12",
+      "source": "a12/test_aclnn_grouped_mat_mul_all_reduce.cpp",
+      "sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "argv": [
+        "2",
+        "1",
+        "0,1"
+      ],
+      "success": "process 0 + both rank threads sync returned; gap vs old bridge is multi-delta path control only"
+    },
+    {
+      "arm": "A0",
+      "flags": 0,
+      "rows": 128,
+      "success": "API return + both ranks sync returned + finite"
+    },
+    {
+      "arm": "H1",
+      "flags": 1,
+      "rows": 128,
+      "success": "same as A0; group string created before prepare and kept past sync"
+    },
+    {
+      "arm": "H2",
+      "flags": 2,
+      "rows": 128,
+      "success": "same as A0; workspace kept until sync returned"
+    }
+  ],
+  "stage2": [
+    "H3 keep_descriptors",
+    "H11 keep_all (downgraded diagnostic)",
+    "H4 direct_launch",
+    "H5 refetch_stream",
+    "H6 memset_workspace",
+    "H7 M sweep 128/256/1024/967"
+  ],
+  "cli": {
+    "compile": "bash runtime/grouped_mmar/compile_probe.sh <absolute .so>",
+    "plan": "torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.py --arm <A8|A0|H1|H2> --temp-root <abs> --out <abs-fresh> --adapter <so> --k 8704 --n 5120 --rows 128 --seed 20261119 --arm-timeout 60 --comm-timeout 90",
+    "execute": "same plus --execute",
+    "a12_compile": "bash runtime/grouped_mmar/a12/compile_a12.sh <absolute build dir>",
+    "a12_run": "bash runtime/grouped_mmar/a12/run_a12.sh <build>/build/bin/main"
+  },
+  "success": [
+    "API returned",
+    "both ranks observed sync return",
+    "output finite",
+    "release only after sync and only for keep arms"
+  ],
+  "failure_branches": [
+    "prepare rc!=0",
+    "launch rc!=0",
+    "sync not returned within arm timeout",
+    "group names differ across ranks",
+    "non-finite output",
+    "release rc!=0"
+  ],
+  "recovery": {
+    "routine": "official start.sh to aa3e/s1; record branch=aa3e-noop; tree stays aa3e1758; four checks/env/identity/two workers recorded",
+    "f810_to_fused": "rescue only for known source anomaly: record drift before/after SHA, trace/plog/time, mark the cell isolation-failed, report 20/32, then authorized aa3e restore; never silent success",
+    "unknown": "stop and report; do not guess or edit source",
+    "forbidden": "old 5c/restore_prod auto-revert to f810; service tree/guard/vendor writes"
+  },
+  "inputs": {
+    "33": "C1-C6, matrix v2, A12 frozen sample 6c1a90ab (commit f5703e4)",
+    "31": "snapshot 39e52eb5..., restore-spec 76355dab..., API pack tar 685d9a33... (64 files)",
+    "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof"
+  },
+  "cpu_tests": {
+    "suite": "runtime/grouped_mmar/test_probe_cpu.py",
+    "result": "11/11",
+    "no_torch_npu": true,
+    "no_device": true
+  },
+  "no_service_lifecycle": true,
+  "no_f810_revert": true,
+  "no_entry_or_metrics_change": true,
+  "manifest_note": "manifest.json does not pin its own SHA; the commit/message reports it"
+}
