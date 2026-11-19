@@ -44,6 +44,7 @@ SUPERVISOR_SHA = '172c283827d75074bf339fd5ba6326006d2b3755dd6b9c5c31d3f030d6f318
 PHASE_SHA = '888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44'
 RUNNER_SHA = '7d32e5c3e7977efa7222d527792887e50b541349d3ef6390663470180e011cab'
 BASE_SHA = '127e47aec47b30c461de69f37355c8149a045ae32127f7a2afde39d7a3caa648'
+SOURCE_CONTROL_SHA = 'a1c502a3a709b836d31dc994a156f702d6a826ce5f2854beeec9ac50701f7299'
 WINDOW_SHA = '700cf10cdc3fda18d1ae7f113158342e1ef6ec114569e52b15b134949bfe8473'
 MANIFEST_SHA = '31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4'
 BASE_MANIFEST_SHA = '0338f87b326a1b375dbb757b71acfa1d4bf1b037acb77a70dbbe176b7b5786b2'
@@ -113,6 +114,8 @@ def build_deps(a):
             'frozen f810 manifest SHA mismatch')
     ab_dir = a.ab_code.resolve()
     require(sha(ab_dir / 'joint_fused_service_ab.py') == BASE_SHA, 'AB base SHA mismatch')
+    require(sha(ab_dir / 'joint_fused_source_control.py') == SOURCE_CONTROL_SHA,
+            'source-control runner SHA mismatch')
     require(sha(ab_dir / 'joint_fused_attention_window.py') == WINDOW_SHA, 'AB window SHA mismatch')
     for name, digest in (('apply_joint_fused_attention.py', 'b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406'),
                          ('apply_joint_service_check.py', '1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c')):
@@ -120,7 +123,8 @@ def build_deps(a):
     sys.path.insert(0, str(owner))
     phase = load(owner / 'final_service_phase.py', 'candidate_phase_gates')
     strict = phase.strict
-    ab_mod = load(ab_dir / 'joint_fused_service_ab.py', 'candidate_ab_base')
+    sc_mod = load(ab_dir / 'joint_fused_source_control.py', 'candidate_source_control')
+    require(sc_mod.base.__file__ == str(ab_dir / 'joint_fused_service_ab.py'), 'AB base resolution drift')
     acceptance = load(a.code / 'runtime/final_acceptance.py', 'candidate_acceptance')
     ns = SimpleNamespace(
         run_dir=a.run_dir.resolve(), repo=str(a.repo), tree=a.tree, python=a.python,
@@ -129,7 +133,7 @@ def build_deps(a):
         data='', short='od-0105', long='od-1534', image_source='', text_url='',
         image_url='', port=a.port, rounds=0, reps=0, warmup=0, http_timeout=0.0,
         stop_timeout=a.stop_timeout, wait_timeout=a.wait_timeout)
-    ab = ab_mod.SourceControl(ns)
+    ab = sc_mod.SourceControl(ns)
     return SimpleNamespace(strict=strict, phase=phase, ab=ab, acceptance=acceptance,
                            manifest=read(a.manifest), base_manifest=read(a.base_manifest))
 

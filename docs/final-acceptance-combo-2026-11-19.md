@@ -33,7 +33,7 @@
 
 | 文件 | SHA-256 |
 | --- | --- |
-| `runtime/candidate_service_phase.py` | `feb17e35598a16c477c3812009b296ae375cbd707557165e85c8465e410828b9` |
+| `runtime/candidate_service_phase.py` | `1f98dba90c4cb466fd3ae3804ab1dacbaee8bd9799b8ef2110e22bc5489164d7` |
 | `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |
 | `runtime/test_candidate_service_phase.py` | `b65653af0dd9a19077bffa05dab62df1848e2f4d22b5002c574dff7d83faf048` |
 | `runtime/test_candidate_manifest.py` | `8ba9cdb5a2f96f7253fcc0a09fc833428b8b61c9510beba56951108fac5b6d5a` |
