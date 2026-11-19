@@ -46,14 +46,34 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot tests",
+      "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
       "sha256": "a8426375560ca63e4d5fef92e298cd8115c1eb6f9219aee26ff9654bf84808b3",
       "bytes": 6400
     },
+    "runtime/grouped_mmar/cell_supervisor.py": {
+      "role": "pure child PGID/source-aware supervisor with optional restore argv",
+      "sha256": "6473a0111ad1d96e5d57dc5814944c6aa65760c0f4678f42a5d085f450e475aa",
+      "bytes": 8819
+    },
+    "runtime/grouped_mmar/test_cell_supervisor_cpu.py": {
+      "role": "CPU supervisor tests (8)",
+      "sha256": "0e5bf08c083b7317b49e7fb6d89ab826af0972e635c0da0fd4bf058a3486e539",
+      "bytes": 4228
+    },
+    "runtime/grouped_mmar/supervised_probe_window.py": {
+      "role": "full service window: preflight/d0_stop/child/official restore/checks",
+      "sha256": "e55fcc00d0b0de32bea0b9d4313fc63a6b057f0c37d1776423131b80988d5d41",
+      "bytes": 23070
+    },
+    "runtime/grouped_mmar/test_supervised_window_cpu.py": {
+      "role": "CPU window control-flow tests (8)",
+      "sha256": "8edce087684df03c1d5fd3b450d3810d7b358f9b7535514082286782fcd378cb",
+      "bytes": 7471
+    },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "375c1673184fa9f87e906cdf3f80702af3630007db9b06ba75f26108c0b046e2",
-      "bytes": 9303
+      "sha256": "8ef3da00001edb9e4909a0846441e566ac5705a960d48f1ff91977d0b529099e",
+      "bytes": 12403
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -87,8 +107,8 @@
     },
     "runtime/grouped_mmar/a12/BUILD_NOTE.md": {
       "role": "A12 derived-build labeling and semantics",
-      "sha256": "d606aa224396f48b6197575306309ecca1c9c1fa671fbfbef7894e521e51d36e",
-      "bytes": 1254
+      "sha256": "cabdc6478b3661d2461102df67b2cb6ddf886a295c1f756de81721467e22eab3",
+      "bytes": 1453
     },
     "runtime/grouped_mmar/a12/compile_a12.sh": {
       "role": "A12 CMake build wrapper",
@@ -106,12 +126,13 @@
       "arm": "A8",
       "flags": 0,
       "rows": 128,
-      "success": "both ranks sync returned + finite"
+      "success": "both ranks sync returned + finite",
+      "device_build_reference": null
     },
     {
       "arm": "A12",
       "source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
-      "build": "derived CMake glue; official CMakeLists not supplied -> NOT as-is official build",
+      "build": "derived CMake glue; official examples/CMakeLists does not exist in f5703e4 (33 verified) -> NOT an as-is official build",
       "argv": [
         "2",
         "1",
@@ -129,19 +150,22 @@
       "arm": "A0",
       "flags": 0,
       "rows": 128,
-      "success": "API return + both ranks sync returned + finite"
+      "success": "API return + both ranks sync returned + finite",
+      "device_build_reference": null
     },
     {
       "arm": "H1",
       "flags": 1,
       "rows": 128,
-      "success": "same as A0; group string created before prepare and kept past sync"
+      "success": "same as A0; group string created before prepare and kept past sync",
+      "device_build_reference": null
     },
     {
       "arm": "H2",
       "flags": 2,
       "rows": 128,
-      "success": "same as A0; workspace kept until sync returned"
+      "success": "same as A0; workspace kept until sync returned",
+      "device_build_reference": null
     }
   ],
   "stage2": [
@@ -180,18 +204,28 @@
     "forbidden": "old 5c/restore_prod auto-revert to f810; service tree/guard/vendor writes"
   },
   "inputs": {
-    "33": "C1-C6, matrix v2, support research commits 2616628/334c67f, A12 frozen source 6c1a90ab (commit f5703e4)",
-    "31": "snapshot 39e52eb5..., restore-spec 224b0036..., API pack authoritative PACK_SHA256SUMS ecffc1ff (63/63), A12 stage manifest 088f05f6...",
+    "33": "C1-C6, matrix v2, support research commits 2616628/334c67f/049b5ea; A12 frozen source 6c1a90ab (commit f5703e4); official examples/CMakeLists absent; pack v4 PACK_SHA256SUMS 6e9bc5f8 (65/65), binary_info_config d46acc38 + per-op c9bd574a; A12 archive 7/7",
+    "31": "snapshot 39e52eb5..., restore-spec 224b0036..., API pack v4 6e9bc5f8 (65 payload 65/65), A12 authoritative stage manifest 088f05f6 (1d529ca8 superseded), glue 22edb89f, binary 37929ec4, ldd missing 0",
     "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof, derived-build labeling"
   },
   "cpu_tests": {
-    "suite": "runtime/grouped_mmar/test_probe_cpu.py",
-    "result": "11/11",
+    "suites": {
+      "test_probe_cpu.py": "11/11",
+      "test_cell_supervisor_cpu.py": "8/8",
+      "test_supervised_window_cpu.py": "8/8"
+    },
     "no_torch_npu": true,
     "no_device": true
   },
   "no_service_lifecycle": true,
   "no_f810_revert": true,
   "no_entry_or_metrics_change": true,
-  "manifest_note": "manifest.json does not pin its own SHA; the commit/message reports it"
+  "manifest_note": "manifest.json does not pin its own SHA; the commit/message reports it",
+  "window": {
+    "path": "runtime/grouped_mmar/supervised_probe_window.py",
+    "cli": "see README 5.2",
+    "normal_branch": "aa3e-noop",
+    "f810_to_fused": "isolation failure, rescue only",
+    "no_installer_guard_vendor_tree_writes": true
+  }
 }

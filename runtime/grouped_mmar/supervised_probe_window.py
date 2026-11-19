@@ -1,0 +1,518 @@
+#!/usr/bin/env python3
+"""Pure supervised window for one Grouped MMAR probe cell.
+
+Responsibilities only: verify the live service identity, stop it with the
+original d0_stop, run one child in its own PGID with a hard timeout, then
+restore aa3e/s1 with the official start.sh and check the documented gates.
+It has no installer/guard/vendor/tree write logic of its own.  Plan-only by
+default; execute requires explicit temporary paths.
+
+A normal cell must end with joint-patch-record branch == aa3e-noop and the
+source tree unchanged at aa3e.  ``f810->fused`` is rescue-only and marks the
+cell isolation-failed; it never satisfies the success gate.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import time
+import urllib.request
+
+AA3E = 'aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503'
+CLEAN = 'fcbdcbf11521e1ae499c1ac5329eed990d63f3e8a75a99b5fbb6b4df1dcb0230'
+CLEAN_PATH = ('/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:'
+              '/usr/games:/usr/local/games:/snap/bin')
+RUNNER_NAMES = {'final_acceptance.py', 'bench_ready.py', 'run_cell.py',
+                'window_probe.py', 'supervised_window.py',
+                'joint_fused_attention_window.py', 'joint_fused_service_ab.py',
+                'joint_fused_source_control.py'}
+FIELDS = ('pid', 'starttime', 'boot_id', 'pgid', 'ppid')
+
+
+def sha256(path):
+    h = hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def read_json(path):
+    return json.loads(Path(path).read_text())
+
+
+def write_json(path, value):
+    Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=1) + '\n')
+
+
+def proc_identity(pid):
+    path = Path('/proc') / str(pid)
+    try:
+        stat = (path / 'stat').read_text()
+        fields = stat[stat.rfind(')') + 2:].split()
+        cmdline = (path / 'cmdline').read_bytes().decode(errors='replace').rstrip('\0').split('\0')
+    except FileNotFoundError:
+        return None
+    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    return {'pid': int(pid), 'ppid': int(fields[1]), 'pgid': int(fields[2]),
+            'state': fields[0], 'starttime': fields[19], 'boot_id': boot,
+            'cmdline': cmdline}
+
+
+def scan():
+    result = {}
+    for entry in Path('/proc').iterdir():
+        if entry.name.isdigit():
+            ident = proc_identity(int(entry.name))
+            if ident is not None:
+                result[ident['pid']] = ident
+    return result
+
+
+def tree(table, root):
+    pids = {root}
+    while True:
+        children = {p for p, row in table.items() if row['ppid'] in pids}
+        if children.issubset(pids):
+            return pids
+        pids |= children
+
+
+def same_identity(saved, live):
+    return bool(live and live['state'] != 'Z' and
+                all(live[k] == saved[k] for k in FIELDS if k in saved))
+
+
+def pending_clients(table, prior=None):
+    pending = []
+    for pid, row in table.items():
+        if pid == os.getpid() or row['state'] == 'Z':
+            continue
+        argv = row.get('cmdline') or []
+        if any(Path(x).name in RUNNER_NAMES for x in argv if x):
+            pending.append(pid)
+    if prior:
+        record = read_json(prior)
+        if record.get('clients_exited') is not True:
+            raise RuntimeError('prior client supervision did not exit')
+        if any(r['pgid'] == record['client_pid'] and r['state'] != 'Z' for r in table.values()):
+            raise RuntimeError('prior client group still present')
+    return pending
+
+
+def port_open(port):
+    with socket.socket() as s:
+        s.settimeout(3)
+        rc = s.connect_ex(('127.0.0.1', port))
+    if rc not in (0, 111):
+        raise RuntimeError(f'unknown port connect_ex={rc}')
+    return rc
+
+
+def http_json(base, suffix, timeout=10):
+    with urllib.request.urlopen(base + suffix, timeout=timeout) as response:
+        return json.loads(response.read())
+
+
+def post_json(base, suffix, body, timeout=120):
+    data = body.encode() if isinstance(body, str) else json.dumps(body).encode()
+    request = urllib.request.Request(base + suffix, data=data,
+                                     headers={'Content-Type': 'application/json'})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.status, json.loads(response.read())
+
+
+def npu_rows(text):
+    if 'Process id in container' not in text:
+        raise RuntimeError('NPU process table unavailable')
+    rows = []
+    for line in text.split('Process id in container', 1)[1].splitlines():
+        cells = [c.strip() for c in line.strip().strip('|').split('|')]
+        if len(cells) != 5:
+            continue
+        loc = cells[0].split()
+        if len(loc) == 2 and all(x.isdigit() for x in loc):
+            if not (cells[1].isdigit() and cells[4].isdigit()):
+                raise RuntimeError('invalid NPU row')
+            rows.append({'card': int(loc[0]), 'chip': int(loc[1]), 'name': cells[2], 'pid': int(cells[4])})
+    return rows
+
+
+def npu_evidence(expected_pids=None):
+    result = subprocess.run(['npu-smi', 'info'], capture_output=True, text=True, timeout=30)
+    rows = npu_rows(result.stdout)
+    if expected_pids is None:
+        if rows or 'No running processes found in NPU 7' not in result.stdout:
+            raise RuntimeError('card7 is not empty')
+        return rows
+    if not rows or not {r['pid'] for r in rows}.issubset(expected_pids):
+        raise RuntimeError('unattributed NPU process')
+    workers = [r for r in rows if r['name'] == 'VLLMWorker_TP']
+    if len(workers) != 2 or {r['chip'] for r in workers} != {0, 1}:
+        raise RuntimeError('TP2 worker mapping mismatch')
+    return rows
+
+
+def read_root_env(pid):
+    raw = (Path('/proc') / str(pid) / 'environ').read_bytes()
+    out = {}
+    for part in raw.split(b'\0'):
+        if b'=' in part:
+            key, value = part.split(b'=', 1)
+            out[key.decode()] = value
+    return out
+
+
+def env_evidence(pid, clean_expect):
+    expected_doc = read_json(clean_expect)
+    expected = expected_doc.get('service_environment', expected_doc)
+    live = read_root_env(pid)
+    checks = {}
+    for key in ('ASCEND_CUSTOM_OPP_PATH', 'LD_LIBRARY_PATH'):
+        want = str(expected[key]).encode()
+        got = live.get(key)
+        checks[key] = {'match': got == want,
+                       'count': len(got.split(b':')) if got else 0,
+                       'expected_count': len(want.split(b':'))}
+    return {'clean_expect_sha256': sha256(clean_expect), 'checks': checks,
+            'match': all(v['match'] for v in checks.values())}
+
+
+def joint_env(live):
+    wanted = {'CLEF_JOINT_FUSED_ATTN': b'1',
+              'CLEF_JOINT_ALLOWED_POSTIMAGE_SHA': AA3E.encode(),
+              'CLEF_JOINT_SINGLE_FIELD': b'1'}
+    forbidden = ('CLEF_JOINT_SMALLQ', 'CLEF_JOINT_SMALLQ_KERNEL')
+    return {'keys': {k: live.get(k) == v for k, v in wanted.items()},
+            'forbidden_absent': all(k not in live for k in forbidden),
+            'ok': all(live.get(k) == v for k, v in wanted.items()) and
+                  all(k not in live for k in forbidden)}
+
+
+def run(argv, timeout, log):
+    with Path(log).open('xb') as handle:
+        proc = subprocess.run(argv, stdout=handle, stderr=subprocess.STDOUT,
+                              timeout=timeout, check=False)
+    return {'argv': argv, 'rc': proc.returncode, 'log': str(log)}
+
+
+def build_restore_argv(a):
+    inner = (f'cd {a.service_root} && source {a.activate} && exec bash {a.official_start} '
+             f'--model-dir {a.model_dir} --output-dir {a.restore_output}')
+    return ['env', '-i', f'PATH={CLEAN_PATH}', 'CLEF_LAUNCH_CONFIG=s1',
+            'setsid', '/bin/bash', '-c', inner]
+
+
+def build_child_argv(a):
+    if a.child_argv:
+        value = json.loads(a.child_argv)
+        if not isinstance(value, list) or not value:
+            raise ValueError('child-argv must be a non-empty JSON array')
+        return [str(x) for x in value]
+    if a.arm == 'A12':
+        if not a.a12_binary:
+            raise ValueError('A12 requires --a12-binary')
+        return ['bash', str(a.a12_runner), str(a.a12_binary)]
+    argv = ['torchrun', '--nproc_per_node=2', '--master_port', str(a.master_port),
+            str(Path(__file__).with_name('run_probe.py')), '--arm', a.arm,
+            '--temp-root', str(a.probe_temp_root), '--out', str(a.probe_out),
+            '--k', str(a.k), '--n', str(a.n), '--rows', str(a.rows), '--seed', str(a.seed),
+            '--arm-timeout', str(a.child_timeout), '--comm-timeout', str(a.comm_timeout)]
+    if a.arm != 'A8':
+        argv += ['--adapter', str(a.adapter)]
+    argv.append('--execute')
+    return argv
+
+
+def build_plan(a):
+    for value, name in ((a.run_dir, 'run-dir'), (a.restore_output, 'restore-output')):
+        if not Path(value).is_absolute():
+            raise ValueError(f'{name} must be absolute')
+    if Path(a.run_dir).exists():
+        raise ValueError('run-dir must be fresh')
+    if not Path(a.source_target).is_file():
+        raise ValueError('source-target missing')
+    if sha256(a.source_target) != a.expected_source_sha:
+        raise ValueError('source SHA mismatch')
+    identity = read_json(a.root_identity)
+    for key in ('pid', 'starttime', 'boot_id', 'pgid'):
+        if key not in identity:
+            raise ValueError(f'root identity lacks {key}')
+    if not a.child_argv and not a.arm:
+        raise ValueError('supply --child-argv or --arm')
+    if not Path(a.text_body).is_file() or not Path(a.image_body).is_file():
+        raise ValueError('text/image probe bodies must exist')
+    child = build_child_argv(a)
+    return {'schema': 'grouped-mmar-window-plan/1', 'run_dir': str(Path(a.run_dir).resolve()),
+            'root_identity': identity, 'stop_argv': [a.python, str(a.stop_script),
+            '--api-pid', str(identity['pid']), '--saved-identity', str(a.root_identity),
+            '--out', str(Path(a.run_dir) / 'stop.json')],
+            'child_argv': child, 'child_timeout': a.child_timeout,
+            'restore_argv': build_restore_argv(a), 'restore_output': str(a.restore_output),
+            'source_target': str(a.source_target), 'expected_source_sha256': a.expected_source_sha,
+            'port': a.port, 'clean_expect': str(a.clean_env_expect),
+            'probes': {'text': str(a.text_body), 'image': str(a.image_body)},
+            'success': {'child_rc': 0, 'not_timed_out': True, 'no_survivors': True,
+                        'source_sha256': AA3E, 'branch': 'aa3e-noop',
+                        'four_checks': True, 'env': True, 'joint_env': True,
+                        'two_workers': True, 'clients_empty': True},
+            'failure_branches': ['preflight identity/port/client mismatch',
+                                 'stop rc!=0 or post-stop port/PGID/NPU not empty',
+                                 'child timeout/nonzero/unknown group member',
+                                 'restore rc!=0/health timeout/unknown pid',
+                                 'branch f810->fused (isolation failure, rescue only)',
+                                 'source SHA drift', 'four-check/env/joint/worker mismatch'],
+            'no_service_writes': True, 'no_f810_revert': True}
+
+
+def cleanup_child(pid, table, protected):
+    members = {p for p, row in table.items() if row['pgid'] == pid and row['state'] != 'Z'}
+    if members & set(protected):
+        return {'killed': False, 'reason': 'protected_in_child_group', 'members': sorted(members)}
+    try:
+        os.killpg(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    time.sleep(1.0)
+    table = scan()
+    members = {p for p, row in table.items() if row['pgid'] == pid and row['state'] != 'Z'}
+    if members:
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        time.sleep(1.0)
+        table = scan()
+        members = {p for p, row in table.items() if row['pgid'] == pid and row['state'] != 'Z'}
+    return {'killed': True, 'reason': None, 'members': sorted(members)}
+
+
+def wait_health(a, state):
+    deadline = time.monotonic() + a.restore_timeout
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            health = http_json(f'http://127.0.0.1:{a.port}', '/health')
+            if health.get('status') == 'ready' and health.get('model') == 'clef':
+                return health
+            last = health
+        except Exception as exc:  # noqa: BLE001
+            last = f'{type(exc).__name__}: {exc}'
+        time.sleep(1.0)
+    raise RuntimeError(f'health not ready: {last}')
+
+
+def execute(a, plan):
+    run_dir = Path(plan['run_dir'])
+    run_dir.mkdir(parents=True, exist_ok=False)
+    result = {'schema': 'grouped-mmar-window-result/1', 'plan': plan, 'ok': False,
+              'steps': {}, 'isolation_failed': False}
+    state_path = run_dir / 'window.json'
+    flush = lambda: write_json(state_path, result)
+
+    def step(name, value):
+        result['steps'][name] = value
+        flush()
+
+    before = sha256(a.source_target)
+    result['source_sha256_before'] = before
+    if before != a.expected_source_sha:
+        result['error'] = 'source changed before preflight'
+        return 1
+    table = scan()
+    saved = plan['root_identity']
+    live = table.get(saved['pid'])
+    if not same_identity(saved, live) or live['ppid'] != 1 or live['pgid'] != saved['pid']:
+        result['error'] = 'root identity mismatch'
+        flush()
+        return 1
+    if port_open(a.port) != 0:
+        result['error'] = 'service port not open before stop'
+        flush()
+        return 1
+    clients = pending_clients(table, a.prior_client_record)
+    if clients:
+        result['error'] = f'pending clients: {clients}'
+        flush()
+        return 1
+    step('preflight', {'identity': live, 'port': 0, 'clients': []})
+
+    stop = run(plan['stop_argv'], a.stop_timeout, run_dir / 'stop.log')
+    step('stop', stop)
+    if stop['rc'] != 0:
+        result['error'] = f'stop rc={stop["rc"]}'
+        return 1
+    table = scan()
+    if any(p in table and table[p]['state'] != 'Z' for p in tree(scan(), saved['pid'])):
+        result['error'] = 'old tree remains after stop'
+        return 1
+    if any(row['pgid'] == saved['pid'] and row['state'] != 'Z' for row in table.values()):
+        result['error'] = 'old PGID member remains after stop'
+        return 1
+    if port_open(a.port) != 111:
+        result['error'] = 'port not closed after stop'
+        return 1
+    npu_evidence(None)
+    step('stopped', {'port': 111, 'npu_empty': True})
+
+    protected = {saved['pid'], *[p for p, row in table.items() if row['pgid'] == saved['pid']]}
+    child = None
+    child_state = {'started': False}
+    try:
+        with (run_dir / 'child.stdout').open('xb') as out, (run_dir / 'child.stderr').open('xb') as err:
+            child = subprocess.Popen(plan['child_argv'], cwd=a.cwd, stdout=out, stderr=err,
+                                     start_new_session=True)
+        identity = proc_identity(child.pid)
+        if not identity or identity['pgid'] != child.pid or child.pid in protected:
+            raise RuntimeError('child is not a fresh own-PGID process')
+        child_state.update(started=True, pid=child.pid, identity=identity)
+        step('child_started', child_state)
+        try:
+            rc = child.wait(timeout=a.child_timeout)
+            timed = False
+        except subprocess.TimeoutExpired:
+            timed = True
+            child_state['timed_out'] = True
+            cleanup = cleanup_child(child.pid, scan(), protected)
+            child_state['cleanup'] = cleanup
+            try:
+                rc = child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                rc = None
+        members = {p for p, row in scan().items() if row['pgid'] == child.pid and row['state'] != 'Z'}
+        if members:
+            raise RuntimeError(f'child group survivors: {sorted(members)}')
+        child_state.update(rc=rc, timed_out=timed, survivors=[])
+        step('child', child_state)
+    except BaseException as exc:
+        child_state['error'] = f'{type(exc).__name__}: {exc}'
+        if child is not None and child.poll() is None:
+            child_state['cleanup'] = cleanup_child(child.pid, scan(), protected)
+        step('child', child_state)
+        result['error'] = child_state['error']
+    finally:
+        if child is not None and child.poll() is None:
+            cleanup_child(child.pid, scan(), protected)
+        after_source = sha256(a.source_target)
+        result['source_sha256_after_child'] = after_source
+        if after_source != a.expected_source_sha:
+            result['error'] = 'source changed during child'
+        restore = run(plan['restore_argv'], a.restore_timeout, run_dir / 'restore.log')
+        step('restore', restore)
+        if restore['rc'] != 0:
+            result['error'] = f'restore rc={restore["rc"]}'
+            result['finished_monotonic_ns'] = time.monotonic_ns()
+            flush()
+            return 1
+        try:
+            health = wait_health(a, result)
+            manifest = read_json(Path(a.restore_output) / 'launch-manifest.json')
+            pid = int(manifest['pid'])
+            live = scan().get(pid)
+            if not live or live['ppid'] != 1 or live['pgid'] != pid:
+                raise RuntimeError('restored root identity mismatch')
+            pids = tree(scan(), pid)
+            if not all(scan()[p]['pgid'] == pid for p in pids):
+                raise RuntimeError('restored descendant escaped group')
+            record = read_json(Path(a.restore_output) / 'joint-patch-record.json')
+            branch = record.get('branch')
+            result['restore_branch'] = branch
+            if branch != 'aa3e-noop':
+                result['isolation_failed'] = True
+                result['error'] = f'joint branch={branch}; source drift evidence retained'
+            npu_evidence(pids)
+            env = env_evidence(pid, a.clean_env_expect)
+            joint = joint_env(read_root_env(pid))
+            info = http_json(f'http://127.0.0.1:{a.port}', '/v1/decide/info')
+            text_status, text = post_json(f'http://127.0.0.1:{a.port}', '/v1/systemone',
+                                          Path(a.text_body).read_text())
+            image_status, image = post_json(f'http://127.0.0.1:{a.port}', '/v1/decide',
+                                            Path(a.image_body).read_text())
+            after_restore = sha256(a.source_target)
+            result['source_sha256_after_restore'] = after_restore
+            checks = {'health': health.get('status') == 'ready',
+                      'info': info.get('config') == 's1',
+                      'workers': True, 'text': text_status == 200,
+                      'image': image_status == 200,
+                      'env': env['match'], 'joint_env': joint['ok'],
+                      'source': after_restore == a.expected_source_sha}
+            result['restore_checks'] = {'pid': pid, 'pids': sorted(pids), 'branch': branch,
+                                         'health': health, 'info': info, 'env': env,
+                                         'joint_env': joint, 'text': text, 'image': image,
+                                         'checks': checks,
+                                         'clients': pending_clients(scan())}
+            result['ok'] = bool(rc == 0 and not child_state.get('timed_out') and
+                                result.get('source_sha256_after_child') == a.expected_source_sha and
+                                result.get('source_sha256_after_restore') == a.expected_source_sha and
+                                branch == 'aa3e-noop' and all(checks.values()) and
+                                not result['restore_checks']['clients'] and
+                                not result['isolation_failed'])
+            result['finished_monotonic_ns'] = time.monotonic_ns()
+            flush()
+            return 0 if result['ok'] else 1
+        except BaseException as exc:
+            result['error'] = f'{type(exc).__name__}: {exc}'
+            result['finished_monotonic_ns'] = time.monotonic_ns()
+            flush()
+            return 1
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--run-dir', type=Path, required=True)
+    p.add_argument('--root-identity', type=Path, required=True)
+    p.add_argument('--stop-script', type=Path, default=Path('/tmp/d0cc/d0_stop.py'))
+    p.add_argument('--expect-stop-sha', default='d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886')
+    p.add_argument('--python', default=sys.executable)
+    p.add_argument('--child-argv', help='JSON string array; overrides --arm')
+    p.add_argument('--arm', choices=('A12', 'A8', 'A0', 'H1', 'H2'), default=None)
+    p.add_argument('--a12-binary', type=Path)
+    p.add_argument('--a12-runner', type=Path, default=Path(__file__).with_name('a12') / 'run_a12.sh')
+    p.add_argument('--adapter', type=Path)
+    p.add_argument('--probe-temp-root', type=Path)
+    p.add_argument('--probe-out', type=Path)
+    p.add_argument('--k', type=int, default=8704)
+    p.add_argument('--n', type=int, default=5120)
+    p.add_argument('--rows', type=int, default=128)
+    p.add_argument('--seed', type=int, default=20261119)
+    p.add_argument('--master-port', type=int, default=29531)
+    p.add_argument('--comm-timeout', type=float, default=90.0)
+    p.add_argument('--child-timeout', type=float, default=240.0)
+    p.add_argument('--stop-timeout', type=float, default=120.0)
+    p.add_argument('--restore-timeout', type=float, default=900.0)
+    p.add_argument('--port', type=int, default=18143)
+    p.add_argument('--source-target', type=Path, required=True)
+    p.add_argument('--expected-source-sha', default=AA3E)
+    p.add_argument('--official-start', type=Path, required=True)
+    p.add_argument('--activate', type=Path, required=True)
+    p.add_argument('--service-root', type=Path, required=True)
+    p.add_argument('--model-dir', type=Path, required=True)
+    p.add_argument('--restore-output', type=Path, required=True)
+    p.add_argument('--clean-env-expect', type=Path,
+                   default=Path('/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json'))
+    p.add_argument('--text-body', type=Path, required=True)
+    p.add_argument('--image-body', type=Path, required=True)
+    p.add_argument('--prior-client-record', type=Path)
+    p.add_argument('--cwd', type=Path)
+    p.add_argument('--execute', action='store_true')
+    a = p.parse_args(argv)
+    if a.stop_script.is_file() and sha256(a.stop_script) != a.expect_stop_sha:
+        raise ValueError('stop script SHA mismatch')
+    plan = build_plan(a)
+    if not a.execute:
+        plan['status'] = 'plan_not_executed'
+        print(json.dumps(plan, ensure_ascii=False, indent=2))
+        return 0
+    return execute(a, plan)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

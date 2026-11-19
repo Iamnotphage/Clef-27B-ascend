@@ -60,6 +60,8 @@ executor 引用调用方描述符（则并入 H3）。
 | `a12/` | 33 冻结官方样例 5 文件（原字节）+ 编译/运行包装 | 源 `6c1a90ab…` |
 | `snapshot_contract.json`、`validate_snapshot.py` | 31/32 snapshot 门 CPU 清单 | 见 manifest |
 | `test_probe_cpu.py` | 控制流/路径/释放顺序/watchdog/snapshot 测试 | 见 manifest |
+| `cell_supervisor.py` | source-aware 纯监督切片：单 child PGID/硬超时/保护 PID/源 SHA/可选 restore | 见 manifest |
+| `test_cell_supervisor_cpu.py` | 监督切片 CPU 测试（8/8） | 见 manifest |
 | `manifest.json` | 冻结 tuple/CLI/预期/失败分支/恢复 | 自描述 |
 
 `binding_probe.cpp` flags：`1 keep_group`、`2 keep_workspace`、`4 keep_descriptors`、`8 keep_all`、
@@ -83,10 +85,51 @@ torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.
 ```
 
 - `--arm-timeout` 默认 60 s（33 的 240 s 可显式传入；首轮短超时避免无区别挂满）。
+- 建议用 `cell_supervisor.py` 包住每格：它在独立 PGID 运行命令、硬超时后只清该 PGID、拒绝 signal
+  任何 `--protected-pid`、前后校验 source SHA 恒 aa3e，并可选执行 31 提供的官方 start.sh restore argv
+  与 post-check argv。它**不**停/启服务；服务生命周期仍由 31 控制。
 - 每臂新 `--out`（必须不存在）；`--temp-root` 显式；输出 `rank{0,1}/result.json`、`trace.jsonl`、
   失败时 `timeout.json`。A12 输出由 31 的 supervisor 捕获 stdout/stderr/rc。
 - 固定 seed/形状；967 行真实 MLP 臂在通路成立后另行提供真实 weight bin + SHA（本包支持
   `--weight-bin/--weight-sha`，首包不预置生产权重）。
+
+### 5.1 监督切片 CLI（31 执行；先 plan 后 execute）
+
+```bash
+python3 runtime/grouped_mmar/cell_supervisor.py   --source-target <aa3e head> --expected-source-sha aa3e1758...   --timeout 240 --run-dir <fresh> --protected-pid <service root> --protected-pid <member>...   --restore-argv '<official start.sh argv JSON>' --post-check-argv '<31 check argv JSON>'   --execute -- <probe command argv>
+```
+
+A12 臂可只用 `--` 加 `bash runtime/grouped_mmar/a12/run_a12.sh <bin>`，不带 restore（服务由 31 决定）；
+A8/A0/H1/H2 臂用 `torchrun ... run_probe.py ... --execute`。正常 restore 后必须 `branch=aa3e-noop`、
+tree 恒 aa3e；`f810->fused` 仅异常救援且判隔离失败。监督切片只记录 rc/survivors/source SHA/restore rc，
+不解释数值。
+
+### 5.2 完整服务窗口 CLI（31 执行；先 plan 后 execute）
+
+`supervised_probe_window.py` 是 31 要求的完整切片：preflight identity/端口/client → 原 d0_stop →
+断言端口 111/旧整 PGID 空/卡7 空 → child 独立 PGID/240s 硬超时/只杀精确 PGID/unknown 停报 →
+finally 官方 start.sh clean 两键+activate 恢复 aa3e/s1（fresh output）→ health、branch 必须
+`aa3e-noop`、tree 恒 aa3e、五 PID 同 PGID、卡7 双 worker、health/info/text/image 四检、OPP9/LD12、
+joint 三键、clients 空；`f810->fused` 仅保留漂移并判隔离失败。它不写 tree/guard/vendor，也不复用
+5c/v4r1 的 f810 revert 窗口；`window.json` 记录每步 rc/argv/identity/child PGID/cleanup。
+
+```bash
+python3 runtime/grouped_mmar/supervised_probe_window.py \
+  --run-dir <fresh> --root-identity <fresh-id.json> \
+  --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75... \
+  --arm A12 --a12-binary <a12-build>/build/bin/a12_grouped_mmar \
+  --source-target <aa3e head> --expected-source-sha aa3e1758... \
+  --official-start <service-root>/Clef-27B/start.sh \
+  --activate <service-root>/scripts/activate_env.sh \
+  --service-root <service-root> --model-dir <model> \
+  --restore-output <fresh> --text-body <text request> --image-body <image request> \
+  --port 18143 --execute
+```
+
+A8/A0/H1/H2 把 `--arm A12 --a12-binary ...` 换成 `--arm A0 --adapter <clef_mmar_probe.so>
+--probe-temp-root <fresh> --probe-out <fresh> --rows 128 --k 8704 --n 5120 --seed 20261119`；
+也可用 `--child-argv '<JSON argv>'` 直接给完整 child 命令。`--text-body/--image-body` 必须显式提供，
+窗口不伪造请求体。plan-only 输出完整 stop/child/restore argv 与成功门。
 
 ## 6. 预期观测 / 失败分支
 
@@ -117,7 +160,7 @@ torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.
 - 33 契约：C1–C6、A12 冻结样例 `6c1a90ab…`（commit `f5703e4`）、矩阵 v2、支持矩阵研究
   （repo commit `2616628`）；A12 样例文档自相矛盾已记录，不作支持性裁决。
 - 31：snapshot `39e52eb5…`、restore-spec `224b0036…`、API pack `/tmp/aa3e-grouped-api-pack-20261119`
-  （权威清单 `ecffc1ff…`，63 payload 63/63 OK；tar `f40628b7…` 仅派生）；A12 设备构建参考
+  （权威 v3 清单 `cfa70c1d…`，64 payload 64/64 OK；binary index `c9bd574a…`；tar `8a288b8c…` 仅派生）；A12 设备构建参考
   glue `22edb89f…`、binary `37929ec4…`、stage manifest `1d529ca8…`。
 - 32：首包判据、snapshot/restore 收紧、A12 不可单独作为 C1 单因证据。
 - 本包不 import torch/NPU 做 CPU 测试；CPU 测试只验证控制流/资源生命周期/超时/元数据。
