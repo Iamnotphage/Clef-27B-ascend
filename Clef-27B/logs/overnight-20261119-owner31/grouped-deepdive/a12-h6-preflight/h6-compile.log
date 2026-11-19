@@ -1,0 +1,41 @@
+-- The C compiler identification is GNU 11.4.0
+-- The CXX compiler identification is GNU 11.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Configuring done (0.4s)
+-- Generating done (0.0s)
+-- Build files have been written to: /workspace/yangchen/work/a12-h6-build-20261119T064904Z/build
+[ 50%] Building CXX object CMakeFiles/a12_grouped_mmar_h6.dir/workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp.o
+/workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp: In function ‘int callMatmulAndAicpu(HcclComm, void**, void**, int*, int*, DataSize&, aclrtStream, aclrtEvent, aclrtEvent, int, int, int, int, int, std::string, std::map<std::__cxx11::basic_string<char>, long int>&)’:
+/workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp:370:64: warning: ‘aclnnStatus aclnnGroupedMatMulAllReduceGetWorkspaceSize(const aclTensorList*, const aclTensorList*, const aclTensorList*, const aclIntArray*, int64_t, const char*, const char*, int64_t, int64_t, const aclTensorList*, uint64_t*, aclOpExecutor**)’ is deprecated: aclnnGroupedMatMulAllReduceGetWorkspaceSize will be deprecated [-Wdeprecated-declarations]
+  370 |     auto aclnnRet = aclnnGroupedMatMulAllReduceGetWorkspaceSize(
+      |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+  371 |         (aclTensorList*)inputs[0], (aclTensorList*)inputs[1], (aclTensorList*)inputs[2], (aclIntArray*)inputs[3],
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  372 |         split_item, hcom_name, "sum", comm_turn, 1, (aclTensorList*)outputs[0], &workspaceSize, &executor);
+      |         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp:34:
+/usr/local/Ascend/cann-9.2.1/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h:48:23: note: declared here
+   48 | ACLNN_API aclnnStatus aclnnGroupedMatMulAllReduceGetWorkspaceSize(
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp:389:43: warning: ‘aclnnStatus aclnnGroupedMatMulAllReduce(void*, uint64_t, aclOpExecutor*, aclrtStream)’ is deprecated: aclnnGroupedMatMulAllReduce will be deprecated [-Wdeprecated-declarations]
+  389 |     aclnnRet = aclnnGroupedMatMulAllReduce(workspaceAddr, workspaceSize, executor, rtStream);
+      |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /workspace/yangchen/work/grouped-deepdive-35-36f8141/runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp:34:
+/usr/local/Ascend/cann-9.2.1/include/aclnnop/aclnn_grouped_mat_mul_all_reduce.h:62:23: note: declared here
+   62 | ACLNN_API aclnnStatus aclnnGroupedMatMulAllReduce(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
+      |                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+[100%] Linking CXX executable bin/a12_grouped_mmar_h6
+[100%] Built target a12_grouped_mmar_h6
+cdf485539c5fed610ad3352315d44cd114d57bad95f30a999a8f1e7cd275515f  /workspace/yangchen/work/a12-h6-build-20261119T064904Z/build/bin/a12_grouped_mmar_h6
