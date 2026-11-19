@@ -390,7 +390,10 @@
 
 - **执行**：plan `18fdf185…`；d0_stop 1305145 成功、torchrun 2 ranks 启动；约 4 s 后 rank1 exit1；child.stdout 仅 `ERR99999`；child.stderr `run_probe.py:243 out.mkdir(parents=True, exist_ok=False)` → `FileExistsError`（rank0 先创建 `probe-out-a14-small-v2`），rank0 SIGTERM；probe-out 仅 rank0 stub/空 trace；**无 507046/stream47，未进入 MC2 调用**。该格不作为 A14 判据。
 - **根因/修复**：harness mkdir 竞争；最小修复 `out.mkdir(parents=True, exist_ok=True)`，per-rank `rank_dir.mkdir()` 保持 `exist_ok=False` 以保留 fresh 检查。35 重冻 run_probe 新 SHA；31 先完成 safe window 官方 aa3e 恢复（回传新 root/五 PID/branch/四检/restore 原件），再从新冻重 stage/编译/重出 small plan（新 root identity、新 run_probe SHA、新 probe-out 路径），预检 `master_port 29531` 空闲；32 核后重发 A14 small GO。
-- **状态**：A14 仍未检验；H6 限定结论（user workspace 初值削弱）不变；依赖 `supported_but_unproven`；A13 不执行；服务恢复 aa3e。
+- **状态**：A14 仍未检验；H6 限定结论（user workspace 初值削弱）不变；依赖 `supported_but_unproven`；A13 不执行；服务恢复 aa3e（新 root **1306695**）。
+- **失败格归档核验**：a14-small-cell 10/10 OK；window ok=false、child rc1、无 survivor；child.stderr FileExistsError（run_probe.py:243）；无 507046/stream47（未进 MC2）；rank0 stub/空 trace；restore manifest pid 1306695、joint-record branch aa3e-noop/ok true；恢复五 PID/四检全 true。
+- **修复最终冻结**：f087746/manifest `02fdd342…`（binding `101660f8…`、run_probe `b7f255cb…`（prepare_out exist_ok=True + rank_dir fresh 门、A14 KEEP_ALL）、window `2202165e…`）；代码与 d571641 相同，CPU 独立 **45/45**；a14_control 记录 small_v2_aborted_pre_launch/fixed_d571641_v3_pending。
+- **v3**：31 从 f087746 重 stage；adapter d181b15a 可复用（binding 未变，重出 compile log）；root 1306695 fresh identity；probe-out 全新（probe-out-a14-small-v3）；master_port 29531 预检空闲；small plan M128/K256/N512/KEEP_ALL/window 2202165e/240 s；stage-identity v4/SUMS → 32/33 核后 GO；证据与完整恢复要求同前；large 等 small。
 
 ## 9. 本地核对副本
 
