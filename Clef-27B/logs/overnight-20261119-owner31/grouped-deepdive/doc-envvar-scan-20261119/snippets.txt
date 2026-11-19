@@ -1,0 +1,91 @@
+=== msopst/scripts/msopst.ini 10-22 ===
+
+# performance_mode: ST运行是否获取性能数据，参数取值：
+#   False: ST运行不获取获取性能数据
+#   True : ST运行获取性能数据
+performance_mode = False
+
+# ASCEND_GLOBAL_LOG_LEVEL: 设置host日志级别环境变量，参数取值:
+#    0: 对应DEBUG级别
+#    1: 对应INFO级别
+#    2: 对应WARNING级别
+#    3: 对应ERROR级别(默认)
+#    4: 对应NULL级别，不输出日志
+ASCEND_GLOBAL_LOG_LEVEL = 3
+=== asys/config/config_parser.py 44-52 ===
+    "log_level": IniConfItem(
+        "ASCEND_GLOBAL_LOG_LEVEL",
+        {"DEBUG": "0", "INFO": "1", "WARNING": "2", "ERROR": "3", "NULL": "4"},
+        "INFO",
+    ),
+    "log_event_enable": IniConfItem(
+        "ASCEND_GLOBAL_EVENT_ENABLE", {"FALSE": "0", "TRUE": "1"}, "TRUE"
+    ),
+    "log_print_to_stdout": IniConfItem(
+=== asys/drv/env_var.py 25-43 ===
+    def __init__(self):
+        self.process_log_path = self._set_env_path("ASCEND_PROCESS_LOG_PATH")
+        self.npu_collect_path = self._set_env_path("NPU_COLLECT_PATH")
+        self.dump_graph_path = self._set_env_path("DUMP_GRAPH_PATH")
+        self.work_path = self._set_env_path("ASCEND_WORK_PATH")
+        self.cache_path = self._set_env_path("ASCEND_CACHE_PATH")
+        self.opp_path = self._set_env_path("ASCEND_OPP_PATH")
+        self.custom_opp_path = self._set_env_path("ASCEND_CUSTOM_OPP_PATH")
+        self.current_path = os.getcwd()
+        self.home_path = os.path.expanduser("~")
+
+    @staticmethod
+    def _set_env_path(env_var):
+        env_path = os.getenv(env_var)
+        if env_path and f.check_dir(env_path):
+            ret = os.path.abspath(env_path)
+        else:
+            ret = None
+        return ret
+=== asys/common/task_common.py 128-137 ===
+def get_cann_log_path(log_type):
+    """
+    get trace or cann log path from env
+    """
+    env_var = EnvVarName()
+    if log_type == CANN_LOG_NAME:
+        if env_var.process_log_path:
+            return env_var.process_log_path, "${ASCEND_PROCESS_LOG_PATH}"
+
+    if env_var.work_path:
+=== pkg_inc/mmpa/sub_inc/mmpa_env_define.h 92-96 ===
+    MM_ENV_ASCEND_GLOBAL_EVENT_ENABLE = 6003,
+    MM_ENV_ASCEND_GLOBAL_LOG_LEVEL = 6004,
+    MM_ENV_ASCEND_MODULE_LOG_LEVEL = 6005,
+    MM_ENV_ASCEND_HOST_LOG_FILE_NUM = 6006,
+    MM_ENV_ASCEND_PROCESS_LOG_PATH = 6007,
+=== mmpa_env_define.h 142 ===
+    MM_ENV_HCCL_DEBUG_CONFIG = 11025,
+=== asc/.../aicpu_operator_pub.h 660 ===
+    u64 debugConfig = 0; // 环境变量HCCL_DEBUG_CONFIG, 考虑兼容性放在结构体末尾
+=== opp/.../moe_distribute_base.h 240 ===
+    uint64_t debugConfig = 0; // 环境变量HCCL_DEBUG_CONFIG, 考虑兼容性放在结构体末尾
+=== asc_op_compile_base log_utils.py 122-132,151-155 ===
+        default_log_level = AscendCLogLevel.LOG_WARNING.value
+        plog_switch = os.environ.get("ASCEND_SLOG_PRINT_TO_STDOUT")
+        plog_level = os.environ.get("ASCEND_GLOBAL_LOG_LEVEL")
+        if plog_level is None and log_level.value < default_log_level:
+            return
+        if plog_level is not None and log_level.value < int(plog_level):
+            return
+        LogUtil.plog_print(kernel_name, msg_info, log_level, option)
+        if plog_switch is None and log_level.value < default_log_level:
+            return
+        if plog_switch is not None and int(plog_switch) == 0 and log_level.value < default_log_level:
+    @staticmethod
+    def detail_log_print(kernel_name: str, msg_info: str, log_level: AscendCLogLevel, option: Option = Option.DEFAULT):
+        plog_switch = os.environ.get("ASCEND_GLOBAL_EVENT_ENABLE")
+        if plog_switch is not None and int(plog_switch) == 1:
+            logpid = os.getpid()
+=== pypto debug_aicore_error.py 300-305 ===
+    """检查 ASCEND_GLOBAL_LOG_LEVEL，非 ERROR 级别时提示可能较慢。"""
+    level = os.environ.get("ASCEND_GLOBAL_LOG_LEVEL", "3")
+    if level != "3":
+        _print_log("WARNING",
+            f"ASCEND_GLOBAL_LOG_LEVEL({level}) not set to ERROR(3), single-operator test be slow at current log level, "
+            "recommend export ASCEND_GLOBAL_LOG_LEVEL=3")
