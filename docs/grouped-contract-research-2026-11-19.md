@@ -374,6 +374,16 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 
 **不能证**：`rcvCnt` 的初始化值/递增指令与可见性（现有反汇编只覆盖 `AicpuCcOpExe/AddTaskForHcclMsg` 头部，未覆盖 `ReadWorkMsg/CheckRcvWorkMsg` 全文；未见 rcvCnt offset 51 访问）；`AivAicpuOpParam` 除 sendCnt/valid 外的字段由 kernel/AICPU 谁填充；H11 的 KFC task 实际 dispatch 到哪个 KFC/RPC 版本/函数（符号存在≠本次调用）；tiling 运行时 `notifyOff/workspaceOff` 实际值；本机 kernel 编译后完整 `sizeof/offsetof`。H6 仍只清 user workspace，不覆盖 context KFC 区。候选保持“AivAicpu KFC producer/consumer 响应推进”而非结案；后续 H4K 若返回/仍挂分别按 32 口径分层。
 
+## 26. H4K 结果：调用线程真实 sync 仍挂 stream47 task13（2026-11-19）
+
+33 只读核 `h4k-small-v1-cell`（23 文件，SUMS `8fe4986b…` 23/23，commit cd561f6）：plan 947fe77a/stage 2dcf4544/window d7e73514/run_probe 508e2931/binding 101660f8/adapter d181b15a/identity 1316176/399261496；out/run/restore h4k-small-v1 fresh。
+
+- trace（source=cpp，flags=24）：`handler_enter` @2.546568（prepare stream 0xaaaaf0db4448/context 0xaaaaed99b470）→ `stream_compare` @.546576 → `launch_enter` @.546579 → `launch_return launch_rc=0` @2.609939 → **`sync_enter`（调用线程真实 aclrtSynchronizeStream）@2.609959，无 `sync_return`**；**无 Python `api_return`/`sync_enter`**（direct launch body 仍阻塞在 cpp sync，torch.ops 未返回）。rank1 同型（launch_return @2.565001、sync_enter @2.565022）。240s watchdog child rc -9、timed_out=true、survivors []、result stub（libraries []，早 flush）。
+- plog 两 device `2026-11-19-08:26:31.680/.677 [stream.cc:1996] three minutes timeout! stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1`；device 日志创建 `KFCtaskAndTilingTraceData` + `AivAicpuOpParam`（device0 L108/L111、device1 L108/L111）、`End AicpuRpcResInit` L113，并加载 `RunAicpuKfcResInit`（V1）/`ResInitV2`/`RpcSrvLaunchV2`/`SrvLaunch`（L88/L107/L114）。
+- 活 rank 快照：rank0 pid 1318300、rank1 1318301，PGID self、starttime 399358649、cmdline=torchrun H4K；保存 `/proc/<pid>/maps` 全文 + 15 项过滤库 SHA；**快照在启动早期采集，probe_adapter.so/libopapi.so 尚未映射，result libraries 未 flush**——adapter 加载门不能由该快照证明，时序限制如实记录。restore aa3e-noop root **1319033**/五 PID/四检全 true。
+
+**有限结论**：H4K（调用线程 + 真实 C++ sync）与 H11（OpCommand handler + Python sync）**同样挂 stream47/task_id=13 pending**；H5K 为 launch 前区间阻塞（非 Grouped device 判别）。→ **线程/同步路径不是差异源**；Grouped device path（KFC task/AivAicpuOpParam 响应推进）候选保持，不单格定因；H4K 无 numeric/reduced diff（stub）；`mc2_server` 依赖仍 `supported_but_unproven`。A14 large 的设备事实条件（H4K 同挂+完整恢复）已满足，待 32 核原件与 20 授权 CPU 准备；A15 无设备授权；Grouped large/A13 暂停。
+
 **优先方向修正（32/35 审阅后）**：原 H4（flags=DIRECT_LAUNCH=16）**不是单变量**——它同时改变 ①调用线程 vs OpCommand consumer 线程 ②body 内真实 `aclrtSynchronizeStream` vs handler 默认 sync_rc0 ③失去 KEEP_ALL 保活/cleanup/id。H5（flags=REFETCH_STREAM=32）也不是单变量——同时改 handler 线程内 stream 重取与失去 KEEP_ALL 保活。正确匹配变体需显式组合：**H4K=DIRECT_LAUNCH|KEEP_ALL=24**（仍同时改线程+真实同步，是组合臂）与 **H5K=REFETCH_STREAM|KEEP_ALL=40**（对 H11 仅改 handler 流来源，是单一 stream/context 变量），需在 run_probe `ARMS` 与 window `--arm choices` 加两行（CPU-only，binding/flags 零改），**等 H11 raw + 32 审查后再决定，当前不写码/不排设备**。零代码用原 H4/H5 只能作“线程+同步+保活”/“stream+保活”组合交互臂，不能隔离 context/线程。判别顺序（未来）：H5K 返回→handler 重取 stream/context 绑定为差异；H11 挂 + H5K 挂 + H4K 返回→调用线程+显式同步路径可行，OpCommand consumer 线程/无 sync 为候选（同步与线程仍纠缠）；三者全挂→投递/AivAicpu-KFC 协议候选更强；**不得由 H4K 单独证明 context**。跨进程 stream 指针不可比，只比同进程 prepare/handler 关系与 device；C++ sync trace 与 Python sync 需标 `source=cpp|python`。
 
 ## 20. H11 matched small 结果：Grouped 同形状仍挂起（2026-11-19）
