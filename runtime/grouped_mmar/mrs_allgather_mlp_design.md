@@ -289,15 +289,68 @@ separate optional stage, not mixed into the matmul comparison.
   and total median/p95 for both arms plus paired deltas. No single-run adoption claim.
 - **Process model and KEEP_ALL budget**: choose either one process alternating arms
   or one fresh process per arm. The A15 probe leaks one executor/workspace per call
-  because release is unregistered; small workspace is 17,170,432 B/rank and large is
-  115,818,496 B/rank. Count W warmups, all A15 calls, retries and auxiliary calls
-  against the same 1 GiB/rank cap: total calls <= floor(1 GiB / per-call workspace),
-  i.e. about 62 small or 9 large per rank. If both arms leak in one process they share
-  that budget; separate processes isolate it and let process exit reclaim. Suggested
-  bounded cells: small W=3/N=20 (23 calls), large W=2/N=6 (8 calls).
+  because release is unregistered. The earlier "62 small / 9 large" estimate counted
+  only the workspace; the code-path budget in 15.1 includes the retained pad input and
+  RS output, giving about 16.50 MiB small and 131.25 MiB large per call. Count W
+  warmups, all A15 calls, retries and auxiliary calls against the same 1 GiB/rank cap.
+  If both arms run in one process they share the A15 budget; separate processes
+  isolate it and reclaim at exit. Suggested bounded cells after 15.1: small W=3/N=20
+  (23 calls, about 398 MiB retained peak) in one process; large **W=1/N=4 (5 calls,
+  about 807 MiB peak including shared weight/input and transient)** per arm in
+  independent processes. Large cannot fit W2/N6 (8 calls, about 1,050 MiB retained
+  alone) once the pad input and RS output are counted.
 - **Production lifecycle**: a long-running service still needs executor destruction
   and workspace pooling/ownership; using flags=0 and relying on early release is not
   a solution and is not measured here.
 - **Reporting**: raw per-iteration durations and amplitudes stay with the run; any
   comparison remains a diagnostic of this bounded cell, not a production throughput
   or precision claim. No official entry/CSV change.
+
+### 15.1 KEEP_ALL budget from the actual retained objects
+
+Code path: `run_mrs` allocates `workspace = at::empty({bytes})` under the input
+options (binding_probe.cpp:615) and, when `KEEP_ALL` is set, stores
+`keep_x = x`, `keep_w = weight`, `keep_y = y`, `keep_workspace = workspace` and
+`keep_lists` (binding_probe.cpp:618-621). The state stays in `g_states` because `id`
+is assigned for any keep flag; the release op is unregistered, so every call retains
+its own objects until process exit.
+
+| Object (per rank) | Small M127->128, K256, N512 | Large M967->968, K8704, N5120 |
+| --- | --- | --- |
+| workspace | 17,170,432 B = 16.375 MiB | 115,818,496 B = 110.458 MiB |
+| pad input `x_mrs` (new each call) | 128*256*2 = 65,536 B = 0.0625 MiB | 968*8704*2 = 16,850,944 B = 16.071 MiB |
+| MRS output `y` (new each call) | 64*512*2 = 65,536 B = 0.0625 MiB | 484*5120*2 = 4,956,160 B = 4.726 MiB |
+| descriptors/lists | small | small |
+| **retained per call** | **17,301,504 B = 16.500 MiB** | **137,625,600 B = 131.255 MiB** |
+
+Shared, not multiplied per call: the weight tensor passed to `run_mrs` (large
+8704*5120*2 = 85.0 MiB) is the same allocation every iteration, and the original
+`x_n` [967,8704] is about 16.05 MiB; both are held once. The executor pointer is also
+leaked but its allocator size is unknown, so keep a 20% margin.
+
+Transient per call (freed after the comparison, not cumulative): `full` [968,5120]
+9.91 MiB, `reference` [967,5120] 9.91 MiB, and diff/stat temporaries of the same
+order; peak transient is roughly 40-60 MiB and belongs in peak RSS, not in the
+cumulative leak sum.
+
+Capacity under 1 GiB/rank (1,073,741,824 B):
+
+- Small: floor(1 GiB / 17,301,504) = 62 calls; with 20% margin 49 calls. W3/N20 = 23
+  calls (about 398 MiB retained including the shared weight/input).
+- Large: floor(1 GiB / 137,625,600) = 7 calls of leak alone; with 20% margin 6.
+  W2/N6 = 8 calls is 1,050 MiB of retained objects and does not fit. W1/N4 = 5 retains
+  656 MiB, plus shared weight/input about 101 MiB and transient about 50 MiB, for a
+  peak near 807 MiB (about 79% of 1 GiB). W1/N5 = 6 retains 788 MiB and peaks near
+  938 MiB (about 91%), too tight once allocator overhead is included.
+
+Process model:
+
+- **Small**: one process alternating A15/A16 is feasible (23 A15 calls, about 398 MiB
+  retained plus transient/shared); ABBA pairs are inside that process.
+- **Large**: use one fresh process per arm (A15 and A16 each W1/N4), alternating the
+  process launches A/B/B/A; this isolates the A15 leak and lets process exit reclaim.
+  If a shared process is required, cap at W1/N3 = 4 A15 calls (525 MiB retained plus
+  shared/transient, about 676 MiB peak) and keep A16 in its own process.
+- A16 is design-not-implemented, so the benchmark cannot start until the baseline arm
+  exists and its NZ/ND equivalence is verified; no device benchmark is authorized by
+  this section.
