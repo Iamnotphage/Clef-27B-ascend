@@ -567,3 +567,12 @@ freeze `22346ec`：manifest `35bc507a…`、run_probe **`7afd7799…`（27,430 B
 31 归档 `a15-small-v2-cell/`（18 文件，SUMS `05b2ccc6…` 18/18，commit 32ef246）：plan a9ea5fe2/identity 1328734/399924959。两 rank result：pad `{rows127,padded128,pad_value1.0}`、row_block rank0 `(0,64)`/rank1 `(64,128)`、gather_ms **1.16421/1.15801**、workspace **17,170,432**、api/sync/finite/both true、numeric_pass/pass true；trace pad_ready/workspace/sync **7.776/9.699 ms**/gather；child rc0、survivors []、cleanup_final 空；window ok=false 仅 maps 采样伪影；restore aa3e-noop root **1330921**/五 PID/四检全 true、subreaper 0→cleared→final0、无第二树。
 
 **缺失字段根因（产品）**：`a15_flow` 的 `reference=all_reduce(matmul(x,w))`，execute 传入 `lambda t: dist.all_reduce(t, op=SUM)`；PyTorch `dist.all_reduce` 原地返回 None → reference=None → 后置 `reduced/equivalence/diagnostic_gate` 分支被跳过（并非零差异）。result 无 `reduced/equivalence/diagnostic_gate`，因此 **numeric_pass 仅覆盖 api/sync/finite，不是等价性通过**。修复：lambda/函数调用 `dist.all_reduce(t)` 后 `return t`，CPU 桩断言 equivalence 出现；重冻后需 a15-small-v3 plan 与一次 GO。A15 v2 无数值等价结论；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
+
+## 52. cdc8324 A15 原地/fail-closed 修复复核（2026-11-19）
+
+freeze `cdc8324`：manifest `eedd36c9…`、run_probe **`103b9775…`（28,844 B）**、window `1f780bf8` 未变、test_probe **`f6fe2c99…`（24）**、test_window 228150e4（40）；CPU 73/73（7 Linux-only skip）；binding/adapter/H4K tuple 未变。
+
+- `a15_flow` L285-311：`reference = matmul(x,w)` 后 `all_reduce(reference)` 原地调用，**不再使用返回值**；注释明确 `dist.all_reduce` 返回 None。
+- `a15_record` L314-330 纯函数：reference None→None；否则 `reduced/equivalence/diagnostic_gate`（0.03125/1e-4 diagnostic，非 fixed_gate）。execute L512-518 调用，None 时写 `numeric_error=missing_equivalence_record`；L546-553 `record_ok` 要求 A15 三键齐全，缺则 numeric_pass=false（fail-closed，记录完整性，不是误差门）。
+- 测试：CPU 桩 all_reduce 返回 None 并原地改 tensor，断言 reference 非 None/值正确、output/reference 127、max_abs=8.0；`A15RecordTest` 正常/None 两态；test_probe 24。代码级 PASS。
+- A15 v3 待 31 用 fresh identity **1330921**（restore manifest 无 starttime，需实扫 /proc）出 plan（rows127/k256/n512、flags8、bias null、window 1f780bf8、run_probe 103b9775、adapter d181b15a、fresh a15-small-v3、port 预检）→ 32/33 核 → 一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
