@@ -482,3 +482,11 @@ freeze `a00edad`：manifest `778c37af…`、window **`9a31091b…`（46,020 B）
 - 恢复官方 start.sh：branch `aa3e-noop`、root **1313827**、五 PID、双 worker、四检/env/joint/clients 全 true、无残留。
 
 **有限结论**：H11 在 M128/K256/N512、BF16、FP32 zero bias、单 group、KEEP_ALL、同 adapter/comm/240s 下仍挂起（即使 host handler 已返回、Python device sync 未返回）→ **排除“仅大 shape/tiling”解释**，Grouped-specific op/kernel/tiling/`rac_server`/AivAicpu KFC task 投递为优先候选，`task_id=13` pending；不单格定因，`mc2_server` 必要依赖仍 `supported_but_unproven`。H11 KFC/AivAicpu 痕迹与 A14 的 `Hccl<HCCL_SERVER_TYPE_AICPU>` 客户端路径形成对照；日志缺失不作未执行证明，但结合源码链支持协议候选。large 暂停；H4K/H5K 不自行加臂，待 20/32 排程；A13 不执行。
+
+## 38. 120d4e7 subreaper lifecycle 复核（2026-11-19）
+
+freeze `120d4e7`：manifest `4beba032…`、window **`b77530bc…`（47,325 B）**、run_probe `d54584b7…`（未变）、test_probe `c11f4284…`（18）、test_window `6f6a3cc9…`（38，6 Linux-only skip）；CPU 65/65。`begin_restore` 在 `start_restore` 前调用 `disable_subreaper`；失败则 `blocked_subreaper_restore`/`restore_blocked`，**不启动第二棵树**（纯逻辑测试在）。新 Linux daemon fixture：enable 时 daemon 化 wrapper 子进程 reparent 到 window；disable 后新 daemon reparent 到 PID1（非 window）。这两点代码级成立。
+
+**F5（中高）原 flag 未读取/未还原**：`_prctl_subreaper(enabled)` 只执行 `prctl(36, 1/0)`（L108-113），没有 `PR_GET_CHILD_SUBREAPER`（37）读取旧值；`disable_subreaper` 固定清零，docstring 的 “Restore the pre-cell subreaper state” 与实现不符。若 window 启动前原本就是 subreaper=1，清零后不会恢复原值；fixture 只测 enable→reparent window / disable→PID1，**未测 original=1**。修复：set 前 `prctl(37,&old)` 保存；restore 前清零以达成 ppid1，finally 再 `prctl(36,old)` 还原原状态；补 original=1 的 Linux fixture。若 original=1，清零期间 service 可 reparent PID1，但结束后必须恢复原状态；不能把“固定清零”称为 restore。
+
+**A14 v2 plan 状态**：`56441483`（window 52c10dce）未启动；新 window 为 b77530bc，故该 plan/stage 已不是当前 window，需 31 重出 stage/plan（run_probe d54584b7、window b77530bc、fresh identity 1323589/399707126），不能用旧 plan metadata-only 复用。A14 large 数值重跑待 F5 修复 + Linux 38 项 + 32/33 核。Grouped large/A13 暂停；A15 CPU。
