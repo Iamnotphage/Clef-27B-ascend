@@ -2800,3 +2800,43 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 不得改 binding/smoke/schema/release 函数体/run/sync/Lists/window；不得改 `8ecf8f9`/frozen `101660f8`/`1f780bf8`/`d181b15a`；不重跑、不设备、不部署、无 PR/设备 GO。
 
 **状态**：release dispatcher 最终 PASS（窄范围）；valid-state/SDK/task13/H11 仍不证；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
+
+## 135. 下一最小观测的可行性设计（不实现/不取件/不设备）
+
+**目标**：在不盲读候选地址、不读其它进程地址的前提下，受支持地读取“同 rank 进程自有、长度已知的 workspace”，或取得 AICORE task13 等待证据。
+
+### 135.1 接口盘点（来源/缺口）
+
+| 接口 | 目标 | 来源 | 可行性 |
+| --- | --- | --- | --- |
+| harness `keep_workspace`（`at::Tensor`，16,777,216 B） | 自有、已知长度 **user workspace** | binding L162/L311–325（源码已证）；`at::Tensor` API | **可读但区域不对**：这是 aclnn user workspace，不是 `context->WorkSpace`；**不含 KFC response/rcvCnt** |
+| `context->WorkSpace`（HCCL 通信上下文 workspace；候选 `0x12c09bc00000`） | KFC response/rcvCnt 所在 | 内核源 `workspaceMsg=context->WorkSpace+notifyOff`（§303/§317）；`rac_server.h` `f6b286d7…`；`mc2_common_def.h` `9c045a97…`/`a8969b7f…` | **无 host 访问器**：harness 不持有该指针/上下文；需 9.2.1 HCCL/ACL API 或内核侧标记 |
+| `aclrtMemcpy`/`aclrtMemcpyAsync` | 设备→host 读 | 9.2.1 `include/acl/acl_rt.h`（本机未副本；`aclrtMemset` 声明见 §182 的 31 读取） | **声明/签名未本地核实**；需 9.2.1 头 SHA |
+| `aclrtSynchronizeStreamWithTimeout` | 有限超时同步 | A12 上游样例 L383；9.2.1 头未副本 | 需 9.2.1 头确认签名/超时单位 |
+| `torch.npu.synchronize()` | 当前 sync | run_probe L534（源码已证） | **会阻塞**；不能用于 hang 中读取 |
+| AICORE `TurnWait` | task13 等待 | 无现有日志/接口；需 kernel `printf`/msprof | 当前不可读 |
+
+### 135.2 为什么不能读 `0x...0073`
+
+- 候选 `0x12c09bc20073` 依赖 `y=0x12c09bc00000`（仅低 32 匹配）、`j=notifyOff`、`T=1`、`notifyOff=131072`；full base/jT/notifyOff **未运行绑定**。
+- 该地址在 HCCL 上下文 workspace，不一定属于 harness 进程可见 VA；盲读候选/其它进程地址不支持。
+- 因此候选地址只能作为**未来 plan 的候选目标**，不是当前可执行读点。
+
+### 135.3 受支持的最小方案（二选一）
+
+**方案 A（可设计；回答不同问题）**：未来包在 harness 内新增只读 `read_user_workspace(id, offset, length)`，读 `keep_workspace`（16 MiB，自有/已知长度），用 9.2.1 `aclrtMemcpyAsync` 在**独立 stream/context**、有限超时（1–5 s）；只回答 user workspace 内容/生命周期，**不含 KFC response**，不能解 ack。
+- 需要：9.2.1 `acl_rt.h` 的 memcpy 声明/签名；独立 stream；不改变 g_states 所有权；只读；新包/plan/32 审/20 GO。
+
+**方案 B（能回答 ack；当前缺接口）**：取得 `context->WorkSpace` 的 host 访问器，或内核侧 `TurnWait` 标记/msprof，读 `context->WorkSpace+notifyOff+64` 的 response 区。
+- 需要：9.2.1 HCCL/ACL API 或头（暴露 comm context workspace）**或** kernel `printf`/profiling；full base/jT/notifyOff；新包/plan/32 审/20 GO。
+- 当前**不可执行**；最小需补：`acl_rt.h`（memcpy/同步签名）+ HCCL 上下文 workspace 访问器（或 9.2.1 HCCL 头）+ tiling `notifyOff/j/T`/full base。
+
+### 135.4 任何未来 plan 的硬要求
+
+- full base/jT/notifyOff 绑定；**禁止盲读**候选 `0x...0073`/其它进程地址。
+- 读取范围（仅 response 区或整个 16 MiB）、时序（hang 中/超时后/预 sync）、是否会被同一 sync/stream 阻塞；必须独立 stream/context。
+- 有限超时（1–5 s，非默认 30 s；默认 30 s **不证明**覆盖历史退出延迟）。
+- 只读、不取得所有权；g_states 保活；清理/唯一 restore 预算明确；既有 `-2` GO 已消耗，必须新包/plan/32 复审/20 有限 GO。
+- 不写第二套操作命令；不自动运行；当前服务/`8ecf8f9`/候选冻结。
+
+**结论**：现有接口下**不可执行**“读 response/取 AICORE 等待证据”。可支持的只有自有 user workspace 读（方案 A，回答不了 ack）；方案 B 需补 9.2.1 `acl_rt.h`/HCCL 访问器 + tiling 字段，或 kernel 标记/profiling。root cause unresolved。
