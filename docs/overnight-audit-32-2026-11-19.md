@@ -394,6 +394,7 @@
 - **失败格归档核验**：a14-small-cell 10/10 OK；window ok=false、child rc1、无 survivor；child.stderr FileExistsError（run_probe.py:243）；无 507046/stream47（未进 MC2）；rank0 stub/空 trace；restore manifest pid 1306695、joint-record branch aa3e-noop/ok true；恢复五 PID/四检全 true。
 - **修复最终冻结**：f087746/manifest `02fdd342…`（binding `101660f8…`、run_probe `b7f255cb…`（prepare_out exist_ok=True + rank_dir fresh 门、A14 KEEP_ALL）、window `2202165e…`）；代码与 d571641 相同，CPU 独立 **45/45**；a14_control 记录 small_v2_aborted_pre_launch/fixed_d571641_v3_pending。
 - **v3**：31 从 f087746 重 stage；adapter d181b15a 可复用（binding 未变，重出 compile log）；root 1306695 fresh identity；probe-out 全新（probe-out-a14-small-v3）；master_port 29531 预检空闲；small plan M128/K256/N512/KEEP_ALL/window 2202165e/240 s；stage-identity v4/SUMS → 32/33 核后 GO；证据与完整恢复要求同前；large 等 small。
+- **v3 最终核验/GO**：不可变 tuple = commit **f087746**/manifest **02fdd342**（代码与 d571641 逐字节相同：binding `101660f8…`、run_probe `b7f255cb…`、window `2202165e…`）、adapter `d181b15a…`（compile `fc8efe47…`）、identity **1306695/398875478**（`a85ff9b8…`）、plan **8782537a…**（M128/K256/N512/KEEP_ALL/out probe-out-a14-small-v3/run+restore v3 fresh/240 s/plan_not_executed）；stage-v5 `a3b12870…`、SUMS 17/17（`4eaf108e…`）、master_port 29531 FREE。早前 d88250e4 为 v4 旧 plan，已 superseded。**A14 small v3 GO 已发**；回传 rank0/1 result.json（api/sync/finite/both/pass、reduced max_abs/bit_equal、group/world、versions）、trace、child 日志、window.json/per-PID maps、plog、完整恢复；large 等 small 结果 + 32 有限核，用 small 恢复后新 root 重建；A13 不执行。
 
 ## 9. 本地核对副本
 
