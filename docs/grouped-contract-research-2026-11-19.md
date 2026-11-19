@@ -137,3 +137,20 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
   - **A13b `aclnnMatmulReduceScatterV2` commMode="aiv"**：A3 文档仅支持 `aiv` 且通信缓冲区 ≥200MB（plog 默认 `HCCL_BUFFSIZE=200M`）；示例 `mc2/matmul_reduce_scatter_v2/examples/test_aclnn_matmul_reduce_scatter_v2.cpp`，SHA `83aa3286…`，10,461 B。
   - 判定：A13a hang + A13b 成功 → `mc2_server`/KFC 路径在 chip:5 不可用，Grouped（仅 AICPU 路径）为环境阻塞；A13a 成功 → Grouped op/kernel 特定问题。
 - 待 31 只读提供：`/usr/local/Ascend/cann-9.2.1/opp/built-in/op_impl/aicpu/kernel/mc2_server.tar.gz` 与其 support 配置/README、同目录清单、`cann-tsch-compat.tar.gz` 配置，以及 A13a/A13b kernel 路由文件；若确认 chip:5 不在 mc2_server 支持列表，则 Grouped 路径记为环境阻塞，停止 H6/H7/H12 设备臂，不改变 aa3e/f810 默认。
+
+## 11. mc2_server chip:5 支持矩阵收尾与结案（2026-11-19）
+
+31 只读证据包 `Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/mc2-support/`（commit e33d5f7）经 33 独立核：
+
+- 5 文件 + SHA256SUMS **5/5 OK**；SUMS 文件 SHA `1f5e62c8…`。
+- `mc2_server.tar.gz` SHA `71263835…`，873,250 B；文件头 `aa55aa55` 私有包格式（非 gzip），标准工具 `file` 判为 data；`strings` 仅见 PKI/CRL URL，包内 chip 支持清单无法用标准解包读取。
+- `ascend_package_load.ini`：`mc2_server.tar.gz` 为 `optional:true`、`package_path:opp/built-in/op_impl/aicpu/kernel`、`load_as_per_soc:false`；全部 AICPU/compat 包均 `optional:true`，ini 本身**无 chip/soc 支持字段** → 支持判定在运行时 package loader。
+- `libmc2_server.json`：`HcclLaunchAicpuKernel`（`opKernelLib:AICPUKernel`）、`Mc2AicpuTaskCacheClearKernel` 与 `Mc2ServerKernel`（`opKernelLib:KFCKernel`）均映射到 `libmc2_server.so`——即 MC2 KFC 实现位于被跳过的包内。
+- `mc2-load-evidence-lines.txt` 与 A12 `plog-run-1301080.log` 逐字一致（两处 `chip:5 does not support package:mc2_server.tar.gz`；`cann-tsch-compat.tar.gz` 同被跳过）。
+- **chip:5 ↔ A3 映射（经验）**：A12 实测设备 0/1 为 `Ascend910_9382`（phy 14/15），loader 对这些设备记录 `chip:5`；本机未找到官方 chip-id 映射表，故以“被测设备即 chip:5”为操作事实，不对 chip 编号做外部推断。
+- 同段 AICPU 包加载：`Ascend-aicpu_legacy`、`aicpu_hccl`、`aicpu_hcomm` 为“same as device / skip load”，未被拒绝；被拒绝的唯一 MC2 服务包是 `mc2_server.tar.gz`（另有 compat 包 `cann-tsch-compat`）。因此缺口明确为 **MC2 server/KFC 实现**。
+
+**A13 更正**：35 已实现的 A13（`aclnnMatmulAllReduce` v1，commit 365cb95）在本机 A3 **无法执行**——文档产品表 A3 不支持，且本机 A3 op-info 未注册任何 MatMulAllReduce 变体（仅 AllGatherMatmul/V2、MatmulReduceScatter/V2）；运行会停在 op 查找（161001 类），不能作为“MC2 路径”等价控制。A13 代码保留未执行。若将来需要 A3 AICPU 路径控制，应使用 MatmulReduceScatter V1（A3 仅 AI CPU 通信）与 V2 `commMode="aiv"`（A3 仅 aiv、缓冲 ≥200MB）对照；但 loader 直接拒绝证据已足以给出操作结论，按 32/35 决定暂停全部 Grouped 设备臂。
+（MatMulAllReduce 头/文档事实备查：x1/x2/bias/output 同为 BF16 或 FP16，bias shape `(n)` 可空；示例 streamMode=1、commTurn=0；V2 增 x3，V3 增 x3+commMode。）
+
+**结案**：GroupedMatMulAllReduce 的 MC2 AICPU/KFC 路径在本机 A3（Ascend910_9382）/CANN 9.2.1 因 `mc2_server.tar.gz` 在 chip:5 不被加载而环境阻塞；A12 官方样例与 v4r1 同因；H1–H12 对“挂起”结案（非 binding/生命周期/comm 创建缺陷）。官方 aa3e/f810 默认、入口、指标与 CSV 不变；无 PR；服务保持 aa3e/s1（root 1301295）健康在线。关联记录：31 mc2-support `e33d5f7`、32 `34ccde7`、35 `98fc132`/`d4b600c`、33 `2616628`/`334c67f`/`049b5ea`/`d052acd`/`8b584d1`。
