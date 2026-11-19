@@ -77,8 +77,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "284b89e4ea5443fa0c6812d05307347a84ce64195bff363dd2a6c03342f412da",
-      "bytes": 24661
+      "sha256": "6182dc79baf24106a814208260f9434e0bab3e1c3473a85d7b51a7504e15ae44",
+      "bytes": 25910
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -340,7 +340,8 @@
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
       "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
       "31: Mc2ServerKernel exists only in the rejected package; no installed AICPU .so exports it; libccl_kernel provides KFC/ResInit; runtime dependency unproven (suspected_environment_blockage_pending_dependency_control)",
-      "A14 small v5 (MRS V1): prepare/launch/sync rc0, sync 20.65 ms, reduced.max_abs=0.0 and bit_equal=true on both ranks under the same chip:5 mc2_server skip; Grouped still stream47/507046"
+      "A14 small v5 (MRS V1): prepare/launch/sync rc0, sync 20.65 ms, reduced.max_abs=0.0 and bit_equal=true on both ranks under the same chip:5 mc2_server skip; Grouped still stream47/507046",
+      "H11 matched Grouped small (M128/K256/N512, BF16, single group, KEEP_ALL, same adapter/comm/window): Python device sync never returns; plog stream47 task_id=13 pendingNum=1 and KFCtaskAndTiling/AivAicpuOpParam objects"
     ],
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
@@ -349,8 +350,8 @@
       "Grouped-specific cause of stream47/507046 while A14 MRS V1 KFC path returns synchronously at small shape"
     ],
     "pending": [
-      "H11 matched Grouped small (plan e159c897, identity 1311514/399079056, out h11-small-v1) after 32 GO",
-      "A14 large M968/K8704/N5120 after the H11 small result and 32 limited review"
+      "H4K/H5K discriminator design provisioning after 20/32 scheduling (run_probe ARMS + window choices, no binding change)",
+      "A14 large M968/K8704/N5120 paused until the Grouped-specific cause narrows"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -406,7 +407,7 @@
     }
   },
   "matched_grouped_control": {
-    "status": "CPU design only; not scheduled",
+    "status": "executed_hang_at_device_sync; Grouped-specific candidates prioritized",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
     "design_sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
@@ -419,7 +420,25 @@
     "reference": "local x @ w then dist.all_reduce SUM (zero bias); records reduced.max_abs/bit_equal, not a pass condition",
     "numeric_gate": "numeric_pass = api/sync/finite/both_finite; pass/exit follow numeric_pass; harness_pass also needs harness_release_ok; release NotImplementedError and any cleanup error are recorded and do not erase numbers",
     "discriminability": "H11 hang -> Grouped op-specific; H11 returns -> small shape insufficient, move to v4r1-like large; H11 prepare failure -> record op shape constraint, pick nearest legal shape",
-    "order": "A14 small v5 numeric is complete; H11 plan e159c897 is prepared with root 1311514 identity, fresh h11-small-v1 out, port 29531 preflight; 32 increments then GO; large after H11 + 32 limited review"
+    "order": "A14 small v5 numeric is complete; H11 plan e159c897 executed and hung at the Python device sync; H4K/H5K discriminators await 20/32 scheduling; large paused",
+    "result": {
+      "tuple": "f3e76cc / manifest 5531e104 / run_probe 0f90fd23 / binding 101660f8 / window 2202165e / adapter d181b15a / plan e159c897 / identity 1311514/399079056",
+      "trace": "api_return workspace 16,777,216, run_id 1; python sync_enter with no sync_return; cpp launch_return launch_rc=0; handler_return cleanup_rc=0/sync_rc=0 are KEEP_ALL defaults (no sync API called)",
+      "stream": "in-process stream_compare prepare_stream == handler_stream (0xaaab2d583bb8 on rank0); cross-process pointer equality is not used as evidence",
+      "watchdog": "child rc -9, timed_out true, survivors [], cleanup killed, isolation_failed false",
+      "window": "ok=false because the external maps sample was partial (libhccl/libascendcl true, opapi_math/transformer/nnopbase false, binary_pids empty); child rc -9; same sampling artifact as v5",
+      "plog": "both devices: stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1, three-minute timeout; device logs create KFCtaskAndTilingTraceData + AivAicpuOpParam",
+      "restore": "branch aa3e-noop, root 1313827, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no probe residue",
+      "evidence": "h11-small-v1-cell SUMS 15/15 (57932c67, 31 commit f576d23); window 30152154, rank0 trace 6431785c/result 78523809, rank1 trace eb4d9097/result fdabc46b, restore 63ea26c5/f2aa5924",
+      "interpretation": "under the same M128/K256/N512, BF16, single group, KEEP_ALL, adapter, comm and window as A14 v5, the Grouped op still leaves stream47 task_id=13 pending and the Python device sync never returns; this excludes a large-shape/tiling-only explanation and prioritizes Grouped-specific rac_server/AivAicpu/KFC task delivery candidates; single cell does not establish a cause, and the mc2_server dependency remains supported_but_unproven"
+    },
+    "next_discriminators": {
+      "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination)",
+      "H5K": "REFETCH_STREAM|KEEP_ALL=40: retention identical to H11; single stream-source variable in the same OpCommand handler thread",
+      "implementation": "two ARMS entries in run_probe plus two names in the window --arm choices; binding/flags unchanged; not written now",
+      "order": "H4K first, then H5K; H11 hang + H5K return -> handler stream/context binding; H11 hang + H5K hang + H4K return -> calling-thread/OpCommand path candidate; all three hang -> delivery/AivAicpu-KFC protocol stronger",
+      "rule": "stream/context pointers are process-local; compare same/different relations and device id within a process, never cross-process hex equality"
+    }
   },
   "a14_control": {
     "status": "small_v5_numeric_pass_complete; maps gate is a window sampling artifact, per-rank result.libraries prove actual loads",
