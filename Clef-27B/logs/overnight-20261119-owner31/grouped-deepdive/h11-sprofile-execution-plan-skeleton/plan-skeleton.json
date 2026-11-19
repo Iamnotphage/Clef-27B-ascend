@@ -1,0 +1,79 @@
+{
+ "schema": "grouped-mmar-window-plan-skeleton/1",
+ "status": "prepared_pending_source_pin",
+ "device_go": false,
+ "deployed": false,
+ "purpose": "single H11 sample-based capability experiment; preparation only",
+ "cell": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1",
+ "run_dir": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/run-h11-sprofile-v1",
+ "msprof_out": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/msprof-out-h11-sprofile-v1",
+ "probe_temp": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/probe-temp-h11-sprofile-v1",
+ "probe_out": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/probe-out-h11-sprofile-v1",
+ "logs": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/logs-h11-sprofile-v1",
+ "archive": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/archive-h11-sprofile-v1",
+ "restore_output": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1/restore-h11-sprofile-v1",
+ "collector": {
+  "msprof": "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
+  "sha256": "fe8b7256faea5fcf08b1878744177a368893cd8169ba2fe58957e8fe2dacd01d",
+  "version": "26.2.0",
+  "mode": "sample-based",
+  "aic_freq_hz": 100,
+  "delay_s": 10,
+  "duration_s": 120,
+  "task_time": "l1",
+  "ai_core": "on",
+  "aic_metrics": "PipeUtilization",
+  "help_conflicts": "none documented (help level)",
+  "duration_end_semantics": "unproven (flush/exit/kill/wait app)"
+ },
+ "child_argv_file": "child-argv.json",
+ "window_argv_file": "window-argv-skeleton.json",
+ "native_app": {
+  "arm": "H11",
+  "rows": 128,
+  "k": 256,
+  "n": 512,
+  "world": 2,
+  "dtype": "BF16",
+  "flags": 8,
+  "flag_names": [
+   "keep_all"
+  ],
+  "seed": 20261119,
+  "run_probe_sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+  "adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3"
+ },
+ "budgets_s": {
+  "stop": 120,
+  "child": 240,
+  "comm": 90,
+  "restore": 900,
+  "settle_default": 30,
+  "settle_note": "default 30 s does not prove covering the old exit delay"
+ },
+ "gates": {
+  "preflight": [
+   "caller env",
+   "preflight-rescan ALL PASS",
+   "collect begin (identity/metadata)"
+  ],
+  "residual": "continuous two-empty residual before any restore",
+  "restore": "single begin_restore only; no second restore tree; no same-cell retry",
+  "success": "valid AIC sample + kernel identity + sample time within this submit-end window + this run's actual stream/task; else capability_unproven"
+ },
+ "restore_source": {
+  "file": "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/plan-h11-observe-v2.json",
+  "sha256": "9c2936c240112599209c3aa396d7695bbac10b91ca908733777df1bb36a13137",
+  "restore_argv_template": "env -i PATH=<clean> CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c \"cd /workspace/yangchen/Clef-27B-ascend && source activate_env.sh && exec bash start.sh --model-dir ... --output-dir <new restore dir>\"",
+  "note": "same-source template only; output-dir replaced with the fresh restore path"
+ },
+ "pending": [
+  "$PENDING_WINDOW_PATH (8f4b843-derived supervisor path+SHA to pin)",
+  "$PENDING_FRESH_IDENTITY_FILE (capture at execution time; 1355077 snapshot is not final)",
+  "new fixed source commit + collector/plan/test/README SHAs",
+  "candidate adapter/new .so SHA (if release dispatcher is used)",
+  "candidate manifest complete files table + Linux incremental evidence",
+  "final pre-execution rescan (identity/boot/ppid/pgid/29531/residue/fresh dirs)"
+ ],
+ "not_executed": "no real msprof, torch import, device, service stop; skeleton only"
+}
