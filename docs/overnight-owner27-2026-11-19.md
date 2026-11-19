@@ -135,7 +135,7 @@ ERQA末轮 Δ +9.19843 ms，短文本方向各半。结论限于同 aa3e postima
 
 恢复远端 `/workspace/yangchen/logs/handoff27-grouped-recover-20261118T194732Z-e36660ba/`，外层rc0，complete.ok=true/signals=[]；label `d0-restore-20261118T194732Z-3e31e017`，root1222521，workers1222677/1222678，五PID同PGID/SID1222521及boot393ecc。四检均rc0/oktrue，OPP9项、LD12项与历史expected逐字节相等，23独立闭合。原件：[失败window](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-timeout/window.json)、[失败record](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-timeout/probe/record.json)、[fresh gone](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/earlier-fresh-gone.json)、[恢复complete](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/complete.json)、[四检](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/restore.json)、[env严格比对](../Clef-27B/logs/overnight-20261119-owner27/grouped29-first-recovery/restore-env-compare.json)。
 
-结论限于固定首调用未完成，prepare/launch/sync尚未定位；没有Grouped候选精度、timing或profile证据。ND/NZ诊断差异单独记录，保持原NZ参考与冻结门。后续不直接重试；当前先按20队列执行ebca真f810 source-control，随后rstd8和A/D。
+结论限于固定首调用未完成，prepare/launch/sync尚未定位；没有Grouped候选精度、timing或profile证据。ND/NZ诊断差异单独记录，保持原NZ参考与冻结门。当时排程为ebca真f810 source-control后接rstd8和A/D；截止时执行范围见下文收口记录。
 
 
 最终服务phase入口 [final_service_phase.py](../runtime/final_service_phase.py) 已完成CPU准备，尚未设备执行。默认plan-only；仅f810/原guard，固定28四phase覆盖参数与干净两键父环境。旧restore SHA、label/api.pid、PID/start/boot/PGID/完整final argv绑定后调用原d0_stop；停前strict旧PGID所有非Z成员须已归属树，停后整个旧PGID须空；未知端口或未清空卡7禁止launch。客户端前置为互斥必选：实际prior supervision记录，或显式first-phase-no-client且仅S1→S1；已观测client PID及PGID须全部退出。新服务完整argv/env/launch/info经cc7检查，再做原六d0四检与卡7双worker归属。
@@ -148,4 +148,21 @@ v3 SHA `888a8d7fac79bd243fe894c25324aca0f498e311cab91be77df1dc2cfdc0de44`，test
 
 04:15 CST回收原外层SSH会话69391，得到传输退出码255；本地 `/tmp/clef27-handoff/source-control-ebca-outer.log` 为0字节，匹配的原SSH/ebca本地进程为空。唯一owner通过既有clef入口做一次20秒有界只读 `true` 探测，返回255及 `Connection closed by UNKNOWN port 65535`。本次未修改SSH配置或凭据，未重复候选命令、未发送设备或服务信号。该错误尚不足以定位凭据失效，远端实验完成情况、源/guard状态、客户端退出与恢复四检/env终态均待实读。
 
-原件：[owner连接探测](../Clef-27B/logs/overnight-20261119-owner27/source-control-transport-interruption/owner-probe.json)。完整ab/raw/stop/restore/envcompare尚无本地副本，无法据此判定winner或恢复完成。20已接手平台入口核验；27停止重连并暂停rstd8、A/D及S1。入口恢复后先只读同一run的完整记录与fresh进程身份，按真实退出/恢复证据决定后续处理，保持既定rstd8→A/D顺序。
+04:15原件：[owner连接探测](../Clef-27B/logs/overnight-20261119-owner27/source-control-transport-interruption/owner-probe.json)，345 bytes、SHA `386824134a47603a81b64f09731a682cd02cdb8502922b227bef7a0f09839734`。完整ab/raw/stop/restore/envcompare尚无本地副本，无法据此判定winner或恢复完成。20接手平台入口核验后，27停止重连及所有后续窗口。
+
+07:57:12 CST按20截止前授权，通过原clef入口唯一一次有界只读探测，0.0295秒返回SSH rc255，stderr仍为 `Connection closed by UNKNOWN port 65535`；随后停止重试。原件：[截止前连接探测](../Clef-27B/logs/overnight-20261119-owner27/source-control-transport-interruption/owner-probe-075712.json)，237 bytes、SHA `ce81a56b02d6e0d4b696fdc25dd13072820fbc75a2ece05a38f18ac100299ffa`。两次探测均无signal、无配置或凭据修改；传输失败与候选运行结果分列。
+
+## 本轮截止范围与后续入口
+
+| 范围 | 截止状态及证据边界 |
+| --- | --- |
+| 前述head内部flag四轮AB、N1 ARon cores1/2/24、smallQ A/C/B及B/D | 已归档各窗口原件与恢复四检。内部flag增量、ND固定参考、局部head诊断各保持原结论范围，未据此采纳生产候选。 |
+| Grouped v3首格及其独立clean恢复 | 首格保持240秒超时失败、candidate无raw。独立恢复已由23核闭合四检及OPP/LD；该历史恢复服务随后进入ebca实验，其证据不代表截止时的服务现场。 |
+| ebca真f810 source-control | 第四轮、完整8次stop、最终restore、envcompare及总体退出码均为unknown。最后独立观察仅覆盖三轮完成、04:01:11 CST进入第四轮；没有完整四轮结果或winner结论。 |
+| 当前远端现场 | 当前服务label/root/完整身份、源码、guard、health、卡7进程与资源、客户端退出及恢复状态均为unknown，待恢复连接后fresh读取。 |
+| rstd8、A/D、Grouped设备重试 | 本轮未执行；06:30新增候选截止已过，本轮不再启动。 |
+| 正式f810 S1首轮、首次final_service_phase服务切换、最终全量验收 | 均未执行。CPU测试和有限源码审阅仅证明入口准备状态；本轮无S1≥3、S2 B8/B16或ERQA全量验收结果。 |
+
+历史生产baseline与既往验收数据按其原日期、来源和配置保留，见[2026-11-17历史汇总](final-summary-2026-11-17.md)及本报告引用的既有原件；本轮状态为未完成验收。执行冻件与指标CSV保持原样，本次归档仅更新本报告、连接证据和证据manifest。
+
+整体任务保留未完成。当前继续停止重连与新窗口；平台入口恢复后，唯一优先动作是只读同一 `/workspace/yangchen/logs/joint-fused-source-control-27-ebca-first` 的ab/raw/8stop/restore/envcompare及精确现场。发现未恢复或异常时先将实际身份与原件交23；必要恢复沿已核授权、原身份门和严格清理/恢复检查执行。恢复完成须由fresh原件证明。
