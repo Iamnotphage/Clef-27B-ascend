@@ -1873,3 +1873,12 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 **不变项**：plan `9c2936c2…3137`（plan_not_executed）、identity `1347086/401212026` 五 PID、argv 60/61、冻结 e38b541/8e308804/1f780bf8/101660f8/d181b15a；未重 stage/Linux40；v1/attempt-1 未改。
 
 **状态**：包内容 B/C/D 闭合；仍待 35 对新 helper 68dc9e2c 做 CPU 路径绑定回归、32 最终 readiness；**无 v2 GO/设备动作**；root cause 待 v2 实测。
+
+## 105. v2 最终固定包 991c21c / 6075c4c0（22/22，E/B/C/D 全闭）
+
+**包**：commit `991c21c`，SUMS `6075c4c0…`（22 行），本地 `shasum -c` **rc=0，22/22 OK**；远端 execution-v2 同一 SUMS 22/22（31 报）。
+- `rank-env-read.py` = **68dc9e2c…**；`stage-identity-h11-observe-v2.json` 的 `rank_helper_sha256` 已改 68dc9e2c；README 明确“v2 绑定版（SHA 68dc9e2c；默认 CELL/RUN -v2，支持 --run；非 v1 a4b76676）”。
+- collect-raw 标题/注释源 SHA 已 v2（84c9edb2/2474b487/9c2936c2）；README 22 文件索引一致；无不一致旧 pin。
+- 不变：plan `9c2936c2…3137`（plan_not_executed）、identity `1347086/401212026` 五 PID、argv 60/61、冻结 e38b541/8e308804/1f780bf8/101660f8/d181b15a；v1/attempt-1 未改。
+
+**状态**：E（SUMS/helper 不一致）与 B/C/D 残留全部闭合；A 沿用脚本级 caller 门。**仍待 35 对新 helper `68dc9e2c` 做真实路径绑定回归**（显式 v2 CELL→`run-h11-observe-v2/descendants.json`、rows 2002 不见 2001、默认→v2 run、新 SHA 18/18）；PASS 后 32 给最终 readiness。**无 v2 GO/设备动作**；root cause 待 v2 实测。
