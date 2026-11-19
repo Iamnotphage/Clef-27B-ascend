@@ -32,11 +32,13 @@ def target(**over):
         kernel_name="K_fresh_abc",
         stream_id=7,
         task_id=99,
+        observation_start_ns=0,
+        observation_end_ns=1000000,
         raw_submit_ns=900,
         raw_end_ns=1900,
         submit_ns=1000,
-        end_ns=2000,
-        end_kind="timeout",
+        task_or_pending_end_ns=2000,
+        endpoint_reason="timeout",
         raw_clock="utc_ns",
         clock="monotonic_ns",
         offset_ns=100,
@@ -187,11 +189,24 @@ class TargetTest(unittest.TestCase):
                 reasons = spc.validate_target(target(**{name: None}))
                 self.assertIn(f"missing_{name}", reasons)
 
-    def test_ambiguity_clock_end_kind_window(self):
+    def test_ambiguity_clock_endpoint_observation_window(self):
         self.assertIn("ambiguous_target", spc.validate_target(target(ambiguities=("two",))))
         self.assertIn("unknown_clock", spc.validate_target(target(clock="other")))
-        self.assertIn("unknown_end_kind", spc.validate_target(target(end_kind="other")))
-        self.assertIn("invalid_window", spc.validate_target(target(submit_ns=2000, end_ns=1000)))
+        self.assertIn(
+            "unknown_endpoint_reason",
+            spc.validate_target(target(endpoint_reason="duration_end")),
+        )
+        self.assertIn(
+            "endpoint_unknown", spc.validate_target(target(endpoint_reason="unknown"))
+        )
+        self.assertIn(
+            "invalid_window",
+            spc.validate_target(target(submit_ns=2000, task_or_pending_end_ns=1000)),
+        )
+        self.assertIn(
+            "invalid_observation_window",
+            spc.validate_target(target(observation_start_ns=10, observation_end_ns=5)),
+        )
 
     def test_no_hardcoded_old_ids_or_kernel(self):
         source = Path(spc.__file__).read_text()
@@ -285,6 +300,15 @@ class ClassificationTest(unittest.TestCase):
         self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
         self.assertIn("clock_mismatch", result["reasons"])
 
+    def test_unknown_sample_clock_is_unproven(self):
+        result = classify(
+            adapter_obj=adapter(
+                (record(raw_clock="other", clock="monotonic_ns", offset_ns=0),)
+            )
+        )
+        self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("unknown_sample_clock", result["reasons"])
+
     def test_missing_offset_raw_or_provenance_is_unproven(self):
         for over in (
             {"offset_ns": None},
@@ -318,6 +342,25 @@ class ClassificationTest(unittest.TestCase):
         result = classify(adapter_obj=adapter((bad,)))
         self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
         self.assertIn("identity_offset_nonzero", result["reasons"])
+
+    def test_observation_end_is_not_task_end(self):
+        result = classify(
+            target_obj=target(observation_end_ns=1500, task_or_pending_end_ns=2000),
+            adapter_obj=adapter((record(raw_timestamp_ns=1800, timestamp_ns=1800),)),
+        )
+        self.assertEqual(result["status"], spc.STATUS_CANDIDATE)
+        self.assertEqual(result["window_basis"], "task_or_pending_end")
+        self.assertFalse(result["observation_end_is_task_end"])
+
+    def test_duration_endpoint_is_unproven(self):
+        result = classify(target_obj=target(endpoint_reason="duration_end"))
+        self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("unknown_endpoint_reason", result["reasons"])
+
+    def test_missing_observation_window_is_unproven(self):
+        result = classify(target_obj=target(observation_start_ns=None))
+        self.assertEqual(result["status"], spc.STATUS_UNPROVEN)
+        self.assertIn("missing_observation_start_ns", result["reasons"])
 
     def test_invalid_sample_is_unproven(self):
         result = classify(adapter_obj=adapter((record(valid=False),)))
@@ -392,6 +435,15 @@ class PlanTest(unittest.TestCase):
         self.assertTrue(all(value is None for value in plan["target"]["values"].values()))
         self.assertIn("raw_submit_ns", plan["target"]["fields"])
         self.assertIn("clock_provenance", plan["target"]["fields"])
+        self.assertIn("observation_start_ns", plan["target"]["fields"])
+        self.assertIn("observation_end_ns", plan["target"]["fields"])
+        self.assertIn("task_or_pending_end_ns", plan["target"]["fields"])
+        self.assertIn("endpoint_reason", plan["target"]["fields"])
+        self.assertEqual(plan["target"]["window_basis"], "task_or_pending_end")
+        self.assertEqual(plan["success"]["window_basis"], "task_or_pending_end")
+        self.assertEqual(plan["coverage"]["observation_start_s"], 10)
+        self.assertEqual(plan["coverage"]["observation_end_s"], 130)
+        self.assertTrue(plan["coverage"]["observation_end_is_not_task_end"])
         self.assertTrue(plan["clock"]["clock_provenance_required"])
         self.assertEqual(plan["clock"]["same_label_without_offset"], "capability_unproven")
         self.assertTrue(plan["mock_only"])

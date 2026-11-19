@@ -150,11 +150,13 @@ REQUIRED_TARGET_FIELDS = (
     "kernel_name",
     "stream_id",
     "task_id",
+    "observation_start_ns",
+    "observation_end_ns",
     "raw_submit_ns",
     "raw_end_ns",
     "submit_ns",
-    "end_ns",
-    "end_kind",
+    "task_or_pending_end_ns",
+    "endpoint_reason",
     "raw_clock",
     "clock",
     "offset_ns",
@@ -164,7 +166,8 @@ REQUIRED_TARGET_FIELDS = (
 )
 
 KNOWN_CLOCKS = ("monotonic_ns", "utc_ns")
-END_KINDS = ("timeout", "pending_end", "duration_end")
+# duration_end is an observation end, never a task/pending end.
+ENDPOINT_REASONS = ("timeout", "pending_end", "actual_task_end", "unknown")
 
 STATUS_CANDIDATE = "capability_candidate"
 STATUS_UNPROVEN = "capability_unproven"
@@ -174,11 +177,13 @@ MISSING_REASONS = {
     "missing_kernel_name",
     "missing_stream_id",
     "missing_task_id",
+    "missing_observation_start_ns",
+    "missing_observation_end_ns",
     "missing_raw_submit_ns",
     "missing_raw_end_ns",
     "missing_submit_ns",
-    "missing_end_ns",
-    "missing_end_kind",
+    "missing_task_or_pending_end_ns",
+    "missing_endpoint_reason",
     "missing_raw_clock",
     "missing_clock",
     "missing_offset_ns",
@@ -211,8 +216,11 @@ HARD_COLLECTOR_REASONS = {
     "ambiguous_target",
     "clock_mismatch",
     "unknown_clock",
-    "unknown_end_kind",
+    "unknown_sample_clock",
+    "unknown_endpoint_reason",
+    "endpoint_unknown",
     "invalid_window",
+    "invalid_observation_window",
     "sample_invalid",
     "conversion_mismatch",
     "identity_offset_nonzero",
@@ -318,11 +326,13 @@ class ExpectedTarget:
     kernel_name: Optional[str]
     stream_id: Optional[int]
     task_id: Optional[int]
+    observation_start_ns: Optional[int]
+    observation_end_ns: Optional[int]
     raw_submit_ns: Optional[int]
     raw_end_ns: Optional[int]
     submit_ns: Optional[int]
-    end_ns: Optional[int]
-    end_kind: Optional[str]
+    task_or_pending_end_ns: Optional[int]
+    endpoint_reason: Optional[str]
     raw_clock: Optional[str]
     clock: Optional[str]
     offset_ns: Optional[int]
@@ -339,11 +349,15 @@ class ExpectedTarget:
             kernel_name=value.get("kernel_name"),
             stream_id=_as_int(value.get("stream_id"), "stream_id"),
             task_id=_as_int(value.get("task_id"), "task_id"),
+            observation_start_ns=_as_int(value.get("observation_start_ns"), "observation_start_ns"),
+            observation_end_ns=_as_int(value.get("observation_end_ns"), "observation_end_ns"),
             raw_submit_ns=_as_int(value.get("raw_submit_ns"), "raw_submit_ns"),
             raw_end_ns=_as_int(value.get("raw_end_ns"), "raw_end_ns"),
             submit_ns=_as_int(value.get("submit_ns"), "submit_ns"),
-            end_ns=_as_int(value.get("end_ns"), "end_ns"),
-            end_kind=value.get("end_kind"),
+            task_or_pending_end_ns=_as_int(
+                value.get("task_or_pending_end_ns"), "task_or_pending_end_ns"
+            ),
+            endpoint_reason=value.get("endpoint_reason"),
             raw_clock=value.get("raw_clock"),
             clock=value.get("clock"),
             offset_ns=_as_int(value.get("offset_ns"), "offset_ns"),
@@ -361,11 +375,13 @@ def validate_target(target: ExpectedTarget) -> list[str]:
         ("kernel_name", target.kernel_name),
         ("stream_id", target.stream_id),
         ("task_id", target.task_id),
+        ("observation_start_ns", target.observation_start_ns),
+        ("observation_end_ns", target.observation_end_ns),
         ("raw_submit_ns", target.raw_submit_ns),
         ("raw_end_ns", target.raw_end_ns),
         ("submit_ns", target.submit_ns),
-        ("end_ns", target.end_ns),
-        ("end_kind", target.end_kind),
+        ("task_or_pending_end_ns", target.task_or_pending_end_ns),
+        ("endpoint_reason", target.endpoint_reason),
         ("raw_clock", target.raw_clock),
         ("clock", target.clock),
         ("offset_ns", target.offset_ns),
@@ -381,8 +397,11 @@ def validate_target(target: ExpectedTarget) -> list[str]:
     for clock in (target.raw_clock, target.clock):
         if clock is not None and clock not in KNOWN_CLOCKS:
             reasons.add("unknown_clock")
-    if target.end_kind is not None and target.end_kind not in END_KINDS:
-        reasons.add("unknown_end_kind")
+    if target.endpoint_reason is not None:
+        if target.endpoint_reason not in ENDPOINT_REASONS:
+            reasons.add("unknown_endpoint_reason")
+        elif target.endpoint_reason == "unknown":
+            reasons.add("endpoint_unknown")
     reasons.update(
         _conversion_reasons(
             target.raw_submit_ns,
@@ -395,16 +414,22 @@ def validate_target(target: ExpectedTarget) -> list[str]:
     reasons.update(
         _conversion_reasons(
             target.raw_end_ns,
-            target.end_ns,
+            target.task_or_pending_end_ns,
             target.offset_ns,
             target.raw_clock,
             target.clock,
         )
     )
     if (
+        target.observation_start_ns is not None
+        and target.observation_end_ns is not None
+        and not (target.observation_start_ns < target.observation_end_ns)
+    ):
+        reasons.add("invalid_observation_window")
+    if (
         target.submit_ns is not None
-        and target.end_ns is not None
-        and not (target.submit_ns < target.end_ns)
+        and target.task_or_pending_end_ns is not None
+        and not (target.submit_ns < target.task_or_pending_end_ns)
     ):
         reasons.add("invalid_window")
     return sorted(reasons)
@@ -578,6 +603,9 @@ def _match_record(target: ExpectedTarget, record: SampleRecord) -> tuple[bool, s
     ):
         if value is None or value == "":
             reasons.add(f"missing_{name}")
+    for clock in (record.raw_clock, record.clock):
+        if clock is not None and clock not in KNOWN_CLOCKS:
+            reasons.add("unknown_sample_clock")
     if record.clock is not None and target.clock is not None and record.clock != target.clock:
         reasons.add("clock_mismatch")
     reasons.update(
@@ -601,11 +629,11 @@ def _match_record(target: ExpectedTarget, record: SampleRecord) -> tuple[bool, s
     if (
         record.timestamp_ns is not None
         and target.submit_ns is not None
-        and target.end_ns is not None
+        and target.task_or_pending_end_ns is not None
     ):
         if record.timestamp_ns < target.submit_ns:
             reasons.add("before_submit")
-        elif record.timestamp_ns > target.end_ns:
+        elif record.timestamp_ns > target.task_or_pending_end_ns:
             reasons.add("after_end")
     return not reasons, reasons
 
@@ -613,6 +641,11 @@ def _match_record(target: ExpectedTarget, record: SampleRecord) -> tuple[bool, s
 def coverage_model() -> dict[str, Any]:
     return {
         "scope": "early_pending_only",
+        "observation_start_s": DELAY_S,
+        "observation_end_s": TOTAL_S,
+        "observation_basis": "delay + duration; not a task/pending end",
+        "task_window_basis": "task_or_pending_end",
+        "observation_end_is_not_task_end": True,
         "delay_s": DELAY_S,
         "duration_s": DURATION_S,
         "total_s": TOTAL_S,
@@ -713,6 +746,8 @@ def classify_profile(
         },
         "collector": dict(collector),
         "coverage": dict(coverage or coverage_model()),
+        "window_basis": "task_or_pending_end",
+        "observation_end_is_task_end": False,
         "kernel_counter_evidence": False,
         "not_kernel_counter_evidence": True,
     }
@@ -811,7 +846,11 @@ def build_plan_skeleton(
             "source_required": "fresh StreamLaunchKernelV2 / ConstructFftsMixSqe / AllocTaskAndSendStars or fresh trace",
             "no_hardcode": True,
             "fail_closed_on_missing_or_ambiguous": True,
-            "note": "old stream/task/kernel labels are historical; this run must bind its own",
+            "window_basis": "task_or_pending_end",
+            "observation_fields": ["observation_start_ns", "observation_end_ns"],
+            "endpoint_reasons": list(ENDPOINT_REASONS),
+            "duration_end_not_task_end": True,
+            "note": "old stream/task/kernel labels are historical; this run must bind its own; duration_end is observation only",
         },
         "clock": {
             "submit_clock": "host plog UTC",
@@ -831,10 +870,13 @@ def build_plan_skeleton(
             "and": [
                 "valid AIC sample",
                 "kernel identity",
-                "sample time in this run submit-end window",
+                "sample time in this run task_or_pending_end window",
                 "raw/offset/clock_provenance conversion validated",
                 "this run stream/task attribution",
             ],
+            "window_basis": "task_or_pending_end",
+            "observation_window": "coverage only; duration_end is never a task/pending end",
+            "endpoint_reason_required": True,
             "kernel_name_only": False,
             "timeline_only": False,
             "empty_truncated_error_timeout": STATUS_UNPROVEN,

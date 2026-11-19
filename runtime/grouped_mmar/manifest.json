@@ -99,26 +99,26 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery; H11 sample-profile CPU candidate section added 2026-11-20",
-      "sha256": "e9ffbdc2f011a15699c319233dbe5b3457e73d9e5fb5b7791b25f93fbfabec62",
-      "bytes": 52634,
+      "sha256": "3c3490b75ff5fe9ea4abaf374862845586a70ee94bfc0a02248df8a03309513e",
+      "bytes": 53498,
       "candidate": true
     },
     "runtime/grouped_mmar/sample_profile_collector.py": {
       "role": "CPU-only H11 sample-profile collector helper: list argv, fresh raw/offset clock binding, mock-only classification; native/device unchanged",
-      "sha256": "76b44c3558dcc76bf7be2fa18c270cfa9376452b18191d5c97ff28a61e84f5ab",
-      "bytes": 33389,
+      "sha256": "d2317c13fdd44b1f11420ad1ffdd40724592ceaee76097c31a77f7c8ad1ab05a",
+      "bytes": 35719,
       "candidate": true
     },
     "runtime/grouped_mmar/h11_sample_profile_plan.json": {
       "role": "H11 sample-based plan skeleton: fixed 100 Hz/10 s/120 s flags, 130 s early-pending coverage, AND/raw-offset/fail-closed classification",
-      "sha256": "d90f36eeb286c466d361f071e134bb1a0ce2ee40f0fc8c9fbc9ee327df67e449",
-      "bytes": 8727,
+      "sha256": "ec3940ce170f5fa42856b85c993ea5f45b0485a69077c09e34d1dedb9456a0ef",
+      "bytes": 9815,
       "candidate": true
     },
     "runtime/grouped_mmar/test_sample_profile_cpu.py": {
-      "role": "new mock-only CPU suite for the sample-profile helper; 34/34 OK macOS; existing 50 not rerun",
-      "sha256": "01d5cf9417a71222440475e72af3f438785124c7059d304dbe807d7849cfaa87",
-      "bytes": 24912,
+      "role": "new mock-only CPU suite for the sample-profile helper; 38/38 OK macOS; existing 50 not rerun",
+      "sha256": "dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b",
+      "bytes": 27403,
       "candidate": true
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
@@ -915,22 +915,22 @@
     "scope": "outer collector argv/plan/classification only; native binding_probe.cpp, run_probe.py, adapter, old 8ec and 8f4b843 supervisor settle/gate core unchanged; existing 50 tests not rerun",
     "files": {
       "runtime/grouped_mmar/sample_profile_collector.py": {
-        "sha256": "76b44c3558dcc76bf7be2fa18c270cfa9376452b18191d5c97ff28a61e84f5ab",
-        "bytes": 33389
+        "sha256": "d2317c13fdd44b1f11420ad1ffdd40724592ceaee76097c31a77f7c8ad1ab05a",
+        "bytes": 35719
       },
       "runtime/grouped_mmar/h11_sample_profile_plan.json": {
-        "sha256": "d90f36eeb286c466d361f071e134bb1a0ce2ee40f0fc8c9fbc9ee327df67e449",
-        "bytes": 8727
+        "sha256": "ec3940ce170f5fa42856b85c993ea5f45b0485a69077c09e34d1dedb9456a0ef",
+        "bytes": 9815
       },
       "runtime/grouped_mmar/test_sample_profile_cpu.py": {
-        "sha256": "01d5cf9417a71222440475e72af3f438785124c7059d304dbe807d7849cfaa87",
-        "bytes": 24912
+        "sha256": "dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b",
+        "bytes": 27403
       }
     },
     "readme": {
       "path": "runtime/grouped_mmar/README.md",
-      "sha256": "e9ffbdc2f011a15699c319233dbe5b3457e73d9e5fb5b7791b25f93fbfabec62",
-      "bytes": 52634
+      "sha256": "3c3490b75ff5fe9ea4abaf374862845586a70ee94bfc0a02248df8a03309513e",
+      "bytes": 53498
     },
     "fixed_command": [
       "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
@@ -953,6 +953,11 @@
     ],
     "coverage": {
       "scope": "early_pending_only",
+      "observation_start_s": 10,
+      "observation_end_s": 130,
+      "observation_basis": "delay + duration; not a task/pending end",
+      "task_window_basis": "task_or_pending_end",
+      "observation_end_is_not_task_end": true,
       "delay_s": 10,
       "duration_s": 120,
       "total_s": 130,
@@ -964,10 +969,12 @@
     "success_and": [
       "valid AIC sample",
       "kernel identity",
-      "sample time in this run submit-end window",
+      "sample time in this run task_or_pending_end window",
       "raw/offset/clock_provenance conversion validated",
       "this run stream/task attribution"
     ],
+    "window_basis": "task_or_pending_end",
+    "observation_window": "10 s/130 s coverage only; observation_end_is_not_task_end; duration_end is never a task/pending end",
     "classification": {
       "statuses": [
         "capability_candidate",
@@ -990,6 +997,14 @@
       "collector_exit_flush_semantics": "unproven",
       "settle": "two consecutive empty rounds",
       "gate": "fail-closed",
+      "settle_budget_s": {
+        "requested": 300,
+        "supported_by_pinned_supervisor": false,
+        "current_default": 30,
+        "requires_new_frozen_supervisor": true,
+        "not_implemented_here": true,
+        "owner": "27 isolated --settle-timeout candidate; integrate after 32 increment review"
+      },
       "restore": "exactly one begin_restore",
       "no_second_tree": true,
       "no_same_cell_retry": true,
@@ -998,15 +1013,16 @@
     },
     "tests": {
       "command": "python3 runtime/grouped_mmar/test_sample_profile_cpu.py",
-      "result": "34/34 OK",
+      "result": "38/38 OK",
       "platform": "macOS CPU",
       "existing_50_not_rerun": true,
       "mock_only": true,
       "linux_evidence": {
         "commit": "de64f83",
         "result": "31/31 OK",
-        "applies_to": "5a11477 only; not this revision",
-        "note": "31 must re-run the new suite on a fresh tree of this revision"
+        "applies_to": "5a11477 only; not 7fcba47 and not this end revision",
+        "intermediate_7fc_linux_run": false,
+        "note": "per 20 steer, 31 skips intermediate 7fc Linux 34; wait for end+settle integration, then run one fresh suite; this end revision has no Linux evidence yet"
       }
     },
     "verification": {
