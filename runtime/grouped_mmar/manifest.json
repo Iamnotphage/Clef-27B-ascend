@@ -341,14 +341,14 @@
       "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
     ],
     "pending": [
-      "A12-H6 workspace memset derivative (contract confirmed; pending 32/20)",
-      "A14 MatmulReduceScatter V1 control (implemented; pending local header/symbols and GO)"
+      "A12-H6 compiled/plan-only; awaiting 32 review and 20 scheduling",
+      "A14 CPU-only stage/compile/plan recommended; awaiting 32/20 approval"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "ready_32_pending_31_compile_and_20_go",
+    "status": "compiled_plan_only_ready_for_32_review",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -358,13 +358,28 @@
     "run": "bash a12/run_a12.sh <build>/bin/a12_grouped_mat_mmar_h6",
     "success_gate": "rc0 + no [ERROR]/retcode lines + >=2 mc2 costtime + maps hard gate libhccl+opapi_math/transformer",
     "falsification": "same 507046/stream47 -> H6 workspace-init hypothesis falsified for the hang, not a platform negative",
-    "pending": "33 workspace convention (memset/sync) and 32 review before any execution",
+    "pending": "32 review of binary/plan/identity; 20 schedule execution",
     "api_check": "aclrtMemsetAsync declared at acl_rt.h:2563; exported by libascendcl; Async build valid (31)",
     "static_preflight": "32: diff equals h6.diff, only 9 memset lines, same stream, single-variable holds",
-    "workspace_contract": "33: GetWorkspaceSize returns size only; caller scratch; MC2 message area in GetHcclContext<0>()->WorkSpace; same-stream memset safe, no extra sync"
+    "workspace_contract": "33: GetWorkspaceSize returns size only; caller scratch; MC2 message area in GetHcclContext<0>()->WorkSpace; same-stream memset safe, no extra sync",
+    "preflight": {
+      "commit": "6b6a865",
+      "stage_commit": "36f8141",
+      "manifest_sha256": "ab2a1855",
+      "window_sha256": "51d6bc0c",
+      "binary_sha256": "cdf485539c5fed610ad3352315d44cd114d57bad95f30a999a8f1e7cd275515f",
+      "binary_bytes": 209656,
+      "ldd_sha256": "fe47d0a087e12df91f6ddfaad0a00b4c715e6f86ba24d49daaf17e2ea2e63e6c",
+      "compile_log_sha256": "d1fa7fbcdcca2c7f38850b80836ca826c384df4754b4c174ffde5db51203b2a4",
+      "plan_sha256": "aedd3f682c1fbb6b88b0a555df8a478ed4de9b7ea23eb5088e7497e0d6663d2c",
+      "status": "plan_not_executed",
+      "child": "run_a12.sh + h6 binary",
+      "child_timeout": 240,
+      "sums_sha256": "4b4afbd49ea20fcda2047a8dedad948422ca78be332bd98d45a0a97c66a0d99d"
+    }
   },
   "a14_control": {
-    "status": "preflight_ready_pending_32_20",
+    "status": "cpu_stage_compile_plan_recommended_pending_32_20",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -388,7 +403,7 @@
     "output": "m/rank_size,n",
     "constraints": "m % rank_size == 0; commTurn 0; streamMode 1; reduceOp sum",
     "binding": "run_mrs",
-    "pending": "32/20 GO; compile/plan by 31",
+    "pending": "CPU-only stage/compile/plan approval by 32/20; device execution only after GO",
     "success": "A12-equivalent gate",
     "local_header_sha256": "ad8f98b4652207b3f7bfd5c9cefb4cc4428e79902461b1d7431829cbc0cc8041",
     "local_header_signature": "matches run_mrs: (x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)",
