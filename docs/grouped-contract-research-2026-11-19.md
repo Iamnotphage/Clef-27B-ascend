@@ -2500,3 +2500,36 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 4. 实际 tiling `notifyOff/j/T`、`kfcNotifyId`、`workspaceOff`；运行 `ctx+0xF3200/F3208/F31BC`（设备侧）。
 
 **状态**：root cause unresolved；worker CFG 已闭，站点判别为条件式（待 35/32），ack 收窄到 WaitTaskFinish/AicpuCcOpExe；无新设备/取件/GO。
+
+## 125. 32 复核后的口径收紧：Check#1 是领先候选，不是已证站点
+
+**依据**：32 对 `56b1681` 的独立复核（静态结构一致；无新取件/设备）。本节收紧 §124，不改变 worker CFG 的静态事实。
+
+### 125.1 收紧点
+
+- **“298 在 AicpuCcOpExe 之前 ⇒ Check#1”只能支持“OneStage 范围内的领先候选”**，不是证明。理由：
+  1. line298 不打印 param 指针；x6 是 `server+816` 字段（Check#1/#2 相同）；w1 全 0；Check#1/#2 的日志形态无判别标记。
+  2. TwoStage/Unfold 也各有 Check 站点；551 日志只证 TryRun 入口，不能排除其它 caller。
+  3. 要闭合到 Check#1，需要 CFG + **同一 param/gate 前提**（如 sp+0x20 vs sp+0x328 的可判别内容/标记），当前没有。
+- **“Check#2 被顺序弱排除”**：可接受为“弱排除”（Check#2 在第一个 AicpuCcOpExe 之后，而 298 在其前）；但 **TwoStage/Unfold 未被 counts 排除**。
+- **“CheckAivIsEnd 真 → 跳过 Check#2 → 结束路径 WaitTaskFinish”是条件式假设**：
+  - flag `server+0x220=1` 依赖同一 server 对象、`isLast=1`、后处理执行；字段语义/持久性未证。
+  - worker 可能停在 `CheckAivIsEnd` 循环或 `WaitTaskFinish`；运行时未区分。
+  - 结束等待是 `WaitTaskFinish(ctx,1)`（静态），**不是** `WaitMainStreamFinish`；后者在 callee `AicpuCcOpExe`/`TaskOrchestrator` 内。即便走到结束路径，也不等于 AICORE 收到 ack。
+- **字段语义不升级**：`F31E0/F31B1/F3268` 等只是偏移/值（=1/2、1/0、旧+1），不写成“语义已证”。
+
+### 125.2 不变项
+
+- worker 无 `[x19]`（RpcServer/response/turn/ack）直接 store；相关写只能在 callee：`CheckRcvAddrMsg/ReadAddrMsg/AicpuCcOpExe/WaitTaskFinish`。
+- 缺失 `rcvCnt` 回写仍缺；task13 3 min pending 仍是唯一正证；本地排空/`WaitMainStreamFinish` 不称 AllReduce/task13 完成。
+- selector 局部 CFG（`0x761990 b.ne→0x762228`）已证；`(v&~2)!=1` 是分支结果；v 数值/语义分开未证。
+- 候选地址 `0x12c09bc20040..007f` / jT / TurnWait 与实际 task13 绑定分开。
+
+### 125.3 下一最小证明问题
+
+1. **param 判别标记**：Check#1 用 sp+0x20、Check#2 用 sp+0x328；若两 param 的内容（sendBuffer/count/isLast/valid 等）有可判别差异，可用运行 AddrMsg 字段反推站点。当前 AddrMsg 只有一组值，需 worker 对两 param 的填充路径/CFG 才可判。
+2. **`WaitTaskFinish(ctx,1)` 完整函数/callee 表**：是否写 response+51、调用 `PostMsg/WriteTurnCnt/WriteFinish`、或发 notify/写 op-param——ack 能否升级的关键。
+3. 35 对 worker 包的条件链复核；通过后再决定是否升级站点判别。
+4. 实际 tiling `notifyOff/j/T`、`kfcNotifyId`、`workspaceOff`；运行 `ctx+0xF3200/F3208/F31BC`（设备侧）。
+
+**状态**：root cause unresolved；worker CFG 已闭，站点判别收紧为“领先候选/弱排除/条件式”；ack 仍收窄到 WaitTaskFinish/AicpuCcOpExe 但未证；无新设备/取件/GO。
