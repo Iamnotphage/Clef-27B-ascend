@@ -2739,3 +2739,35 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 4. **param 判别**：Check#1 用 `sp+0x20`、Check#2 用 `sp+0x328`；若两者内容/填充路径有可判别差异，可把“领先候选”升级/否决；需 worker 两 param 的填充/CFG（小静态片段）。
 
 **状态**：root cause unresolved；OneStage/task13 整合维持条件式；最小观测问题已列，待 20 决定；无新取件/设备/GO；release 候选（698ba3d）由 27/31/32 继续，与本线分开。
+
+## 133. release dispatcher CPU readiness PASS（12cb266；窄范围，未部署）
+
+**依据**：32 对 release 候选的 CPU 复核；无设备/部署/PR。目录 `cpu-release-dispatcher-698ba3d`；commit `12cb266`；SUMS **10/10 OK**、自哈希 `799ee13a…`。
+
+### 133.1 固定件与构建
+
+- 候选源 `698ba3d` / base `8f4b843`；binding `d9435b3a…`、smoke `c457b6ef…`、manifest `f7c5ae52…`、compile `53e518db…`、probe_trace.h `3e07139f…`。
+- binding 唯一改动 B722 `m.def(..., &grouped_mmar_release)`；schema/函数体/run 三入口/同步/Lists/window 未变。
+- 隔离 `/tmp/release-candidate-698ba3d`，冻结单 TU recipe；g++ 11.4.0、Python 3.12.16、CANN 9.2.1。首次缺 `probe_trace.h`，补入同 commit 未改动头（`3e07139f…`）后重建，recipe 未改。
+- 候选 `.so` **`83598d6e…`**，195880 B；旧冻结 `.so` `d181b15a…` **未变**。
+
+### 133.2 双进程结果
+
+- **Control（旧 .so d181b15a）**：parent passed=true rc=0；child stage=complete；namespace 空；schema 精确；`release(1)` 得 **NotImplementedError**（消息含 `clef_mmar_probe::release`）；stderr 空；torch 2.10.0+cpu。首次未 activate 的 `load_library` OSError（libhccl.so）已在 safety-audit 保留，**不计 PASS**；同版 activate+venv 重跑得上述 PASS。
+- **Candidate（新 .so 83598d6e）**：parent passed=true rc=0；child stage=complete；namespace 空；schema 精确；`release(1)` **实际返回 Python int 0**；stderr 空。
+- 两臂独立 fresh `-I`、`TORCH_DEVICE_BACKEND_AUTOLOAD=0`、加载前后完整 SHA、30 s timeout；加载失败不 fallback、不计 PASS。
+
+### 133.3 安全/残留与边界
+
+- Python 层未 import torch_npu（脚本断言）；未调用 set_device/synchronize/run/run_mmar/run_mrs/provider/torchrun/18143；仅 `subprocess.run`。`.so` 链接 libtorch_npu 作为共享依赖（NotImplemented 消息列出 C++ fallback），但 Python 层无 torch_npu import/device 调用；loader 依赖已披露。
+- 无 smoke/torchrun 残留；服务 root 1355077/ppid 1355076/health ready 未变；旧 `.so` 未变。
+- **结论**：source + CPU dispatcher readiness **PASS**；只证 **无 Tensor dispatcher 可达 + invalid-id（1）早返回 Python int 0**。
+- **不证**：valid-state cleanup、SDK resource/ownership、valid-state release、H11 stream47/task13 修复；R579 未达；不冒充同步挂起已修。
+- 未部署、无 PR/设备 GO；v2 `8ecf8f9`、frozen `101660f8`/`1f780bf8`/`d181b15a` 未改；不重跑旧 window/50 tests。
+
+### 133.4 证据缺口（明确、不补造）
+
+- 首次未 activate 的失败 control 原始 JSON/stderr 不在 10 文件包内，只有 safety-audit 的 OSError 记录；该次不计 PASS，不影响上述 PASS 证据。
+- `build.log` 只有 `.so sha256sum` 行，g++ rc 未单独落盘；构建成功由 `.so` SHA + 候选实际加载/调用证据支撑。
+
+**状态**：release dispatcher CPU readiness PASS（窄范围）；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
