@@ -134,16 +134,29 @@ check_sha "$CELL/plan-h11-observe-v2.json" 9c2936c240112599209c3aa396d7695bbac10
 check_sha "$CELL/root-identity-h11-observe-v2.json" 84c9edb2e523d234f9073617f1c76ba7c634bbd7e95ba7841d55216bfe64166f root-identity
 check_sha "$CELL/env-sidecar-h11-observe-v2.json" 2474b4875fa12590c3e189577a36db12e85edf453b9fb8656761d2be275ee321 env-sidecar
 
-# 7b) effective-env torchrun 可解析性（CPU-only：--help；不跑 probe/rank/NPU）
+# 7b) torchrun 可解析性：caller 强制（不嵌套）+ recipe 记录
 mkdir -p "$CELL/cpu-prep"
+# caller 环境（必须；preflight 与 window 必须同一 shell）
+caller_which=$(command -v torchrun 2>/dev/null || true)
+[ "$caller_which" = "/workspace/yangchen/venvs/clef-py312/bin/torchrun" ] \
+  && ok "caller env torchrun resolves to venv" \
+  || bad "caller env torchrun ($caller_which)"
+case ":$PATH:" in
+  *":/workspace/yangchen/venvs/clef-py312/bin:"*) ok "caller PATH has venv bin" ;;
+  *) bad "caller PATH missing venv bin" ;;
+esac
+command torchrun --help > "$CELL/cpu-prep/rescan-torchrun-help-caller.log" 2>&1
+caller_help_rc=$?
+[ "$caller_help_rc" -eq 0 ] && ok "caller torchrun --help rc=0" || bad "caller torchrun --help rc=$caller_help_rc"
+# recipe 环境（记录/自检；不替代 caller 检查）
 base_which=$(env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin /bin/bash -c 'command -v torchrun 2>/dev/null' || true)
 [ -z "$base_which" ] && ok "baseline PATH torchrun missing reproduced" || bad "baseline torchrun unexpectedly present: $base_which"
 eff_which=$(/bin/bash -c 'source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh; export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH; command -v torchrun' 2>/dev/null || true)
-[ "$eff_which" = "/workspace/yangchen/venvs/clef-py312/bin/torchrun" ]   && ok "effective env torchrun resolves to venv ($eff_which)"   || bad "effective env torchrun mismatch ($eff_which)"
+[ "$eff_which" = "/workspace/yangchen/venvs/clef-py312/bin/torchrun" ]   && ok "recipe env torchrun resolves to venv ($eff_which)"   || bad "recipe env torchrun mismatch ($eff_which)"
 [ -x /workspace/yangchen/venvs/clef-py312/bin/torchrun ] && ok "torchrun executable" || bad "torchrun not executable"
 /bin/bash -c 'source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh; export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH; exec torchrun --help' > "$CELL/cpu-prep/rescan-torchrun-help.log" 2>&1
 help_rc=$?
-[ "$help_rc" -eq 0 ] && ok "torchrun --help rc=0 (CPU)" || bad "torchrun --help rc=$help_rc"
+[ "$help_rc" -eq 0 ] && ok "recipe torchrun --help rc=0 (CPU)" || bad "torchrun --help rc=$help_rc"
 
 # 8) 无其他设备格 / 无本窗口遗留 child
 if pgrep -fa 'run_probe\.py|supervised_probe_window\.py|torchrun' 2>/dev/null | grep -v 'preflight-rescan' | grep -q .; then

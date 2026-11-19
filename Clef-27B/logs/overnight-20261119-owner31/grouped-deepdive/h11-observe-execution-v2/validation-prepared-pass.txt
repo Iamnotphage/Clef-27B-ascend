@@ -1,4 +1,4 @@
-== v2 preflight-rescan (fixed CELL) ==
+== prepared shell preflight (expect ALL PASS) ==
 PASS   identity pid=1347086
 PASS   starttime 401212026
 PASS   boot_id
@@ -36,15 +36,14 @@ PASS   sha manifest
 PASS   sha plan
 PASS   sha root-identity
 PASS   sha env-sidecar
+PASS   caller env torchrun resolves to venv
+PASS   caller PATH has venv bin
+PASS   caller torchrun --help rc=0
 PASS   baseline PATH torchrun missing reproduced
-PASS   effective env torchrun resolves to venv (/workspace/yangchen/venvs/clef-py312/bin/torchrun)
+PASS   recipe env torchrun resolves to venv (/workspace/yangchen/venvs/clef-py312/bin/torchrun)
 PASS   torchrun executable
-PASS   torchrun --help rc=0 (CPU)
+PASS   recipe torchrun --help rc=0 (CPU)
 PASS   no other probe/torchrun processes
 
 RESULT: ALL PASS
 rescan_rc=0
-== torchrun help log ==
-154
-                        CUDA_VISIBLE_DEVICES is adjusted so each worker
-                        accesses its assigned GPU at device index 0.

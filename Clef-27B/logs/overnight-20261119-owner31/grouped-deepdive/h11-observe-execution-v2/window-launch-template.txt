@@ -40,7 +40,12 @@ A. plan-only（应与 plan SHA 9c2936c2…3137 逐字节一致；可在任意只
 
 B. v2 授权后 execute（仅在 20 另发 v2 明确 GO 后；本包从未执行）
 ---------------------------------------------------------------
-与 A 完全相同，仅在末尾追加顶层 `--execute`（完整 argv 见 window-execute-argv.json）。
+**唯一支持路径**：`bash /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/execution-v2/run-h11-observe-v2.sh`
+该 wrapper 在同一 shell/进程环境内依次完成：source activate_env.sh → PATH 前置 → caller
+`command -v torchrun`/SHA/`--help` → preflight-rescan（rc0）→ `exec window ... --execute`。
+不要手抄 argv、不要拆 shell；手抄路径必须自行保证“调用方 shell”已通过预扫的 caller 检查。
+
+（等价 argv：与 A 完全相同，仅在末尾追加顶层 `--execute`；完整数组见 window-execute-argv.json。）
 
 说明
 ----
