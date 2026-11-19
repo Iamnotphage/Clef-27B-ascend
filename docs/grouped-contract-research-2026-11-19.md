@@ -2840,3 +2840,34 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 不写第二套操作命令；不自动运行；当前服务/`8ecf8f9`/候选冻结。
 
 **结论**：现有接口下**不可执行**“读 response/取 AICORE 等待证据”。可支持的只有自有 user workspace 读（方案 A，回答不了 ack）；方案 B 需补 9.2.1 `acl_rt.h`/HCCL 访问器 + tiling 字段，或 kernel 标记/profiling。root cause unresolved。
+## 136. ACL/aclnn SDK 契约检索（35；9.2.0/9.3.0-beta.1 对照；9.2.1 未获取）
+
+**版本边界**：9.2.1 **本轮未获取**（官方搜索索引仅 9.3.0-beta.1；`--version 9.2.1` 过滤 0；9.2.1 URL 变体 WAF/无元数据）。9.2.0 是最近官方对照（页面元数据明确 9.2.0），9.3.0-beta.1 另列；**不记“9.2.1 已证/不存在”**。本地 a12 docs `31333c59…` 无版本元数据，仅样例/产品范围参考。无新设备/取件。
+
+### 136.1 契约发现（9.2.0/9.3.0-beta.1）
+
+| 契约 | 官方短引/来源 | 对本地问题的含义 |
+| --- | --- | --- |
+| `aclCreateTensor` shape/stride/storageDims | 参数表只写“输入…维度值/访问步长/StorageShape 维度值”，**无复制/生命周期条文**；示例用局部 `std::vector` 并 return tensor（代码层暗示复制，非文字契约）；920/aclCreateTensor.md，9.2.0/930beta1 同文 | `shape.data()/strides.data()` 是否复制**无文字契约**；9.2.1 头/文档仍缺 |
+| `aclCreateTensorList` 成员 | “value 输入：aclTensor 指针数组，其指向的值会赋给 TensorList”；“需与 aclDestroyTensorList 配套”；920/aclCreateTensorList.md | 列表持有 tensor 指针；数组本身是否复制未明文 |
+| `aclDestroyTensorList` | “销毁 aclCreateTensorList 创建的列表”；“对于 TensorList 内的 aclTensor **不需要重复释放**”；920 | 列表销毁**不释放**内部 tensor ⇒ 调用方仍持有 x/w/bias/y；与 g_states 保活一致 |
+| `aclDestroyTensor` | “销毁 aclCreateTensor 创建的 tensor”；约束无；920 | 张量由调用方销毁 |
+| executor 自动释放（非复用） | “二阶段 aclxxXxx 框架会**自动释放**，无需手动 aclDestroyAclOpExecutor”；920/aclDestroyAclOpExecutor.md，930beta1 同文 | 默认非复用路径下 executor 由框架释放；harness 的 B722 自定义 `release` 是**应用层**，非 SDK executor |
+| 复用 executor 例外 | “复用状态…用户自行处理…销毁需显式调用本接口”；“第二段后不会清理 executor 资源”；920/aclSetAclOpExecutorRepeatable.md | 若启用 repeatable，必须显式 destroy；本地是否启用未证 |
+| device queue/arg 保活 | 920/two_phase_api.md 仅“第二段不能重复调用”，**无保活明文**；executor 自动释放仅指 host executor；a12 样例（`31333c59…`）第二段后 `aclrtSynchronizeStreamWithTimeout` → `aclrtFree(workspace)`/`DestroyTensor`（代码层，非契约） | **queue/arg 保活仍缺明文**；样例行为是“sync 后释放”，与 g_states 的“sync 确认后 release”结构一致 |
+| SDK metadata/valid-state | 现有官方页无 tensorlist/executor 的 released/valid 查询条文；`aclDestroyAclOpExecutor` 仅列 561103 null，`aclDestroyTensorList` 仅 0/非 0；920 | CPU invalid-id 0 是**应用层 map 行为**，不判 SDK 已释放 |
+
+### 136.2 对对象表/本地实现的含义
+
+- `aclCreateTensorList` + `aclDestroyTensorList` 的“内部 tensor 不需重复释放”与 harness `g_states` 持有 `keep_lists`/`keep_x,w,bias,y` **一致**；列表销毁只销毁列表，tensor 仍由调用方持有/销毁。
+- executor 默认非复用 ⇒ 框架自动释放（9.2.0 文字）；harness 的 `release` 自定义 op（B722）是 **app-layer cleanup**，不改变 SDK executor 生命周期。若启用 repeatable，则需显式 destroy；本地是否启用未证。
+- device queue/arg（含 MC2 native 资源）**无 9.2.0 保活明文**；a12 样例的 sync→free/destroy 是代码层顺序，不是契约；9.2.1 文档仍缺。
+- valid-state：CPU `release(1)` 返回 0 只证 app-layer map 行为；**不证** SDK 资源已释放/valid-state 清理。
+
+### 136.3 缺口
+
+- 9.2.1 官方 ACL/aclnn 文档/头（`aclCreateTensor` 复制语义、executor auto-release/queuekeepalive、valid-state）未获取；9.2.0 对照不作为 9.2.1 已证。
+- 本地仍无 `aclnn_base.h`/`acl_op.h`/`acl_rt.h`/`hccl.h` 副本与 `two_phase_api.md`。
+- 不改变 §135 的可行性结论：自有 user workspace 可读但不含 KFC response；HCCL context workspace 无 host 访问器；候选 `0x...0073` 不可盲读。
+
+**状态**：SDK 契约 9.2.0/9.3beta1 对照已记录；9.2.1 未获取；release CPU PASS、候选未部署；8f4b843 冻结；无新设备/取件/GO。
