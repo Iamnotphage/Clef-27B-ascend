@@ -184,6 +184,24 @@
 - **31 计划调整**：真实官方入口仅覆盖 f810→fused 起点，197863d5 起点由 CPU 临时夹具覆盖（真实冷启动如需额外生产 revert 须 20 授权）；Release tuple 需单列新 entry/inference/stage/资产 SHA、两条 guard、selected profile 全 aa3e、A 继承/B 新测清单与冻结资产零改动 diff。
 - **review 替代**：原生 review 无关联 PR 且 gh 不可用 → REVIEW_INVALID；按无 PR 范围不新建 PR。我将在新 tuple 交付后做直接本地冻结 diff + 真实夹具独立审查（重点 rev3 全部门与 35 新增分支），记录该替代及局限，finding 发 35、不改其代码。
 
+## 8.10 官方 aa3e 入口（f9e601c）本地独立审查 = PASS
+
+- 新 tuple SHA 全命中：inference `de5b0d1e…`、b09 `b09cd602…`、aa3e `aa3e1758…`、独立 guard `36eaff44…`（两处）、1ed `1ed35f0a…`、test_joint `dcc545c5…`、test_launch `b4f18279…`、harness `385b6324…`、evidence `1cad8ba1…`、diff `c40725a0…`、stage `d7516e8a…`、doc `23ac3c2d…`；冻结资产未改（765/f810/a1ca/31202d27/888a8d7f/172c2838/start.sh d880a01e）。
+- **diff 可复现**：`official_entry.diff` 与 `git diff e20e128 f9e601c -- inference.py test_inference_launch.py` 字节相同；应用到 e20e128 精确产出 `de5b0d1e…` + `b4f18279…`。
+- **基点复现**（按真实 runtime 资产修正 /tmp 布局）：e20e128 inference+test 恰为 1 error（KeyError `pending_install`）+ 1 failure（SystemExit not raised），其余 15 通过——与 7ea8aa6 决策门旧契约诊断一致。
+- **独立复跑**：`test_inference_launch` 17/17；`test_joint_fused_entry` 用交付的 197863d5 fixture 11/11（无 fixture 10+1 布局性 skip）。11 项覆盖三起点、重复 no-op、unknown fail-closed、失败不启动、非 fused pop、f810 dry-run pop、默认 s1 dry-run、探针/布局校验、资产无 scratch。
+- **代码审查**：guard 判 `status_before`、fused 判 `state_before`；仅 preimage 才 apply；独立 backup；原子 `joint-patch-record`（含 no-op/失败）；tree 同解释器探针 + 目标/可写/布局校验 + vllm 前 fail-closed；36 支持 `--manifest`；1ed SOURCE=36、36 SOURCE=f810、b09 SOURCE=aa3e 齐备；environment 白名单且非 fused 显式 pop。**无需改代码**。
+- **完整 release 清单要求（非阻断）**：base 运行依赖须绑定 SHA——GDN `124884fb…`、QKV `37b0698e…`、chunk128 `f1283218…`、schema_cache `0d8d495c…`、旧 guard 765、f810 源、activate_env `3b363394…`、start.sh `d880a01e…`、vendor .so（customize/clef_conv_qkv/clef_gdn_qkv_norm）与模型目录 manifest；新根/打包排除 `._*`。delta stage 的 frozen 列表仅覆盖 7 项，完整 release 由 31 新根补齐。
+- 旧 `/workspace/yangchen/Clef-27B-ascend`（3e83ae1+dirty、缺 delta）仅作 baseline inventory，不再作为执行根重复报告；等 31 报 0b869dd 重建的新根后核字节与 recipe；OPP/LD 若变化须保持 fcbdcbf1 精确门不放宽。
+
+## 8.11 完整 release 根（2dcc029）与 Plan B = READY
+
+- **326/326 逐字节**：对 `/workspace/yangchen/work/final-release-aa3e-0b869dd` 326 文件逐 SHA 与本地 commit `2dcc029` 同路径 git blob 比对，无缺失、无 mismatch；含 `Clef-27B/logs/model_manifest.json` `98c104a9…`，无 `._`/`__pycache__`/bulk logs。
+- recipe SHA 全中：inference `de5b0d1e…`、start.sh `d880a01e…`、activate `3b363394…`、GDN `124884fb…`、QKV `37b0698e…`、chunk128 `f1283218…`、schema_cache `0d8d495c…`、旧 guard 765、f810 源、b09、aa3e、36×2、1ed、stage `048dec31…`、evidence `1cad8ba1…`、diff `c40725a0…`、tests `dcc545c5…`/`b4f18279…`、harness `385b6324…`、doc `ba0e97e9…`；vendor 六 .so `4d2440a3/64b5dda7/8f8c3dbb/2185231c/25063307/b8e60b5c`。
+- **vendor 加载角色（源码实证）**：`vllm_ascend/ops/gdn.py` 用 `ctypes.CDLL(<CLEF_QKV_NORM_VENDOR>/op_api/lib/libcust_opapi.so)` 与 `CLEF_CONV_QKV_VENDOR` 加载 `vendors/customize` 与 `vendors/clef_conv_qkv`；无 `torch.ops.load_library`；`clef_gdn_qkv_norm` 无任何运行引用（仅历史构建源/日志），release 将构建源放 `runtime/ascendc/`、不含生产副本，依据成立。
+- **OPP/LD 路径判定（确定性）**：`qkv_norm_environment` 从运行中 `inference.py` 所在目录推导 vendor 路径；独立 release 根使 OPP 0–4 段变为 release 前缀，无法与 fcbdcbf1（内嵌生产绝对路径）精确一致。dry-run 实测：argv 35/35 一致、OPP 9（0–4 前缀不同）、LD 2（未 source activate_env）。故 Plan B（生产路径 overlay）是唯一保持 exact 门的执行方式。
+- **Plan B（20 认可，32 ready）**：先备份被替换文件（inference 081b5623、test_inference_launch 99baa718）到独立 backup 目录并记录 SHA/来源；部署 13 个已审对象（2 替换 + 11 新增）；旧 765/f810/a1ca/31202d27/phase/v5/GDN/QKV/chunk/NZ/vendor 六 .so 零改；部署后核生产根 SHA；同一 activate_env 下 exact dry-run 断言 OPP9/LD12/argv35；再真实 start.sh 首启 f810->fused、重启 aa3e-noop，核 record/两 report/独立 backup/health/info/五 PID/双 worker/四检/env/joint 三键/clients 空；失败 fail-closed。数值继承仍以 full run recipe 等价为门。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
