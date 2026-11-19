@@ -1,0 +1,15 @@
+candidate commit: 698ba3d2ffacad0d1b089473b31c570c7456095e
+base:            8f4b84357cc86cce97e08f011f8ad704dd0596da
+scope:           runtime/grouped_mmar 4 files (README.md, binding_probe.cpp, manifest.json,
+                 smoke_release_dispatcher.py)
+file SHA at candidate:
+  binding_probe.cpp              d9435b3aa5b3bba32ebc6c043ff5b9b4430e6fe6bcf945636fb8809ee3d5e75f
+  smoke_release_dispatcher.py    c457b6efd1d94814b0344819ce0bc7148f086997c01a0e0b6c4b131014b59d4d
+  manifest.json                  f7c5ae52cd22c3deb0b48f51cf45937fcbb24d4ebdde48e32cd61c0ac4df8592
+  compile_probe.sh (unchanged)   53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb
+  probe_trace.h (unchanged dep)  3e07139f1cd93085dd43fa1f394eabeb398934c9af2ae0eb23f8c749dbd82da9
+binding diff (only change):
+-    m.def("release(int id) -> int");
++    m.def("release(int id) -> int", &grouped_mmar_release);
+release body: unchanged; missing-id path returns 0 under g_mutex before any state/trace/lists/Tensor
+access; native run/run_mmar/run_mrs/provider unchanged.

@@ -1,0 +1,12 @@
+smoke script SHA c457b6ef...; executed as parent -> fresh -I child.
+- child requires TORCH_DEVICE_BACKEND_AUTOLOAD=0; asserts no torch_npu Python modules before/after import
+  and after load; asserts clef_mmar_probe:: namespace empty before loading one adapter; verifies adapter
+  SHA before and after load; schema must equal 'clef_mmar_probe::release(int id) -> int'; only call is
+  release(1).
+- parent uses stdlib only, spawns child with -I, 30 s timeout, records stdout/stderr/rc.
+- forbidden-call grep on script text: only docstring 'torch_npu' mentions, the torch_npu-module guard,
+  and parent subprocess.run (not a native op). No set_device/synchronize/run/run_mmar/run_mrs/provider/
+  torchrun/18143 calls.
+- loader note: probe_adapter links libtorch_npu and CANN SDK; the NotImplementedError message lists
+  torch_npu C++ fallback registrations (libtorch_npu loaded as a shared dependency). Python-level
+  torch_npu was not imported (script asserts), TORCH_DEVICE_BACKEND_AUTOLOAD=0 was set in both runs.

@@ -1,0 +1,9 @@
+- Service before/after: /health ready (clef, local-65e5a3c5ffb6); root 1355077, ppid 1355076,
+  pgid 1355077, starttime 401718579, state S — unchanged; 18143 was not contacted by the smoke.
+- Old/stage .so SHA unchanged: d181b15a...; candidate exists only under /tmp/release-candidate-698ba3d.
+- No torchrun/run_probe/smoke processes remain: /proc argv filter real_leftover_count=0
+  (a shell self-match previously showed 3; filtered by argv0/cmdline).
+- No device/NPU operation was requested by the scripts; module load used the allowed same-version
+  activate + venv to resolve libhccl/libascendcl (CANN 9.2.1) without a device call.
+- First control attempt without activate failed at load_library (OSError: libhccl.so not found) and was
+  NOT counted as a control result; rerun under allowed activate env produced the recorded PASS.

@@ -1,0 +1,9 @@
+Results (CPU-only; candidate not deployed):
+1) Control (old frozen .so d181b15a): parent passed=true rc=0; child stage=complete,
+   namespace empty before load, schema exact, observed=not-implemented,
+   NotImplementedError message contains 'clef_mmar_probe::release'.
+2) Candidate (new .so 83598d6e...): parent passed=true rc=0; child stage=complete,
+   namespace empty, schema exact, observed=returned, return_value=0 (Python int).
+Scope: proves tensor-free dispatcher reachable and invalid-id (1) early-return behavior only.
+Does NOT prove valid-state cleanup, SDK resource/ownership release, or H11 stream47/task13 fix;
+R579 not reached => task13 not claimed fixed. No deployment; service root 1355077 kept.
