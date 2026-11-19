@@ -1,0 +1,33 @@
+H11-observe-v2 window 启动模板（doc-only；当前无 v2 GO，不执行）
+==============================================================
+
+基础环境（固定顺序；仅两项观测 env）
+------------------------------------
+cd /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar
+source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh
+export PATH=/workspace/yangchen/venvs/clef-py312/bin:$PATH
+export ASCEND_GLOBAL_LOG_LEVEL=0
+export ASCEND_PROCESS_LOG_PATH=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/logs-h11-observe-v2
+
+说明：
+- activate_env.sh 会 source `$CLEF_VENV/bin/activate`，本身已把 venv bin 加入 PATH；随后显式前置同目录
+  是幂等加固（最终 PATH 中 venv bin 出现两次，无害，见 cpu-prep-torchrun-metadata.txt）。
+- 不 unset 任何其它变量；除上述两项外环境保持 activate 后的基线。
+- effective env 实测：`command -v torchrun` = /workspace/yangchen/venvs/clef-py312/bin/torchrun；
+  resolved 同路径；executable=yes；SHA fd801bde…0903；解释器 #!/workspace/yangchen/venvs/clef-py312/bin/python；
+  `torchrun --help` rc=0（CPU-only）。基线 PATH 下 `command -v torchrun` 为空（已复现）。
+
+A. plan-only（应与 plan SHA 9c2936c2…3137 逐字节一致）
+-------------------------------------------------------
+/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py --python /workspace/yangchen/venvs/clef-py312/bin/python --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/run-h11-observe-v2 --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/root-identity-h11-observe-v2.json --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 --arm H11 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --master-port 29531 --comm-timeout 90.0 --child-timeout 240.0 --stop-timeout 120.0 --restore-timeout 900.0 --port 18143 --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py --expected-source-sha aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503 --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh --service-root /workspace/yangchen/Clef-27B-ascend --model-dir /workspace/yangchen/models/Clef-27B --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2 --clean-env-expect /workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
+
+B. v2 授权后 execute（仅在 20 另发 v2 明确 GO 后；本包从未执行）
+---------------------------------------------------------------
+与 A 完全相同，仅在末尾追加顶层 `--execute`（完整 argv 见 window-execute-argv.json）。
+
+说明
+----
+- plan JSON 是输出不是输入；不要传 --child-argv（会覆盖 --arm）。
+- 启动前必须先跑本包 preflight-rescan.sh：除 identity/端口/目录/SHA 外，还校验 effective env 下
+  bare torchrun 解析到 venv 且 `torchrun --help` rc=0；任何一项不符即停。
+- 唯一 restore 仍是 plan 内 env -i + 官方 start.sh，一次；不得手工另起第二棵。

@@ -1,0 +1,21 @@
+{
+ "schema": "h11-observe-env-sidecar/2",
+ "cell": "h11-observe-v2",
+ "plan": "plan-h11-observe-v2.json",
+ "candidate_env": {
+  "ASCEND_GLOBAL_LOG_LEVEL": "0",
+  "ASCEND_PROCESS_LOG_PATH": "/workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/logs-h11-observe-v2"
+ },
+ "base_env": {
+  "source": "/workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh",
+  "path_prepend": "/workspace/yangchen/venvs/clef-py312/bin",
+  "note": "activate_env.sh sources $CLEF_VENV/bin/activate (adds venv bin); explicit prepend is idempotent"
+ },
+ "application": {"applied": false, "scope_if_go": "child process only; service and restore unaffected"},
+ "restore": {"argv_mode": "env -i with clean PATH and CLEF_LAUNCH_CONFIG=s1", "candidate_exported_to_restore": false},
+ "unproven_conditions": [
+  "AICPU env propagation into device-side libccl_kernel",
+  "HcclCheckLogLevel/DlogRecord w0/w1 raw operands vs any level enum",
+  "module-level log format and HCCL_DEBUG_CONFIG bit semantics"
+ ]
+}

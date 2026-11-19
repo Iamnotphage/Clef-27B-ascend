@@ -1,0 +1,23 @@
+plan-only 复核记录（v2；同一 argv 去 --execute；2026-11-19）
+=============================================================
+
+原始命令（与 window-planonly-argv.json 完全一致；工作目录 e38b541 stage；未加 --execute）：
+
+/workspace/yangchen/venvs/clef-py312/bin/python /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/supervised_probe_window.py --python /workspace/yangchen/venvs/clef-py312/bin/python --run-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/run-h11-observe-v2 --root-identity /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/root-identity-h11-observe-v2.json --stop-script /tmp/d0cc/d0_stop.py --expect-stop-sha d6d49d75012a0789d3bff3e7b522e9cd496844ca0ee0424608ab8e6b43a33886 --arm H11 --adapter /workspace/yangchen/work/grouped-deepdive-35-e38b541/runtime/grouped_mmar/probe_adapter.so --probe-temp-root /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-temp-h11-observe-v2 --probe-out /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/probe-out-h11-observe-v2 --k 256 --n 512 --rows 128 --seed 20261119 --master-port 29531 --comm-timeout 90.0 --child-timeout 240.0 --stop-timeout 120.0 --restore-timeout 900.0 --port 18143 --source-target /workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py --expected-source-sha aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503 --official-start /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --activate /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh --service-root /workspace/yangchen/Clef-27B-ascend --model-dir /workspace/yangchen/models/Clef-27B --restore-output /workspace/yangchen/work/grouped-deepdive-cell-h11-observe-v2/restore-h11-observe-v2 --clean-env-expect /workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json --text-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/text-body.json --image-body /workspace/yangchen/work/grouped-deepdive-cell-a15-large/image-body.json
+
+实测校验：
+
+  $ sha256sum planonly-rerun-output.json
+  9c2936c240112599209c3aa396d7695bbac10b91ca908733777df1bb36a13137  planonly-rerun-output.json
+  $ sha256sum plan-h11-observe-v2.json
+  9c2936c240112599209c3aa396d7695bbac10b91ca908733777df1bb36a13137  plan-h11-observe-v2.json
+  $ diff planonly-rerun-output.json plan-h11-observe-v2.json
+  （无输出）
+  $ echo $?
+  0
+
+结论：复核输出与 plan 逐字节一致（SHA 9c2936c2…3137）；未手改 plan，无易变字段差异。
+
+说明：
+- v2 plan 与 v1（c95ae5c3）不可混用：identity/run_dir/restore_output 均不同。
+- 若未来复核出现差异，按字段列出（identity/run_dir/argv/probes），重新评审，不得手改。

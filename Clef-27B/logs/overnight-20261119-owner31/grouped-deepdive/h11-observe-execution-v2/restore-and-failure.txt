@@ -1,0 +1,33 @@
+唯一 restore 与失败留现场条件（H11-observe-v1）
+=================================================
+
+唯一 restore argv（plan 内，由 window 在 child 结束后执行；不得手工另起第二棵）
+--------------------------------------------------------------------------------
+env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c "cd /workspace/yangchen/Clef-27B-ascend && source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec bash /workspace/yangchen/Clef-27B-ascend/Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B --output-dir /workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v2"
+
+- restore 输出目录：/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/restore-h11-observe-v2（fresh）。
+- 该 argv 使用 `env -i`，不继承候选 ASCEND_GLOBAL_LOG_LEVEL / ASCEND_PROCESS_LOG_PATH；
+  不得把候选 export 带入 restore。
+- 恢复后必须回到 aa3e/s1，且 joint-patch-record branch == aa3e-noop；`f810->fused` 仅
+  rescue-only，并标记 isolation_failed。
+
+成功门（window 既有）
+---------------------
+- child_rc == 0 且未超时（240 s）；**child PGID 无 survivor，且 attributed survivors 为空**
+  （window 的 no_survivors 判定：DescendantRegistry 登记项与 PGID 扫描均为空，含已回收的
+  Z 项；不表述为“全树无 survivor”）。
+- source SHA 前后均为 aa3e1758…；branch aa3e-noop。
+- four_checks / env / joint_env / two_workers / clients_empty 全真。
+- restore 后 health ready（clef，revision local-65e5a3c5ffb6），root identity 与
+  root-identity-h11-observe-v2.json 一致。
+
+失败留现场（必须）
+-----------------
+- 任何失败（child 超时/非零、stop rc!=0、restore 失败、unknown group member）都不得删除：
+  - CELL/run-h11-observe-v2（含 window.json/descendants.json/child.stdout/stderr/stop.json）
+  - CELL/probe-temp-h11-observe-v2、CELL/probe-out-h11-observe-v2（rank0/rank1 traces/results）
+  - CELL/logs-h11-observe-v2、archive-h11-observe-v2（raw + SUMS）
+  - /root/ascend/log/run/{device-0,device-1,plog} 与 /root/ascend/log/vllm_ascend 时间窗文件
+- 先完成 collect-raw.sh end（含 300 s 尾部 slack），再做任何清理；清理只允许 stop.json 记录
+  的受控 term/kill 与 restore，不做全局 kill。
+- 不重置设备、不升级驱动、不改 SSH 配置；只处理本窗口 PGID 与已登记 descendants。
