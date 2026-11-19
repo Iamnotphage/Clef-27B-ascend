@@ -2564,3 +2564,35 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 27 继续宿主 comm/stream/nativehandle 审计；33 不重复宿主代码审计，不新设备/GO。
 
 **状态**：root cause unresolved；设备侧结论不变；宿主侧 27 证据并入但不与设备完成混用。
+
+## 127. 宿主 binding/run_probe 窄核（32）：0 值是初始化，不是执行证明
+
+**依据**：32 只读窄核；`binding_probe.cpp` SHA `101660f8…`、`run_probe.py` SHA `8e308804…`（与 `e38b541` stage 一致）。无测试/设备/包。
+
+### 127.1 flags8 下 sync/close 的 0 是初始化值
+
+- 常量：`KEEP_GROUP=1`、`KEEP_WORKSPACE=2`、`KEEP_DESCRIPTORS=4`、`KEEP_ALL=8`、`DIRECT_LAUNCH=16`。
+- binding L364 `int sync_rc = 0;`；L365 `if (state->flags & DIRECT_LAUNCH) {`；flags8 & 16 = 0 → **不进**；`sync_rc` 保持 0。
+- L374 `int cleanup_rc = 0;`；L375 `if (!keep_descriptors(state->flags)) cleanup_rc = lists->close();`；`keep_descriptors(8)` 为真 → `!true` 为假 → **close 不执行**；`cleanup_rc` 保持 0。
+- L376–379 `handler_return` 把 `cleanup_rc/sync_rc` 写入 trace ⇒ **`handler_return` 的 `sync_rc:0/cleanup_rc:0` 不能证明同步或 close 已执行**；它们只是初始化值。
+- 与 trace 读法一致：handler 层没有真实 sync/close；真实同步在 Python L534。
+
+### 127.2 g_states 的所有权字段
+
+- RunState L154–172：`at::Tensor keep_workspace`(L162)、`std::shared_ptr<Lists> keep_lists`(L163)、`at::Tensor keep_x, keep_w, keep_bias, keep_y`(L164)；`workspace_ptr`(L166)/`lists_ptr`(L167) 注释为 **Logging-only addresses; never ownership**。
+- KEEP_ALL 分支 L311–318：`keep_x=x`、`keep_w=weight_kn`、`keep_bias=bias`、`keep_y=y`、`keep_workspace=workspace`、`keep_lists=lists`。
+- L321–325：flags8 时 `g_states[id]=state`，注释 “Retain until release() after sync is confirmed.”
+- ⇒ `g_states` 明确持有 harness workspace、lists、x/w/bias/y；**不是** `workspace_ptr/lists_ptr`（仅日志地址）。宿主侧资源在 sync 未返回期间被持有。
+
+### 127.3 run_probe 534/579
+
+- L533 `trace.emit('sync_enter')`；L534 `torch.npu.synchronize()`；L535 `sync_return`；L579 `release_rc, release_error = call_release(...)`。
+- L534 不返回 ⇒ L535+ 与 L579 **全部不可达**；`g_states` 继续持有上述对象。
+
+### 127.4 边界与影响
+
+- 仅宿主源码条件；SDK 内部契约（executor/stream/descriptor/native handles、设备侧 task 引用、release 内部行为）仍缺；**不能外推所有资源生命周期已排除**，也不能证明挂起根因。
+- 与设备侧分开：宿主“sync 未返回/release 不可达/无 earlyfree”**不证明**设备侧 AllReduce/task13 完成；设备侧仍 `rcvCnt` 缺测/task13 3 min pending。
+- 27 主责 comm/stream/nativehandles 与 SDK docs；33 不重复宿主审计；无新设备/GO。
+
+**状态**：root cause unresolved；宿主侧读法精确化（0 值≠执行），设备侧结论不变。
