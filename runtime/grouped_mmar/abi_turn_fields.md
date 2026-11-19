@@ -94,12 +94,12 @@ Unproven: whether S=C for the actual Grouped server (server_A 0x191fd10 and serv
 established or excluded); which Init overload and branch Grouped uses; the meaning of
 the WriteFinish constant and whether it is meant to overwrite the counter; the
 value/`increment` source of ctx+352 (clears only) and the exact semantics of
-ctx+0xF31BC; the AivAicpuOpParam population path (33's consumer chain); whether
-PostMsg's `this` (TwoStageWait's second argument) is the same server_A object
-(0x761994 passes x1 = 0x191fd10, but the TwoStageWait callee prologue and its callers
-are not in the windows); who else writes server+0x18; what PrintMsg does to dest; and
-the compiled layout because the installed headers lack CommKfcParamDesc/KFCTask.
-The Init call sites and ctx 184/192/196 writers are resolved by abi-preflight6.
+ctx+0xF31BC; the AivAicpuOpParam population path (33's consumer chain); whether a TwoStageWait
+caller other than 0x761994 passes a different server object (the callee prologue
+`x19=x1` and the 0x761994 `x1=0x191fd10` call are proven by abi11); any writer of
+server+0x18 outside the abi11-scanned method region 0x7d66f0-0x7da9bc; and the
+compiled layout because the installed headers lack CommKfcParamDesc/KFCTask. The
+Init call sites and ctx 184/192/196 writers are resolved by abi-preflight6.
 
 ## abi-preflight6 call sites and exact alias sets
 
@@ -166,8 +166,10 @@ Instruction-level dataflow inside PostMsg:
 - `0x7d6838/0x7d6844 movz/movk w4 = 0x5CDF123A`; `0x7d6850 str w4,[x0,#44]`.
 - `0x7d6858 strb w1,[x0,#51]`; `w1` is not modified anywhere in PostMsg before this
   store, so it is the caller's uint argument.
-- `0x7d6868 bl AivAicpuOpParam::PrintMsg` with `x0 = dest` (body not fetched, so a
-  write inside PrintMsg is not excluded); `0x7d6884 dsb st`; canary check; return 1.
+- `0x7d6868 bl AivAicpuOpParam::PrintMsg` with `x0 = dest`; abi11 fetched the
+  body (nm 0x7c24e0, size 0x654) and found no store to the dest object's
+  +24/+44/+51 (only `strh w3,[sp,#24]`), so PrintMsg does not alter dest;
+  `0x7d6884 dsb st`; canary check; return 1.
 - `x2` for the source values is the global `0x1613c90` (`ldrh [x2,#704]`,
   `ldrb [x2,#706]`), stored only to the stack, not to dest.
 
@@ -206,11 +208,17 @@ Conditional same-byte with GetRecvCnt (all premises needed):
 - GetRecvCnt reads the u8 at `C+j+64T+51`; therefore PostMsg's `strb w1,[dest+51]`
   and GetRecvCnt's `rcvCnt` byte are the **same byte** exactly under P1-P4, and the
   +44 word is the same valid word. If the non-zero branch ran, no relation holds.
-- P1 is the open premise: PostMsg's `this` is x19 in TwoStageWait, and the 0x761994
-  call passes x1 = 0x191fd10 (the same object Init4 receives, see below), but the
-  TwoStageWait callee prologue and its callers are 33's graph and are not in these
-  windows. P3 is not covered by a full store survey (only Init4 zero branch observed
-  to write +0x18).
+- P1 is supported within abi11's scope: `RunRpcServerTwoStageWait` nm 0x7c7dac
+  size 0x1028, prologue `0x7c7dc8 mov x19,x1` and `0x7c7dd0 mov x20,x0`, so
+  PostMsg's `this` (x19) is the second argument; the only dispatcher call
+  0x761994 passes `x1 = 0x191fd10` (server_A) and `x0 = ctx_R`. Other callers of
+  TwoStageWait are not in the fetched windows and remain unproven.
+- P3 is supported within the scanned method region 0x7d66f0-0x7da9bc: a targeted
+  `str ..,[x?,#24]` scan returned 15 hits, and the only server+0x18 write is
+  Init4's zero-branch `stp x0,x3,[x19,#16]` at 0x7d6758; the other object hits
+  are AivAicpuOpParam outputs (+24) in HclMsg2AicAicpuOpParam and GenMsgByTaskParam,
+  and 12 are `[sp,#24]` stack slots. This is a scope-limited statement, not a
+  library-wide uniqueness claim.
 
 Gate relation: ReadAddrMsg's slot is `[server+8]+64*turn` and ReadApiValidMsg reads
 the u32 at slot+48. If Init(y) set `[server+8] = C`, the gate word is
@@ -316,9 +324,10 @@ only envelopes (each 64-byte slot has an 8-byte live word and a 56-byte hole).
    0x22c7cf0 are different static objects; S=C needs the same object). 33's graph.
 3. `CheckDebugMode` body only if a blocking/sleep question remains;
    `CopyAndCheckApiMsg` is confirmed as a 64-byte copy/GenXor/memcmp by 31/33.
-4. PostMsg destination identity: the TwoStageWait callee prologue (does x19 = arg2?),
-   the callers of TwoStageWait and which server object they pass, who else writes
-   server+0x18, and the `AivAicpuOpParam::PrintMsg` body (can it write dest?). These
-   are the only open premises for the PostMsg +51 / GetRecvCnt same-byte statement.
+4. PostMsg destination identity is now resolved within abi11's scope: the
+   TwoStageWait prologue (`x19=x1`), the dispatcher call (`x1=0x191fd10`),
+   Init4's zero-branch as the only server+0x18 writer in 0x7d66f0-0x7da9bc, and
+   PrintMsg's body (no dest write). Only other TwoStageWait callers and writers
+   outside that method region remain, and they are not requested unless needed.
 Do not fetch these outside 31; 33 merges and 31 executes the single remote read.
 No new full-library store survey, no cross-DSO search, no device action.

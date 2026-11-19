@@ -77,8 +77,13 @@
     },
     "runtime/grouped_mmar/abi_turn_fields.md": {
       "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
-      "sha256": "637fabbaa901abb703e1f6b6a9c5529a1c57fa736bb177894300571ce3104049",
-      "bytes": 22298
+      "sha256": "d3529863fc8b26f5ccfa14c84ef3d0fc6386f9a8f92427f32dc4e2e137645eca",
+      "bytes": 22912
+    },
+    "runtime/grouped_mmar/log_path_markers.md": {
+      "role": "read-only path-distinguishing Dlog/trace marker table plus the minimal rodata string dump request",
+      "sha256": "77e0f26e91e1f3f7e79136fe340e06ec39d1a956a8d79319933f4ebe03535d5a",
+      "bytes": 11086
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
@@ -92,8 +97,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "6f750027e9423f1ab6fae1882127772a0ebbe568d03122c3d9960ed18495c12c",
-      "bytes": 46046
+      "sha256": "f987926a74c28328c8d06b6517f99475c13bc2a4ee39c9ddd328fa67f56a145a",
+      "bytes": 47451
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -490,7 +495,7 @@
     "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
     "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer candidate 0x7d6838-50), abi-preflight8 SUMS d2a4043ba4d3b13e4e7254fe5c31d2f93c7e229dbd6b260fe3e790aba290fa79 (PostMsg windows), abi-preflight9 SUMS 809265364caa52ce0114bcce089d5bdd7f7c33278cb0f384f4fd741a0c99a7a9 (correction plus getters/Init4/ctx windows), abi-preflight3 disasm-RpcSrvLaunch.txt SHA d92fee9d517c178fc7b9513cfff3249334df29bd173df429d6c66134e25c95dc, libccl 2281deca, abi4 GetSendRecvCnt",
     "doc": "runtime/grouped_mmar/abi_turn_fields.md",
-    "design_sha256": "637fabbaa901abb703e1f6b6a9c5529a1c57fa736bb177894300571ce3104049",
+    "design_sha256": "d3529863fc8b26f5ccfa14c84ef3d0fc6386f9a8f92427f32dc4e2e137645eca",
     "proven": [
       "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
       "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
@@ -522,6 +527,28 @@
       "PostMsg premises: whether its this (TwoStageWait's second arg; 0x761994 passes x1=0x191fd10) is the same server_A object (callee prologue and callers not in windows), who else writes server+0x18, and whether AivAicpuOpParam::PrintMsg writes dest; compiled layouts because the installed headers lack CommKfcParamDesc/KFCTask"
     ],
     "request": "abi6 resolved Init call sites and ctx 184/192/196; abi7 gave a local +44 writer candidate (superseded, not uniqueness); abi8 identified PostMsg 0x7d6800 and proved dest=*(this+0x18), the +44/+51 stores, w1 truncation and the write order; abi3/CFG prove server_A=0x191fd10 and exclude 0x1920a10; abi9 corrected the ctx+352 clear and gave the ctx+0xF31BC expression. Remaining: the TwoStageWait callee prologue (is x19=arg2?), its callers and which server they pass, other writers of server+0x18, the AivAicpuOpParam::PrintMsg body, which server object/branch the Grouped path uses, and the ctx+0xF31BC semantics; 33 merges and 31 remains the sole remote fetcher. No new full-library store survey, no cross-DSO search, no device action"
+  },
+  "log_markers_analysis": {
+    "status": "read-only; Dlog/trace markers listed from abi3-abi10 windows; format/file text pending one targeted rodata dump; no device action",
+    "doc": "runtime/grouped_mmar/log_path_markers.md",
+    "design_sha256": "77e0f26e91e1f3f7e79136fe340e06ec39d1a956a8d79319933f4ebe03535d5a",
+    "proven": [
+      "ForApi/RunRpcServerApi per-turn Dlog 0x7b3a24, gate HcclCheckLogLevel(1,3) at 0x7b39f0, fmt 0x14f8290, file 0x14f71a8, line 1715, x6=[ctx+12756]",
+      "OneStage 0x16 return Dlog 0x762280, gate (1,0x01000003) at 0x76224c, fmt 0x14ee650, file 0x14edee8, line 98",
+      "Init4 Dlog 0x7d67cc, gate (0,3) at 0x7d6728, fmt 0x1613f20, file 0x1613cc8, line 27, x6=y; fires before the zero/non-zero branch",
+      "ReadAddrMsg wait timeout Dlog 0x7d8d20, gate (2,0x01000003) at 0x7d8ce4, fmt 0x1614408, file 0x1613cc8, line 360, x6=turn, x7=20; then SetErrToWarnSwitch(1) and PrintAllHcclMsgArea",
+      "ReadApiValidMsg mismatch Dlogs 0x7d6fec (ret==20, gate (2,3), fmt 0x1613bd0, x6=0x1613bc0, x7=ret), 0x7d7074 (IsErrorToWarn true, fmt 0x1613c00), 0x7d70b8 (IsErrorToWarn false, level 3), 0x7d71bc (line 241, x6=[slot+48])",
+      "CheckRcvWorkMsg 6s timeout Dlog 0x7d744c, gate (3,3) at 0x7d7410 plus IsErrorToWarn, fmt 0x1614060, line 285",
+      "parameter-null Dlog 0x7615a4 (fmt 0x14eb1b0, line 433) and post-Init error/warn Dlog 0x7620e8 (fmt 0x14ee728, line 544, x6=[0x191fd04])",
+      "PostMsg response uses PrintMsg 0x7d6868, not a DlogRecord; abi11 shows PrintMsg does not write dest +24/+44/+51",
+      "TwoStageWait has no full disassembly in abi3-abi10, so no internal marker is provable; the absence of the OneStage-0x16 log is an inference, not a proof"
+    ],
+    "missing_text": [
+      "0x1613b80-0x1613d40 covers 0x1613bc0/0x1613bd0/0x1613c00/0x1613cc8/0x1613ce0",
+      "0x1613f00-0x1613f60 (0x1613f20); 0x1614040-0x16140a0 (0x1614060); 0x16143e0-0x1614440 (0x1614408)",
+      "0x14eb190-0x14eb200 (0x14eb1b0); 0x14ede80-0x14edf20 (0x14edee8); 0x14ee630-0x14ee690 (0x14ee650); 0x14ee700-0x14ee790 (0x14ee728); 0x14f7160-0x14f71f0 (0x14f71a8); 0x14f8270-0x14f82e0 (0x14f8290)"
+    ],
+    "request": "one targeted NUL-terminated rodata dump (10 ranges, about 1 KB) merged by 33 and fetched once by 31 from the same libccl 2281deca; no full-library scan, no installer change, no runtime code, no device action"
   },
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
