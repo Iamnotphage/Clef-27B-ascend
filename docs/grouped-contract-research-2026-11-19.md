@@ -1915,3 +1915,17 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
 3. 重建 SUMS/commit 得新固定包，20 另发新 GO；旧空 archive 保留为证据，下次 begin 前清理/重建。
 
 **状态**：v2 仍未进入设备执行；无第二 GO/设备动作；静态 ABI/§15 与 v2 包其余结论保持；root cause 待真正 v2 实测。
+
+### 107.1 35 独立确认与影响范围（collect-raw）
+
+- `collect-raw.sh:56` 确为 `pid=1337814`；identity heredoc 在 `/proc/1337814/stat` 缺失时抛 FileNotFoundError，traceback 到 stderr、stdout 为空 → identity.json **0 字节**。
+- **该 python rc 未被检查**：begin 的 FAIL/exit 1（line 93）只覆盖 `need_file` 必需输入，不覆盖 identity 生成；begin 仍 rc0。
+- **end 也不校验 identity.json**：全脚本除 line 54 写入外无 identity 的 need_file/校验；end 的 SUMS 会把 0 字节 identity 一起打包，仍 rc0 → 缺陷不只在 begin。
+- 同脚本其它硬编码 `18143`（health/info）与 `29531`（端口探针）与 v2 一致，无需改；**未发现其它 v1 identity 硬编码**。
+- 现场一致：run/probe-temp/probe-out/restore ABSENT、服务 1347086 未变；无第二 GO/设备。
+
+**最小修复（加强版）**：
+1. 从 `$SRC_ID`（root-identity-h11-observe-v2.json）读 pid，校验 pid/starttime/boot 与 `/proc` 一致；
+2. identity 生成失败或校验不符 → FAIL/exit 非零；
+3. **begin 与 end 都把 identity.json 纳入必需校验**（非空、可解析、与 SRC_ID 一致）；
+4. 重建 SUMS/commit 得新固定包，20 另发新 GO；空 archive 留证。
