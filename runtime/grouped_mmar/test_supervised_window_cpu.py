@@ -113,6 +113,20 @@ class WindowTest(unittest.TestCase):
         self.assertIn('A14', plan['child_argv'])
         self.assertIn('--adapter', plan['child_argv'])
 
+    def test_h4k_h5k_arms_build_torchrun_child(self):
+        import contextlib
+        import io
+        for arm in ('H4K', 'H5K'):
+            argv = self.args(extra=('--arm', arm))
+            index = argv.index('--child-argv')
+            del argv[index:index + 2]
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(win.main(argv), 0)
+            plan = json.loads(output.getvalue())
+            self.assertIn(arm, plan['child_argv'])
+            self.assertIn('--adapter', plan['child_argv'])
+
     def test_missing_stop_script_rejected(self):
         argv = self.args()
         argv[argv.index('--stop-script') + 1] = str(self.root / 'missing.py')

@@ -81,6 +81,17 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(plan['rows'], 128)
         self.assertEqual(plan['flags'], run_probe.KEEP_ALL)
 
+    def test_h4k_h5k_keep_all_discriminators(self):
+        for arm, flags, names in (('H4K', 24, ['keep_all', 'direct_launch']),
+                                  ('H5K', 40, ['keep_all', 'refetch_stream'])):
+            a = run_probe.parse_args(plan_args(self.root, arm))
+            plan = run_probe.build_plan(a)
+            self.assertTrue(plan['native'])
+            self.assertEqual(plan['rows'], 128)
+            self.assertEqual(plan['flags'], flags)
+            self.assertEqual(plan['flag_names'], names)
+            self.assertNotIn('memset_workspace', plan['flag_names'])
+
     def test_out_dir_shared_by_two_ranks(self):
         import threading
         out = self.root / 'shared-out'

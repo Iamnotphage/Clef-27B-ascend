@@ -1,6 +1,6 @@
 {
   "schema": "grouped-mmar-probe-package/1",
-  "status": "narrowed_environment_first_cause_pending",
+  "status": "grouped_matched_small_hang_exact_cause_unresolved",
   "branch": "ao/resume-cc/grouped-mmar-research-20261119",
   "base_commit": "0db4d21",
   "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
@@ -21,9 +21,9 @@
       "bytes": 1781
     },
     "runtime/grouped_mmar/run_probe.py": {
-      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
-      "sha256": "0f90fd23f06fbe4221eaa646b897460144a93d2bc92c6e000bc9cce68bc9e0b9",
-      "bytes": 21854
+      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
+      "sha256": "508e2931f0d8207fbe12361191f603fe47d89a3a29bddb695de9a14089169b1b",
+      "bytes": 22275
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot tests (15)",
-      "sha256": "a8bf075f154b47db34e7c78aaba21ef2fc11032bfa29bde0f34da61053d0e822",
-      "bytes": 9091
+      "role": "CPU control-flow/path/release/watchdog/snapshot tests (16)",
+      "sha256": "89acbb638a9aa6592862a902b1c7f68c09e805339dee76bdd8784b2efc406aa9",
+      "bytes": 9677
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -61,14 +61,14 @@
       "bytes": 4514
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
-      "sha256": "2202165ef6c9f08bb1cc7168b457c5466a63f20ba0c6168ca63cacade81a03c5",
-      "bytes": 31636
+      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks; arm choices include H4K/H5K",
+      "sha256": "d7e735149f88de212762ed944e0ec4e8c0e587110f2b62a16da8c20e8766e2fa",
+      "bytes": 31650
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (22)",
-      "sha256": "6d2ffc94b148fe8cd316bc53caaec3c22e31fda0fa21a17d13bfa2d3d5243aab",
-      "bytes": 20478
+      "role": "CPU window control-flow tests (23)",
+      "sha256": "0fcdf991f9a162aa89a6af1ee10a9540df7a5c62d354512883d04cbeefe32eb0",
+      "bytes": 21047
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
@@ -77,8 +77,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "6182dc79baf24106a814208260f9434e0bab3e1c3473a85d7b51a7504e15ae44",
-      "bytes": 25910
+      "sha256": "cee57d00c15984a45223383f4a9c9f8bee5cc84fd37dac2ccf1c97b31e6660f6",
+      "bytes": 26056
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -235,9 +235,9 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "15/15",
+      "test_probe_cpu.py": "16/16",
       "test_cell_supervisor_cpu.py": "9/9",
-      "test_supervised_window_cpu.py": "22/22"
+      "test_supervised_window_cpu.py": "23/23"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -335,7 +335,7 @@
     "decision": "status narrowed; A14 MRS V1 KFC path proven live at small shape, so the refused mc2_server is not a universal blocker; remaining question is Grouped-specific (op/kernel/tiling/rac_server/context) and H12; no all-MC2 generalization",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
     "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
-    "status": "narrowed_a14_liveness_pass_grouped_specific_pending",
+    "status": "grouped_matched_small_hang_exact_cause_unresolved; mc2_server dependency supported_but_unproven",
     "established": [
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
       "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
@@ -407,7 +407,7 @@
     }
   },
   "matched_grouped_control": {
-    "status": "executed_hang_at_device_sync; Grouped-specific candidates prioritized",
+    "status": "executed_hang_at_device_sync; exact cause unresolved; Grouped-specific candidates prioritized; H5K/H4K discriminators implemented",
     "design": "runtime/grouped_mmar/h11_matched_control.md",
     "design_sha256": "cfbe9eb78626bc89a5b324bde081ac8eb879312602b39b6930a390a4ac23aea9",
     "arm": "H11 (existing arm; no new code, no adapter/binding change)",
@@ -433,10 +433,12 @@
       "interpretation": "under the same M128/K256/N512, BF16, single group, KEEP_ALL, adapter, comm and window as A14 v5, the Grouped op still leaves stream47 task_id=13 pending and the Python device sync never returns; this excludes a large-shape/tiling-only explanation and prioritizes Grouped-specific rac_server/AivAicpu/KFC task delivery candidates; single cell does not establish a cause, and the mc2_server dependency remains supported_but_unproven"
     },
     "next_discriminators": {
-      "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination)",
-      "H5K": "REFETCH_STREAM|KEEP_ALL=40: retention identical to H11; single stream-source variable in the same OpCommand handler thread",
-      "implementation": "two ARMS entries in run_probe plus two names in the window --arm choices; binding/flags unchanged; not written now",
-      "order": "H4K first, then H5K; H11 hang + H5K return -> handler stream/context binding; H11 hang + H5K hang + H4K return -> calling-thread/OpCommand path candidate; all three hang -> delivery/AivAicpu-KFC protocol stronger",
+      "status": "implemented H5K/H4K in run_probe and the window choices; awaiting 33 contract review, 31 stage, 32 GO",
+      "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination; never proves context alone)",
+      "H5K": "REFETCH_STREAM|KEEP_ALL=40: retention identical to H11; single stream-source variable in the same OpCommand handler thread; first in the schedule",
+      "freeze": {"run_probe.py": "508e2931", "supervised_probe_window.py": "d7e73514", "test_probe_cpu.py": "89acbb63", "test_supervised_window_cpu.py": "0fcdf991", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "cpu_tests": "48/48 (16+9+23)"},
+      "implementation": "two ARMS entries in run_probe plus H4K/H5K in the window --arm choices; binding/flags/adapter unchanged; release/maps logic untouched",
+      "order": "H5K first; if it hangs with a complete restore, one H4K combination cell follows on fresh identity; H11 hang + H5K return -> handler stream/context binding; H11 hang + H5K hang + H4K return -> calling-thread/OpCommand path candidate; all three hang -> delivery/AivAicpu-KFC protocol stronger",
       "rule": "stream/context pointers are process-local; compare same/different relations and device id within a process, never cross-process hex equality"
     }
   },
