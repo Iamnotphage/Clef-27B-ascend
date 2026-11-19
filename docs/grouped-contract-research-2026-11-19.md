@@ -1435,3 +1435,58 @@ python runtime/grouped_mmar/supervised_probe_window.py --arm H11 \
 - env-sidecar：candidate `GLOBAL=0`、`PROCESS_LOG_PATH=<cell>/logs-h11-observe-v1`，`applied=false`；scope=child only；restore 不导出；unproven=AICPU 传播/guard 映射/module 与 HCCL_DEBUG_CONFIG bit。
 
 **结论**：preflight 只读项全过；命令/计划兼容性闭环；**无执行、无设备动作、无 GO**。condition 项仍开放；3 xref 待 31 传播式扫描完成后交。
+
+## 85. 最终可审核观测计划（绑定 plan-h11-observe-v1）
+
+**绑定对象**：`h11-observe-preflight/plan-h11-observe-v1.json` SHA `c95ae5c3…`（31 commit `01e8631`，SUMS `cf59ed66` 6/6）；`status=plan_not_executed`；窗口 `1f780bf8`、run_probe `8e308804`、binding `101660f8`、adapter `d181b15a`、runtime `e38b541`；不修改窗口/产品代码。
+
+### 85.1 env sidecar 应用到同一 window 的步骤
+
+1. `LOGDIR=/workspace/yangchen/work/grouped-deepdive-cell-h11-observe/logs-h11-observe-v1`；确认已存在且可写（preflight 已建）。
+2. 在**启动 window 的同一个 shell**中、`exec supervised_probe_window.py` 之前：
+   ```
+   export ASCEND_GLOBAL_LOG_LEVEL=0
+   export ASCEND_PROCESS_LOG_PATH="$LOGDIR"
+   unset ASCEND_MODULE_LOG_LEVEL HCCL_DEBUG_CONFIG
+   env | grep -E '^ASCEND_(GLOBAL_LOG_LEVEL|PROCESS_LOG_PATH)='
+   ```
+   不把这两个变量写进 argv/plan；`GLOBAL=0` 仍仅候选。
+3. window `child_env={**os.environ, CLEF_WINDOW_OWNER}` → child torchrun → ranks 继承；service/restore 不在同一环境（restore 用 `env -i`）。
+4. **rank env 白名单验证**：从 window `descendants.json`/`window.json` 取 torchrun/rank PID；执行中只读 `/proc/<pid>/environ`，仅记录 `ASCEND_GLOBAL_LOG_LEVEL`、`ASCEND_PROCESS_LOG_PATH`、`CLEF_WINDOW_OWNER` 三个键，不 dump 其他 env。验证失败 → 该次观测按缺测。
+
+### 85.2 采集与归档（raw 全量，不删原件）
+
+- 运行前记录：时间、`ss -ltn`（无 ss 用 bind 探测）、四 fresh 路径 ABSENT、plan/identity SHA。
+- 运行后（含超时）：
+  1. `cann-plog/`：整个 `<LOGDIR>` 原样复制；
+  2. `device-0/`、`device-1/`：`/root/ascend/log` 下两 device 文件按时间窗复制**完整文件/目录**，不按 PID 过滤；
+  3. `cell/`：window.json、descendants.json、child.stdout/stderr、rank result.json、trace.jsonl、stop.json、exec.log；
+  4. `meta/`：plan、stage-identity、root-identity、env-sidecar。
+- 另存 `correlation.txt` 派生视图：rank/device、pid/tid、file:line、时间、stream/task/opIdx；未知关联标 `unknown`；restore 只在该视图中标注，不删 raw。
+- 归档目录建议 `<cell>/logs-h11-observe-v1-archive/`（或 31 的既有归档约定）；raw 与派生分开。
+
+### 85.3 结果判读（成功/缺测/失败/超时）
+
+| 结果 | 处理 | 允许结论 |
+| --- | --- | --- |
+| child rc0、两 rank numeric/pass | 记录 result/trace | 该次运行完成；按 85.4 标记判路径，不称 H11 根因已解 |
+| watchdog 240 s 超时（rc -9） | 仅用 kill 前已落盘 raw | 记录超时；按标记判路径；不称根因；不重试 |
+| 异常/错误退出 | 记录失败分支 | 只记失败与日志；不推断路径（除非正向标记） |
+| 无任何适用 K-entry/正向标记 | 缺测 | 不排除任何路径；下一步才考虑 host launch 日志/代码埋点（需单独授权） |
+
+### 85.4 正向标记判读（与 §78/§79 一致）
+
+- **API**：`start to read the [%u] msg`（每轮，turn）、`reset valid value %u`（consume）、`ReadValidMsg[%u] timeout %lus`（20/40/80/160 s）、`Check msg equal failed`（64B memcmp，每 10000 次累计）。
+- **TwoStage**：`ReadValidMsg timeout 6s...`（单次调用；多次需 loop 证据）。
+- **共享**：`AicpuKfcRpcServer::Init addr:%u`（Init4 路径；不要求其它路径必现）。
+- **MC2**：`[NsRecovery][MC2] Suspending`、`Failed to run aicpu server, MC2 opIdx:%u`（site 条件）。
+- **未定 xref**：`0x14ee680`（Run rpc error sndCnt/rcvCnt）、`0x1613f58`（Post finishedTurnCnt）、`0x1614098`（6s 非 ErrToWarn 变体）**未确认前不用于判路/排除**；若后续确认与关键正向标记关联，再作为条件证据。
+- **缺席不排除**：任何标记缺席都可能是前提未满足/未采集；只有出现正向标记才支持对应路径。
+
+### 85.5 唯一 restore
+
+- 只使用 plan `restore_argv`：`env -i PATH=... CLEF_LAUNCH_CONFIG=s1 setsid /bin/bash -c 'source activate_env.sh && exec start.sh ...'`；输出 fresh `restore-h11-observe-v1`。
+- 只允许一次 restore；完成核对 branch aa3e/s1、五 PID、source 三段 SHA、subreaper 状态；restore 日志按 PID/时间与 probe 分离，原件保留。
+- 无第二棵树/第二 restore；异常按 window 既有恢复门处理（31 owner）。
+
+**当前不执行、不发 GO、设备暂停**；本计划仅绑定真实 plan 的可审核步骤，待 20/32 审阅。
