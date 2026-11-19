@@ -2771,3 +2771,32 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - `build.log` 只有 `.so sha256sum` 行，g++ rc 未单独落盘；构建成功由 `.so` SHA + 候选实际加载/调用证据支撑。
 
 **状态**：release dispatcher CPU readiness PASS（窄范围）；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
+
+## 134. release dispatcher 最终原件 PASS 确认（12cb266；doc-only 更新归属说明）
+
+**依据**：32 最终原件确认；无设备/部署/PR。候选 commit `12cb266`、SUMS `799ee13a…`（**10/10**）、候选源 `698ba3d`；binding `d9435b3a…`、smoke `c457b6ef…`、manifest `f7c5ae52…`、compile `53e518db…`；候选 `.so` `83598d6e…`（195880 B）；旧 `.so` `d181b15a…` 未变。
+
+### 134.1 最终结果（窄范围）
+
+- Control（旧 `d181b15a`）：call-site `NotImplementedError`（消息含 `clef_mmar_probe::release`），parent/child passed rc0。
+- Candidate（新 `83598d6e`）：`release(1)` 返回 Python int 0，parent/child passed rc0。
+- 两臂均 fresh `-I`、autoload0、namespace 空、schema 精确、SHA 门、30 s；无 Python torch_npu import/无 set_device/synchronize/run/run_mmar/run_mrs/provider/torchrun/18143；无残留；服务 root 1355077/ppid 1355076/health ready 未变。
+- **结论**：source + CPU dispatcher readiness **PASS**；只证 dispatcher 可达 + invalid-id(1) 早返回 int 0。
+
+### 134.2 证据粒度（不补造）
+
+- `build.log` 仅冻结 `set -e` recipe 末尾 `.so` SHA；独立 build RC 字段**未归档**，build 成功按 `.so` SHA + 候选实际加载/调用引用，不写“已归档 rc0”。
+- 首次缺 `probe_trace.h` 与未 activate `libhccl.so` OSError 仅有摘要；未 activate 失败**不计 control PASS**；有效 PASS 为同版 activate+venv 重跑。
+- 首次失败 control 的原始 JSON/stderr 不在 10 文件包内；不补造、不据此改结论。
+
+### 134.3 授权的一次性 doc-only 更新（候选 owner 执行；33 不跨分支改）
+
+- 应更新候选 README 第 9 节与 manifest `release_dispatcher_candidate`：
+  - `candidate_adapter_sha=83598d6e…`；`evidence=12cb266/SUMS 799ee13a…`；`smoke_status=executed_cpu_only`；
+  - `control=passed/NotImplemented`；`candidate=passed/int0`；
+  - `valid_state_cleanup_verified=false`、`sdk_resource_release_verified=false`、`task13_fix_verified=false`；
+  - `not deployed`；build RC 记“未归档，成功由 .so SHA/加载证据支撑”。
+- **归属**：候选文件在 `ao/resume-cc/execute-20261119` 分支（`12cb266`），不在 33 的 `ao/resume-cc/grouped-20261119`；33 **不跨分支修改**候选 README/manifest，由候选 owner（35/31/27）执行；产生新 commit 后交 32 只审该 doc-only diff。
+- 不得改 binding/smoke/schema/release 函数体/run/sync/Lists/window；不得改 `8ecf8f9`/frozen `101660f8`/`1f780bf8`/`d181b15a`；不重跑、不设备、不部署、无 PR/设备 GO。
+
+**状态**：release dispatcher 最终 PASS（窄范围）；valid-state/SDK/task13/H11 仍不证；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
