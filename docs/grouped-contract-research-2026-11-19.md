@@ -2891,3 +2891,34 @@ AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93）
 - 若需 9.2.1，需 20 另行授权取件；本轮无新取件/设备；`8f4b843` 冻结、候选未部署。
 
 **状态**：SDK 契约边界固化；H11/task13 结论不变；root cause unresolved；无设备/新 GO。
+## 138. release doc-only 终审 PASS（94a0d2d；源候选 698ba3d 未变）
+
+**依据**：32 终审；无 SSH/重 build/重 smoke/设备。commit `94a0d2d9…`，parent `698ba3d2…`；diff 仅 `README.md` + `manifest.json`。
+
+### 138.1 身份/范围
+
+- binding `d9435b3a…`、smoke `c457b6ef…`、compile `53e518db…`、probe_trace.h `3e07139f…` 与 `698ba3d` **逐字节不变**（`exec_diff_rc=0`）；其它可执行文件未动。
+- README SHA `53c0d115…`；manifest SHA `ff68f9d4…`。
+- README diff 仅在 §9（hunk 从 228 行起）；前 8 节未变；记录 698 冻结源、`12cb266`/SUMS `799ee13a`、control/candidate 实际结果、`.so` `83598d6e`/195880、build RC 未归档边界、初次失败摘要/不计 control PASS、三 false、未部署；**无代码/契约升级表述**。
+
+### 138.2 manifest（33/33 匹配）
+
+- `release_dispatcher_candidate.status=cpu_dispatcher_and_invalid_id_verified_not_deployed`；
+- `source_commit=698ba3d`；`candidate_adapter_sha=83598d6e…`、bytes=195880；
+- `evidence.commit=12cb266`、`sums_sha=799ee13a…`；control/candidate JSON SHA `a070d24f…`/`6e0a943f…` 与 `12cb266` 原件匹配；
+- `smoke_status=executed_cpu_only`；`build_exit_code_archived=null`，`build_evidence` 明示“仅 .so SHA/实际加载支撑”；
+- `initial_failures` 摘要-only、未计 control PASS；
+- `valid_state_cleanup_verified`/`sdk_resource_release_verified`/`task13_fix_verified` 均 **false**；`deployment_status=not_deployed`。
+
+### 138.3 12cb 原件与 27 artifact
+
+- `12cb266` SUMS 自哈希 `799ee13a…`、10 条；control/candidate JSON 哈希匹配。
+- 27 artifact 新 SHA `f6788da4…`；旧 11326B 前缀 SHA `5423fca2…` **原样保留**。
+
+### 138.4 结论/边界
+
+- **doc-only PASS**；源候选身份仍 `698ba3d`，未改 binding/smoke/schema/函数体/run/sync/Lists/window；`8ecf8f9`/v2/frozen 未动。
+- 只证 **dispatcher + invalid-id**；valid-state cleanup、SDK resource/ownership、H11/task13 仍 false；未部署、无 PR/设备 GO；未 SSH/重 build/重 smoke/设备。
+- 若后续再有代码或记录变更，需重新审；本结论不外推。
+
+**状态**：release doc-only 终审 PASS（窄范围）；与 sync 挂起/OneStage/task13 线分开；root cause unresolved；无设备/新 GO。
