@@ -364,6 +364,13 @@
 - **A14 preflight 待件**：31 提供本机 `aclnn_matmul_reduce_scatter*.h`（pack 缺；33 上游 `6e49c20f…`）、V1 kernel .o 符号与 tiling taskType（对照 KFC_TASK_HCC_TASK_DELIVER）、`opp/built-in/op_impl/aicpu/kernel/` 全量清单、libccl_kernel.so 路径/SHA；35 最小 A14（bias null/零；x1(m,k)、x2(k,n)或(n,k)；output(m/2,n)；sum/commTurn0/streamMode1；m 为 rank_size 整数倍：v4r1-like **M=968**，小格 M=128/K=256/N=512）；判据同 A12；驱动/固件兼容（compatible_fw [7.0.0,9.9.9]）列为待核。
 - **A13 停跑**；不改白名单强载；服务 aa3e/s1 在线；未获 20 排程前无设备动作。
 
+## 8.28 H6 GO 与 A14 KEEP_ALL 契约修正（2026-11-19）
+
+- **H6 final-check PASS**：identity root 1301295/start 398656442（`03c437ee…`，与 plan 一致）、SUMS `4b4afbd4…` 6/6、window `51d6bc0c…`、H6 binary `cdf48553…`（209,656 B；compile log `d1fa7fbc…` 的 sha256sum 一致、ldd `fe47d0a0…`）、source `4b8e6e2a…`/diff `754e2f24…`/compile `8ef604f1…`。**20/用户已授权，32 GO**：31 立即执行单格 H6（d0_stop 1301295→H6≤240s→精确清理→官方 aa3e-noop 恢复）；回传两线程 memset rc、launch/sync/错误/costtime、per-PID maps、window.json、plog、恢复身份/四检。判据：rc0+无 `[ERROR]`/retcode+≥2 costtime+maps 硬门+memset rc0；507046/stream47→H6 削弱；返回→H6 上升；不外推平台。
+- **A14 旧 plan 废弃**：31 的 d9b9070b（small）/8cdbebd5（large）基于旧 run_probe `331f9929…`（A14 flags=0）→ 早释放混淆，**不得执行**。35 已在 e0b06df 修为 **A14 flags=KEEP_ALL**（binding `101660f8…`、run_probe `6ae866b1…`、window `2202165e…`、manifest `1c8d2682…`；group/workspace/descriptors/tensors 保活到 sync 后 release，handler 不早 close），CPU 独立 **44/44**。
+- **A14 流程**：31 从 e0b06df 重 stage/编译（adapter 若仍 101660f8 可复用 d181b15a，需重出 compile log）/重出 small plan M128/K256/N512；若 H6 先跑，用新 AA3E root 重建 identity/plan。小格 plan/binary/identity + 32 核 KEEP_ALL 契约后 **GO**（无需二次许可）；large M968/K8704/N5120 按小格结果与 32 有限核再定。
+- **A14 判定**：通过→KFC 路径可用、被拒包非普遍阻断；同挂→KFC 路径阻塞更广；均不单独裁决被拒包依赖（仍 supported_but_unproven）。A13 编译-only 不执行；服务 aa3e 在线。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
