@@ -342,7 +342,7 @@
       "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven"
     ],
     "pending": [
-      "A14 small v3: fresh out/identity after recovery, fixed prepare_out, 32 re-review, then GO",
+      "A14 small v3 rebuild with root 1306695 and fixed run_probe b7f255cb; 32 review then GO",
       "A14 large after small result"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
@@ -399,7 +399,7 @@
     }
   },
   "a14_control": {
-    "status": "small_v2_aborted_pre_launch_shared_out_mkdir; fixed_pending_v3_plan",
+    "status": "small_v2_aborted_pre_launch; fixed_d571641_v3_pending",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -484,7 +484,11 @@
     ],
     "gate": "run_probe pass + window child_ok (adapter/libhccl/ascendcl maps); hang records stream47/mc2_server",
     "abort_note": "both ranks raced on out.mkdir(exist_ok=False); no MC2 call, no 507046; not an A14 criterion",
-    "fix": "prepare_out uses exist_ok=True for the shared parent; rank subdirs remain per-rank",
-    "v3_requirement": "fresh out path and fresh identity after the aa3e recovery; 32 re-review plan v3"
+    "fix": "prepare_out shared parent exist_ok=True; rank_dir.mkdir() remains exist_ok=False",
+    "v3_requirement": "fresh out path and fresh identity after the aa3e recovery; 32 re-review plan v3",
+    "fix_commit": "d571641",
+    "fixed_run_probe_sha256": "b7f255cb",
+    "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
+    "v3": "fresh identity 1306695, fresh probe-out path, bindings 101660f8/window 2202165e, master_port 29531 free; 32 review then GO"
   }
 }
