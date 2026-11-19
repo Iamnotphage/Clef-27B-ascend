@@ -114,6 +114,16 @@
 - supervision complete、clients_exited=true、client_rc0、timed_out false、remaining_group []。
 - 待续：S2_b16（C32/C64）→ ERQA 400 → s1 clean 恢复。
 
+## 8.2 f810 正式验收 S2_b16（已完成并核）
+
+- phase：`owner31-phase-s2b16-20261119T0125Z`，complete ok=true、label `d0-final-s2_b16-20261119T012444Z-ad6e0ec7`、root 1266382、五 PID 同 PGID、四检 rc0/ok；launch-manifest effective 16/16384 且 argv 含 overrides；clean 两键父环境（切服时 service-check rc0/ok）。该服务随后被 ERQA 相位替换，live env 不可事后读，以上为切换期证据。
+- v5 两点（每点 2352，完成序 journal；index 集合完整 + 逐行绑定，0 异常）：
+  - C32：inflight_max 32；p50 1679.734 / p95 3125.361 / p99 3610.798 ms；17.5432 dec/s；Cal 82.5362 / Int 65.7434 / Cap 74.139804（Δ−0.2857 pp）/ acc 1902 / MAE 0.402396。
+  - C64：inflight_max 64；p50 3534.276 / p95 5937.589 / p99 7194.449 ms；17.5996 dec/s；Cal 82.5394 / Int 65.743 / Cap 74.141169（Δ−0.2843 pp）/ acc 1902 / MAE 0.402382。
+  - 两点作者 scorer 独立重打分与记录逐位一致；均 2PP 内。
+- supervision complete、clients_exited=true、client_rc0、timed_out false；s2_b16 phase restore.json SHA `5683086c…7ace`。
+- 待续：ERQA 400（16384/16 图/1048576）→ s1 clean 恢复。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
