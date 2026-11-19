@@ -132,6 +132,20 @@
 - supervision complete、clients_exited=true、client_rc0、timed_out false、remaining_group []。
 - 待续：最终 s1 clean 恢复（最佳服务）与四检/envcompare。
 
+## 8.4 最终 s1 恢复（最佳服务）与全链结论
+
+- phase：`owner31-phase-s1-restore-20261119T0140Z`，complete ok=true、label `d0-final-s1-20261119T013520Z-047e2bb5`、root 1269846、五 PID 同 PGID、四检 rc0/ok；effective 4096/seqs1/batched4096、limit_mm `{"image":1,"video":1}`；plan clean_parent 仅 PATH+CLEF_LAUNCH_CONFIG=s1。
+- live 复核：OPP 9/`7b79c5db…`、LD 12/`ca27dbb7…`、joint 仅 SINGLE_FIELD（候选键清零）、source f810、guard 76595657。
+- **全链结论**：f810 正式验收 S1≥3 轮、S2_b8（C8/C16）、S2_b16（C32/C64）、ERQA 400 全部真实完成并逐项独立核验；各点 2352/400 完整、0 协议失败、作者 scorer 重打分与记录逐位一致；OD 三项与 ERQA 相对 baseline 的绝对波动均 ≤0.578 pp / ≤3 题（2PP 内）；最佳服务已恢复。候选 aa3e S1 中性（逐轮差 −0.625/+0.037/−0.028 ms，2 快 1 慢；Cap 74.247710，2PP 内）。
+
+## 8.5 35 typed 变体（e20e128）本地 ready
+
+- 新 tuple 实读 SHA 全部命中：typed entry `abb7c383…`、unit test `4681a7e1…`、diff `8b96aa89…`、evidence `a00cf2bc…`、stage `644be6b4…`、doc `9191eaf2…`、combo `d72e7957…`；branch 远端 e20e128（在 45745a1 之上）。
+- derived-manifest 复核：restore 恒强制 `record.manifest_sha` == 入口 manifest SHA；record 有 `manifest` 时强制解析相等；缺失时从 prior supervision `argv --manifest` 推导并同样强制等于入口 manifest；`manifest_source` 记 deploy_record|prior_supervision；`verify_prior_supervision` 仍以入口 manifest 校验 prior 的 --manifest/三路径/phase/clients_exited/observed/root。无弱化。
+- 独立实跑：typed-fixtures 布局 60/60 OK；typed-records 布局 60 OK（1 布局性 skip）；新用例覆盖 missing-manifest 正常路径、supervision manifest 错误阻断、record manifest 不匹配阻断。
+- 原语零改参：新 diff 14 hunk 全为校验/plan 字段；stage_d0/stage_candidate/apply_service_check/switch_source/restore_prod 调用无 +/- 行。
+- 结论：本地 tuple ready；执行前 31 代 remote staging，我核远端字节与本地 SHA 一致后给 remote ready，再由 20 排程按每候选 phase deploy→v5→restore f810/s1 执行。
+
 
 ## 9. 本地核对副本
 
