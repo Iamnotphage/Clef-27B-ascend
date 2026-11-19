@@ -1,6 +1,6 @@
 {
   "schema": "grouped-mmar-probe-package/1",
-  "status": "closed_environment_blocked",
+  "status": "narrowed_environment_first_cause_pending",
   "branch": "ao/resume-cc/grouped-mmar-research-20261119",
   "base_commit": "0db4d21",
   "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "be32050e1340ebb4aed5f45e937c0f7e5f05325ace370cdde1fbf0acb9df310f",
-      "bytes": 18603
+      "sha256": "fb379ef08ac55208ec705e21cb056b9e89d81974d7840da95bf25bd469f2e004",
+      "bytes": 19127
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -306,7 +306,7 @@
     "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
     "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
     "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119",
-    "status": "paused_unexecuted_not_a3_registered",
+    "status": "stopped_not_a3_registered",
     "a3_registration": "absent; packed A3 ops-info has AllGatherMatmul/V2 and MatmulReduceScatter/V2 only",
     "correction": "aclnnMatmulAllReduce v1 is not A3-registered; running would stop at op lookup (161001 class), not a valid MC2 control",
     "future_control": "MatmulReduceScatter V1 (A3 AI CPU) vs V2 commMode=aiv (A3 aiv, >=200MB) only after A3 registration/platform support is confirmed"
@@ -324,7 +324,22 @@
     "a12": "official sample failed identically; supervision/recovery chain PASS",
     "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
-    "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2"
+    "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
+    "status": "narrowed_pending_A12_H6_and_A14",
+    "established": [
+      "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
+      "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch"
+    ],
+    "not_established": [
+      "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
+      "H6 workspace initial value for the hang",
+      "H12 MC2 context/AICPU binding"
+    ],
+    "pending": [
+      "A12-H6 workspace memset derivative (prepared, 33/32 contract)",
+      "A14 MatmulReduceScatter V1 control (A3 registered; header/sample pending 33)"
+    ],
+    "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status"
   },
   "a12_h6": {
     "status": "prepared_not_executed_pending_33_32_contract",
