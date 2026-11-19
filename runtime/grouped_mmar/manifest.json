@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "fb379ef08ac55208ec705e21cb056b9e89d81974d7840da95bf25bd469f2e004",
-      "bytes": 19127
+      "sha256": "ce2ebaed2f691016182c1b94e2387134add7ed0d0e0faf93f5c2fd24f6e227fd",
+      "bytes": 19173
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -132,8 +132,8 @@
     },
     "runtime/grouped_mmar/a12_h6/compile_a12_h6.sh": {
       "role": "A12-H6 CMake build wrapper",
-      "sha256": "e7a59de67372dd58cc3ba4a01bfe1daade67c44f9801a7f2165c8203821462ce",
-      "bytes": 1674
+      "sha256": "8ef604f1c26866742e6c1c06f57ed23717f0a0d95ed21dcd4e6861ebbe2255c2",
+      "bytes": 1711
     },
     "runtime/grouped_mmar/a12_h6/README.md": {
       "role": "A12-H6 design, contract pending, success gate",
@@ -319,7 +319,9 @@
       "libmc2_server_json_sha256": "8e1346767b5c88393c01c4e94ae6eaac3d7ece558b733f496a7ed85c75537e52",
       "libaicpu_custom_sha256": "ce4f21b605b149bc9274593746c79604d2fc8197007b3e4ffd4951ae14c5e7c7",
       "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae",
-      "33_commit": "87ffb96"
+      "33_commit": "87ffb96",
+      "31_conclusion_revision": "8133e16 (suspected_environment_blockage_pending_dependency_control)",
+      "31_dependency_analysis": "d8d4050 / 31f8f1ee..."
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
     "decision": "Grouped MC2 environment-blocked on this A3/CANN 9.2.1; no binding/lifetime/comm fix; pause all Grouped device arms",
@@ -328,7 +330,8 @@
     "status": "narrowed_pending_A12_H6_and_A14",
     "established": [
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
-      "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch"
+      "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
+      "31: Mc2ServerKernel exists only in the rejected package; no installed AICPU .so exports it; libccl_kernel provides KFC/ResInit; runtime dependency unproven (suspected_environment_blockage_pending_dependency_control)"
     ],
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
@@ -352,6 +355,8 @@
     "run": "bash a12/run_a12.sh <build>/bin/a12_grouped_mat_mmar_h6",
     "success_gate": "rc0 + no [ERROR]/retcode lines + >=2 mc2 costtime + maps hard gate libhccl+opapi_math/transformer",
     "falsification": "same 507046/stream47 -> H6 workspace-init hypothesis falsified for the hang, not a platform negative",
-    "pending": "33 workspace convention (memset/sync) and 32 review before any execution"
+    "pending": "33 workspace convention (memset/sync) and 32 review before any execution",
+    "api_check": "aclrtMemsetAsync declared at acl_rt.h:2563; exported by libascendcl; Async build valid (31)",
+    "static_preflight": "32: diff equals h6.diff, only 9 memset lines, same stream, single-variable holds"
   }
 }

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the frozen official A12 sample unchanged.  AOT only; no device calls.
+# Build the A12-H6 derivative: official source 6c1a90ab + h6.diff (workspace memset).
+# AOT only; no device calls.
 set -euo pipefail
 cd "$(dirname "$0")"
 src="$(pwd)/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp"
