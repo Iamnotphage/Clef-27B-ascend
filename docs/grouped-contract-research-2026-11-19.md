@@ -217,3 +217,15 @@ A12 官方样例（FP16、2 group、M=256/1024、K=256、N=256/1024，源 `6c1a9
 **修复核验（33，35 分支 `ao/resume-cc/grouped-mmar-research-20261119`）**：commit `d571641`/`f087746`；`run_probe.py` SHA **`b7f255cb…`**（20,278 B），diff 仅新增 `prepare_out(exist_ok=True)` 与保留 `rank_dir.mkdir()`（fresh 门），无其它语义改动；binding `101660f8…`、window `2202165e…`、manifest `02fdd342…` 与 32/35 报一致；`test_probe_cpu.py` SHA `ea514245…`（7,708 B）含新 `test_out_dir_shared_by_two_ranks`，**实际 14 项**。发现 metadata 计数过期：manifest `cpu_tests.suites.test_probe_cpu.py` 仍为 `13/13`、role 文本仍写 `tests (11)`，与实际 14/14（总 45/45=14+9+22）不一致；请 35 在 v3 metadata 修正（不阻塞，32 已独立跑 45/45）。A14 v3 仍待 31 以 root 1306695 重 stage/重出 plan/端口预检，32 复核后 GO。
 
 **A14 small v3 最终 tuple（32 GO，33 只读核一致）**：commit `f087746` / manifest `02fdd342`（与 d571641 代码逐字节相同）、binding `101660f8`、run_probe `b7f255cb`、window `2202165e`、adapter `d181b15a`、compile log `fc8efe47`；root identity **1306695 / starttime 398875478**（`a85ff9b8…`）；plan **`8782537a…`**（M128/K256/N512、KEEP_ALL、`out=probe-out-a14-small-v3`、run/restore v3 fresh、240s、`plan_not_executed`）；stage-identity-v5 `a3b12870…`；`a14-preflight/SHA256SUMS` `4eaf108e…` **17/17 OK**；`master_port 29531` 计划时 FREE。早前 `d88250e4` 为 v4 旧 plan，已 superseded。33 无阻塞 finding；按 32 GO，31 执行单格。
+
+## 16. A14 small v3 执行：MRS V1 KFC 路径可用；release harness 缺陷（2026-11-19）
+
+33 只读核 `a14-small-v3-cell`（16 文件，SUMS 16/16）：
+
+- rank0 trace 阶段：`prepare_return` rc0、workspace 17,170,432、executor_nonnull=True；`handler_enter`/`api_return`/`launch_return`/`handler_return` 全部出现；`sync_return sync_ms=18.66017`；`python_exception` 在 sync 之后。rank1 同（sync_ms 8.16）。**plog/device 无 `stream_id=47`、无 507046**。
+- `rank0/1 result.json`：`api_returned=true`、`sync_returned=true`、`finite=false`、`pass=false`；`error` 为 `NotImplementedError: ... no fallback function is registered for schema clef_mmar_probe::release`（sync 后 `run_probe.py:353 sync_and_release → release(run_id)` 零 Tensor 参数 dispatch）。result 已含 inputs/libraries/provider/versions/trace，但 `reduced/reference/bit_equal` 未计算。
+- window `ok=false`；restore `branch=aa3e-noop`、新 root **1308632**（恢复中/已启动）。
+
+**结论**：A14（MatmulReduceScatter V1，A3 AI CPU）在小形状 **prepare/launch/sync rc0、无 stream47/507046** → **MC2 AICPU/KFC 公共路径在本机可用；被拒 `mc2_server` 包并非普遍阻断**。Grouped 仍 507046/stream47，差异转向 Grouped-specific（op/kernel/tiling/rac_server 协议/上下文）与 H12/依赖证据；`mc2_server` 依赖仍 `supported_but_unproven`，不因 A14 单独裁决。A14 v3 的 liveness 有效；完整数值（reduced/reference/bit_equal）因 release harness 缺陷未取得，需修复后同格重跑。
+
+**release 最小修复建议（35）**：① 给 `release` schema 增加一个占位 Tensor 参数（如 `release(Tensor token, int run_id)`，实现忽略 token；可传任一 PrivateUse1 tensor），或注册 `Library.fallback`/PrivateUse1 fallback；② 先计算并原子落盘完整 result.json（api/sync/finite/reduced/reference/bit_equal/versions/trace），再调用 release，并将 release 包 try/except 记录 `release_rc/release_error` 后重 flush；③ 重冻 run_probe 新 SHA、stage identity/manifest；31 用恢复后新 root（1308632）重建 identity/plan v4、fresh out（不复用 v3）、预检 29531，重跑同小格取完整结果；large 等完整 small + 32 有限核。
