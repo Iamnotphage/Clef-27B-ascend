@@ -343,14 +343,14 @@
       "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
     ],
     "pending": [
-      "A12-H6: 32 review of cdf48553+plan, then 31 executes the authorized single cell",
-      "A14: 31 recompiles e492ea8 single-tensor binding, plan-only; 32/20 gate before execution"
+      "A12-H6 GO executing; capture memset/launch/sync/costtime/maps/plog/recovery",
+      "A14 rebuild on e0b06df; old plans invalid; small GO after 32 review"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "ready_32_review_then_20_authorized_execution",
+    "status": "go_executing_single_cell",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -378,10 +378,11 @@
       "child": "run_a12.sh + h6 binary",
       "child_timeout": 240,
       "sums_sha256": "4b4afbd49ea20fcda2047a8dedad948422ca78be332bd98d45a0a97c66a0d99d"
-    }
+    },
+    "go": "32 GO; plan aedd3f68; d0_stop 1301295 -> H6 child <=240s -> cleanup -> official start.sh aa3e"
   },
   "a14_control": {
-    "status": "compile_fix_pending_31_recompile",
+    "status": "e0b06df_rebuild_pending_small_then_large",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -424,6 +425,13 @@
     "dependency_note": "Grouped/A14 both show HCCL/KFC family and no Mc2Server/RacServer; dependency on the refused mc2_server remains supported_but_unproven; A14 alone cannot decide it",
     "execution_gate": "33 013b9a0: CPU-only stage/compile/plan by 31; 32 ready; 20 GO; then small M128/K256/N512, then v4r1-like M968/K8704/N5120 (output 484x5120)",
     "compile_fix": "MMAR/MRS V1 take const aclTensor*; Lists.add_single owns single descriptors; grouped keeps aclTensorList",
-    "flags": "KEEP_ALL (full state kept until sync/release; no early-release confound)"
+    "flags": "KEEP_ALL (full state kept until sync/release; no early-release confound)",
+    "old_plans_invalid": [
+      "d9b9070b (old run_probe 331f9929 flags=0)",
+      "8cdbebd5 (old run_probe 331f9929 flags=0)"
+    ],
+    "rebuild_required": "31 re-stage e0b06df (binding 101660f8, run_probe 6ae866b1 KEEP_ALL, window 2202165e), recompile/log, new identity after H6 recovery, new small plan M128/K256/N512",
+    "small_go": "after 32 reviews 101660f8+6ae866b1 and the new plan/binary/identity",
+    "large": "M968/K8704/N5120 after small result and 32 limited review"
   }
 }
