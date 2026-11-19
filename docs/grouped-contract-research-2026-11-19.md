@@ -532,3 +532,10 @@ freeze `6dae03f`：manifest `83dd8e85…`、window `1f780bf8`（未变）、test
 31 归档 `a14-large-v3-cell/`（18 文件，SUMS `774bbdf5…` 18/18，commit 691a826）。两 rank：`api/sync/finite/both_finite/numeric_pass/pass=true`；`reduced.max_abs=2.0`、`mean_abs=5.446e-05/4.804e-05`、`bit_equal=false`；workspace **115,818,496 B（110.5 MiB）**；trace sync **9.97/36.81 ms**；无 stream47/错误行。window child rc0、timed_out=false、survivors []、cleanup_final 全空；`ok=false` 仅 maps_ok=false（采样伪影），restore branch aa3e-noop root **1326845**/五 PID/四检全 true、`subreaper_original=0 → cleared=true → final_restored=true → final=0`、无第二棵树；descendants 3 条（torchrun+2 rank），无残留。
 
 **判读**：MRS V1 large 的**支持/workspace/sync/数值链路成立**；**不是精度通过**——`bit_equal=false`，`max_abs=2.0` 不满足 A15 小形状 0.03125 的绝对诊断阈值，但 0.03125 是尺度相关的小形状探针值，不能直接套 large。按 K=8704、N(0,1) 输入估计输出量级 std≈93，BF16 ulp 在 128/256/512 约 1/2/4；`max_abs=2.0` 可能是少量 BF16 reduce 顺序 ulp，mean≈5e-5 远小于 1 ulp，但 result 未存 reference 幅值/相对误差，**不能据此判精度通过**。建议后续 probe 增加 `max_rel/mean_rel/ulp_at_max`（或 reference 幅值）与明确的 large 诊断门；若用于生产替代 down 路径，需模型级 OpenDecisions/ERQA 2PP 验证。A14 large 当前仅作 large 支持/workspace/数值可行性证据，不作生产 NZ/性能/精度结论。Grouped large/A13 暂停；A15 CPU。
+
+## 47. A14 v3 原件数据缺口：不能证实“1 ulp/60–68 元素”（2026-11-19）
+
+逐字段核 `rank0/1-result.json`：keys 仅 `reduced={max_abs,mean_abs,bit_equal}`、`inputs={x,weight}`（shape/dtype/sha256）、plan/libraries/versions/trace/wall 等；**没有 reference/output 张量、参考幅值、逐元素 diff、diff 直方图/分位数、max_rel/mean_rel/ulp_at_max/counts**。因此：
+- 可计算：N=(968/2)×5120=**2,478,080**；total_abs=mean_abs×N = **134.958979**（rank0）/ **119.054683**（rank1）；因每元素 |diff|≤max_abs=2.0，非零差元素数**至少 ceil(total_abs/2.0)=68/60**；这只是下界，若存在小于 2.0 的差，元素数更多。不能由此得到“60–68 个元素差 1 ulp”的精确计数。
+- 不可证：2.0 是否等于“峰值处 1 个 BF16 ulp”、输出峰值 420–510、相对误差 ~7e-7 都依赖未落盘的 reference/output 幅值与逐元素数据；K=8704、N(0,1) 的 σ≈93.3 只是模型估计，不是本格实测。**不能把 max_abs=2.0 直接归因为 BF16 累加/非缺陷**，也不能据此改门或宣称精度通过。
+- 修复/后续：probe 记录 reference/output 的 max/p50/p99 幅值、逐元素 diff 分位数、非零计数、max_rel/mean_rel、ulp_at_max；或做模型级 OD/ERQA 2PP。A14 large v3 仍为 numeric-complete、not precision pass；A14 对照臂不新增绝对门。Grouped 研究不受此格影响；A15 rows127 合同不扩展审核。
