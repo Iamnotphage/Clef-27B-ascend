@@ -1,0 +1,52 @@
+Traceback (most recent call last):
+  File "/workspace/yangchen/work/grouped-deepdive-35-e0b06df/runtime/grouped_mmar/run_probe.py", line 436, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/workspace/yangchen/work/grouped-deepdive-35-e0b06df/runtime/grouped_mmar/run_probe.py", line 432, in main
+    return execute(a, plan)
+           ^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/work/grouped-deepdive-35-e0b06df/runtime/grouped_mmar/run_probe.py", line 243, in execute
+    out.mkdir(parents=True, exist_ok=False)
+  File "/workspace/yangchen/python/cpython-3.12.16+20261110/lib/python3.12/pathlib.py", line 1311, in mkdir
+    os.mkdir(self, mode)
+FileExistsError: [Errno 17] File exists: '/workspace/yangchen/work/grouped-deepdive-cell-a14/probe-out-a14-small-v2'
+W1119 07:02:53.932000 1306636 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 1306682 closing signal SIGTERM
+E1119 07:02:53.941000 1306636 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 1 (pid: 1306683) of binary: /workspace/yangchen/venvs/clef-py312/bin/python
+Traceback (most recent call last):
+  File "/workspace/yangchen/venvs/clef-py312/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+/workspace/yangchen/work/grouped-deepdive-35-e0b06df/runtime/grouped_mmar/run_probe.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-11-19_07:02:53
+  host      : 25e6d0590726
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 1306682)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 1306682
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-11-19_07:02:53
+  host      : 25e6d0590726
+  rank      : 1 (local_rank: 1)
+  exitcode  : 1 (pid: 1306683)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
