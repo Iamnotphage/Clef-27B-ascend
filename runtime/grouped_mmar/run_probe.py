@@ -57,8 +57,8 @@ ARMS = {
            'title': 'M sweep 128/256/1024/967 (stage 2)'},
     'A13': {'flags': 0, 'native': True, 'rows': 967,
             'title': 'MatMulAllReduce (non-grouped MC2) control with torch multi-process comm'},
-    'A14': {'flags': 0, 'native': True, 'rows': 128,
-            'title': 'MatmulReduceScatter V1 AICPU MC2 control (A3-registered)'},
+    'A14': {'flags': KEEP_ALL, 'native': True, 'rows': 128,
+            'title': 'MatmulReduceScatter V1 AICPU MC2 control (A3-registered; full state kept until sync)'},
 }
 A12 = {
     'title': 'official A3 sample positive control (separate binary, fixed source from 33)',

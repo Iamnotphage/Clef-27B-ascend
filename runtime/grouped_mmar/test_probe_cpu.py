@@ -79,7 +79,7 @@ class PlanTest(unittest.TestCase):
         plan = run_probe.build_plan(a)
         self.assertTrue(plan['native'])
         self.assertEqual(plan['rows'], 128)
-        self.assertEqual(plan['flags'], 0)
+        self.assertEqual(plan['flags'], run_probe.KEEP_ALL)
 
     def test_weight_requires_sha(self):
         weight = self.root / 'w.bin'

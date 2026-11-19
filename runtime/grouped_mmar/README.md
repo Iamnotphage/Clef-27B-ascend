@@ -84,7 +84,7 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 ## A14 MatmulReduceScatter V1 控制（已实现，pending 本机头/未执行）
 
 - 33 契约：上游头 `aclnn_matmul_reduce_scatter.h` SHA `6e49c20f…`（3,158 B），`GetWorkspaceSize(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`；bias 可空（A2/A3 非 0 bias 不支持，用 nullptr）；output `(m/rank_size,n)`；x1 `(m,k)`、x2 `(k,n)`；reduceOp 仅 sum、commTurn 0、streamMode 1；**m 必须 rank_size 整数倍**；样例 `test_aclnn_matmul_reduce_scatter.cpp` SHA `0996d6f4…`（8,873 B）。A3 ops-info 已注册 `MatmulReduceScatter`/`V2`；符号在 libopapi.so；是否依赖 mc2_server 未证。
-- 本包：binding 新增 `run_mrs(x,w,group,rank_size,flags)`（bias nullptr，keep/workspace/descriptor/release 同 grouped）；run_probe `A14`（默认 M=128/K=256/N=512 小臂，`--rows 968 --k 8704 --n 5120` v4r1-like；output 484×5120）；window choices 增加 A14。
+- 本包：binding 新增 `run_mrs(x,w,group,rank_size,flags)`（bias nullptr，keep/workspace/descriptor/release 同 grouped）；run_probe `A14`（默认 flags=KEEP_ALL，group/workspace/descriptors/tensors 全部保活到 sync 后 release，避免早释放混淆；M=128/K=256/N=512 小臂，`--rows 968 --k 8704 --n 5120` v4r1-like；output 484×5120）；window choices 增加 A14。
 - 待 31 提供本机 `include/aclnnop/aclnn_matmul_reduce_scatter.h` 本地副本/SHA 与 libccl_kernel/MatmulReduceScatter kernel 符号；编译前不得执行。
 - CLI：`--arm A14 --adapter <so> --rows 128 --k 256 --n 512 --seed 20261119`（先 plan 后 --execute）；成功=A12 同门（rc0+两 rank sync+finite+maps+无错误行+完成标记）。
 

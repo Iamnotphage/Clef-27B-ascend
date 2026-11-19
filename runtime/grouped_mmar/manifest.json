@@ -22,8 +22,8 @@
     },
     "runtime/grouped_mmar/run_probe.py": {
       "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "331f99290de23211e6a9ac0c7d9fed88d52734edc67ec1c9c4643bd9915c58ca",
-      "bytes": 20096
+      "sha256": "6ae866b1235691b87fefb6c9cb9776a7d324035add0959bf6036a8a832023afc",
+      "bytes": 20131
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -47,8 +47,8 @@
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
       "role": "CPU control-flow/path/release/watchdog/snapshot tests (11)",
-      "sha256": "6c9983ffb892823736fe02ee7c74fbc4790ed1f46ba509a3acc60698b004ed62",
-      "bytes": 7056
+      "sha256": "cc579b66171fd87a15100b38a707642e8d287039f974ae4f709df0acc56961e9",
+      "bytes": 7073
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "30bda69a5b5bfc2f5f8999ead54ca7cf387932ca83cbe3b4dde869cafac9a226",
-      "bytes": 20445
+      "sha256": "a3a5c53213a9584b76613d2a63bd1ced8ba38df87b1d3dc18ad00ffd53c21cdf",
+      "bytes": 20557
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -306,7 +306,7 @@
     "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
     "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
     "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119",
-    "status": "stopped_not_a3_registered",
+    "status": "compile_type_fixed_not_run_not_a3_registered",
     "a3_registration": "absent; packed A3 ops-info has AllGatherMatmul/V2 and MatmulReduceScatter/V2 only",
     "correction": "aclnnMatmulAllReduce v1 is not A3-registered; running would stop at op lookup (161001 class), not a valid MC2 control",
     "future_control": "MatmulReduceScatter V1 (A3 AI CPU) vs V2 commMode=aiv (A3 aiv, >=200MB) only after A3 registration/platform support is confirmed",
@@ -343,14 +343,14 @@
       "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
     ],
     "pending": [
-      "A12-H6 compiled/plan-only; 32 review + 20 scheduling",
-      "A14 compile fix pending 31 recompile/plan; 32/20 gate"
+      "A12-H6: 32 review of cdf48553+plan, then 31 executes the authorized single cell",
+      "A14: 31 recompiles e492ea8 single-tensor binding, plan-only; 32/20 gate before execution"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "compiled_plan_only_ready_for_32_review",
+    "status": "ready_32_review_then_20_authorized_execution",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -381,7 +381,7 @@
     }
   },
   "a14_control": {
-    "status": "compile_fix_single_tensor_pending_31_recompile",
+    "status": "compile_fix_pending_31_recompile",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -423,6 +423,7 @@
     ],
     "dependency_note": "Grouped/A14 both show HCCL/KFC family and no Mc2Server/RacServer; dependency on the refused mc2_server remains supported_but_unproven; A14 alone cannot decide it",
     "execution_gate": "33 013b9a0: CPU-only stage/compile/plan by 31; 32 ready; 20 GO; then small M128/K256/N512, then v4r1-like M968/K8704/N5120 (output 484x5120)",
-    "compile_fix": "MMAR/MRS V1 take const aclTensor*; Lists.add_single owns single descriptors; grouped keeps aclTensorList"
+    "compile_fix": "MMAR/MRS V1 take const aclTensor*; Lists.add_single owns single descriptors; grouped keeps aclTensorList",
+    "flags": "KEEP_ALL (full state kept until sync/release; no early-release confound)"
   }
 }
