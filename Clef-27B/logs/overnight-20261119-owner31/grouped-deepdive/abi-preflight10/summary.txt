@@ -1,0 +1,6 @@
+abi-preflight10 summary (read-only; counts kept)
+1) CopyCtxInfo: nm 0x7edc20 size 0xc90. Direct bl callers: exactly 1 (count=1) at 0x7ba9f0 inside AicpuKfcProcess::AicpuRpcResInit(HcclCombinOpParam*)+0xc28; x0=x20 at the call (x20 built earlier in AicpuRpcResInit, not resolved in this window).
+   Internals: x23 = arg+0xf0000 (source side); x24 = adrp 0x22ce000 +0x888 (static global); destination index/base derived from [x23+12728] and constants; at 0x7edfb4-0x7edfc0: ldr w5,[x23,#12732]; str w5,[x7,#12732] (copy of +0x31bc/12732 to the destination context). x7 derived from x22 (madd at 0x7ede58, add 0xf0000 at 0x7edeb0).
+2) 0x2ea7b8 belongs to an unnamed static-initializer region labelled DlopenTraceSov+0x24fc0 (no exported symbol); it calls __cxa_atexit and writes the static global based at 0x22ce888 (x1 = that base + 0xf0000) with value 9 to +0x31bc; not ctx_R. bl count to 2ea7xx region = 0 in this scan; init_array hex first rows do not enumerate it (no match for byte pattern b8a72e00 in scanned rows).
+3) Endpoint summary: source ctx in CopyCtxInfo = its argument ctx (from AicpuRpcResInit x20); destination ctx = x22-derived context built from the static global table - exact object identity not yet proven from these windows.
+No code/device actions; service untouched.
