@@ -561,3 +561,9 @@ freeze `22346ec`：manifest `35bc507a…`、run_probe **`7afd7799…`（27,430 B
 ## 50. A15-small-v2 preflight 元数据核（2026-11-19）
 
 `a15-preflight/SHA256SUMS` `9bceab86…` **9/9**；plan `a9ea5fe2…`：A15、rows127/k256/n512、seed 20261119、fresh `run/temp/out/restore-a15-small-v2`、240/90、plan_not_executed；child argv 指向 `grouped-deepdive-35-0146129` 的 run_probe（7afd7799）/adapter（d181b15a）；root identity **1328734/399924959**（8ecd96b6）。stage-v6 `bf21fabb…`：commit 0146129、manifest 47976c76（Linux **29/29** exact）、run_probe 7afd7799、window 1f780bf8（Linux 40 未重跑，test-only）、binding 101660f8、adapter d181b15a；test_probe 4418a835、Linux probe **22/22 OK**（log 3429b5f9）、F821 负例通过；port 29531 FREE；v1 99db4369 invalid、99abe352 superseded。元数据一致；A15 v2 未执行，32 一次 GO；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
+
+## 51. A15 v2 结果：pad/gather/sync 成立，equivalence 被 lambda 缺陷跳过（2026-11-19）
+
+31 归档 `a15-small-v2-cell/`（18 文件，SUMS `05b2ccc6…` 18/18，commit 32ef246）：plan a9ea5fe2/identity 1328734/399924959。两 rank result：pad `{rows127,padded128,pad_value1.0}`、row_block rank0 `(0,64)`/rank1 `(64,128)`、gather_ms **1.16421/1.15801**、workspace **17,170,432**、api/sync/finite/both true、numeric_pass/pass true；trace pad_ready/workspace/sync **7.776/9.699 ms**/gather；child rc0、survivors []、cleanup_final 空；window ok=false 仅 maps 采样伪影；restore aa3e-noop root **1330921**/五 PID/四检全 true、subreaper 0→cleared→final0、无第二树。
+
+**缺失字段根因（产品）**：`a15_flow` 的 `reference=all_reduce(matmul(x,w))`，execute 传入 `lambda t: dist.all_reduce(t, op=SUM)`；PyTorch `dist.all_reduce` 原地返回 None → reference=None → 后置 `reduced/equivalence/diagnostic_gate` 分支被跳过（并非零差异）。result 无 `reduced/equivalence/diagnostic_gate`，因此 **numeric_pass 仅覆盖 api/sync/finite，不是等价性通过**。修复：lambda/函数调用 `dist.all_reduce(t)` 后 `return t`，CPU 桩断言 equivalence 出现；重冻后需 a15-small-v3 plan 与一次 GO。A15 v2 无数值等价结论；A15 large/生产未授权；Grouped large/A13 暂停；设备暂停。
