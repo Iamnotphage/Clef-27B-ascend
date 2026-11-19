@@ -1,46 +1,36 @@
-# Review packet: candidate S1 minimal combo (stage 640ac23)
+# Review packet: candidate S1 minimal combo (rev3)
 
-Status: **CPU review evidence, device not executed**. This packet is self-contained for independent audit by 32. It does not authorize device execution; 31 remains the only service owner. Frozen f810 entry (`final_service_phase.py` `888a8d7f…`, supervisor `172c2838…`, cc7 runner/manifest) is untouched.
+Status: **CPU review evidence, device not executed**. Self-contained for independent audit by 32. 31 remains the only service owner. Frozen f810 entry (`final_service_phase.py` `888a8d7f…`, supervisor `172c2838…`, cc7 runner/manifest) is untouched.
 
-## Errata rev2 (32 finding: call parameter only)
-
-The earlier example used `--repo /workspace/yangchen/work/scratch-24/joint-fused-5c045eb`; **the correct value is the bundle root** `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`. `stage_candidate()` and `stage_d0()` copy from `repo/runtime`; the bundle root holds all four pinned artifacts (`b09cd602…` fusion installer, `1ed35f0a…` guardadapter, `aa3e1758…` postimage, `36eaff44…` guard postimage) and the six pinned d0 modules. `5c045eb` is still correct only for `--helper joint_fused_attention_window.py` (`9245e1a6…`).
-
-31's failed attempt reached `stage_d0/stage_candidate` and failed **before** the stop gate: no signal, source or guard change; the service tree survived. Code, tests, manifest and gates are unchanged (`candidate_service_phase.py` still `1f98dba9…`); this revision only corrects the call parameter and adds this errata. The code-identical execution stage is the commit containing this packet revision; verify with section 0/5.
-
-Preflight before any deploy (any mismatch blocks):
-
-```bash
-B=/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769
-sha256sum "$B/runtime/apply_joint_fused_attention.py" \
-          "$B/runtime/apply_joint_service_check.py" \
-          "$B/runtime/joint_fused_attention/clef_joint_schema.py" \
-          "$B/runtime/joint_service_check/apply_joint_single_field_patch.py"
-# b09cd602… / 1ed35f0a… / aa3e1758… / 36eaff44…
-```
-
-## 0. Frozen identities
+## 0. Frozen identities (rev3)
 
 | Object | Path | SHA-256 |
 | --- | --- | --- |
-| code stage (original) | `/workspace/yangchen/work/final-acceptance-cc34-640ac23cac9aaa9a937832c2361dddd74007d195` | commit `640ac23` |
-| docs-corrected stage | commit containing this rev2 packet (code/manifest SHAs identical to 640ac23) | path in 34 steer |
-| candidate entry | stage `runtime/candidate_service_phase.py` | `1f98dba90c4cb466fd3ae3804ab1dacbaee8bd9799b8ef2110e22bc5489164d7` |
+| code stage | `/workspace/yangchen/work/final-acceptance-cc34-2af7dd7aa2d00052c98d450785320562059ca984` | commit `2af7dd7aa2d00052c98d450785320562059ca984` |
+| candidate entry | stage `runtime/candidate_service_phase.py` | `d3aead16060a46e8817126345bcc3f84b5cd6778716f508e4fb08d19633cb98b` |
+| entry test | stage `runtime/test_candidate_service_phase.py` | `adb7f6c1ab18afea4b4cb47cdbe837138ec2469868be6384f9bf3bfcb91660ba` |
 | candidate manifest | stage `runtime/final_acceptance_candidate_manifest.json` | `31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4` |
 | manifest generator | stage `runtime/candidate_manifest.py` | `6348ab527ce03e025263e23f6745a304351e8ab72e34ce04d4af3f43f256c2b5` |
 | diff report | stage `runtime/final_acceptance_candidate_manifest.diff.json` | `646ba8d89a07c9a647bea1a6429b617d22b409fb6aa9ca9f68b1fc37c6c9a9ab` |
-| phase/supervisor gates | d4464ac stage / 063109a stage | `888a8d7f…` / `172c2838…` |
-| source-control base | ebca runtime | `joint_fused_source_control.py a1c502a3…`, `joint_fused_service_ab.py 127e47ae…`, window `700cf10c…` |
-| installers | ebca runtime | fusion `b09cd602…`, guardadapter `1ed35f0a…` |
-| stop/launch/wait/activate | original | `d6d49d75…` / `a7373861…` / `e3fb0888…` / `3b363394…` |
+| combo | stage `runtime/final_acceptance_combo.json` | `e7c4aafe0c7cf73c68b8980173e5e94dd0000574fc0677b7261ac8c5c0dd8e65` |
+| combo doc | `docs/final-acceptance-combo-2026-11-19.md` | `f53e5f6ab554ba9d51ff7e936580d222e33b29d0f050309d61dc0d19cbcf523e` |
+| phase/supervisor | d4464ac / 063109a stages | `888a8d7f…` / `172c2838…` |
+| cc7 runner / manifest | cc7 stage | `7d32e5c3…` / `0338f87b…` |
+| ebca pins | bundle root | sc `a1c502a3…`, base `127e47ae…`, window `700cf10c…`, fusion `b09cd602…`, adapter `1ed35f0a…` |
 
-## 1. What is new and what is reused
+The execution stage is the commit containing this rev3 packet; its code/manifest SHAs are identical to `/workspace/yangchen/work/final-acceptance-cc34-2af7dd7aa2d00052c98d450785320562059ca984` (verify section 0/5).
 
-New files only (f810 files 0 diff):
-- `runtime/candidate_manifest.py` — deterministic 13-leaf transform from cc7 `0338f87b…` to candidate `31202d27…`; rejects any other drift.
-- `runtime/candidate_service_phase.py` — minimal `deploy`/`restore` orchestration for the candidate S1. No new stop, signal, source-install or guard logic: it calls the audited `d0_stop`, original launcher/wait, both audited installers with owned manifests, frozen phase-v3 PGID/client/port/NPU gates, cc7 `service_check`, and d0 four-check.
-- Tests + `runtime/verify_final_acceptance_combo.py` + derived manifest/diff.
-- No four-phase candidate framework; the CLI accepts `--phase` but this round only S1 is frozen and reviewed.
+## 1. Errata
+
+### rev2 (32 finding): `--repo` value
+
+`--repo` must be the **bundle root** `/workspace/yangchen/work/scratch-24/joint-fused-source-control-ebca769`, not `5c045eb`. `stage_candidate()`/`stage_d0()` copy from `repo/runtime`; the bundle root holds the four pinned artifacts and six d0 modules. `5c045eb` remains correct only for `--helper joint_fused_attention_window.py` (`9245e1a6…`). The failed attempt stopped before the stop gate.
+
+### rev3 (31 real deploy finding): `SourceControl.state`
+
+31's v2 deploy reached `switch_source('aa3e')` after stop and hit `AttributeError: 'SourceControl' object has no attribute 'state'` (evidence `/workspace/yangchen/logs/owner31-candidate-s1-20261119T0051Z/deploy.log`, `deploy-run/error.txt` `acdea26f…`, `recovery.json` `fb43f447…`). Root cause: ebca `main()` seeds `ab.state`; the library caller did not. Fix: `build_deps()` now assigns `initial_state()` immediately after construction (schema/at/args/rounds/steps/source_switches/overall_rc); no other behavior changed. A regression test exercises construction plus the first `switch_source`.
+
+Consequence of the pre-fix failure: recovery could also not run `restore_prod` (it writes `state`), so the service is currently **stopped** with source f810, guard `76595657…`, port closed, no clients, card 7 empty. 31 must first use the existing audited clean restore, then run a fresh deploy with this rev3 entry.
 
 ## 2. Entry full file: `runtime/candidate_service_phase.py`
 
@@ -150,6 +140,12 @@ def proc_environ(pid):
                 for part in raw.split(b'\0') if b'=' in part)
 
 
+def initial_state(base):
+    """The ebca main() normally seeds this before any switch/restore call."""
+    return {'schema': 'joint-fused-source-control/1', 'at': base.now(), 'args': {},
+            'rounds': [], 'steps': {}, 'source_switches': [], 'overall_rc': 1}
+
+
 def build_deps(a):
     owner = a.owner_code.resolve()
     require(sha(owner / 'final_acceptance_supervisor.py') == SUPERVISOR_SHA, 'supervisor SHA mismatch')
@@ -181,6 +177,9 @@ def build_deps(a):
         image_url='', port=a.port, rounds=0, reps=0, warmup=0, http_timeout=0.0,
         stop_timeout=a.stop_timeout, wait_timeout=a.wait_timeout)
     ab = sc_mod.SourceControl(ns)
+    # SourceControl.switch_source/restore_prod write through self.state; the ebca
+    # main() seeds it, but a library caller must do the same.
+    ab.state = initial_state(sc_mod.base)
     return SimpleNamespace(strict=strict, phase=phase, ab=ab, acceptance=acceptance,
                            manifest=read(a.manifest), base_manifest=read(a.base_manifest))
 
@@ -495,16 +494,15 @@ if __name__ == '__main__':
     raise SystemExit(main())
 ```
 
-## 3. CPU boundary logs (25 tests, stage itself)
-
-Command (run on the remote Linux host in the stage):
+## 3. CPU boundary logs (26 tests)
 
 ```bash
-cd /workspace/yangchen/work/final-acceptance-cc34-640ac23cac9aaa9a937832c2361dddd74007d195/runtime
+cd /workspace/yangchen/work/final-acceptance-cc34-2af7dd7aa2d00052c98d450785320562059ca984/runtime
 /workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_service_phase test_candidate_manifest
 ```
 
 ```
+test_build_deps_seeds_source_control_state (test_candidate_service_phase.BuildDepsTest.test_build_deps_seeds_source_control_state) ... ok
 test_deploy_requires_current_restore (test_candidate_service_phase.CliTest.test_deploy_requires_current_restore) ... ok
 test_restore_rejects_first_phase_mode (test_candidate_service_phase.CliTest.test_restore_rejects_first_phase_mode) ... ok
 test_deploy_erqa_uses_frozen_overrides (test_candidate_service_phase.DeployTest.test_deploy_erqa_uses_frozen_overrides) ... ok
@@ -532,17 +530,12 @@ test_extra_phase_env_rejected (test_candidate_manifest.DeriveTest.test_extra_pha
 test_frozen_base_sha_and_candidate_sha (test_candidate_manifest.FrozenManifestTest.test_frozen_base_sha_and_candidate_sha) ... skipped 'real frozen manifest not provided'
 
 ----------------------------------------------------------------------
-Ran 25 tests in 0.041s
+Ran 26 tests in 0.044s
 
 OK (skipped=1)
 ```
 
-Real frozen base manifest test (8/8, candidate SHA recomputed):
-
-```bash
-CLEF_BASE_MANIFEST=/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
-  /workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_manifest
-```
+Real frozen base manifest (8/8):
 
 ```
 test_base_forbidden_requires_flag (test_candidate_manifest.DeriveTest.test_base_forbidden_requires_flag) ... ok
@@ -560,16 +553,16 @@ Ran 8 tests in 0.005s
 OK
 ```
 
-Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no run dir created):
+Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no run dir created; `--repo` now the bundle root):
 
 ```
 {
  "deploy_status": "plan_not_executed",
  "deploy_plan": {
   "action": "deploy",
-  "label": "d0-cand-20261119T003054Z-a59d0c31",
-  "run_dir": "/tmp/cc34-revpkt-2YZb4G/deploy-run",
-  "current_restore": "/tmp/cc34-revpkt-2YZb4G/old-restore.json",
+  "label": "d0-cand-20261119T005328Z-2b4c699b",
+  "run_dir": "/tmp/cc34-revpkt3-I7ywOe/deploy-run",
+  "current_restore": "/tmp/cc34-revpkt3-I7ywOe/old-restore.json",
   "current_restore_sha": "9b3a68076aa49f17f6e72b20faadb727b6688c243f30f793602d88d865a0e846",
   "manifest_sha": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4",
   "source": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
@@ -577,7 +570,7 @@ Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no
   "launch": [
    "/bin/bash",
    "/workspace/yangchen/logs/perf-wave2-20261118/launch.sh",
-   "d0-cand-20261119T003054Z-a59d0c31"
+   "d0-cand-20261119T005328Z-2b4c699b"
   ],
   "launch_env": {
    "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
@@ -591,10 +584,10 @@ Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no
  "restore_status": "plan_not_executed",
  "restore_plan": {
   "action": "restore",
-  "label": "d0-restore-20261119T003055Z-f28d1818",
-  "run_dir": "/tmp/cc34-revpkt-2YZb4G/restore-run",
-  "deploy_record": "/tmp/cc34-revpkt-2YZb4G/deploy-complete.json",
-  "deploy_record_sha": "951ae3c29d73907b5b7871be58dc990b38365db2e2ce60d23582511675ae88b7",
+  "label": "d0-restore-20261119T005328Z-b5272351",
+  "run_dir": "/tmp/cc34-revpkt3-I7ywOe/restore-run",
+  "deploy_record": "/tmp/cc34-revpkt3-I7ywOe/deploy-complete.json",
+  "deploy_record_sha": "2342b2e98042b0233390760ba350e5d3ad7c7a775a0d29aa8da6dab99b14a545",
   "ready_pids": [
    1,
    2,
@@ -602,7 +595,7 @@ Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no
   ],
   "source": "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863",
   "guard": "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9",
-  "client_gate": "prior:/tmp/cc34-revpkt-2YZb4G/supervision.json"
+  "client_gate": "prior:/tmp/cc34-revpkt3-I7ywOe/supervision.json"
  },
  "bad_manifest_rc": 1,
  "bad_manifest_stderr_tail": [
@@ -613,17 +606,6 @@ Real CLI plan-only deploy/restore + wrong-manifest block (no service touched, no
 ```
 
 ## 4. Manifest machine diff (13 leaves)
-
-Generator check command:
-
-```bash
-/workspace/yangchen/venvs/clef-py312/bin/python "$STAGE/runtime/candidate_manifest.py" \
-  --base /workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
-  --out "$STAGE/runtime/final_acceptance_candidate_manifest.json" --check
-# -> {"status": "verified", "candidate_sha256": "31202d27b49c43279ecbdf71bb2881930ab3aaaa1729fa30361f65d0e19dd2a4"}
-```
-
-Full diff report `runtime/final_acceptance_candidate_manifest.diff.json`:
 
 ```json
 {
@@ -725,17 +707,13 @@ Full diff report `runtime/final_acceptance_candidate_manifest.diff.json`:
 }
 ```
 
-The 13 leaves are exactly: `source_files[5].sha256` (head), `source_files[47].sha256` (guard), `source_selection.production_head_sha`, `source_selection.guard_sha`, `forbidden_environment`, and `CLEF_JOINT_FUSED_ATTN` + `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA` in each of the four phase environments. Data, denominators, author scorer, 2pp gates, argv, effective config and OPP/LD are byte-identical.
+Exactly: `source_files[5].sha256` (head), `source_files[47].sha256` (guard), `source_selection.production_head_sha`, `source_selection.guard_sha`, `forbidden_environment`, and the two candidate env keys in each of the four phases. Candidate SHA `31202d27…`; everything else byte-identical to cc7 `0338f87b…`.
 
-## 5. Local prep + remote pin verification
+## 5. Local prep + remote pins
 
-Command:
+Local 8/8 and remote 13/13 from the current verifier run:
 
-```bash
-python3 runtime/verify_final_acceptance_combo.py --stage . --ssh-host clef --json
-```
-
-```
+```json
 {
   "schema": "final-acceptance-combo-check/1",
   "stage": "/Users/chenclay/.ao/data/worktrees/clef-27b-ascend/clef-27b-ascend-34",
@@ -755,39 +733,42 @@ python3 runtime/verify_final_acceptance_combo.py --stage . --ssh-host clef --jso
 }
 ```
 
-8 local prep files and 13 remote stage/runtime pins all match (0 failures). The 13 remote pins are the f810 runner/manifest, supervisor, phase, source-control base, both installers, cleanup window, stop, launch, wait, activate and the 12,933 B clean expected manifest.
-
-## 6. Safety gates kept
-
-1. Original `d0_stop.py` only; identity-bound saved root; no pgrep/wide kill.
-2. Pre-stop: full `/proc` scan, old root PID/PGID/starttime/boot/argv, full PGID membership, no pending runner, port open, NPU card 7 rows subset.
-3. Post-stop: old tree and whole PGID have no non-Z member, port 111, card 7 empty, clients clear.
-4. Candidate launch: clean two-key parent + only `CLEF_JOINT_FUSED_ATTN=1` and `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e…`; identical launcher and per-phase overrides.
-5. Ready: new root identity stable, PGID tree complete, full argv/env vs candidate manifest, health/info, d0 four-check, TP2 dual worker mapping.
-6. Any failure after a proven stop: recovery only if port 111, clients clear, source/guard known; otherwise writes `blocked` and launches/signals nothing. Recovery reverts adapter, restores f810, clean-launches production, four-checks, byte-compares OPP/LD.
-7. `--single-baseline-round` never accepted for candidate; S1 is 3 rounds.
-
-## 7. Reproduction checklist for 32
+Reproduce:
 
 ```bash
-STAGE=/workspace/yangchen/work/final-acceptance-cc34-640ac23cac9aaa9a937832c2361dddd74007d195
-cd "$STAGE/runtime"
-/workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_service_phase test_candidate_manifest
-CLEF_BASE_MANIFEST=/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json   /workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_manifest
+STAGE=/workspace/yangchen/work/final-acceptance-cc34-2af7dd7aa2d00052c98d450785320562059ca984
+cd "$STAGE/runtime" && /workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_service_phase test_candidate_manifest
+CLEF_BASE_MANIFEST=/workspace/yangchen/work/final-acceptance-cc7f32842a78786a8f0e5da373f66597752ea9ab/runtime/final_acceptance_manifest.json \
+  /workspace/yangchen/venvs/clef-py312/bin/python -m unittest -v test_candidate_manifest
 cd "$STAGE" && /workspace/yangchen/venvs/clef-py312/bin/python runtime/verify_final_acceptance_combo.py --stage . --json
-sha256sum runtime/candidate_service_phase.py runtime/final_acceptance_candidate_manifest.json runtime/candidate_manifest.py runtime/final_acceptance_candidate_manifest.diff.json
+sha256sum runtime/candidate_service_phase.py runtime/test_candidate_service_phase.py runtime/final_acceptance_candidate_manifest.json
 ```
 
-Expected: 25 tests OK (1 skipped), 8 real-base tests OK, prep 8/8, SHA list matches section 0.
+## 6. Safety gates (unchanged)
 
-## 8. Known boundaries
+1. Original `d0_stop.py` only; identity-bound saved root; no pgrep/wide kill.
+2. Pre-stop: full `/proc`, old root PID/PGID/starttime/boot/argv, full PGID membership, no pending runner, port open, card 7 subset.
+3. Post-stop: old tree and whole PGID no non-Z, port 111, card 7 empty, clients clear.
+4. Launch: clean two-key parent + only `CLEF_JOINT_FUSED_ATTN=1` and `CLEF_JOINT_ALLOWED_POSTIMAGE_SHA=aa3e…`; original launcher and frozen per-phase overrides.
+5. Ready: stable new root, complete PGID tree, argv/env vs candidate manifest, health/info, d0 four-check, TP2 dual worker.
+6. Failure after a proven stop: recovery only if port 111, clients clear, source/guard known; else `blocked` with no signal/launch. Recovery reverts adapter, restores f810, clean-launches, four-checks and byte-compares OPP/LD.
+7. No `--single-baseline-round` for candidate; S1 is 3 rounds.
 
-- Device execution is not performed here; the packet proves CPU behavior and frozen identity only.
-- `deploy` runs `frozen_check` after the candidate is installed (guard post/head aa3e); a pre-stop check against the f810 manifest is not run, so an environment/data drift would be caught after stop and trigger the audited recovery path. This is deliberate: the recovery path is safer than a second preflight variant, and the frozen `frozen_check` is the same one used by phase v3.
-- The candidate restore always restores f810 s1; it does not restore a candidate winner. If candidate S1 shows stable gain, the four-phase variant and winner restore need a separate frozen stage.
-- No S2/ERQA candidate execution is prepared in this round.
+## 7. Execution notes for 31
+
+- `--repo` bundle root (section 1 rev2); preflight four-file SHA check before deploy.
+- `--ab-code` bundle `runtime`.
+- deploy prior client: f810 S1 last `supervision.json` (`clients_exited=true`); first-phase only if no prior client.
+- restore prior client: candidate S1 last `supervision.json`; `--from-phase s1`.
+- helper stays `5c045eb/runtime/joint_fused_attention_window.py` (`9245e1a6…`).
+- Current service is stopped after the pre-fix failure: clean-restore first, then fresh deploy.
+
+## 8. Boundaries
+
+- No device execution here. `frozen_check` runs after candidate install; drift triggers audited recovery.
+- Restore always returns f810 s1; winner restore and four-phase candidate variant are not built in this round.
+- Packet is updated only by new independent commits/stages; the f810 entry and prior stages are immutable.
 
 ## 9. Feedback protocol
 
-Report only concrete findings with file/line or command/output evidence. For an accepted finding, 34 will make the minimal fix in a new independent stage/SHA under `/workspace/yangchen/work/final-acceptance-cc34-<newcommit>/`, regenerate this packet, and never modify the frozen f810 entry or the locked 640ac23 stage. 31 executes only after 32 closes and 20 schedules.
-
+Concrete findings only, with file/line or command/output evidence. Accepted findings get a minimal fix in a new independent stage/SHA; the f810 entry and prior stages are never modified. 31 executes after 32 closes and 20 schedules.
