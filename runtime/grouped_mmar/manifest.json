@@ -321,7 +321,8 @@
       "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae",
       "33_commit": "87ffb96",
       "31_conclusion_revision": "8133e16 (file bfef1c02; suspected_environment_blockage_pending_dependency_control)",
-      "31_dependency_analysis": "d8d4050 / 31f8f1ee (dependency_status=supported_but_unproven)"
+      "31_dependency_analysis": "d8d4050 / 31f8f1ee (dependency_status=supported_but_unproven)",
+      "31_a14_preflight_sums": "21dcae08... (header ad8f98b4, libccl 2281deca, MRS kernel HCCL/KFC, no Mc2Server/RacServer)"
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
     "decision": "status narrowed; A12-H6 workspace-init and A14 MatmulReduceScatter V1 controls are pending; no all-MC2 generalization",
@@ -336,7 +337,8 @@
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
       "H6 workspace initial value for the hang",
-      "H12 MC2 context/AICPU binding"
+      "H12 MC2 context/AICPU binding",
+      "Grouped dependency on the refused mc2_server remains unproven; A14/H6 controls are the next discriminators"
     ],
     "pending": [
       "A12-H6 workspace memset derivative (contract confirmed; pending 32/20)",
@@ -346,7 +348,7 @@
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
   },
   "a12_h6": {
-    "status": "contract_confirmed_pending_32_20",
+    "status": "ready_32_pending_31_compile_and_20_go",
     "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
     "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
     "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
@@ -362,7 +364,7 @@
     "workspace_contract": "33: GetWorkspaceSize returns size only; caller scratch; MC2 message area in GetHcclContext<0>()->WorkSpace; same-stream memset safe, no extra sync"
   },
   "a14_control": {
-    "status": "prepared_pending_local_header_and_go",
+    "status": "preflight_ready_pending_32_20",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -386,7 +388,16 @@
     "output": "m/rank_size,n",
     "constraints": "m % rank_size == 0; commTurn 0; streamMode 1; reduceOp sum",
     "binding": "run_mrs",
-    "pending": "31 local header copy/SHA; libccl_kernel and MatmulReduceScatter kernel symbols; 32/20 GO",
-    "success": "A12-equivalent gate"
+    "pending": "32/20 GO; compile/plan by 31",
+    "success": "A12-equivalent gate",
+    "local_header_sha256": "ad8f98b4652207b3f7bfd5c9cefb4cc4428e79902461b1d7431829cbc0cc8041",
+    "local_header_signature": "matches run_mrs: (x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)",
+    "header_note": "local CANN header differs from upstream 6e49c20f; compile against the local header",
+    "libccl_kernel_sha256": "2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c",
+    "libccl_symbols": "RunAicpuKfc*, HcclKernelEntrance, HcomMc2AiCpuStreamAllocAndGet, HcclMc2Com*; Mc2Server/RacServer count 0",
+    "mrs_kernel_symbols": "HCCL/KFC family (AssembleHcclMsg/HcclMsg/g_hcclContextReserved); no Mc2Server/RacServer",
+    "aicpu_kernel_dir": "6 entries only; no other mc2* variant; mc2_server 71263835",
+    "loadsysopkernel_note": "cannot find aicpu packages also appears in the healthy service startup; common line, not failure-specific",
+    "preflight_sums_sha256": "21dcae087a84e78281ce7dbebb124ec66740245e543b4e2d695c7a12621d28ae"
   }
 }
