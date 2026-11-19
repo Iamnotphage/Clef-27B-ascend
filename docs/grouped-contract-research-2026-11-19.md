@@ -2141,3 +2141,93 @@ ps -eo pid,cmd | grep -E 'torchrun|run_probe.py' | grep -v grep || true   # 运�
   4. 若上述仍不足，由 20 决定是否需要一次最小 entry 日志/只读快照；本轮不请求。
 
 **状态**：31/35 本阶段已完成（31 CPU 候选 `8f4b843` 50/50 PASS、未部署；服务 root 1355077/ppid 1355076 health ready）；33 仅完成本节只读判读与一次文档提交；无设备/新 GO。
+
+## 117. task13/wait-notify 可核表与缺失 ack 绑定（12 原始文件；无新取件）
+
+**口径**：仅 bce9ce2 的 12 个 marker 原件（`archive-marker-hits/`：2 debug device、6 debug plog gz、2 run plog、2 run device）+ b009f73 上下文。host plog/run plog 为 **UTC**；device log 为 **CST(=UTC+8)**。跨域偏移按 ack↔TaskFinished 对齐 **30.53 ms**（rank0 `.261.338↔.291.869`=30.531；rank1 `.261.233↔.291.762`=30.529；task5 `.255.043↔.285.576`=30.533），仅用于排序，±1 ms。命名：**H13**=host `stream_id=47/task_id=13`；**X47**=FFTS+ 展开 `32781/47`；同一逻辑任务的不同标识，不混用。0 命中仅限这 12 文件。
+
+### 117.1 表 A：host runtime（UTC）
+
+| rank | UTC | 事件 | stream/task | notify | 源 |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 14:49:06.286.502 | construct notify_wait | s12/t6(sq37) | 2437 | 06023:91447 |
+| 0 | 14:49:06.286.588 | construct notify_record(ipc,phy14) | s47/t12(sq2) | 2437 | 06023:91462 |
+| 0 | 14:49:06.287.487 | ConstructFftsMixSqe(H13) | s47/t13 | — | 06023:91529 |
+| 0 | 14:49:06.287.501 | expand H13→X47 | 32781/47 | — | 06023:91535 |
+| 0 | 14:49:06.287.513 | AllocTaskAndSendStars(提交 H13) | s47/t13 KERNEL_AICORE | — | 06023:91538 |
+| 0 | 14:49:06.287.732 | TaskFinished wait | s12/t6 NOTIFY_WAIT | 2437 | 06023:91558 |
+| 0 | 14:49:06.287.776 | TaskFinished record | s47/t12 NOTIFY_RECORD | 2437 | 06023:91571 |
+| 0 | 14:49:06.291.869 | TaskFinished launch rc0 | s12/t7 KERNEL_AICPU | — | 06023:91578 |
+| 0 | 14:52:06.287.354 | 3 min sync timeout pendingNum=1 | s47/t13 | — | run/plog 1276:407 |
+| 1 | 14:49:06.286.044 | construct notify_wait | s12/t6(sq37) | 2387 | 05927:95185 |
+| 1 | 14:49:06.286.115 | construct notify_record(ipc,phy15) | s47/t12(sq2) | 2387 | 05927:95200 |
+| 1 | 14:49:06.286.575 | ConstructFftsMixSqe(H13) | s47/t13 | — | 05927:95267 |
+| 1 | 14:49:06.286.591 | expand H13→X47 | 32781/47 | — | 05927:95273 |
+| 1 | 14:49:06.286.603 | AllocTaskAndSendStars(提交 H13) | s47/t13 KERNEL_AICORE | — | 05927:95276 |
+| 1 | 14:49:06.286.787 | TaskFinished wait | s12/t6 NOTIFY_WAIT | 2387 | 05927:95296 |
+| 1 | 14:49:06.286.823 | TaskFinished record | s47/t12 NOTIFY_RECORD | 2387 | 05927:95312 |
+| 1 | 14:49:06.291.762 | TaskFinished launch rc0 | s12/t7 KERNEL_AICPU | — | 05927:95320 |
+| 1 | 14:52:06.286.359 | 3 min sync timeout pendingNum=1 | s47/t13 | — | run/plog 1267:386 |
+
+### 117.2 表 B：device AICPU（CST 原生；UTC=CST−8h；host-frame≈+30.53 ms）
+
+| rank | CST | UTC | 事件 | AICPU stream/task | notify | 源 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0 | 22:49:06.259.404 | 14:49:06.259.404 | Init addr 2613051392(=0x9BC00000) | — | — | device-0:6061 |
+| 0 | 22:49:06.260.394 | .260.394 | Add all end task | s92 | 2437 | device-0:6157 |
+| 0 | 22:49:06.260.401 | .260.401 | notify record | s92/t10 | 2437 | device-0:6158 |
+| 0 | 22:49:06.260.463→.488 | | WaitMainStreamFinish(head11/tail11) | s92 | — | device-0:6164/6166 |
+| 0 | 22:49:06.260.974 | | SetOpExecStatus state:2 | — | — | device-0:6215 |
+| 0 | 22:49:06.261.315 | | end RunAicpuRpcSrvLaunch | — | — | device-0:6250 |
+| 0 | 22:49:06.261.338 | | End send ack to Ts result0 | s12/t7 | — | device-0:6252 |
+| 1 | 22:49:06.258.674 | 14:49:06.258.674 | Init addr 2613051392 | — | — | device-1:6061 |
+| 1 | 22:49:06.259.652 | .259.652 | Add all end task | s93 | 2387 | device-1:6157 |
+| 1 | 22:49:06.259.663 | .259.663 | notify record | s93/t10 | 2387 | device-1:6158 |
+| 1 | 22:49:06.259.723→.260.375 | | WaitMainStreamFinish | s93 | — | device-1:6164/6233 |
+| 1 | 22:49:06.260.847 | | SetOpExecStatus state:2 | — | — | device-1:6282 |
+| 1 | 22:49:06.261.208 | | end RunAicpuRpcSrvLaunch | — | — | device-1:6317 |
+| 1 | 22:49:06.261.233 | | End send ack to Ts result0 | s12/t7 | — | device-1:6319 |
+
+host-frame 对齐：end-task record rank0 `.290.93`、rank1 `.290.19`；`end` `.291.85/.291.74`，与 host launch TaskFinished `.291.869/.291.762` 一致（30.53 ms 偏移）。
+
+### 117.3 表 C：notify 资源（`rts_notify.cc:63 SetNotifyData`）
+
+| resId | addr | devId | 出现 | 用途 |
+| --- | --- | --- | --- | --- |
+| 2379 | 0x2f06a014052c | 15 | device-0:3880/5619、device-1:3862/3901/5627 | AICPU 内部 wait/record；low32=0xA014052C |
+| 2380 | 0x2f06a0140530 | 15 | device-0:3899/5601、device-1:3881/3910/5609 | 同上；low32=0xA0140530 |
+| 2437 | 0x2e06a0140614 | 14 | device-0:5573 | rank0 end-task / host wait-record 同 id |
+| 2387 | 0x2f06a014054c | 15 | device-1:5573 | rank1 end-task / host wait-record 同 id |
+
+AICPU 内部 SQE 同步另用相邻 id：rank0 `2429/2430/2435/2436`（s92/93），rank1 `2379/2380/2385/2386`（s92/93）；end task 分别 `2437`（s92/t10）、`2387`（s93/t10）。notify flag 与 op-param 别名仍未知（完整 y+j/jT 未证）。
+
+### 117.4 四类归属（不相互外推）
+
+| 项 | 归属 | 证据 | 边界 |
+| --- | --- | --- | --- |
+| 提交 | host runtime | AllocTaskAndSendStars + expand（H13→X47） | 只证入队/展开，不证执行 |
+| 本地排空 | AICPU HCCL executor | WaitMainStreamFinish s92/s93 head11/tail11（25 µs/652 µs） | **不是** s47/t13，也不是远端 AllReduce |
+| 启动核完成 | host runtime + device ack | TaskFinished s12/t7 rc0；device ack result0 | 只证 s12/t7，不证 H13/X47 |
+| task13 未完成 | host runtime | 无 TaskFinished s47/t13；两 rank 3 min pendingNum=1 | **唯一正证**是“未完成”，不证等待变量/原因 |
+
+### 117.5 缺失 wait/ack 绑定（本轮核心）
+
+- host wait `s12/t6`（2437/2387）由**本 rank 的** host record `s47/t12` 释放：wait 完成 `.287.732/.286.787` 早于 record 完成 `.287.776/.286.823`；AICPU end-task record 在 host-frame `.290.93/.290.19`，**晚于** wait 完成约 2.2–3.4 ms，故 host wait 不是它释放的。
+- AICPU end-task notify（`s92/t10` 2437、`s93/t10` 2387）与 host 链同 id，但**没有** wait/returncode/TaskFinished 把它绑定到 H13/X47；它只是 KFC end task 的完成信号，不能归因 task13。
+- AICORE 侧静态等待是 `TurnWait` 轮询 `msgRcvRspArea->rcvCnt>=totalTurn`（response=`WorkSpace+notifyOff+64`，rcvCnt@+51）。Grouped 窗口内 **所有** `[SQE] write value` 只写 notify flag（rank0 4 条→0x2f06a0140530/052c；rank1 3 条→0x2e06a01405f4/05f8）；**没有** 任何写 `0x12c09bc...` 的 write value（全库 0 命中），也没有小 memcpy 到 response 区；`PostMsg`/`Post finishedTurnCnt`/turn **0 命中**。→ **rcvCnt 回写缺失**是当前最强的 ack 缺口候选，但未证“AICORE 确在 TurnWait 或该写被别级完成”。
+- 覆盖缺口：device 日志在 `end`（CST `.261.315/.261.208`）后到 `22:52:59` 之间，**HCCL 行=0、非 memstat CCECPU 行=0**（仅周期内存统计与 HCCP 噪声）；host debug plog 在 `06.292` 之后 **0 条 ConstructSqe/AllocTask/TaskFinished/TaskFailCallBack**（仅 heartbeat/socket）；run plog 仅 3 min timeout。**AICORE 侧完全无日志**，因此当前 12 文件不能判定该等待/回写是否存在。
+
+### 117.6 workspace 候选与 response 地址范围（候选，不升级）
+
+- 运行值：`HccCommResParamTask.workSpace 0x12c09bc00000`、`workSpaceSize 16777216`，两 rank 相同（device-0/1:5274）；Init `%u`=2613051392=`0x9BC00000` 恰为其低 32 位（两 rank）。
+- 候选：Init y 的完整 64 位 = `0x12c09bc00000`（workSpace）。低 32+大小（16 MiB，与 probe workspace_bytes 一致）是强匹配；但 `y==workSpace` 仍依赖静态数据流（ctx+184 ← workSpace；Init x1 ← ctx+184），**未运行绑定**，按候选记录，不升级为已证。
+- 在候选 y + 源级 `notifyOff=131072` + `T=1`（AddrMsg totalTurnCnt=1）下：send 区 `0x12c09bc20000`、response 区 `0x12c09bc20040`、`rcvCnt` 字节 `0x12c09bc20073`（64 B response 范围 `0x12c09bc20040..0x12c09bc2007f`）。这是**候选地址范围**，依赖 j=notifyOff/T=1 与本地 tiling 常量，未证；仅作为将来只读快照的候选目标，不是已观测写点。
+
+### 117.7 缺口清单（交 20；abi14 已发，不重复）
+
+1. **AICORE 侧证据**：H13/X47 在 `14:49:06.291–14:52:06` 的等待/异常/完成；12 文件无 AICORE 日志（device 日志为 AICPU/HCCP）。需设备侧 AICORE trace/exception 或内核等待点，属新能力/新窗口，20 决定，当前不请求。
+2. **response 区只读快照**（候选 `0x12c09bc20040..0x...007f`，或 j/T/tiling 确定后的实际地址）：仅在 20 授权未来只读快照时使用；当前不请求。
+3. **tiling 常量** `notifyOff`/`j`/`T` 与 `kfcNotifyId`（本地 config）：静态、35/abi 范围；用于钉死 response 地址与 AICORE 等待源。
+4. **abi14 静态包**（RcvMsg/Start to run 的 fmt/file/xref/实参）已由 20 发 31（handle `h11-abi14-static31-20261120-1`）；本节不重复请求。
+
+**结论**：根因仍 unresolved。当前最完整的证据链是：H13 已提交/展开、AICPU 通信执行并本地排空、s12/t7 启动核 rc0、H13 3 min 未完成；缺的是 AICPU→AICORE 的 `rcvCnt` response 回写绑定（或等价的 AICORE 等待源），现有 12 文件既无该写、也无 AICORE 侧日志，故只能记“缺失/未证”，不能结案。
