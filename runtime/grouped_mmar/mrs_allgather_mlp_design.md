@@ -305,6 +305,10 @@ separate optional stage, not mixed into the matmul comparison.
 - **Reporting**: raw per-iteration durations and amplitudes stay with the run; any
   comparison remains a diagnostic of this bounded cell, not a production throughput
   or precision claim. No official entry/CSV change.
+- **max_rel_abs semantics**: the denominator is `clamp_min(|reference|, 1e-12)`, so a
+  near-zero reference can produce a large value. It is not a gate; always read it
+  together with `max_error_reference` and `max_error_output`, which identify the
+  sample that produced the maximum absolute error.
 
 ### 15.1 KEEP_ALL budget from the actual retained objects
 
@@ -324,14 +328,36 @@ its own objects until process exit.
 | **retained per call** | **17,301,504 B = 16.500 MiB** | **137,625,600 B = 131.255 MiB** |
 
 Shared, not multiplied per call: the weight tensor passed to `run_mrs` (large
-8704*5120*2 = 85.0 MiB) is the same allocation every iteration, and the original
-`x_n` [967,8704] is about 16.05 MiB; both are held once. The executor pointer is also
-leaked but its allocator size is unknown, so keep a 20% margin.
+8704*5120*2 = 89,128,960 B = 85.0 MiB) is the same allocation every iteration, and
+the original `x_n` [967,8704] is 16,833,536 B = 16.05 MiB; both are held once. The
+adapter library and runtime mappings are process-resident and have no per-call
+growth. The descriptor lists, aclTensor objects, group string copy, shared_ptr state
+and executor handle are **not measured**; they are small but the executor's internal
+allocator size is unknown. Use an explicit upper-bound allowance X per call (1 MiB in
+the default formula) and keep the 20% margin.
 
 Transient per call (freed after the comparison, not cumulative): `full` [968,5120]
 9.91 MiB, `reference` [967,5120] 9.91 MiB, and diff/stat temporaries of the same
 order; peak transient is roughly 40-60 MiB and belongs in peak RSS, not in the
-cumulative leak sum.
+cumulative leak sum. The benchmark must not append per-iteration outputs to a list;
+if it does, those tensors become retained and must be counted.
+
+Budget formula (per rank, with resident and transient subtracted):
+
+```
+max_calls = floor((1 GiB - resident - transient_peak) / (per_call_retained + X))
+```
+
+Large: resident about 101.1 MiB (x + w), transient_peak about 50 MiB,
+per_call_retained 131.255 MiB, X = 1 MiB:
+floor((1024 - 101.1 - 50) / 132.255) = 6 calls. W1/N4 = 5 calls retains 656 MiB and
+peaks near 808 MiB; W1/N5 = 6 peaks near 940 MiB (about 92%), so W1/N4 is the
+recommended large cell. Small: resident about 0.31 MiB, transient under 1 MiB,
+per_call_retained 16.5 MiB, X = 1 MiB: floor((1024-0.31-1)/17.5) = 58 calls; W3/N20
+= 23 is safe. If both arms share one process, sum the A15 retained growth and the
+A16 allocator high-water against the same cap; per-arm processes avoid the sum.
+These are code-derived values with X as an explicit upper-bound allowance, not
+measured executor/descriptor sizes.
 
 Capacity under 1 GiB/rank (1,073,741,824 B):
 

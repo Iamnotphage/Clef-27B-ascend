@@ -72,8 +72,8 @@
     },
     "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
       "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
-      "sha256": "43cfa688511557c88cac41c0749ca880f96b87140f65a58757afb6d9ccd181cb",
-      "bytes": 21273
+      "sha256": "3ce26ba325bdea518168c9ca6c8c5209026e4775465e7805654f48a4ddc86b5f",
+      "bytes": 22888
     },
     "runtime/grouped_mmar/h11_matched_control.md": {
       "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
@@ -82,8 +82,8 @@
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
-      "sha256": "3902691640a4f4549f868c6c52d7a4ba049606adae75721e9527a13bdd60a9fe",
-      "bytes": 37602
+      "sha256": "2965e22c0d3e53f0e6a411d845a66ba3e4ce0cf12376df94905b12a6672b638e",
+      "bytes": 38585
     },
     "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
       "role": "A12 official sample source (byte copy)",
@@ -455,9 +455,9 @@
   "mrs_allgather_alternative": {
     "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
     "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
-    "design_sha256": "43cfa688511557c88cac41c0749ca880f96b87140f65a58757afb6d9ccd181cb",
+    "design_sha256": "3ce26ba325bdea518168c9ca6c8c5209026e4775465e7805654f48a4ddc86b5f",
     "a15_contract": "the current freeze expresses rows 127 via parameters only: --arm A15 --rows 127 --k 256 --n 512; flags 8 KEEP_ALL, bias nullptr, pad 128, RS blocks 64/64, AG 128, crop 127; plan-only verified, no code change needed",
-    "production_plan": "CPU design sections 13/15: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan. Bounded steady-state plan (32 findings incorporated): baseline arm A16 keeps the weight FRACTAL_NZ29 (record ND source hash and NZ cast hash) and calls production-shaped F.linear/matmul + all_reduce on the same stream, retaining tensors to match A15 KEEP_ALL; primary comparison at M968 for both arms (secondary M967 baseline quantifies the one-row pad); ABBA, W warmups excluded, N measured, timing covers launch+collective+sync, median/p95 plus paired deltas. KEEP_ALL budget section 15.1 counts code-path retained objects: workspace + new pad x_mrs + new RS y + descriptor lists = 17,301,504 B (16.5 MiB) small and 137,625,600 B (131.255 MiB) large per call; shared weight/input are held once and transient full/reference/diff tensors are peak-only. Under 1 GiB/rank with a 20% margin: small <=49 calls (W3/N20=23 in one process); large <=6 calls, so W2/N6 (8 calls, 1,050 MiB retained) does not fit. Large uses per-arm independent processes at W1/N4=5 (about 807 MiB peak including shared/transient), or a shared process capped at W1/N3=4. A16 remains design-not-implemented and no device benchmark is authorized. Production executor/workspace lifecycle remains pending and flags=0 early release is not treated as a solution",
+    "production_plan": "CPU design sections 13/15: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan. Bounded steady-state plan (32 findings incorporated): baseline arm A16 keeps the weight FRACTAL_NZ29 (record ND source hash and NZ cast hash) and calls production-shaped F.linear/matmul + all_reduce on the same stream, retaining tensors to match A15 KEEP_ALL; primary comparison at M968 for both arms (secondary M967 baseline quantifies the one-row pad); ABBA, W warmups excluded, N measured, timing covers launch+collective+sync, median/p95 plus paired deltas. KEEP_ALL budget section 15.1 is complete-retention: resident x (~16.05 MiB) + w (85.0 MiB) + adapter/runtime once; per-call retained workspace + new pad x_mrs + new RS y + descriptor lists = 17,301,504 B (16.5 MiB) small / 137,625,600 B (131.255 MiB) large; descriptors/executor size is unmeasured, so an explicit X=1 MiB/call upper-bound allowance is added; transient full/reference/diff (~50 MiB peak) is peak-only and must not be retained in a results list. Formula max_calls = floor((1 GiB - resident - transient_peak)/(per_call_retained + X)); large = 6, so W2/N6=8 does not fit; use per-arm independent processes at W1/N4=5 (~808 MiB peak) or a shared process at W1/N3=4; small W3/N20=23 fits. Two arms sharing one process sum their growth. A16 remains design-not-implemented and no device benchmark is authorized. Production executor/workspace lifecycle remains pending and flags=0 early release is not treated as a solution. max_rel_abs uses clamp_min(|reference|, 1e-12): near-zero references can give large values; it is not a gate and must be read with max_error_reference/output",
     "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
     "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
     "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
@@ -473,9 +473,20 @@
       "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
       "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
       "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields with torch-direct tests; NOT the executed v3 tuple", "run_probe.py": "8e308804", "test_probe_cpu.py": "ad257b5f", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
-      "torch_direct_test": "TensorErrorStatsTest runs tensor_error_stats and a15_record(stats=tensor_error_stats, equal=torch.equal) on small CPU tensors (normal, zero reference, None/wrong shape) and cross-checks the list helper; float fields use assertAlmostEqual(delta=1e-5) because torch float32 accumulation differs from the double helper. Skipped when torch is absent (macOS); on the Linux venv the suite must first source activate_env.sh, otherwise torch_npu's entry point tries to load CANN and segfaults (rc 139, environment precondition, not a product defect)",
+      "torch_direct_test": "TensorErrorStatsTest runs tensor_error_stats and a15_record(stats=tensor_error_stats, equal=torch.equal) on small CPU tensors (normal, zero reference, None/wrong shape) and cross-checks the list helper; float fields use assertAlmostEqual(delta=1e-6) because torch float32 accumulation differs from the double helper. Skipped when torch is absent (macOS); on the Linux venv the suite must first source activate_env.sh, otherwise torch_npu's entry point tries to load CANN and segfaults (rc 139, environment precondition, not a product defect)",
       "error_stats": "a15_record's stats callback records max_abs/mean_abs/bit_equal plus ref_abs_max, out_abs_max, diff_nonzero_count, diff_total_count, max_error_index/position and values, max_rel_abs, and relative_l2 = ||out-ref||_2 / max(||ref||_2, 1e-12); it also stores relative_l2_denominator and relative_l2_zero_reference. These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
       "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
+      "large_v1_result": {
+        "status": "executed; functional/full-row diff and scale measured; within_bounds is FALSE in the original result",
+        "tuple": "e38b541 / run_probe 8e308804 / test ad257b5f / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan 8befce63 / identity 1334752/400276164",
+        "device": "both ranks pad {967 -> 968, pad_value 1.0}; row_block 0 (0,484) / 1 (484,968); equivalence shape [967,5120]; workspace 115,818,496 B; gather 1.13913/1.21021 ms; sync ~7.846 ms",
+        "numeric": "max_abs 2.0, mean_abs 5.1305116357980296e-05, ref_abs_max/out_abs_max 744.0, diff_nonzero 510 / 4,951,040, max_error_index 1040755 position [203,1395], max_error_reference 400.0, max_error_output 402.0, max_rel_abs 1.0, relative_l2 4.9197991043609655e-05 (denominator 293496.6875, zero_reference false), bit_equal false",
+        "gate": "diagnostic_gate max_abs_le 0.03125 / mean_abs_le 1e-4 / within_bounds FALSE / status diagnostic_only_not_an_official_gate; the code rule is AND. 31's summary text said within_bounds=true, but the archived rank0/rank1 result.json both contain false; the original is authoritative and was not rewritten",
+        "window": "child rc0, timed_out false, survivors [], cleanup_final empty; ok=false only from the maps sampling artifact",
+        "restore": "branch aa3e-noop, root 1337814/400405818, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-large-v1-cell SUMS 17/17 (2adc7ef6, 31 commit 0d8cc1a); window d75f4745, rank0 result f50dba4f/trace 7ac02b83, rank1 result 995a4443/trace 27d5f521, restore b7605e05/03c37db9",
+        "scope": "large-shape functional/full-row reference difference only: max_abs 2.0 at reference 400 is about one BF16 ulp at that magnitude and 510 of 4,951,040 elements are nonzero; not a precision pass, not a performance or production claim, no gate change"
+      },
       "v3_result": {
         "status": "executed on the locked tuple; diagnostic success only, not a production or precision-pass claim",
         "tuple": "cdc8324 / run_probe 103b9775 / test f6fe2c99 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan 2fcd101b / identity 1330921/400000296",
