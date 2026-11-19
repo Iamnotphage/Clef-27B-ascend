@@ -247,6 +247,14 @@
 - **首批 ready 要求**：A8/A12/A0 + 必要 A9 埋点 + H1(A1)/H2(A2) 即可 preflight，不要求全 11 假设；A3/A4/A5 随后；每臂双 rank/240 s/fresh/固定 seed；成功=rc0+两 rank sync 返回+finite；A9 记录 stream/thread/context/group 指针/maps 实际库。
 - **A12 官方样例包（33 交付，本地已核）**：`/Users/chenclay/.ao/data/artifacts/clef-27b-ascend-33/grouped-a12-sample/`，SHA256SUMS **5/5 OK**；源 `test_aclnn_grouped_mat_mul_all_reduce.cpp` SHA `6c1a90ab…`（21,723 B，f5703e4）；行号核对：aclInit L163、hcom_name 栈 L355-356、GetWorkspaceSize L370、launch L380、`aclrtSynchronizeStreamWithTimeout(…,10000)` L383、aclrtFree L385、rank 线程 context L423-424、finally sync L452/461；FP16 默认/2 group（x0[256,256]/x1[1024,256] 等，data_size 10485760）。**pending（具体）**：包内无官方 examples/CMakeLists.txt（compile 文档为通用 FlashAttentionScore 模板）；主张“官方原样”须补 f5703e4 的 CMakeLists 及 SHA，否则 A12 标注为“官方样例源+重建 CMake（派生构建）”。A12 无数值参考答案 → 成功判据=API rc0+sync 返回（liveness/通路控制），不单因证明 C1；A12b（BF16+FP32 bias、v4r1-like shape）仅作派生 delta；编译/加载 provider 差异（libopapi_math/transformer+hccl vs dlopen libopapi/libnnopbase）须记录。
 
+## 8.16 Grouped 深挖：包定稿、op-info 与 A12 preflight
+
+- **API 包定稿**：`PACK_SHA256SUMS` SHA `ecffc1ff…`，63 条目全相对路径、**63/63 OK**、无自条目；目录 64 文件（63 payload+manifest）；派生 tar `f40628b7…` 仅记录不作权威。
+- **restore-spec**：SHA `224b0036…`；success_assertions 已删旧 `{f810->fused, aa3e-noop}` 并列项，正常成功仅 `branch == aa3e-noop (normal cell)`；`exception_note` 明确 f810->fused 永不满足成功门；branch_policy 三态保留。
+- **op-info（本机 9.2.1 a16b41d0）**：GroupedMatMulAllReduce 实测 x/w `bfloat16,float16` ND、bias `float32,float16` ND、y 同 x；group required str；splitItem/commTurn 默认 0；reduceOp 默认 sum；group_list int64 optional；`mc2.ctx=mc2_context_0`；`needCheckSupport=false`；dynamic shape/compile true；opFile grouped_mat_mul_all_reduce；multi_kernel；precision_reduce=true——支持 33 契约矩阵；op-info 无 128 对齐约束（M=967 不由其排除，tiling 仍待 A0/A7 实测）。
+- **A12 构建 preflight**：source `6c1a90ab…`（官方原字节）、glue `22edb89f…`（manifest 明确为 derived CMake glue，官方 examples/CMakeLists 不在冻结包）、binary `37929ec4…`/204,744 B；ldd 链 libascendcl/libnnopbase/libopapi_math/libopapi_transformer/libhccl/libhcomm/libstdc++；FP16 原样、成功=rc0+sync 返回（无数值参考）；deltas/provider_delta 已记录。**pending-1**：本地归档 stage-manifest SHA `088f05f6…` 与 31 报文 `1d529ca8…` 不一致，待指明权威。**pending-2**：本地归档仅 ldd.log+stage-manifest.json，缺 glue CMakeLists/cmake.log/make.log/source/binary 副本，待补齐加 SHA256SUMS。
+- 首批 readiness：包+A12 接近 ready；35 的 A8/A0(M=128)/H1/H2 仍待；两 pending 解决后合并 preflight，31 按恢复门停服执行。
+
 ## 9. 本地核对副本
 
 本机 `/tmp/clef32-audit/` 保留 ebca 71 原件、rstd8 window/probe/timing 与 cell/timing bin（diag/rstd）、AD window/probe、cc34 双 manifest 与 entry；均与远端逐 SHA 对齐（见各节哈希）。远端原件路径如各节所示。
