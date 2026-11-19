@@ -483,6 +483,12 @@ freeze `a00edad`：manifest `778c37af…`、window **`9a31091b…`（46,020 B）
 
 **有限结论**：H11 在 M128/K256/N512、BF16、FP32 zero bias、单 group、KEEP_ALL、同 adapter/comm/240s 下仍挂起（即使 host handler 已返回、Python device sync 未返回）→ **排除“仅大 shape/tiling”解释**，Grouped-specific op/kernel/tiling/`rac_server`/AivAicpu KFC task 投递为优先候选，`task_id=13` pending；不单格定因，`mc2_server` 必要依赖仍 `supported_but_unproven`。H11 KFC/AivAicpu 痕迹与 A14 的 `Hccl<HCCL_SERVER_TYPE_AICPU>` 客户端路径形成对照；日志缺失不作未执行证明，但结合源码链支持协议候选。large 暂停；H4K/H5K 不自行加臂，待 20/32 排程；A13 不执行。
 
+## 39. 120d4e7 begin_restore 全链路与 plan 指纹审计（2026-11-19）
+
+**调用链事实（window b77530bc）**：probe 侧先 `registry.stop()`（最终 record）→ `cleanup_attributed`/`survivors`（reap/token），随后 `recovery_gate`；`cleanup_blocked` 优先拒绝。`needs_restore` 为真后唯一 `begin_restore` 调用在 L998；`start_restore` 只在 `begin_restore` 内（L138）。`begin_restore` 先 `disable_subreaper`（L132），失败写 `blocked_subreaper_restore`/`restore_blocked` 并返回 False，调用方 raise → except 只记录 error，**normal/except/finally 均无第二 restore 旁路**；`wait_restored_root` 的严格 `ppid==1 && pgid==pid` 保留。**F5 仍开放**：`_prctl_subreaper` 只 set 1/0（L108-113），无 `PR_GET_CHILD_SUBREAPER` 旧值读取，`disable_subreaper` 固定清零；docstring “restore pre-cell state”不成立，fixture 只测 enable/disable，不测 original=1。修复需 set 前 `prctl(37,&old)`，restore 前清零，finally `prctl(36,old)` 还原，并加 original=1 fixture。
+
+**plan/stage 指纹审计**：v1 `plan-a14-large-v1.json`（fac2d948）child argv 指向 `grouped-deepdive-35-0d3f7fb/run_probe.py` 与同目录 adapter；v1 `stage-identity.json` 却写 commit a00edad/run_probe 0bd1fde8/window 9a31091b，实际 a14-large-cell descendants cmdline 为 `grouped-deepdive-35-a00edad/run_probe.py` → **plan argv/stage/actual 三者不一致，fac2d948 不可 metadata-only 复用**。v2 `plan-a14-large-v2.json`（56441483）child argv 指向 `grouped-deepdive-35-a99c93d`，而当前 `stage-identity-v2` 已为 commit 120d4e7/window b77530bc/run_probe d54584b7（run_probe/adapter SHA 与 a99c93d 路径相同）；v2 **未启动**，因此应重出 plan 使用当前 stage 路径/argv 并记录实际 SHA，不能沿用旧 path 当不可变执行源。A14 large 数值重跑待 F5 修复、31 Linux 38 项、plan 重出、32 GO；Grouped large/A13 暂停；A15 CPU。
+
 ## 38. 120d4e7 subreaper lifecycle 复核（2026-11-19）
 
 freeze `120d4e7`：manifest `4beba032…`、window **`b77530bc…`（47,325 B）**、run_probe `d54584b7…`（未变）、test_probe `c11f4284…`（18）、test_window `6f6a3cc9…`（38，6 Linux-only skip）；CPU 65/65。`begin_restore` 在 `start_restore` 前调用 `disable_subreaper`；失败则 `blocked_subreaper_restore`/`restore_blocked`，**不启动第二棵树**（纯逻辑测试在）。新 Linux daemon fixture：enable 时 daemon 化 wrapper 子进程 reparent 到 window；disable 后新 daemon reparent 到 PID1（非 window）。这两点代码级成立。
