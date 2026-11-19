@@ -21,9 +21,9 @@
       "bytes": 1781
     },
     "runtime/grouped_mmar/run_probe.py": {
-      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9",
-      "sha256": "b7f255cb0dceb759d9962d4ae0b09ec40bf222dfd3b23811735d7ed66951f08d",
-      "bytes": 20278
+      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
+      "sha256": "fdbfeb677aa7a3842ecc6518cd4a3232f7870cc2685d8b28d0692d247f06f5a0",
+      "bytes": 21183
     },
     "runtime/grouped_mmar/compile_probe.sh": {
       "role": "AOT adapter build (no load/device)",
@@ -46,9 +46,9 @@
       "bytes": 2346
     },
     "runtime/grouped_mmar/test_probe_cpu.py": {
-      "role": "CPU control-flow/path/release/watchdog/snapshot tests (14)",
-      "sha256": "ea514245ded967c419ba47e31dd3c8b64373768e24df5ce0b66b71265e58f038",
-      "bytes": 7708
+      "role": "CPU control-flow/path/release/watchdog/snapshot tests (15)",
+      "sha256": "805c4315fe4381437db0f84e447357e5e097046f43bbf46062384ea36a081484",
+      "bytes": 8739
     },
     "runtime/grouped_mmar/cell_supervisor.py": {
       "role": "pure child PGID/source-aware supervisor with optional restore argv",
@@ -230,7 +230,7 @@
   },
   "cpu_tests": {
     "suites": {
-      "test_probe_cpu.py": "14/14",
+      "test_probe_cpu.py": "15/15",
       "test_cell_supervisor_cpu.py": "9/9",
       "test_supervised_window_cpu.py": "22/22"
     },
@@ -327,10 +327,10 @@
       "33_a14_commit": "013b9a0"
     },
     "a12": "official sample failed identically; supervision/recovery chain PASS",
-    "decision": "status narrowed; A12-H6 workspace-init and A14 MatmulReduceScatter V1 controls are pending; no all-MC2 generalization",
+    "decision": "status narrowed; A14 MRS V1 KFC path proven live at small shape, so the refused mc2_server is not a universal blocker; remaining question is Grouped-specific (op/kernel/tiling/rac_server/context) and H12; no all-MC2 generalization",
     "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
     "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
-    "status": "narrowed_pending_A12_H6_and_A14",
+    "status": "narrowed_a14_liveness_pass_grouped_specific_pending",
     "established": [
       "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
       "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
@@ -339,11 +339,12 @@
     "not_established": [
       "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
       "H12 MC2 context/AICPU binding",
-      "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven"
+      "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven",
+      "Grouped-specific cause of stream47/507046 while A14 MRS V1 KFC path returns synchronously at small shape"
     ],
     "pending": [
-      "A14 small v3 rebuild with root 1306695 and fixed run_probe b7f255cb; 32 review then GO",
-      "A14 large after small result"
+      "A14 numeric rerun (v4) with run_probe 8804be5d, adapter d181b15a reused, identity from root 1308632",
+      "A14 large M968/K8704/N5120 after a complete small numeric result and 32 limited review"
     ],
     "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
     "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
@@ -399,7 +400,7 @@
     }
   },
   "a14_control": {
-    "status": "small_v2_invalid_harness_race; small_v3_plan_8782537a_pending_32_review",
+    "status": "small_v3_executed_liveness_pass_release_harness_crash; numeric rerun pending release fix",
     "op": "aclnnMatmulReduceScatter V1",
     "header_sha256": "6e49c20f (3158 B upstream)",
     "sample_sha256": "0996d6f4 (8873 B)",
@@ -473,7 +474,7 @@
       "sums_sha256": "2e1086eb (13/13)"
     },
     "small_v3": {
-      "status": "plan_not_executed; pending 32 plan/identity/binary review then GO",
+      "status": "executed; liveness pass, numeric rerun blocked by release harness crash",
       "freeze": "commit f087746, manifest 02fdd342, run_probe b7f255cb, binding 101660f8, window 2202165e",
       "freeze_note": "f087746 differs from the 32-reviewed d571641/7d39461d only in manifest metadata; binding/run_probe/window are byte-identical",
       "plan_sha256": "8782537a",
@@ -487,7 +488,26 @@
       "compile_log_sha256": "fc8efe47",
       "master_port": "29531 (preflight FREE)",
       "stage_archive": "a14-preflight/plan/stage-identity-v5.json + identity + plan; SUMS 17/17 (4eaf108e)",
-      "stage_commit": "9600e2a"
+      "stage_commit": "9600e2a",
+      "result": {
+        "cell": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/a14-small-v3-cell/ (SUMS 16/16, 88b823a4, 31 commit 064d469)",
+        "trace": "both ranks prepare_rc0, executor nonnull, workspace 17,170,432 B, launch_rc0, handler cleanup_rc0/sync_rc0, sync_ms 18.66017/8.16125, no stream47, no 507046",
+        "rank0_result_sha256": "33410194",
+        "rank1_result_sha256": "300eebfd",
+        "window_sha256": "c291b877",
+        "restore": "branch aa3e-noop, root 1308632/start 398926792, five PIDs, four checks/env/joint/source/clients true, no residue",
+        "interpretation": "MRS V1 A3 AICPU/KFC path works at small shape; refused mc2_server not a universal blocker; Grouped still 507046/stream47; dependency supported_but_unproven",
+        "blocker": "run_probe.py release(run_id) zero-tensor dispatch NotImplementedError after sync; result.json stub only; reduced/reference/bit_equal not computed"
+      }
+    },
+    "release_fix": {
+      "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
+      "run_probe": "numeric result (reduced/reference/bit_equal/finite/versions) computed and atomically flushed before release; call_release wraps release in try/except and records release_rc/release_error/harness_release_ok, then re-flushes",
+      "pass_gate": "numeric_pass = api/sync/finite/reference (no release term, completed numbers never discarded); pass = numeric_pass and harness_release_ok, so a cleanup error is not a complete harness PASS (20)",
+      "shas": {"run_probe.py": "fdbfeb67", "test_probe_cpu.py": "805c4315", "binding_probe.cpp": "101660f8 (unchanged)", "window": "2202165e (unchanged)", "adapter": "d181b15a (reused)"},
+      "cpu_tests": "15/15 + 9/9 + 22/22 = 46/46",
+      "known_limitation": "the release op stays unregistered for zero-tensor dispatch; v4 records the NotImplementedError as harness_release_ok=false. A CatchAll registration plus adapter recompile can be done later if an explicit release success gate is ever required.",
+      "v4_requirement": "31 keeps adapter d181b15a, stages run_probe fdbfeb67, rebuilds identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, reruns the same small cell"
     },
     "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
     "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
@@ -506,6 +526,7 @@
     "fix_commit": "d571641",
     "fixed_run_probe_sha256": "b7f255cb",
     "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
-    "v3": "see small_v3: plan 8782537a, identity 1306695, fresh out probe-out-a14-small-v3, freeze f087746/02fdd342, bindings 101660f8/window 2202165e, master_port 29531 free; 32 review then GO"
+    "v3": "executed at identity 1306695; liveness pass (KFC path works), release harness crash; see small_v3.result",
+    "v4": "pending 31: adapter d181b15a reused, run_probe fdbfeb67, identity from root 1308632, fresh out probe-out-a14-small-v4, master_port 29531 preflight, same small cell"
   }
 }

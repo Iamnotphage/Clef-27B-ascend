@@ -198,6 +198,16 @@ def sync_and_release(sync, release, run_id, keep):
     return 0
 
 
+def call_release(release, run_id, keep):
+    """Release is cleanup, not the measurement: record a failure instead of aborting."""
+    if not (keep and run_id):
+        return 0, None
+    try:
+        return release(run_id), None
+    except Exception as exc:
+        return None, f'{type(exc).__name__}: {exc}'[:512]
+
+
 def library_evidence(adapter):
     wanted = ('libhccl', 'libopapi', 'libnnopbase', 'libascendcl', 'libtorch_npu')
     names = set(wanted)
@@ -350,12 +360,6 @@ def execute(a, plan):
             torch.npu.synchronize()
             trace.emit('sync_return', sync_ms=(time.monotonic_ns() - sync_begin) / 1e6)
             meta['sync_returned'] = True
-            release_rc = sync_and_release(lambda: None,
-                                          torch.ops.clef_mmar_probe.release,
-                                          run_id, plan['flags'] & (KEEP_GROUP | KEEP_WORKSPACE |
-                                                                   KEEP_DESCRIPTORS | KEEP_ALL))
-            meta['release_rc'] = release_rc
-            trace.emit('release_return', rc=release_rc)
             reduced = torch.matmul(x_n, w_n)
             if a.arm == 'A14':
                 reference = torch.empty((rows // world, a.n), dtype=reduced.dtype,
@@ -384,11 +388,29 @@ def execute(a, plan):
         meta['finite'] = finite
         meta['wall_ms'] = (time.monotonic_ns() - begin) / 1e6
         trace.emit('result', finite=finite)
+        flush()
+        release_rc, release_error = call_release(
+            torch.ops.clef_mmar_probe.release, run_id,
+            plan['flags'] & (KEEP_GROUP | KEEP_WORKSPACE | KEEP_DESCRIPTORS | KEEP_ALL))
+        meta['release_rc'] = release_rc
+        meta['harness_release_ok'] = release_error is None and release_rc == 0
+        if release_error is not None:
+            meta['release_error'] = release_error
+            trace.emit('release_error', error=release_error)
+        else:
+            trace.emit('release_return', rc=release_rc)
+        flush()
         both = [None, None]
         dist.all_gather_object(both, bool(finite))
         meta['both_finite'] = all(both)
-        meta['pass'] = bool(meta['api_returned'] and meta['sync_returned'] and finite and
+        # The numeric gate is api/sync/finite/reference; a release failure is a harness
+        # record (harness_release_ok=False), never a reason to discard completed numbers.
+        numeric_pass = bool(meta['api_returned'] and meta['sync_returned'] and finite and
                             all(both) and (not a.norm or meta.get('gate', {}).get('pass')))
+        meta['numeric_pass'] = numeric_pass
+        # Overall pass additionally requires clean cleanup: a release error means the
+        # numbers are valid but this is not a complete harness PASS.
+        meta['pass'] = bool(numeric_pass and meta['harness_release_ok'])
         trace.emit('done', passed=meta['pass'])
         timer.cancel()
         trace.close()

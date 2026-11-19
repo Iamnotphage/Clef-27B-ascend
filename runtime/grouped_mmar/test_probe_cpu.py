@@ -135,6 +135,25 @@ class ReleaseOrderingTest(unittest.TestCase):
             run_probe.sync_and_release(boom, lambda i: calls.append(('release', i)), 7, True)
         self.assertEqual(calls, [])
 
+    def test_call_release_records_error_without_aborting(self):
+        self.assertEqual(run_probe.call_release(lambda i: 0, 7, True), (0, None))
+        self.assertEqual(run_probe.call_release(lambda i: 0, 0, True), (0, None))
+        self.assertEqual(run_probe.call_release(lambda i: 0, 7, False), (0, None))
+
+        def boom(_):
+            raise NotImplementedError('no fallback for zero-tensor op')
+
+        rc, error = run_probe.call_release(boom, 7, True)
+        self.assertIsNone(rc)
+        self.assertTrue(error.startswith('NotImplementedError: no fallback'))
+        # The numeric gate is api/sync/finite/reference and must not depend on release;
+        # overall pass additionally requires clean cleanup.
+        source = Path(run_probe.__file__).read_text()
+        numeric = source.split('numeric_pass = bool(', 1)[1].split('\n', 1)[0]
+        self.assertNotIn('release', numeric)
+        overall = source.split("meta['pass'] = bool(", 1)[1].split('\n', 1)[0]
+        self.assertIn('harness_release_ok', overall)
+
 
 class WatchdogTest(unittest.TestCase):
     def test_watchdog_exits_124_and_writes_marker(self):

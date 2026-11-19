@@ -81,14 +81,16 @@ sync 未返回时 watchdog `os._exit(124)`，不执行 release。
 - 恢复：branch `aa3e-noop`、tree aa3e、root 1301295、五 PID、health/info/text/image/env/joint/source/clients 全 true。
 - **结论**：官方样例与 v4r1 同一 stream 47/AICORE pending。H1/H2/H3/H11（绑定生命周期/线程/stream/comm 创建方式）不能解释挂起；`mc2_server` 在当前 chip:5 未加载是平台层首因线索，与公开文档“A3 不支持”一致。后续仅在 33/31 确认 `mc2_server` 支持矩阵/可启用后再考虑 A13 MatMulAllReduce 控制；否则 Grouped 路径记为**环境阻塞**，不再投入 H6/H7/H12。
 
-## A14 MatmulReduceScatter V1 控制（small v2 作废；v3 plan 8782537a 待 32 核后 GO）
+## A14 MatmulReduceScatter V1 控制（v3 liveness 通过；v4 取完整数值，待 31 执行）
 
 - 33 契约：上游头 `aclnn_matmul_reduce_scatter.h` SHA `6e49c20f…`（3,158 B），`GetWorkspaceSize(x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)`；bias 可空（A2/A3 非 0 bias 不支持，用 nullptr）；output `(m/rank_size,n)`；x1 `(m,k)`、x2 `(k,n)`；reduceOp 仅 sum、commTurn 0、streamMode 1；**m 必须 rank_size 整数倍**；样例 `test_aclnn_matmul_reduce_scatter.cpp` SHA `0996d6f4…`（8,873 B）。A3 ops-info 已注册 `MatmulReduceScatter`/`V2`；符号在 libopapi.so；是否依赖 mc2_server 未证。
 - 本包：binding 新增 `run_mrs(x,w,group,rank_size,flags)`（bias nullptr，keep/workspace/descriptor/release 同 grouped）；run_probe `A14`（默认 flags=KEEP_ALL，group/workspace/descriptors/tensors 全部保活到 sync 后 release，避免早释放混淆；M=128/K=256/N=512 小臂，`--rows 968 --k 8704 --n 5120` v4r1-like；output 484×5120）；window choices 增加 A14。
 - 待 31 提供本机 `include/aclnnop/aclnn_matmul_reduce_scatter.h` 本地副本/SHA 与 libccl_kernel/MatmulReduceScatter kernel 符号；编译前不得执行。
 - CLI：`--arm A14 --adapter <so> --rows 128 --k 256 --n 512 --seed 20261119`（先 plan 后 --execute）；rank 共享 out 父目录由 `prepare_out` 以 `exist_ok=True` 创建（rank0/1 子目录独立），避免双 rank mkdir 竞争；成功=A12 同门（rc0+两 rank sync+finite+maps+无错误行+完成标记）。
 - small v2（plan `18fdf185`、identity 1305145）在启动前因双 rank `out.mkdir(exist_ok=False)` 竞争中止：无 MC2 调用、无 507046，**不作 A14 判据**。修复 commit `d571641`/`f087746`，run_probe `b7f255cb`；CPU 45/45（14+9+22）。
-- small v3（待执行）：冻结 commit `f087746`、manifest `02fdd342`、binding `101660f8`、window `2202165e`、adapter `d181b15a`；identity 1306695/start 398875478；plan `8782537a`、out `probe-out-a14-small-v3`（全新）、M128/K256/N512、KEEP_ALL、240s、master_port 29531 预检空闲；31 stage SUMS 17/17（commit `9600e2a`）。plan `d88250e4` 为从 f087746 重建时被替换的过渡版。32 核 plan/identity/binary 后 GO。
+- small v3（已执行）：冻结 commit `f087746`、manifest `02fdd342`、binding `101660f8`、window `2202165e`、adapter `d181b15a`；identity 1306695/start 398875478；plan `8782537a`、out `probe-out-a14-small-v3`、M128/K256/N512、KEEP_ALL、240s、master_port 29531 预检空闲；31 stage SUMS 17/17（commit `9600e2a`）。plan `d88250e4` 为过渡版。
+- small v3 结果（32/33 核 PASS，31 commit `064d469`，SUMS 16/16 `88b823a4`）：两 rank prepare_rc0、executor 非空、workspace 17,170,432 B、launch_rc0、handler cleanup_rc0/sync_rc0、sync_ms **18.66017/8.16125**，**无 stream47、无 507046** → **MRS V1 A3 AICPU/KFC 路径可用**，被拒 `mc2_server` 非普遍阻断；Grouped 仍 507046/stream47，归因转 Grouped-specific/H12，依赖仍 supported_but_unproven。sync 后 `run_probe.py:353 release` 因零 Tensor 自定义算子无 fallback 抛 `NotImplementedError`，result.json 仅 stub、reduced/bit_equal 未落盘；恢复 aa3e-noop root 1308632/start 398926792、五 PID、四检/env/joint/source/clients 全 true。
+- v4 修复（run_probe-only，33/32/20 口径，binding/adapter 不变、`d181b15a` 复用、无需重编）：先算完 reduced/reference/bit_equal/finite/versions 并原子落盘 result，再 `try/except` release 并将 `release_rc`/`release_error`/`harness_release_ok` 写回；`numeric_pass` 只看 api/sync/finite/reference，`pass = numeric_pass and harness_release_ok`，即 release/cleanup 失败不抹数值但**不算完整 harness PASS**。新 run_probe `fdbfeb67`、`test_probe_cpu` `805c4315`，CPU 46/46（15+9+22）。31 待以 root 1308632 重建 identity/plan v4、fresh out `probe-out-a14-small-v4`、预检 29531 后重跑同小格。
 
 ## A12-H6 workspace 初值最小派生（已准备，未执行）
 
