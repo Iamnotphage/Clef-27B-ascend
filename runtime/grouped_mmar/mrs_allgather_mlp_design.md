@@ -374,8 +374,12 @@ not claimed here.
 proof). At large shape, while `tensor_error_stats` runs, at minimum four float32
 [967,5120] tensors are live (`out.float`, `ref.float`, `diff`, one `pow(2)`/sum
 temporary), 4 * 19,804,160 = 79,216,640 B = 75.55 MiB, plus BF16 `full` 9,912,320 B
-and BF16 `reference` 9,902,080 B = 18.90 MiB, a **lower bound of 94.44 MiB**; including
-retained `y` 4,956,160 B gives about 104 MiB. Small shape is above 1 MiB. The benchmark
+and BF16 `reference` 9,902,080 B = 18.90 MiB, a **lower bound of 94.44 MiB**.
+`y` (BF16 [484,5120], 4,956,160 B) is part of the per-call **retained** ledger, not
+the transient set. An alternative "simultaneously live tensor total" reading that adds
+it once is 99,031,040 + 4,956,160 = 103,987,200 B = **99.17 MiB**; this is **not
+additive** to the per-call retained sum (do not double count y). Small shape is above
+1 MiB. The benchmark
 must not append per-iteration outputs to a list; any such retention is additional.
 Freed temporaries may remain in the caching allocator, so the benchmark must record
 `memory_allocated` and `memory_reserved` (or call `empty_cache` outside the timed
