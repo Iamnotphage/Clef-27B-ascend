@@ -53,10 +53,6 @@ class WindowTest(unittest.TestCase):
         self.text = self.root / 'text.json'; self.text.write_text('{"q":"x"}')
         self.image = self.root / 'image.json'; self.image.write_text('{"q":"y"}')
         self.restore_output = self.root / 'restore'
-        self.restore_output.mkdir()
-        (self.restore_output / 'launch-manifest.json').write_text(json.dumps({'pid': 6262}))
-        (self.restore_output / 'joint-patch-record.json').write_text(
-            json.dumps({'branch': 'aa3e-noop'}))
         self.run_dir = self.root / 'run'
 
     def args(self, execute=False, extra=()):
@@ -68,7 +64,8 @@ class WindowTest(unittest.TestCase):
                 '--service-root', str(self.root), '--model-dir', str(self.root / 'model'),
                 '--restore-output', str(self.restore_output),
                 '--text-body', str(self.text), '--image-body', str(self.image),
-                '--stop-script', str(self.root / 'stop.py'), *extra] + (
+                '--stop-script', str(self.root / 'stop.py'),
+                '--arm', 'A0', '--adapter', '/x/clef_mmar_probe.so', *extra] + (
                     ['--execute'] if execute else [])
 
     def test_plan_only_validates_and_prints(self):
@@ -81,14 +78,22 @@ class WindowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             win.main(argv)
 
-    def full_success(self, branch='aa3e-noop'):
-        (self.restore_output / 'joint-patch-record.json').write_text(
-            json.dumps({'branch': branch}))
+    def full_success(self, branch='aa3e-noop', stop_rc=0):
         stopped = {'value': False}
+
+        def fake_restore(plan, run_dir, result):
+            self.restore_output.mkdir(parents=True, exist_ok=True)
+            (self.restore_output / 'launch-manifest.json').write_text(json.dumps(
+                {'pid': 6262, 'output_dir': str(self.restore_output.resolve())}))
+            (self.restore_output / 'joint-patch-record.json').write_text(
+                json.dumps({'branch': branch}))
+            result['restore'] = {'started': True, 'waited': False}
+            return None
 
         def fake_run(argv, timeout, log):
             if 'stop.py' in ' '.join(argv):
                 stopped['value'] = True
+                return {'argv': argv, 'rc': stop_rc, 'log': str(log)}
             return {'argv': argv, 'rc': 0, 'log': str(log)}
 
         def fake_scan():
@@ -100,6 +105,7 @@ class WindowTest(unittest.TestCase):
                 mock.patch.object(win, 'port_open', side_effect=[0, 111, 0]), \
                 mock.patch.object(win, 'pending_clients', return_value=[]), \
                 mock.patch.object(win, 'run', side_effect=fake_run), \
+                mock.patch.object(win, 'start_restore', side_effect=fake_restore), \
                 mock.patch.object(win, 'npu_evidence', return_value=[]), \
                 mock.patch.object(win, 'wait_health', return_value={'status': 'ready'}), \
                 mock.patch.object(win, 'env_evidence', return_value={'match': True}), \
@@ -110,6 +116,10 @@ class WindowTest(unittest.TestCase):
                 mock.patch.object(win, 'proc_identity', return_value={
                     'pid': 5252, 'ppid': 1, 'pgid': 5252, 'state': 'S',
                     'starttime': '1', 'boot_id': 'b', 'cmdline': ['child']}), \
+                mock.patch.object(win, 'maps_evidence', return_value=[
+                    {'path': '/x/libhccl.so', 'sha256': 'a', 'soname': 'libhccl.so'},
+                    {'path': '/x/libopapi_math.so', 'sha256': 'b', 'soname': 'libopapi_math.so'},
+                    {'path': '/x/clef_mmar_probe.so', 'sha256': 'c', 'soname': None}]), \
                 mock.patch.object(win.subprocess, 'Popen', return_value=FakeProcess()):
             return win.main(self.args(execute=True))
 
@@ -126,6 +136,34 @@ class WindowTest(unittest.TestCase):
         result = json.loads((self.run_dir / 'window.json').read_text())
         self.assertTrue(result['isolation_failed'])
         self.assertFalse(result['ok'])
+
+    def test_restore_output_must_be_fresh(self):
+        self.restore_output.mkdir()
+        with self.assertRaises(ValueError):
+            win.main(self.args())
+
+    def test_stop_failure_still_restores(self):
+        self.assertEqual(self.full_success(stop_rc=1), 1)
+        result = json.loads((self.run_dir / 'window.json').read_text())
+        self.assertIn('restore', result)
+        self.assertTrue(result['restore'].get('started'))
+        self.assertFalse(result['ok'])
+
+    def test_a12_evidence_rejects_error_lines(self):
+        out = self.root / 'a12.out'; err = self.root / 'a12.err'
+        out.write_text('rank 0 hcom name is x\n[INFO] mc2 costtime = 1, deviceid = 0\n'
+                       '[INFO] mc2 costtime = 2, deviceid = 1\n')
+        err.write_text('')
+        self.assertTrue(win.a12_evidence(out, err, 0)['ok'])
+        err.write_text('[ERROR] acl interface return err x:1, retcode: 507033\n')
+        self.assertFalse(win.a12_evidence(out, err, 0)['ok'])
+
+    def test_required_maps(self):
+        maps = [{'path': '/x/libhccl.so'}, {'path': '/x/libopapi_math.so'}]
+        self.assertTrue(win.required_map_ok('A12', None, maps))
+        self.assertFalse(win.required_map_ok('A12', None, maps[:1]))
+        self.assertTrue(win.required_map_ok('A0', '/x/clef_mmar_probe.so',
+                                            maps + [{'path': '/x/clef_mmar_probe.so'}]))
 
     def test_npu_rows_parser(self):
         text = ('Process id in container\n'

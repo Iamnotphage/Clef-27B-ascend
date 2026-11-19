@@ -61,14 +61,14 @@
       "bytes": 4228
     },
     "runtime/grouped_mmar/supervised_probe_window.py": {
-      "role": "full service window: preflight/d0_stop/child/official restore/checks",
-      "sha256": "e55fcc00d0b0de32bea0b9d4313fc63a6b057f0c37d1776423131b80988d5d41",
-      "bytes": 23070
+      "role": "full window: preflight/d0_stop/child Popen/own-PGID timeout/finally official restore (no wait)/A12 evidence/maps/checks",
+      "sha256": "80fd76f9be5c67617157b0fb9ba0ae38b2d1df52170c1c242b272835018f58d7",
+      "bytes": 28277
     },
     "runtime/grouped_mmar/test_supervised_window_cpu.py": {
-      "role": "CPU window control-flow tests (8)",
-      "sha256": "8edce087684df03c1d5fd3b450d3810d7b358f9b7535514082286782fcd378cb",
-      "bytes": 7471
+      "role": "CPU window control-flow tests (12)",
+      "sha256": "81523e6fbe76ab356dc574b901016937fdec57946fae6452e041c385feaf7400",
+      "bytes": 9577
     },
     "runtime/grouped_mmar/README.md": {
       "role": "first-package review, matrix, CLI, expected, recovery",
@@ -212,7 +212,7 @@
     "suites": {
       "test_probe_cpu.py": "11/11",
       "test_cell_supervisor_cpu.py": "8/8",
-      "test_supervised_window_cpu.py": "8/8"
+      "test_supervised_window_cpu.py": "12/12"
     },
     "no_torch_npu": true,
     "no_device": true
@@ -226,6 +226,13 @@
     "cli": "see README 5.2",
     "normal_branch": "aa3e-noop",
     "f810_to_fused": "isolation failure, rescue only",
-    "no_installer_guard_vendor_tree_writes": true
+    "no_installer_guard_vendor_tree_writes": true,
+    "p0_fixes": [
+      "restore starts via Popen and never waits; health+manifest decide",
+      "top-level finally restores after stop on all paths; alive service -> restore skipped",
+      "A12 requires rc0 + no [ERROR]/retcode lines + two mc2 costtime markers",
+      "child PGID maps with SHA/SONAME (A12 needs libhccl+opapi_math/transformer; native needs adapter)",
+      "restore_output fresh; manifest output_dir match + mtime after stop"
+    ]
   }
 }
