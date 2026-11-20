@@ -23,6 +23,12 @@ AA3E = 'aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503'
 CAPACITIES = (16384, 131072, 262144)
 GIB = 1 << 30
 ADMISSION_BYTES = 2 * GIB + (227549 - 131072) * 5120 * 2 + GIB // 2
+REPEAT_LABELS = ('warmup', 'eval-1', 'eval-2', 'eval-3')
+REPEAT_ADMISSION = {
+    'mode': 'validated-adopted-profile', 'capacity': 262144, 'gpu_memory_utilization': 0.85,
+    'analysis_sha256': '8ed479aabf199725a167dc0ea0a61d797c4a50c2a00ee2e1c3740fa32150576f',
+    'min_free_lower_bytes': [5497558138, 6184752906],
+}
 REQUEST_FIELDS = ('id', 'record_index', 'image_count', 'option_count', 'image_sha256',
                   'image_order', 'request_structural_sha256', 'request_wire_sha256')
 
@@ -220,11 +226,20 @@ def startup_record(text, cap):
 
 def verify_startup(frozen, plan, phase, manifest, identity, text):
     cap, gate = phase['cache_cli'], phase['startup_gate']
-    row = startup_record(text, cap)
+    native = cap == 0
+    if native:
+        require(plan.get('evaluation_mode') == 'warmup-three' and gate.get('cache_mode') == 'native',
+                'native baseline requires explicit repeat profile')
+        require('Clef encoder cache candidate initialized:' not in text, 'native wrapper record drift')
+        row = None
+    else:
+        row = startup_record(text, cap)
     for flag in ('enable_mm_processor_stats', 'enable_logging_iteration_details'):
         require(flag + '=False' in text, f'missing disabled {flag} evidence')
         require(not re.search(flag + r'\s*[=:]\s*True', text), f'{flag} enabled')
-    lines = [line for line in text.splitlines() if 'Clef encoder cache candidate initialized: ' in line]
+    marker = 'Initializing a V1 LLM engine' if native else 'Clef encoder cache candidate initialized: '
+    lines = [line for line in text.splitlines() if marker in line]
+    require(len(lines) == 1, 'missing/duplicate startup record')
     engine = re.search(r'EngineCore[^)]*pid=(\d+)', lines[0])
     require(engine, 'constructor EngineCore PID missing')
     engine_pid = int(engine.group(1))
@@ -243,7 +258,7 @@ def verify_startup(frozen, plan, phase, manifest, identity, text):
     require(all(type(value) in (int, float) and math.isfinite(value) and 0 < value <= 1
                 for value in utilization) and utilization[0] == utilization[1] == utilization[2],
             'plan/argv/effective gpu memory utilization drift')
-    for key, value in {'--scheduler-cls': gate['scheduler_cls'], '--runner': 'pooling',
+    for key, value in {'--runner': 'pooling',
                        '--dtype': 'bfloat16', '--max-model-len': '16384',
                        '--max-num-batched-tokens': '16384', '--max-num-seqs': '1',
                        '--tensor-parallel-size': '2'}.items():
@@ -256,19 +271,43 @@ def verify_startup(frozen, plan, phase, manifest, identity, text):
             {'shortest_edge': 65536, 'longest_edge': 1048576}, 'processor image dimensions drift')
     require('--enforce-eager' in argv and '--enable-mm-processor-stats' not in argv,
             'eager/timing drift')
-    require(frozen.sha256(gate['module_path']) == gate['module_sha256'] and
-            manifest['effective']['encoder_cache_scheduler_sha256'] == gate['module_sha256'],
-            'scheduler module SHA drift')
     live = frozen.read_root_env(identity['pid'])
     path = live.get('PYTHONPATH', b'').decode().split(':')
-    require(path[0] == str(Path(gate['module_path']).parent), 'PYTHONPATH module resolution drift')
-    require(live.get('CLEF_ENCODER_CACHE_TOKENS') == str(cap).encode(), 'cache environment drift')
+    if native:
+        require(not any(arg.split('=', 1)[0] == '--scheduler-cls' for arg in argv),
+                'native custom scheduler drift')
+        require(all(key not in manifest['effective'] for key in
+                    ('encoder_cache_tokens', 'encoder_cache_scheduler_sha256')),
+                'native effective extension drift')
+        require('CLEF_ENCODER_CACHE_TOKENS' not in live and
+                all(key not in manifest['service_environment'] for key in
+                    ('CLEF_ENCODER_CACHE_TOKENS', 'PYTHONPATH')), 'native extension environment drift')
+    else:
+        require(option(argv, '--scheduler-cls') == gate['scheduler_cls'], 'service scheduler drift')
+        require(frozen.sha256(gate['module_path']) == gate['module_sha256'] and
+                manifest['effective']['encoder_cache_scheduler_sha256'] == gate['module_sha256'],
+                'scheduler module SHA drift')
+        require(path[0] == str(Path(gate['module_path']).parent), 'PYTHONPATH module resolution drift')
+        require(live.get('CLEF_ENCODER_CACHE_TOKENS') == str(cap).encode(), 'cache environment drift')
+    if plan.get('evaluation_mode') == 'warmup-three':
+        for key, value in {'max_model_len': 16384, 'max_num_batched_tokens': 16384,
+                           'max_num_seqs': 1, 'tensor_parallel_size': 2}.items():
+            require(manifest['effective'].get(key) == value, f'effective {key} drift')
+        require(json.loads(manifest['effective']['limit_mm_per_prompt']) == {'image': 16, 'video': 0} and
+                manifest['effective']['mm_processor_kwargs'] == option(argv, '--mm-processor-kwargs'),
+                'effective image/processor drift')
     require(frozen.joint_env(live)['ok'], 'joint environment drift')
     require(frozen.sha256(plan['cleanup_restore']['source_target']) == AA3E, 'aa3e source drift')
     service_dir = Path(manifest['output_dir'])
     require(frozen.read_json(service_dir / 'joint-patch-record.json').get('branch') == 'aa3e-noop',
             'joint patch branch drift')
-    return {'constructor': row, 'module_sha256': gate['module_sha256'], 'pythonpath': path,
+    return {'constructor': row, 'cache_mode': 'native' if native else 'wrapper',
+            'module_sha256': None if native else gate['module_sha256'], 'pythonpath': path,
+            'native_cache': {'cache_capacity': None, 'observed_class': None, 'compute_effective': None,
+                             'source_expected_class': 'vllm_ascend.patch.platform.patch_balance_schedule.BalanceScheduler',
+                             'source_config_compute_budget': 16384, 'source_config_cache_budget': 16384,
+                             'source_effective_budget_rule': 'max(16384, singleMMfloor) for each budget',
+                             'semantics': 'extension off; native encoder cache remains active'} if native else None,
             'identity': identity, 'engine_identity': table[engine_pid], 'manifest': manifest}
 
 
@@ -475,8 +514,11 @@ def check_pins(frozen, plan):
 
 def planned_arm_order(plan):
     order = plan.get('arm_order', list(CAPACITIES))
+    mode = plan.get('evaluation_mode', 'cold-natural')
+    require(mode in ('cold-natural', 'warmup-three'), 'unsupported evaluation_mode')
+    allowed = ((0, 262144),) if mode == 'warmup-three' else (CAPACITIES, (131072, 16384), (131072, 262144))
     require(isinstance(order, list) and all(type(cap) is int for cap in order) and
-            tuple(order) in (CAPACITIES, (131072, 16384), (131072, 262144)), 'unsupported arm_order')
+            tuple(order) in allowed, 'unsupported arm_order')
     phases = plan['phases']
     require(all(type(p['cache_cli']) is int for p in phases) and
             tuple(p['cache_cli'] for p in phases) == tuple(order), 'capacity/order mismatch')
@@ -487,6 +529,22 @@ def planned_arm_order(plan):
 def validate_plan(plan):
     require(plan['schema'] == 'clef-vision-cache-plan/2', 'plan schema mismatch')
     planned_arm_order(plan)
+    repeat = plan.get('evaluation_mode') == 'warmup-three'
+    if repeat:
+        require('quality_gate' in plan, 'repeat quality gate required')
+        require(plan['memory_guard'].get('repeat_admission') == REPEAT_ADMISSION and
+                plan['memory_guard'].get('runtime_min_free_bytes') == 2 * GIB,
+                'repeat adopted-profile admission drift')
+        outputs = [trial['output_dir'] for phase in plan['phases'] for trial in phase['passes']]
+        require(len(outputs) == len(set(outputs)), 'repeat output directories must be distinct')
+        for key, value in {'initial_stop': 120, 'initial_settle_total': 300,
+                           'startup_each_arm': 300, 'each_400_client_outer': 300, 'each_score': 60,
+                           'active_each_arm': 1740, 'cleanup_each_arm': 120, 'settle_each_arm_total': 300,
+                           'each_arm_including_cleanup': 2160, 'all_arms_child_total_including_cleanup': 4320,
+                           'final_restore_total_reserved': 900, 'outer_recording_margin': 120,
+                           'overall_outer': 5760, 'unused_removed_third_arm_budget': 0}.items():
+            require(type(plan['budgets_s'].get(key)) is int and plan['budgets_s'][key] == value,
+                    f'repeat budget {key} drift')
     if 'quality_gate' in plan:
         quality = plan['quality_gate']
         require(quality == {'baseline_correct': 219, 'total': 400, 'max_drop_pp': 2, 'min_correct': 211} and
@@ -499,8 +557,26 @@ def validate_plan(plan):
     for phase in plan['phases']:
         require(phase['ready']['method'] == 'GET' and phase['ready']['image_warmup'] == 0 and
                 phase['ready']['text_warmup'] == 0, 'ready policy drift')
-        require([p['label'] for p in phase['passes']] == ['cold-first', 'natural-second'], 'pass order drift')
+        labels = list(REPEAT_LABELS) if repeat else ['cold-first', 'natural-second']
+        require([p['label'] for p in phase['passes']] == labels, 'pass order drift')
+        if repeat:
+            cap = phase['cache_cli']
+            require(phase['startup_timeout_s'] == 300 and phase['max_arm_active_s'] == 1740 and
+                    phase['cleanup_timeout_s'] == 120 and phase['settle_timeout_s'] == 300 and
+                    phase['max_arm_with_cleanup_s'] == 2160, 'repeat arm budget drift')
+            require(phase['startup_gate'].get('cache_mode') == ('native' if cap == 0 else 'wrapper'),
+                    'repeat cache mode drift')
+            require(option(phase['service_argv'], '--encoder-cache-tokens') == str(cap) and
+                    option(phase['service_argv'], '--gpu-memory-utilization') == ('0.9' if cap == 0 else '0.85'),
+                    'repeat service profile drift')
         for trial in phase['passes']:
+            if repeat:
+                require(trial['expected_count'] == 400 and
+                        trial['outer_wall_deadline_s'] == 300 and trial['score_timeout_s'] == 60 and
+                        option(trial['argv'], '--output-dir') == trial['output_dir'] and
+                        option(trial['score_argv'], '--run-dir') == trial['output_dir'] and
+                        option(trial['score_argv'], '--output') == str(Path(trial['output_dir']) / 'erqa-score.json'),
+                        'repeat output/count drift')
             require(option(trial['argv'], '--retries') == '1' and
                     option(trial['argv'], '--scope') == 'full' and '--resume' not in trial['argv'] and
                     '--limit' not in trial['argv'] and '--verify-requests' in trial['score_argv'],
@@ -529,13 +605,35 @@ def monitor(frozen, arm, service, sampler, identity, service_dir, sampling_start
     require(not re.search(r'out of memory|OutOfMemoryError|memory allocation fail', text, re.I), 'service OOM')
     if (arm.directory / 'ready.json').exists():
         ready = frozen.read_json(arm.directory / 'ready.json')
-        startup_record(text, ready['constructor']['cache_requested'])
+        if ready.get('cache_mode') == 'native':
+            require('Clef encoder cache candidate initialized:' not in text, 'native wrapper record drift')
+        else:
+            startup_record(text, ready['constructor']['cache_requested'])
         require(all(frozen.same_process(row, frozen.proc_identity(row['pid']))
                     for row in [ready['engine_identity'], *ready['workers'].values()]), 'engine/TP worker restarted')
     samples = json_lines(arm.directory / 'hbm.jsonl', complete=False)
     if samples or time.monotonic() - sampling_started >= 5:
         hbm_gate(samples, time.monotonic())
     return samples
+
+
+def summarize_repeats(frozen, phase):
+    require([trial['label'] for trial in phase['passes']] == list(REPEAT_LABELS), 'repeat summary order drift')
+    rows = []
+    for trial in phase['passes']:
+        summary = frozen.read_json(Path(trial['output_dir']) / 'summary.json')
+        metrics = {'mean_ms': summary['latency_ms']['mean'], 'p95_ms': summary['latency_ms']['p95'],
+                   'wall_s': summary['run']['wall_seconds']}
+        require(all(type(value) in (int, float) and math.isfinite(value) and value > 0
+                    for value in metrics.values()), 'repeat summary invalid metric')
+        rows.append({'label': trial['label'], 'output_dir': trial['output_dir'],
+                     'correct': summary['accuracy']['correct'], **metrics})
+    aggregate = {}
+    for key in ('mean_ms', 'p95_ms', 'wall_s'):
+        values = sorted(row[key] for row in rows[1:])
+        aggregate[key] = {'median': values[1], 'range': [values[0], values[-1]]}
+    return {'warmup': rows[0], 'measurements': rows[1:], 'aggregate': aggregate,
+            'aggregation': 'median and [min,max] of three per-pass metrics; warmup excluded'}
 
 
 def run_phase(frozen, plan, phase, arm, expected, reference, active_deadline, frozen_path):
@@ -611,6 +709,8 @@ def run_phase(frozen, plan, phase, arm, expected, reference, active_deadline, fr
         reference = verify_predictions(frozen, output, expected, reference, plan.get('quality_gate'))
         (output / 'expected-inputs.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in expected))
         require(frozen.same_process(identity, frozen.proc_identity(identity['pid'])), 'service lifetime drift')
+    if plan.get('evaluation_mode') == 'warmup-three':
+        frozen.write_json(arm.directory / 'evaluation-summary.json', summarize_repeats(frozen, phase))
     samples = monitor(frozen, arm, service, sampler, identity, service_dir, sampling_started, active_deadline)
     return reference, hbm_gate(samples, time.monotonic())
 
@@ -713,7 +813,7 @@ def execute(frozen, plan, saved, expected, frozen_path):
         minima_by_capacity = {}
         for phase in plan['phases']:
             cap = phase['cache_cli']
-            if cap == 262144:
+            if cap == 262144 and plan.get('evaluation_mode') != 'warmup-three':
                 require(131072 in minima_by_capacity, '131072 evidence required before 262144')
                 prior_min = minima_by_capacity[131072]
                 if min(prior_min) < ADMISSION_BYTES:
@@ -735,12 +835,23 @@ def execute(frozen, plan, saved, expected, frozen_path):
                                                 frozen_path)
                 minima_by_capacity[cap] = arm_min
                 record = {'capacity': cap, 'ok': True, 'min_free_lower_bytes': arm_min}
+                if plan.get('evaluation_mode') == 'warmup-three':
+                    record['evaluation'] = frozen.read_json(directory / 'evaluation-summary.json')
                 result['arms'].append(record)
                 result['by_capacity'][str(cap)] = record
             finally:
                 clean = arm.close(18143)
             require(clean, 'arm cleanup/settle failed')
             check_pins(frozen, plan)
+        if plan.get('evaluation_mode') == 'warmup-three':
+            baseline = result['by_capacity']['0']['evaluation']['aggregate']
+            adopted = result['by_capacity']['262144']['evaluation']['aggregate']
+            result['comparison'] = {
+                'baseline_capacity': 0, 'adopted_capacity': 262144,
+                'median_delta_pct': {key: (adopted[key]['median'] / baseline[key]['median'] - 1) * 100
+                                     for key in ('mean_ms', 'p95_ms', 'wall_s')},
+                'scope': 'two complete profiles in fixed serial order; warmup excluded',
+            }
         result['experiment_ok'] = True
     except BaseException as exc:
         result['error'] = f'{type(exc).__name__}: {exc}'
