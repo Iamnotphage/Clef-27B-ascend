@@ -5,6 +5,7 @@ real foreground fixture, which starts a temporary HTTP + manifest service and
 verifies the window returns while that service is still alive.  The window's
 recovery gate, source checks, branch gate and cleanup are real.
 """
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -87,6 +88,35 @@ class WindowTest(unittest.TestCase):
     def test_plan_only_validates_and_prints(self):
         self.assertEqual(win.main(self.args()), 0)
         self.assertFalse(self.run_dir.exists())
+
+    def test_settle_timeout_plan_default_and_explicit(self):
+        import contextlib
+        import io
+        for extra, expected in (((), 30.0), (('--settle-timeout', '300'), 300.0)):
+            with self.subTest(expected=expected):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(win.main(self.args(extra=extra)), 0)
+                self.assertEqual(json.loads(output.getvalue())['settle_timeout'], expected)
+                self.assertFalse(self.run_dir.exists())
+
+    def test_settle_timeout_invalid_before_stop_or_child(self):
+        import contextlib
+        import io
+        for value in ('nan', 'NaN', 'inf', '+inf', '-inf', '1e309',
+                      '0', '-0', '-1', 'bad', ''):
+            with self.subTest(value=value), \
+                    contextlib.redirect_stderr(io.StringIO()), \
+                    mock.patch.object(win, 'execute') as execute, \
+                    mock.patch.object(win, 'run') as stop, \
+                    mock.patch.object(win.subprocess, 'Popen') as child:
+                with self.assertRaises(SystemExit) as error:
+                    win.main(self.args(execute=True, extra=('--settle-timeout=' + value,)))
+                self.assertEqual(error.exception.code, 2)
+                execute.assert_not_called()
+                stop.assert_not_called()
+                child.assert_not_called()
+                self.assertFalse(self.run_dir.exists())
 
     def test_a13_arm_builds_torchrun_child(self):
         import contextlib
@@ -269,7 +299,8 @@ class WindowTest(unittest.TestCase):
             self.returncode = 0
             return 0
 
-    def timeout_settle_case(self, clear_rounds=2, persistent=False):
+    def timeout_settle_case(self, clear_rounds=2, persistent=False, settle_timeout=None,
+                           settle_override=None):
         ranks = [
             {'pid': 5253, 'ppid': 5252, 'pgid': 5253, 'sid': 5253,
              'starttime': '2', 'boot_id': 'b', 'cmdline': ['rank0']},
@@ -308,20 +339,23 @@ class WindowTest(unittest.TestCase):
                 self.t += seconds
 
         clock = Clock()
-        tables = [alive] * 100 if persistent else [alive] * clear_rounds + [{}, {}]
+        tables = [alive] * clear_rounds + [{}, {}]
         seq = iter(tables)
         real_settle = win.settle_attributed
 
         def table_reader():
+            if persistent:
+                return alive
             try:
                 return next(seq)
             except StopIteration:
                 return {}
 
         def fake_settle(entries, child_pid, **kwargs):
+            if settle_override is not None:
+                return settle_override
             return real_settle(entries, child_pid, clock=clock.monotonic,
-                               sleep=clock.sleep, table_reader=table_reader,
-                               deadline=2.0 if persistent else 30.0, **kwargs)
+                               sleep=clock.sleep, table_reader=table_reader, **kwargs)
 
         started = []
         stopped = {'value': False}
@@ -347,26 +381,41 @@ class WindowTest(unittest.TestCase):
             return {'pid': pid, 'ppid': 1, 'pgid': pid, 'state': 'S',
                     'starttime': '2', 'boot_id': 'b', 'cmdline': ['child']}
 
-        with mock.patch.object(win, 'DescendantRegistry', return_value=FakeRegistry(ranks)), \
-                mock.patch.object(win, '_scan_direct', return_value=alive), \
-                mock.patch.object(win, '_read_proc', side_effect=lambda pid: alive.get(pid)), \
-                mock.patch.object(win, 'settle_attributed', side_effect=fake_settle), \
-                mock.patch.object(win, 'scan', side_effect=fake_scan), \
-                mock.patch.object(win, 'port_open', side_effect=[0, 111, 111]), \
-                mock.patch.object(win, 'pending_clients', return_value=[]), \
-                mock.patch.object(win, 'run', side_effect=fake_run), \
-                mock.patch.object(win, 'start_restore', side_effect=fake_restore), \
-                mock.patch.object(win, 'npu_evidence', return_value=[]), \
-                mock.patch.object(win, 'wait_health', return_value={'status': 'ready'}), \
-                mock.patch.object(win, 'env_evidence', return_value={'match': True}), \
-                mock.patch.object(win, 'read_root_env', return_value={}), \
-                mock.patch.object(win, 'joint_env', return_value={'ok': True}), \
-                mock.patch.object(win, 'http_json', return_value={'status': 'ready', 'config': 's1'}), \
-                mock.patch.object(win, 'post_json', return_value=(200, {'ok': True})), \
-                mock.patch.object(win, 'proc_identity', side_effect=fake_proc), \
-                mock.patch.object(win, 'maps_evidence', return_value=maps()), \
-                mock.patch.object(win.subprocess, 'Popen', return_value=self.TimeoutProcess()):
-            code = win.main(self.args(execute=True))
+        with ExitStack() as stack:
+            def patch(target, name, **kwargs):
+                return stack.enter_context(mock.patch.object(target, name, **kwargs))
+
+            patch(win, 'DescendantRegistry', return_value=FakeRegistry(ranks))
+            patch(win, '_scan_direct', return_value=alive)
+            patch(win, '_read_proc', side_effect=lambda pid: alive.get(pid))
+            patch(win, '_signal_targets')
+            patch(win.time, 'sleep')
+            settle = patch(win, 'settle_attributed', side_effect=fake_settle)
+            begin = patch(win, 'begin_restore', wraps=win.begin_restore)
+            patch(win, 'scan', side_effect=fake_scan)
+            patch(win, 'port_open', side_effect=[0, 111, 111])
+            patch(win, 'pending_clients', return_value=[])
+            patch(win, 'run', side_effect=fake_run)
+            patch(win, 'start_restore', side_effect=fake_restore)
+            patch(win, 'npu_evidence', return_value=[])
+            patch(win, 'wait_health', return_value={'status': 'ready'})
+            patch(win, 'env_evidence', return_value={'match': True})
+            patch(win, 'read_root_env', return_value={})
+            patch(win, 'joint_env', return_value={'ok': True})
+            patch(win, 'http_json', return_value={'status': 'ready', 'config': 's1'})
+            patch(win, 'post_json', return_value=(200, {'ok': True}))
+            patch(win, 'proc_identity', side_effect=fake_proc)
+            patch(win, 'maps_evidence', return_value=maps())
+            patch(win.subprocess, 'Popen', return_value=self.TimeoutProcess())
+            if persistent and settle_timeout is None:
+                settle_timeout = 2.0
+            extra = () if settle_timeout is None else ('--settle-timeout', str(settle_timeout))
+            code = win.main(self.args(execute=True, extra=extra))
+            settle.assert_called_once()
+            self.assertEqual(settle.call_args.kwargs['deadline'],
+                             30.0 if settle_timeout is None else settle_timeout)
+            self.assertEqual(begin.call_count, len(started))
+            self.assertLessEqual(begin.call_count, 1)
         result = json.loads((self.run_dir / 'window.json').read_text())
         return code, result, started
 
@@ -379,6 +428,35 @@ class WindowTest(unittest.TestCase):
         self.assertEqual(result['recovery_gate']['reason'], 'restore')
         self.assertEqual(len(started), 1)
         self.assertFalse(result['ok'])  # timeout fact is preserved
+        self.assertEqual(child['settle']['deadline'], 30.0)
+        self.assertEqual(child['settle']['min_empty'], 2)
+        self.assertEqual(child['settle']['empty_rounds'], 2)
+
+    def test_settle_timeout_300_reaches_real_settle_and_restores_once(self):
+        code, result, started = self.timeout_settle_case(clear_rounds=520, settle_timeout=300)
+        settle = result['steps']['child']['settle']
+        self.assertEqual(result['plan']['settle_timeout'], 300.0)
+        self.assertEqual(settle['deadline'], 300.0)
+        self.assertEqual(settle['elapsed'], 260.5)
+        self.assertEqual(settle['elapsed_ns'], 260_500_000_000)
+        self.assertEqual(settle['empty_rounds'], 2)
+        self.assertTrue(settle['clean'])
+        self.assertFalse(settle['deadline_hit'])
+        self.assertEqual(len(started), 1)
+        self.assertEqual(code, 1)  # child timeout remains a failed probe
+
+    def test_settle_budget_not_reset_across_exception_and_finally(self):
+        code, result, started = self.timeout_settle_case(persistent=True, settle_timeout=300)
+        settle = result['steps']['child']['settle']
+        self.assertEqual(settle['deadline'], 300.0)
+        self.assertEqual(settle['elapsed'], 300.0)
+        self.assertEqual(settle['elapsed_ns'], 300_000_000_000)
+        self.assertEqual(len(settle['rounds']), 601)
+        self.assertTrue(settle['deadline_hit'])
+        self.assertFalse(settle['clean'])
+        self.assertIn('child group survivors', result['steps']['child']['error'])
+        self.assertEqual(started, [])
+        self.assertEqual(code, 1)
 
     def test_timeout_persistent_residual_is_bounded_and_blocks_restore(self):
         code, result, started = self.timeout_settle_case(persistent=True)
@@ -386,9 +464,54 @@ class WindowTest(unittest.TestCase):
         self.assertTrue(child['settle']['deadline_hit'])
         self.assertGreaterEqual(len(child['settle']['rounds']), 2)
         self.assertLessEqual(child['settle']['rounds'][-1]['t'], 2.0)
-        self.assertEqual(result['recovery_gate']['reason'], 'blocked_probe_residual')
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_settle_deadline')
         self.assertEqual(started, [])
         self.assertFalse(result['ok'])
+
+    def test_settle_unclean_empty_result_blocks_restore(self):
+        outcome = {'clean': False, 'deadline_hit': False, 'residual': [],
+                   'table': {}, 'states': {}, 'rounds': [{'t': 0, 'residual': []}],
+                   'empty_rounds': 1, 'deadline': 30.0, 'elapsed': 0.0, 'min_empty': 2}
+        code, result, started = self.timeout_settle_case(settle_override=outcome)
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_settle_unclean')
+        self.assertEqual(result['recovery_gate']['settle'], outcome)
+        self.assertEqual(result['restore']['settle'], outcome)
+        self.assertEqual(started, [])
+        self.assertEqual(code, 1)
+
+    def test_settle_deadline_even_with_clean_empty_result_blocks_restore(self):
+        outcome = {'clean': True, 'deadline_hit': True, 'residual': [],
+                   'table': {}, 'states': {}, 'rounds': [{'t': 30, 'residual': []}],
+                   'empty_rounds': 2, 'deadline': 30.0, 'elapsed': 30.0, 'min_empty': 2}
+        code, result, started = self.timeout_settle_case(settle_override=outcome)
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_settle_deadline')
+        self.assertEqual(result['steps']['child']['settle'], outcome)
+        self.assertEqual(started, [])
+        self.assertEqual(code, 1)
+
+    def test_settle_one_empty_at_deadline_blocks_restore(self):
+        code, result, started = self.timeout_settle_case(clear_rounds=2, settle_timeout=1)
+        settle = result['steps']['child']['settle']
+        self.assertEqual(settle['empty_rounds'], 1)
+        self.assertEqual(settle['residual'], [])
+        self.assertEqual(settle['elapsed'], 1.0)
+        self.assertTrue(settle['deadline_hit'])
+        self.assertFalse(settle['clean'])
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_settle_deadline')
+        self.assertEqual(started, [])
+        self.assertEqual(code, 1)
+
+    def test_settle_second_empty_on_deadline_blocks_restore(self):
+        code, result, started = self.timeout_settle_case(clear_rounds=0, settle_timeout=0.5)
+        settle = result['steps']['child']['settle']
+        self.assertEqual(settle['empty_rounds'], 2)
+        self.assertEqual(settle['residual'], [])
+        self.assertEqual(settle['elapsed_ns'], 500_000_000)
+        self.assertFalse(settle['clean'])
+        self.assertTrue(settle['deadline_hit'])
+        self.assertEqual(result['recovery_gate']['reason'], 'blocked_settle_deadline')
+        self.assertEqual(started, [])
+        self.assertEqual(code, 1)
 
     def test_f810_to_fused_marks_isolation_failure(self):
         self.assertEqual(self.full_success('f810->fused'), 1)
@@ -685,6 +808,41 @@ class SettleAttributedTest(unittest.TestCase):
         self.assertEqual(out['rounds'][0]['states']['5253']['starttime'], '10')
         self.assertEqual(out['residual'], [])
         self.assertEqual(reader.calls['n'], 4)
+        self.assertEqual(out['elapsed'], 3.0)
+
+    def test_second_empty_at_or_after_deadline_is_not_clean(self):
+        for read_delay in (0.0, 0.25):
+            with self.subTest(read_delay=read_delay):
+                clock = self.Clock()
+                reads = []
+
+                def reader():
+                    if reads:
+                        clock.t += read_delay
+                    reads.append(clock.t)
+                    return {}
+
+                out = win.settle_attributed([], 5252, clock=clock.monotonic,
+                                           sleep=clock.sleep, table_reader=reader,
+                                           deadline=0.5, interval=0.5)
+                self.assertEqual(out['empty_rounds'], 2)
+                self.assertEqual(out['residual'], [])
+                self.assertEqual(out['elapsed'], 0.5 + read_delay)
+                self.assertTrue(out['deadline_hit'])
+                self.assertFalse(out['clean'])
+                self.assertEqual(len(reads), 2)
+
+    def test_short_budget_caps_sleep_and_still_requires_two_empty_rounds(self):
+        clock = self.Clock()
+        reader = self.seq([{}, {}])
+        out = win.settle_attributed([], 5252, clock=clock.monotonic,
+                                    sleep=clock.sleep, table_reader=reader,
+                                    deadline=0.1)
+        self.assertEqual(out['elapsed'], 0.1)
+        self.assertEqual(out['min_empty'], 2)
+        self.assertEqual(out['empty_rounds'], 2)
+        self.assertTrue(out['deadline_hit'])
+        self.assertFalse(out['clean'])
 
     def test_persistent_non_z_hits_deadline_and_fails_closed(self):
         clock = self.Clock()

@@ -17,6 +17,7 @@ import argparse
 import ctypes
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -39,6 +40,16 @@ RUNNER_NAMES = {'final_acceptance.py', 'bench_ready.py', 'run_cell.py',
                 'joint_fused_attention_window.py', 'joint_fused_service_ab.py',
                 'joint_fused_source_control.py'}
 FIELDS = ('pid', 'starttime', 'boot_id', 'pgid', 'sid', 'ppid')
+
+
+def positive_finite_seconds(value):
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError) as exc:
+        raise argparse.ArgumentTypeError('must be positive finite seconds') from exc
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise argparse.ArgumentTypeError('must be positive finite seconds')
+    return seconds
 
 
 def sha256(path):
@@ -452,20 +463,23 @@ def settle_attributed(entries, child_pid, *, deadline=30.0, interval=0.5,
             else:
                 states[str(pid)] = {'state': row.get('state') or 'unknown',
                                     'starttime': row.get('starttime')}
-        rounds.append({'t': clock() - started, 'residual': residual,
+        elapsed = clock() - started
+        rounds.append({'t': elapsed, 'residual': residual,
                        'states': states, 'table_size': len(table)})
         empties = empties + 1 if not residual else 0
-        if empties >= min_empty:
+        if elapsed >= deadline or empties >= min_empty:
             break
-        if clock() - started >= deadline:
-            break
-        sleep_fn(interval)
-    clean = empties >= min_empty
+        sleep_fn(min(interval, deadline - elapsed))
+    elapsed = clock() - started
+    deadline_hit = elapsed >= deadline
+    clean = empties >= min_empty and not deadline_hit
     return {'clean': clean,
-            'deadline_hit': bool(not clean and clock() - started >= deadline),
+            'deadline_hit': deadline_hit,
             'residual': residual, 'states': rounds[-1]['states'] if rounds else {},
             'rounds': rounds, 'empty_rounds': empties, 'table': table,
-            'deadline': deadline, 'interval': interval, 'min_empty': min_empty}
+            'deadline': deadline, 'elapsed': elapsed,
+            'elapsed_ns': int(elapsed * 1_000_000_000),
+            'interval': interval, 'min_empty': min_empty}
 
 
 def same_identity(saved, live):
@@ -652,6 +666,7 @@ def build_plan(a):
             '--api-pid', str(identity['pid']), '--saved-identity', str(a.root_identity),
             '--out', str(Path(a.run_dir) / 'stop.json')],
             'child_argv': child, 'child_timeout': a.child_timeout,
+            'settle_timeout': a.settle_timeout,
             'restore_argv': build_restore_argv(a), 'restore_output': str(a.restore_output),
             'source_target': str(a.source_target), 'expected_source_sha256': a.expected_source_sha,
             'port': a.port, 'clean_expect': str(a.clean_env_expect),
@@ -941,7 +956,8 @@ def execute(a, plan):
         identity = child_state.get('identity')
         if identity is not None:
             entries.append(identity)
-        return settle_attributed(entries, child.pid, reap=subreaper)
+        return settle_attributed(entries, child.pid, deadline=a.settle_timeout,
+                                 reap=subreaper)
 
     original_subreaper = get_subreaper()
     result['subreaper_original'] = original_subreaper
@@ -1098,6 +1114,8 @@ def execute(a, plan):
                 pass
         settle_outcome = settle_outcome or settle_after_cleanup(
             child_state.get('cleanup_final') or child_state.get('cleanup'))
+        if settle_outcome is not None:
+            child_state['settle'] = settle_outcome
         source_after = sha256(a.source_target)
         result['source_sha256_after_child'] = source_after
         source_ok = source_after == a.expected_source_sha
@@ -1112,6 +1130,13 @@ def execute(a, plan):
             context = {'cleanup_blocked': True,
                        'attributed_survivors': attributed_survivors(
                            registry, child.pid if child is not None else None)}
+            result['recovery_gate'] = {'allow': False, 'reason': reason, **context}
+        elif settle_outcome is not None and (
+                settle_outcome.get('clean') is not True or
+                settle_outcome.get('deadline_hit') is not False):
+            reason = ('blocked_settle_deadline' if settle_outcome.get('deadline_hit')
+                      else 'blocked_settle_unclean')
+            context = {'settle': settle_outcome}
             result['recovery_gate'] = {'allow': False, 'reason': reason, **context}
         elif stop_called:
             needs_restore, reason, context = recovery_gate(
@@ -1210,6 +1235,8 @@ def main(argv=None):
     p.add_argument('--master-port', type=int, default=29531)
     p.add_argument('--comm-timeout', type=float, default=90.0)
     p.add_argument('--child-timeout', type=float, default=240.0)
+    p.add_argument('--settle-timeout', type=positive_finite_seconds, default=30.0,
+                   help='total post-cleanup settle budget in seconds (default: 30)')
     p.add_argument('--stop-timeout', type=float, default=120.0)
     p.add_argument('--restore-timeout', type=float, default=900.0)
     p.add_argument('--port', type=int, default=18143)
