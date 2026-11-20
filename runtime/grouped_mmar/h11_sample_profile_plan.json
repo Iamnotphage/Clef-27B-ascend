@@ -298,16 +298,35 @@
     ],
     "outer_timeout_s": 240,
     "collector_exit_flush_semantics": "unproven",
-    "settle": "two consecutive empty rounds",
+    "settle": "two consecutive empty rounds; deadline priority; clean and deadline_hit mutually exclusive; clean != true or deadline_hit blocks restore even with residual=[]",
+    "settle_timeout_s": {
+      "default": 30,
+      "plan": 300,
+      "positive_finite": true,
+      "cli": "--settle-timeout",
+      "note": "300 s is a conservative upper bound, not proof of covering the old exit delay; deadline remains fail-closed"
+    },
+    "settle_budget_s": {
+      "requested": 300,
+      "supported_by_pinned_supervisor": true,
+      "current_default": 30,
+      "requires_new_frozen_supervisor": false,
+      "not_implemented_here": false,
+      "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+      "blocker_if_300_required": false
+    },
     "gate": "fail-closed",
     "restore": "exactly one begin_restore",
     "no_second_tree": true,
     "no_same_cell_retry": true,
     "raw_artifacts": "retain stdout/output even on failure",
-    "supervisor": "supervised_probe_window.py 8f4b843 baseline; child-argv hook unchanged"
+    "supervisor": "supervised_probe_window.py 27 c80ea5e integrated; sha256 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28; child-argv hook unchanged"
   },
   "freeze": {
     "baseline_commit": "8f4b843",
+    "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+    "supervisor_sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+    "historical_supervisor_sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
     "no_8ec": true,
     "no_minus2_go": true,
     "no_device": true,

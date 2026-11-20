@@ -7,9 +7,10 @@ fresh expected task identity, defines an explicitly labelled synthetic sample
 record, and classifies mock/synthetic outcomes.  A real msprof output adapter is
 a placeholder that returns ``unknown_schema``; real fields are not fabricated.
 
-The existing 8f4b843 supervisor keeps the process-tree, cleanup, settle/gate and
-single ``begin_restore`` responsibility.  Its ``--child-argv`` hook receives the
-list returned by :func:`build_collector_argv`; no native binding or runner is
+The integrated 27 settle-CLI supervisor (c80ea5e; 8f4b843 is the historical
+baseline) keeps the process-tree, cleanup, settle/gate and single
+``begin_restore`` responsibility.  Its ``--child-argv`` hook receives the list
+returned by :func:`build_collector_argv`; no native binding or runner is
 changed.
 """
 from __future__ import annotations
@@ -767,7 +768,7 @@ def classify_lifecycle(
     """Model the collector/app/torchrun/rank lifecycle outcomes.
 
     This is a CPU model only.  Actual tree kill/settle/gate/begin_restore remains
-    the existing 8f4b843 supervisor implementation.
+    the integrated 27 settle-CLI supervisor (c80ea5e) implementation.
     """
     reasons: set[str] = set()
     if collector_exit == "early":
@@ -895,16 +896,35 @@ def build_plan_skeleton(
             "tree": ["msprof", "app", "torchrun", "ranks"],
             "outer_timeout_s": OUTER_TIMEOUT_S,
             "collector_exit_flush_semantics": "unproven",
-            "settle": "two consecutive empty rounds",
+            "settle": "two consecutive empty rounds; deadline priority; clean and deadline_hit mutually exclusive; clean != true or deadline_hit blocks restore even with residual=[]",
+            "settle_timeout_s": {
+                "default": 30,
+                "plan": 300,
+                "positive_finite": True,
+                "cli": "--settle-timeout",
+                "note": "300 s is a conservative upper bound, not proof of covering the old exit delay; deadline remains fail-closed",
+            },
+            "settle_budget_s": {
+                "requested": 300,
+                "supported_by_pinned_supervisor": True,
+                "current_default": 30,
+                "requires_new_frozen_supervisor": False,
+                "not_implemented_here": False,
+                "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+                "blocker_if_300_required": False,
+            },
             "gate": "fail-closed",
             "restore": "exactly one begin_restore",
             "no_second_tree": True,
             "no_same_cell_retry": True,
             "raw_artifacts": "retain stdout/output even on failure",
-            "supervisor": "supervised_probe_window.py 8f4b843 baseline; child-argv hook unchanged",
+            "supervisor": "supervised_probe_window.py 27 c80ea5e integrated; sha256 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28; child-argv hook unchanged",
         },
         "freeze": {
             "baseline_commit": "8f4b843",
+            "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+            "supervisor_sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+            "historical_supervisor_sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
             "no_8ec": True,
             "no_minus2_go": True,
             "no_device": True,
