@@ -1,6 +1,7 @@
 """CPU-only constructor contract; no vLLM, torch, or device imports."""
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
@@ -78,6 +79,15 @@ class EncoderCacheSchedulerTests(unittest.TestCase):
         scheduler = self.scheduler(vllm_config=config, kv_cache_config="kv")
         self.assertEqual(scheduler.max_num_encoder_input_tokens, 16384)
         self.assertEqual(config.scheduler_config.max_num_batched_tokens, 16384)
+
+    def test_budget_record_uses_configured_vllm_logger(self):
+        with self.assertLogs("vllm.clef_encoder_cache", level="INFO") as logs:
+            self.scheduler(self.config())
+        record = json.loads(logs.records[0].getMessage().split(": ", 1)[1])
+        self.assertEqual(record["cache_effective"], 327680)
+        self.assertEqual(record["compute_effective"], 8192)
+        self.assertIs(record["async_scheduling"], False)
+        self.assertIs(record["balance_scheduling"], False)
 
     def test_model_max_item_floor_still_applies(self):
         os.environ["CLEF_ENCODER_CACHE_TOKENS"] = "8192"

@@ -64,6 +64,6 @@ class EncoderCacheBudgetScheduler(BalanceScheduler):
             "cache_effective": manager.cache_size,
             "unit": "encoder_embeddings",
         }
-        logging.getLogger(__name__).info(
+        logging.getLogger("vllm.clef_encoder_cache").info(
             "Clef encoder cache candidate initialized: %s",
             json.dumps(self.encoder_cache_budget_record, sort_keys=True))
