@@ -126,6 +126,48 @@ class LaunchTests(unittest.TestCase):
             launch = self.launch("--config", config)
             self.assert_mm(launch, launcher.MM_PROCESSOR_KWARGS, f"config:{config}")
 
+    def test_encoder_cache_default_preserves_original_launch(self):
+        initial_environment = dict(os.environ)
+        with mock.patch.dict(os.environ, initial_environment, clear=True):
+            default = self.launch("--config", "s1")
+        with mock.patch.dict(os.environ, initial_environment, clear=True):
+            explicit_off = self.launch("--config", "s1", "--encoder-cache-tokens", "0")
+        self.assertEqual(default, explicit_off)
+        self.assertNotIn("--scheduler-cls", default["argv"])
+        self.assertNotIn("PYTHONPATH", default["service_environment"])
+        self.assertNotIn("CLEF_ENCODER_CACHE_TOKENS", default["service_environment"])
+
+    def test_encoder_cache_changes_only_retention_and_module_loading(self):
+        baseline = self.launch("--config", "s1")
+        with mock.patch.dict(os.environ, {"PYTHONPATH": "/existing/path"}):
+            enabled = self.launch("--config", "s1", "--encoder-cache-tokens", "327680")
+        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
+        self.assertEqual(enabled["argv"][-2:], ["--scheduler-cls",
+                         "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
+        self.assertEqual(enabled["service_environment"]["CLEF_ENCODER_CACHE_TOKENS"], "327680")
+        self.assertEqual(enabled["service_environment"]["PYTHONPATH"],
+                         str(ENTRY.parent) + os.pathsep + "/existing/path")
+        self.assertEqual(enabled["effective"]["max_num_batched_tokens"], 4096)
+        self.assertEqual(len(enabled["effective"]["encoder_cache_scheduler_sha256"]), 64)
+
+    def test_encoder_cache_keeps_erqa_phase_parameters(self):
+        args = ("--max-model-len", "16384", "--max-num-batched-tokens", "16384",
+                "--limit-mm-per-prompt", '{"image":16,"video":0}',
+                "--mm-processor-kwargs", '{"min_pixels":65536,"max_pixels":1048576}')
+        baseline = self.launch(*args)
+        enabled = self.launch(*args, "--encoder-cache-tokens", "131072")
+        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
+        for key in ("max_model_len", "max_num_batched_tokens", "limit_mm_per_prompt", "mm_processor_kwargs"):
+            self.assertEqual(enabled["effective"][key], baseline["effective"][key])
+
+    def test_encoder_cache_rejects_shrink_and_scheduler_conflicts(self):
+        for args in (("--encoder-cache-tokens", "-1"),
+                     ("--encoder-cache-tokens", "4095"),
+                     ("--encoder-cache-tokens", "327680", "--", "--scheduler-cls", "other.Class"),
+                     ("--encoder-cache-tokens", "327680", "--", "--async-scheduling")):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                self.launch(*args)
+
     def test_executor_cache_default_and_explicit_override_are_recorded(self):
         self.assertEqual(self.launch("--config", "s1")["service_environment"]
                          ["ACLNN_CACHE_LIMIT"], "1000000")
