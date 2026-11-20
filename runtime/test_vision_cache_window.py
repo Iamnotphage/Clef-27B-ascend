@@ -345,6 +345,32 @@ class VisionCPU(unittest.TestCase):
         self.assertEqual(result['by_capacity']['262144']['prior_capacity'], 131072)
         self.assertEqual(result['by_capacity']['262144']['prior_min_free_bytes'], [v.ADMISSION_BYTES-1]*2)
 
+    def test_fullset_order_runs_131072_then_262144_at_admission_threshold(self):
+        result, events = self.window(order=(131072, 262144),
+                                     reserve={131072:v.ADMISSION_BYTES, 262144:3*v.GIB})
+        self.assertTrue(result['ok']); self.assertEqual(result['restore_attempts'], 1)
+        self.assertEqual(events, ['stop','close:initial-stop',131072,'close:131072',262144,'close:262144'])
+        self.assertEqual(result['arm_order'], [131072,262144])
+        self.assertEqual(set(result['by_capacity']), {'131072','262144'})
+        self.assertEqual(result['by_capacity']['131072']['min_free_lower_bytes'], [v.ADMISSION_BYTES]*2)
+        self.assertEqual(result['by_capacity']['262144']['min_free_lower_bytes'], [3*v.GIB]*2)
+
+    def test_fullset_order_skips_large_arm_below_131072_admission_threshold(self):
+        result, events = self.window(order=(131072, 262144), reserve={131072:v.ADMISSION_BYTES-1})
+        self.assertTrue(result['ok']); self.assertEqual(result['restore_attempts'], 1)
+        self.assertNotIn(262144, events); self.assertNotIn(16384, events)
+        skipped = result['by_capacity']['262144']
+        self.assertEqual(skipped['prior_capacity'], 131072)
+        self.assertEqual(skipped['prior_min_free_bytes'], [v.ADMISSION_BYTES-1]*2)
+        self.assertEqual(skipped['required'], v.ADMISSION_BYTES)
+
+    def test_fullset_first_arm_failure_or_unclean_blocks_large_arm(self):
+        for kw in ({'fail_arm':131072}, {'fail_close':'131072'}):
+            with self.subTest(kw=kw):
+                result, events = self.window(order=(131072, 262144), **kw)
+                self.assertFalse(result['ok']); self.assertNotIn(262144, events)
+                self.assertEqual(result['restore_attempts'], 0 if 'fail_close' in kw else 1)
+
     def order_plan(self, caps=v.CAPACITIES):
         return dict(schema='clef-vision-cache-plan/2', candidate_commit='3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47',
                     memory_guard=dict(sample_interval_s=5,query_timeout_s=1,sample_round_timeout_s=4,max_sample_age_s=10),
@@ -356,7 +382,7 @@ class VisionCPU(unittest.TestCase):
                                          for label in ('cold-first','natural-second')]) for cap in caps])
 
     def test_explicit_reverse_and_legacy_default_plan_only_report_actual_order(self):
-        for caps in (v.CAPACITIES, (131072,16384)):
+        for caps in (v.CAPACITIES, (131072,16384), (131072,262144)):
             plan = self.order_plan(caps)
             if caps != v.CAPACITIES: plan['arm_order'] = list(caps)
             path = self.root/'plan.json'; path.write_text(json.dumps(plan))
@@ -369,9 +395,12 @@ class VisionCPU(unittest.TestCase):
     def test_bad_arm_order_or_duplicate_phase_rejected_before_any_preflight(self):
         bad=[]
         for order in ([], None, '131072,16384', [0,16384], [16384,131072], [131072,131072],
-                      [262144,131072,16384], [131072.0,16384], [True,16384]):
+                      [262144,131072,16384], [131072.0,16384], [True,16384],
+                      [262144,131072], [131072,524288], [131072,262144,262144]):
             plan = self.order_plan((131072,16384)); plan['arm_order']=order; bad.append(plan)
         bad.append(self.order_plan((131072,16384)))  # reverse must be explicit
+        bad.append(self.order_plan((131072,262144)))  # fullset must be explicit
+        plan=self.order_plan((262144,131072)); plan['arm_order']=[131072,262144]; bad.append(plan)
         plan=self.order_plan(); plan['arm_order']=[131072,16384]; bad.append(plan)
         plan=self.order_plan(); plan['phases'][1]['name']=plan['phases'][0]['name']; bad.append(plan)
         plan=self.order_plan(); plan['phases'][1]['cache_cli']=131072.0; bad.append(plan)

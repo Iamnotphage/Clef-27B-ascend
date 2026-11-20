@@ -455,7 +455,7 @@ def check_pins(frozen, plan):
 def planned_arm_order(plan):
     order = plan.get('arm_order', list(CAPACITIES))
     require(isinstance(order, list) and all(type(cap) is int for cap in order) and
-            tuple(order) in (CAPACITIES, (131072, 16384)), 'unsupported arm_order')
+            tuple(order) in (CAPACITIES, (131072, 16384), (131072, 262144)), 'unsupported arm_order')
     phases = plan['phases']
     require(all(type(p['cache_cli']) is int for p in phases) and
             tuple(p['cache_cli'] for p in phases) == tuple(order), 'capacity/order mismatch')
