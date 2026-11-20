@@ -32,6 +32,7 @@ ap.add_argument("--stop-timeout", default="120.0")
 ap.add_argument("--restore-timeout", default="900.0")
 ap.add_argument("--comm-timeout", default="90.0")
 ap.add_argument("--master-port", default="29531")
+ap.add_argument("--settle-timeout", default="300", help="settle budget seconds passed to the supervisor (default 300)")
 ap.add_argument("--execute", action="store_true", help="append top-level --execute (execution mode)")
 ap.add_argument("--check-argv", help="existing window argv JSON to equality-check")
 a = ap.parse_args()
@@ -40,6 +41,11 @@ if a.check_argv:
     old = json.loads(Path(a.check_argv).read_text())
     i = old.index("--child-argv")
     assert old[i + 1] == json.dumps(child), "child-argv drift between window argv and child-argv.json"
+    if "--settle-timeout" in old:
+        j = old.index("--settle-timeout")
+        assert old[j + 1] == a.settle_timeout, "settle-timeout drift"
+    else:
+        raise AssertionError("checked argv lacks --settle-timeout")
     if a.execute:
         assert old[-1] == "--execute", "checked argv lacks --execute"
 
@@ -53,7 +59,8 @@ argv = [a.window_path, "--python", a.python, "--run-dir", a.run_dir,
         "--text-body", a.text_body, "--image-body", a.image_body,
         "--port", a.port, "--child-timeout", a.child_timeout,
         "--stop-timeout", a.stop_timeout, "--restore-timeout", a.restore_timeout,
-        "--comm-timeout", a.comm_timeout, "--master-port", a.master_port]
+        "--comm-timeout", a.comm_timeout, "--master-port", a.master_port,
+        "--settle-timeout", a.settle_timeout]
 if a.execute:
     argv.append("--execute")
 print(json.dumps(argv, indent=1))

@@ -57,11 +57,10 @@
   "note": "same-source template only; output-dir replaced with the fresh restore path"
  },
  "pending": [
-  "$PENDING_27_SUPERVISOR_SHA (27 minimal configurable settle, default 30; new frozen bytes)",
-  "$PENDING_WINDOW_PATH (resolved from the new supervisor)",
-  "$PENDING_FRESH_IDENTITY_FILE (capture at execution time; 1355077 snapshot is informational, not final)",
+  "$PENDING_WINDOW_PATH (resolved from new supervisor 3178f763)",
+  "$PENDING_FINAL_WRAPPER_SHA (wrapper rework to --child-argv + --execute)",
   "$PENDING_WRAPPER_PATH / $PENDING_COLLECT_PATH / $PENDING_PREFLIGHT_PATH (new-cell copies)",
-  "35 helper observation/task-end integration SHAs + integrity manifest + Linux incrementals",
+  "$PENDING_FRESH_IDENTITY_FILE (execution-time capture)",
   "final pre-execution rescan (identity/boot/ppid/pgid/29531/residue/fresh dirs)"
  ],
  "not_executed": "no real msprof, torch import, device, service stop; skeleton only",
@@ -185,9 +184,10 @@
  },
  "tool_sources": {
   "supervisor": {
-   "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
-   "path": "$PENDING_WINDOW_PATH",
-   "status": "historical baseline d2576c63; final will pin 27-modified supervisor SHA (no longer bytes-frozen)"
+   "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+   "size": 54408,
+   "status": "final integrated (c80ea5e settle CLI cherry-picked into 2e2b7a0); historical d2576c63 only",
+   "path": "$PENDING_WINDOW_PATH"
   },
   "binding": {
    "sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
@@ -228,15 +228,13 @@
  "settle_budget_s": {
   "decision": "settle_300",
   "requested": 300,
-  "supported_by_pinned_supervisor": false,
-  "requires_new_frozen_supervisor": true,
-  "new_supervisor_sha256": "$PENDING_27_SUPERVISOR_SHA",
-  "current_pinned_supervisor": {
-   "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
-   "status": "historical_baseline_not_bytes_frozen"
-  },
-  "cli_change_owner": "27 (minimal configurable CLI from 8f4b843; default stays 30; two-empty/kill/single-restore unchanged)",
-  "blocker_until_new_supervisor": true,
+  "supported_by_pinned_supervisor": true,
+  "current_default": 30,
+  "new_supervisor_sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+  "fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+  "cli_flag": "--settle-timeout",
+  "plan_value": 300,
+  "blocker_until_new_supervisor": false,
   "old_exit_delay_coverage": "unproven; 300 s is a conservative bound, not proof",
   "fail_closed_on_deadline": true,
   "evidence_fields": "kill_time, per-round same-snapshot state/pid/starttime, first_empty_time, two_empty_time, deadline_hit"
@@ -267,8 +265,9 @@
  },
  "window_argv_generation": {
   "builder": "build_window_argv.py",
-  "add_execute": "required for execution (--execute appended by builder or final wrapper)",
-  "equality_check": "--check-argv asserts child-argv payload and trailing --execute if requested"
+  "settle_timeout": "300 (--settle-timeout)",
+  "add_execute": "required",
+  "equality_check": "child-argv + settle-timeout + trailing --execute"
  },
  "run_entry": {
   "kind": "final wrapper to be authored in final merge",

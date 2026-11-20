@@ -29,10 +29,10 @@ Fresh layout (all paths planned, none created)
 Budgets and gates (machine-readable in plan-skeleton.json)
 - stop 120 s, child 240 s, comm 90 s, restore 900 s; supervisor settle default 30 s — explicitly noted
   as NOT proving coverage of the old exit delay (attempt2 residual behaviour).
-- settle decision is 300 s: settle_budget_s records requested 300, supported_by_pinned_supervisor=false,
-  requires_new_frozen_supervisor=true, new supervisor SHA pending (27 minimal CLI; default stays 30;
-  two-empty/kill/single-restore unchanged). d2576c63 is now a historical baseline, not bytes-frozen.
-  300 s is a conservative bound only; old exit delay remains unproven. This blocks the final package until pinned.
+- settle decision is 300 s and is now supported by final supervisor 3178f763/54408 (fix c80ea5e):
+  settle_budget_s supported_by_pinned_supervisor=true, cli --settle-timeout, plan value 300, default 30;
+  deadline-first and the consumer guard are in place. d2576c63 is historical only.
+  300 s remains a conservative bound, not proof of old exit delay.
 - wall_clock_budget_s: preflight 60 + collect begin 60 + stop 120 + child 240 + settle 300 + restore 900 +
   collect end 120 = 1800 s, plus 300 s explicit margin => outer deadline 2100 s; collector observation
   10+120 s and app arm 240 s/comm 90 s are inside child and not added again. Lifecycle evidence must keep kill time,
@@ -55,8 +55,8 @@ Budgets and gates (machine-readable in plan-skeleton.json)
 Files
 - child-argv.json: exact child argv list (msprof + native app).
 - build_window_argv.py: canonical generator for the supervisor argv (reads child-argv.json only;
-  --execute appends the top-level execution flag; --check-argv asserts exact child-argv equality and
-  trailing --execute when requested).
+  --settle-timeout defaults to 300 and is appended; --execute appends the top-level execution flag;
+  --check-argv asserts child-argv, settle-timeout and trailing --execute equality).
   $PENDING_WINDOW_PATH and $PENDING_FRESH_IDENTITY_FILE must be pinned at execution time.
 - plan-skeleton.json: plan fields, budgets, gates, pending list, status.
 - identity-snapshot-now.txt: informational current read (not final).
