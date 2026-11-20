@@ -412,6 +412,31 @@ def sample_loop(frozen, directory, identity):
         while True:
             started = time.monotonic()
             record = {'started': started, 'ok': False, 'queries': [], 'chips': []}
+            def query(argv):
+                query_started = time.monotonic()
+                deadline = min(started + 4, query_started + 3)
+                timeout = deadline - query_started
+                evidence = {'argv': argv, 'started': query_started, 'deadline': deadline,
+                            'timeout_s': timeout, 'rc': None, 'stdout': None, 'stderr': None}
+                record['queries'].append(evidence)
+                try:
+                    require(timeout > 0, 'HBM query round deadline')
+                    result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+                    evidence.update(rc=result.returncode, stdout=result.stdout, stderr=result.stderr)
+                except BaseException as exc:
+                    evidence['error'] = f'{type(exc).__name__}: {exc}'
+                    if isinstance(exc, subprocess.TimeoutExpired):
+                        for key in ('stdout', 'stderr'):
+                            partial = getattr(exc, key)
+                            evidence['partial_' + key + '_available'] = partial is not None
+                            evidence[key] = partial.decode(errors='replace') if isinstance(partial, bytes) else partial
+                            if isinstance(partial, bytes):
+                                evidence[key + '_hex'] = partial.hex()
+                    raise
+                finally:
+                    evidence['finished'] = time.monotonic()
+                require(evidence['finished'] < deadline, 'HBM query deadline')
+                return result
             try:
                 require(started - slot < 1, 'sampler cadence drift')
                 table = frozen.scan()
@@ -420,9 +445,7 @@ def sample_loop(frozen, directory, identity):
                 ready = (directory / 'ready.json').exists()
                 if not ready:
                     argv = ['/usr/local/bin/npu-smi', 'info']
-                    result = subprocess.run(argv, capture_output=True, text=True, timeout=1)
-                    record['queries'].append({'argv': argv, 'rc': result.returncode,
-                                              'stdout': result.stdout, 'stderr': result.stderr})
+                    result = query(argv)
                     require(result.returncode == 0, 'startup NPU query failed')
                     rows = frozen.npu_rows(result.stdout)
                     require(rows or 'No running processes found in NPU 7' in result.stdout,
@@ -432,10 +455,7 @@ def sample_loop(frozen, directory, identity):
                 for chip in (0, 1):
                     for kind in (('usages', 'proc-mem') if ready else ('usages',)):
                         argv = ['/usr/local/bin/npu-smi', 'info', '-t', kind, '-i', '7', '-c', str(chip)]
-                        result = subprocess.run(argv, capture_output=True, text=True,
-                                                timeout=min(1.0, max(0.001, started + 4 - time.monotonic())))
-                        record['queries'].append({'argv': argv, 'rc': result.returncode,
-                                                  'stdout': result.stdout, 'stderr': result.stderr})
+                        result = query(argv)
                         require(result.returncode == 0, 'HBM query failed')
                         if kind == 'usages':
                             values = {'card': 7, 'chip': chip, **hbm_values(result.stdout)}
@@ -551,7 +571,7 @@ def validate_plan(plan):
                 all(type(value) is int for value in quality.values()), 'ERQA quality policy drift')
     require(plan['candidate_commit'] == '3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47', 'candidate drift')
     require(plan['memory_guard']['sample_interval_s'] == 5 and
-            plan['memory_guard']['query_timeout_s'] == 1 and
+            plan['memory_guard']['query_timeout_s'] == 3 and
             plan['memory_guard']['sample_round_timeout_s'] == 4 and
             plan['memory_guard']['max_sample_age_s'] == 10, 'sampler policy drift')
     for phase in plan['phases']:
