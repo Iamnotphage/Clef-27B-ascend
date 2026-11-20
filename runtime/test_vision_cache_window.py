@@ -217,13 +217,27 @@ class VisionCPU(unittest.TestCase):
         for text in ('', log(constructor()) * 2, 'Clef encoder cache candidate initialized: {broken'):
             with self.assertRaises((RuntimeError, ValueError)): v.startup_record(text, 16384)
 
+    def readme_erqa_args(self):
+        text = (Path(__file__).parents[1]/'Clef-27B'/'README.md').read_text()
+        text = text.split('ERQA 优选启动配置（2026-11-20 已采用）',1)[1].split('```bash\n',1)[1].split('```',1)[0]
+        args = shlex.split(text.replace('\\\n', ''))
+        self.assertEqual(args[:2], ['python','Clef-27B/inference.py'])
+        args = args[2:]
+        self.assertEqual(v.option(args,'--config'),'s1')
+        for flag, placeholder in (('--model-dir','/path/to/Clef-27B'),
+                                  ('--output-dir','/path/to/new-erqa-run')):
+            self.assertEqual(v.option(args,flag),placeholder)
+            i = args.index(flag)
+            del args[i:i+2]  # LaunchTests supplies isolated temporary model/output paths.
+        return args
+
     def startup_fixture(self, utilization):
         from test_inference_launch import LaunchTests
         case = LaunchTests(); case.setUp(); self.addCleanup(case.doCleanups)
-        text = (Path(__file__).parents[1]/'Clef-27B'/'README.md').read_text()
-        text = text.split('ERQA 优选启动配置（2026-11-20 已采用）',1)[1].split('```bash\n',1)[1].split('```',1)[0]
-        manifest = case.launch('--config','s1',*shlex.split(text.replace('\\\n', '')),
-                               '--gpu-memory-utilization',str(utilization))
+        args = self.readme_erqa_args()
+        args[args.index('--gpu-memory-utilization')+1] = str(utilization)
+        args[args.index('--encoder-cache-tokens')+1] = '131072'  # Preserve this CLI fixture.
+        manifest = case.launch(*args)
         module = Path(__file__).parents[1]/'Clef-27B'/'clef_encoder_cache_scheduler.py'
         digest = manifest['effective']['encoder_cache_scheduler_sha256']
         plan = {'cleanup_restore': {'source_target': 'aa3e.py'}}
@@ -488,12 +502,11 @@ class VisionCPU(unittest.TestCase):
             # Match each real env-i launch; the launcher prepends vendor paths.
             with mock.patch.dict(v.os.environ, environment, clear=True):
                 return case.launch(*args)
-        readme = (Path(__file__).parents[1]/'Clef-27B'/'README.md').read_text()
-        text = readme.split('ERQA 优选启动配置（2026-11-20 已采用）',1)[1].split('```bash\n',1)[1].split('```',1)[0]
-        args=shlex.split(text.replace('\\\n', ''))
-        chosen=launch('--config','s1',*args)
+        args=self.readme_erqa_args()
+        chosen=launch(*args)
         effective=chosen['effective']
-        self.assertEqual(effective['encoder_cache_tokens'],131072)
+        self.assertEqual(effective['encoder_cache_tokens'],262144)
+        self.assertEqual(effective['gpu_memory_utilization'],0.85)
         self.assertEqual(effective['max_model_len'],16384)
         self.assertEqual(effective['max_num_batched_tokens'],16384)
         self.assertEqual(effective['tensor_parallel_size'],2)
@@ -502,9 +515,14 @@ class VisionCPU(unittest.TestCase):
                          {'shortest_edge':65536,'longest_edge':1048576})
         self.assertEqual(v.option(chosen['argv'],'--scheduler-cls'),
                          'clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler')
-        args[-1]='0'
-        fallback=launch('--config','s1',*args)
-        self.assertEqual(fallback,launch('--config','s1',*args[:-2]))
+        i=args.index('--encoder-cache-tokens')
+        args[i+1]='0'
+        args[args.index('--gpu-memory-utilization')+1]='0.9'
+        fallback=launch(*args)
+        self.assertNotIn('encoder_cache_tokens',fallback['effective'])
+        self.assertNotIn('--scheduler-cls',fallback['argv'])
+        self.assertEqual(fallback['effective']['gpu_memory_utilization'],0.9)
+        self.assertEqual(fallback,launch(*args[:i],*args[i+2:]))
         for config in ('s1','s2'):
             self.assertEqual(launch('--config',config),launch('--config',config,'--encoder-cache-tokens','0'))
 
