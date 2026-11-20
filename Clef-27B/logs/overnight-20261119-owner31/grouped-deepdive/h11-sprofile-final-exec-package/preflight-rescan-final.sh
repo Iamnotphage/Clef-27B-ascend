@@ -52,10 +52,10 @@ for d in "$RUN" "$TEMP" "$OUT" "$MSOUT" "$LOGDIR" "$RESTORE" "$ARCH"; do
 done
 # 4) frozen/native/source pins
 check_sha "$CODE/supervised_probe_window.py" 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28 supervisor
-check_sha "$CODE/collect-raw-final.sh" 6077acb4a2e6bde4856c6855a7c3d3ba6e9f07a20b17f012f5957adbca1972e3 collect
+check_sha "$CODE/collect-raw-final.sh" 059951e4336e573980829f6a80469c903f68c8806e3ebb547d80d65b16221419 collect
 check_sha "$CODE/build_window_argv.py" f98cfe183a0ff7c8436ecaca9b1faf21e32fe3d0ac80ea0821260c2943b83b0e builder
-check_sha "$CODE/child-argv.json" d3db38a8aed434667a1b78f264dbeb7bf6a1ad4bb5fc1a0acd1a1d2ee040d7aa child
-check_sha "$CODE/plan-h11-sprofile-final.json" 5ee2ab5d9bbb42193cb67c2445242d21992bcb45cdeda9e9af55c8278f213a1d plan
+check_sha "$CODE/child-argv.json" 3934d598ea65f1134b49ed2e6072e25d23407f032ae0ae9faef69949af648b73 child
+check_sha "$CODE/plan-h11-sprofile-final.json" 553da5efc20a9384121bf0a074c63bcf446bb6a88167297a1318e6bb88bde32c plan
 check_sha "$STAGE/run_probe.py" 8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f run_probe
 check_sha "$STAGE/binding_probe.cpp" 101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f binding
 check_sha "$STAGE/probe_adapter.so" d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3 adapter

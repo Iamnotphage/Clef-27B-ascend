@@ -16,15 +16,16 @@ BODIES=${BODIES:-/workspace/yangchen/work/grouped-deepdive-cell-a15-large}
 SRC_ID=${SRC_ID:-$CELL/root-identity-h11-sprofile-final.json}      # 84c9edb2…
 SRC_SIDECAR=${SRC_SIDECAR:-$CELL/env-sidecar-h11-sprofile-final.json}  # 2474b487…
 SRC_PLAN=${SRC_PLAN:-$CELL/plan-h11-sprofile-final.json}           # 9c2936c2…
-SRC_DEV0=/root/ascend/log/run/device-0
-SRC_DEV1=/root/ascend/log/run/device-1
-SRC_PLOG=/root/ascend/log/run/plog
-SRC_VLLM=/root/ascend/log/vllm_ascend
+SRC_DEV0=${SRC_DEV0:-/root/ascend/log/run/device-0}
+SRC_DEV1=${SRC_DEV1:-/root/ascend/log/run/device-1}
+SRC_PLOG=${SRC_PLOG:-/root/ascend/log/run/plog}
+SRC_VLLM=${SRC_VLLM:-/root/ascend/log/vllm_ascend}
 RUN=$CELL/run-h11-sprofile-final
 TEMP=$CELL/probe-temp-h11-sprofile-final
 OUT=$CELL/probe-out-h11-sprofile-final
 RESTORE=$CELL/restore-h11-sprofile-final
 LOGDIR=$CELL/logs-h11-sprofile-final
+MSOUT=$CELL/msprof-out-h11-sprofile-final
 
 FAIL=0
 need_file() {  # path label
@@ -74,7 +75,7 @@ begin)
   [ -e "$ARCH" ] && { echo "archive must be absent before begin: $ARCH" >&2; exit 5; }
   mkdir -p "$ARCH"/{cann-plog,device,cell,meta}
   mkdir -p "$ARCH"/cann-plog/{plog,vllm_ascend} "$ARCH"/device/{device-0,device-1}
-  mkdir -p "$ARCH"/cell/{run,probe-temp,probe-out,restore} "$ARCH"/fresh-logs
+  mkdir -p "$ARCH"/cell/{run,probe-temp,probe-out,restore,msprof-out} "$ARCH"/fresh-logs
   : > "$ARCH/meta/sources.txt"
   date -u +%Y-%m-%dT%H:%M:%SZ > "$ARCH/meta/start-utc.txt"
   date +%s.%N > "$ARCH/meta/start-epoch.txt"
@@ -192,6 +193,11 @@ end)
   if need_dir "$TEMP" "probe temp"; then
     cp -a "$TEMP/." "$ARCH/cell/probe-temp"/ 2>/dev/null || true
     record_src "$TEMP" "cell/probe-temp"
+  fi
+  if need_dir "$MSOUT" "msprof out"; then
+    mkdir -p "$ARCH/cell/msprof-out"
+    cp -a "$MSOUT/." "$ARCH/cell/msprof-out"/ 2>/dev/null || true
+    record_src "$MSOUT" "cell/msprof-out"
   fi
   if need_dir "$OUT" "probe out"; then
     cp -a "$OUT/." "$ARCH/cell/probe-out"/ 2>/dev/null || true

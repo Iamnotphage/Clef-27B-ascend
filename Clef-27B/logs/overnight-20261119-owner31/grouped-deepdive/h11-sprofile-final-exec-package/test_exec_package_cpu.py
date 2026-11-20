@@ -137,5 +137,67 @@ class CollectCopy(Base):
         r = subprocess.run(["bash", str(PKG / "collect-raw-final.sh"), "end"], env=env, capture_output=True, text=True, timeout=10)
         self.assertEqual(r.returncode, 7, r.stderr)
 
+class PathsAndArchive(Base):
+    def test_child_and_plan_paths_are_final_cell(self):
+        plan = json.loads((PKG / "plan-h11-sprofile-final.json").read_text())
+        self.assertEqual(CHILD, plan["child_argv"])
+        cell = "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final"
+        for group in (CHILD, plan["child_argv"]):
+            for p in group:
+                if "grouped-deepdive-cell-h11-sprofile" in p:
+                    self.assertTrue(p.startswith(cell + "/"))
+                    self.assertNotIn("h11-sprofile-v1", p)
+        self.assertEqual(CHILD[CHILD.index("--output") + 1], cell + "/msprof-out-h11-sprofile-final")
+        self.assertEqual(CHILD[CHILD.index("--temp-root") + 1], cell + "/probe-temp-h11-sprofile-final")
+        self.assertEqual(CHILD[CHILD.index("--out") + 1], cell + "/probe-out-h11-sprofile-final")
+
+    def _archive_fixture(self, with_msprof=True):
+        cell = self.cell; arch = cell / "archive"; meta = arch / "meta"; meta.mkdir(parents=True)
+        ident = {"pid": 123, "starttime": "1", "boot_id": "b"}
+        (cell / "src-id.json").write_text(json.dumps(ident))
+        (meta / "identity.json").write_text(json.dumps(ident))
+        for d in (arch / "cell" / n for n in ("run", "probe-temp", "probe-out", "restore", "msprof-out")):
+            d.mkdir(parents=True, exist_ok=True)
+        dirs = {"run": cell / "run-h11-sprofile-final", "temp": cell / "probe-temp-h11-sprofile-final",
+                "out": cell / "probe-out-h11-sprofile-final", "restore": cell / "restore-h11-sprofile-final",
+                "logs": cell / "logs-h11-sprofile-final"}
+        if with_msprof:
+            dirs["msprof"] = cell / "msprof-out-h11-sprofile-final"
+        for d in dirs.values():
+            d.mkdir(parents=True, exist_ok=True)
+            (d / "marker.txt").write_text("x")
+        srcs = {}
+        for n in ("dev0", "dev1", "plog", "vllm"):
+            d = cell / ("src-" + n); d.mkdir(); (d / "m.txt").write_text("x"); srcs[n] = d
+        bodies = cell / "bodies"; bodies.mkdir()
+        (bodies / "text-body.json").write_text("{}"); (bodies / "image-body.json").write_text("{}")
+        (cell / "sidecar.json").write_text("{}"); (cell / "plan.json").write_text(json.dumps({"status": "plan_not_executed"}))
+        start = meta / "START_SLACK"; start.write_text(""); os.utime(start, (1000, 1000))
+        end = meta / "END_SLACK"; end.write_text(""); os.utime(end, (3000, 3000))
+        for f in list(cell.rglob("marker.txt")) + list(cell.rglob("m.txt")):
+            os.utime(f, (2000, 2000))
+        env = dict(os.environ)
+        env.update({"CELL": str(cell), "ARCH": str(arch), "SRC_ID": str(cell / "src-id.json"),
+                    "SRC_SIDECAR": str(cell / "sidecar.json"), "SRC_PLAN": str(cell / "plan.json"),
+                    "BODIES": str(bodies), "SRC_DEV0": str(srcs["dev0"]), "SRC_DEV1": str(srcs["dev1"]),
+                    "SRC_PLOG": str(srcs["plog"]), "SRC_VLLM": str(srcs["vllm"])})
+        return env, arch
+
+    def test_collect_archives_msprof_out(self):
+        env, arch = self._archive_fixture(True)
+        r = subprocess.run(["bash", str(PKG / "collect-raw-final.sh"), "end"], env=env, capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((arch / "cell" / "msprof-out" / "marker.txt").exists())
+        self.assertIn("cell/msprof-out", (arch / "meta" / "sources.txt").read_text())
+        self.assertIn("cell/msprof-out/marker.txt", (arch / "SHA256SUMS").read_text())
+
+    def test_collect_missing_msprof_out_marks_incomplete(self):
+        env, arch = self._archive_fixture(False)
+        r = subprocess.run(["bash", str(PKG / "collect-raw-final.sh"), "end"], env=env, capture_output=True, text=True, timeout=20)
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertTrue((arch / "meta" / "INCOMPLETE").exists())
+        self.assertTrue((arch / "cell" / "run" / "marker.txt").exists())
+        self.assertTrue((arch / "cell" / "probe-temp" / "marker.txt").exists())
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

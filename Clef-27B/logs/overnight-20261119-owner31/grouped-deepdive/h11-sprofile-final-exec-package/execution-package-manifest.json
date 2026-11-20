@@ -54,9 +54,10 @@
   "outer": 2100
  },
  "cpu_suite": {
-  "result": "7/7 OK",
-  "runtime_s": 0.47,
-  "scope": "fake gates/caller/window; real builder/run_window; no real preflight/torch/msprof/device/service"
+  "result": "10/10 OK",
+  "runtime_s": 0.594,
+  "scope": "fake gates/caller/window; real builder/run_window; no real preflight/torch/msprof/device/service",
+  "added": "final-cell path equality, msprof-out archive and missing-negative"
  },
  "files": [
   {
@@ -80,20 +81,20 @@
   {
    "name": "child-argv.json",
    "role": "canonical_child_argv",
-   "sha256": "d3db38a8aed434667a1b78f264dbeb7bf6a1ad4bb5fc1a0acd1a1d2ee040d7aa",
-   "size": 1029
+   "sha256": "3934d598ea65f1134b49ed2e6072e25d23407f032ae0ae9faef69949af648b73",
+   "size": 1047
   },
   {
    "name": "collect-raw-final.sh",
    "role": "collect",
-   "sha256": "6077acb4a2e6bde4856c6855a7c3d3ba6e9f07a20b17f012f5957adbca1972e3",
-   "size": 10428
+   "sha256": "059951e4336e573980829f6a80469c903f68c8806e3ebb547d80d65b16221419",
+   "size": 10725
   },
   {
    "name": "harness.stderr",
    "role": "cpu_run_stderr",
-   "sha256": "9843b1df3ddb8d486394014fb90d804cec703b7a0e1af7150eac0bfa0adc3d93",
-   "size": 946
+   "sha256": "c15038b463bb1a83c3794aa488de961fad6b66ac97ce28f1ed57b655308cd9b7",
+   "size": 1295
   },
   {
    "name": "harness.stdout",
@@ -104,13 +105,13 @@
   {
    "name": "plan-h11-sprofile-final.json",
    "role": "static_plan",
-   "sha256": "5ee2ab5d9bbb42193cb67c2445242d21992bcb45cdeda9e9af55c8278f213a1d",
-   "size": 2160
+   "sha256": "553da5efc20a9384121bf0a074c63bcf446bb6a88167297a1318e6bb88bde32c",
+   "size": 2178
   },
   {
    "name": "preflight-rescan-final.sh",
    "role": "preflight",
-   "sha256": "dbff49325e8948720bf1ae8114d5719660a13f282abcc263af95692705d4823c",
+   "sha256": "b602f3f3a8b09aedf6e0cf1afed0069eba588d1e80ab3eb71b06a4e35afd04c0",
    "size": 4461
   },
   {
@@ -158,8 +159,8 @@
   {
    "name": "test_exec_package_cpu.py",
    "role": "cpu_gate_suite",
-   "sha256": "54e88e33f9380777244ba2d0c7325705404e048a05bda68353d4d9d3dafaaa16",
-   "size": 6736
+   "sha256": "598b8cc5663e06a2b64fb11adef4640f41435be1599abdcb519ecb26b41136e9",
+   "size": 10797
   },
   {
    "name": "test_sample_profile_cpu.py",
@@ -179,5 +180,17 @@
    "sha256": "f8ccacd02f6f387cd72d90516dbace46805128991a08812c75e4ec440fa646ba",
    "size": 601
   }
- ]
+ ],
+ "canonical_paths": {
+  "child_equals_plan_child_argv": true,
+  "cell": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final",
+  "msprof_out": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final/msprof-out-h11-sprofile-final",
+  "probe_temp": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final/probe-temp-h11-sprofile-final",
+  "probe_out": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final/probe-out-h11-sprofile-final"
+ },
+ "collect_archive": {
+  "includes_msprof_out": true,
+  "path": "ARCH/cell/msprof-out",
+  "missing_marks": "INCOMPLETE and exit 1; other partials preserved"
+ }
 }
