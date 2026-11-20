@@ -1,0 +1,541 @@
+{
+  "schema": "clef-erqa-cache-adoption/1",
+  "status": "verified",
+  "date": "2026-11-20",
+  "scope": "ERQA image requests; existing S1/S2 defaults and text benchmark CSV values unchanged",
+  "independent_audit": {
+    "owner": "clef-27b-ascend-36",
+    "result": [
+      "PASS_UTIL85_RESULT_CORE",
+      "PASS_UTIL85_FULL_DEDUP_BYTECHAIN",
+      "PASS_LIFECYCLE"
+    ],
+    "prior_windows": "independent result audit PASS"
+  },
+  "selected_profile": {
+    "window": "fullset-util085",
+    "capacity": 262144,
+    "gpu_memory_utilization": 0.85,
+    "dtype": "bfloat16",
+    "eager": true,
+    "normalized_service_argv": [
+      "python",
+      "Clef-27B/inference.py",
+      "--config",
+      "s1",
+      "--model-dir",
+      "/path/to/Clef-27B",
+      "--output-dir",
+      "/path/to/new-erqa-run",
+      "--tensor-parallel-size",
+      "2",
+      "--max-model-len",
+      "16384",
+      "--max-num-seqs",
+      "1",
+      "--max-num-batched-tokens",
+      "16384",
+      "--gpu-memory-utilization",
+      "0.85",
+      "--limit-mm-per-prompt",
+      "{\"image\":16,\"video\":0}",
+      "--mm-processor-kwargs",
+      "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+      "--schema-token-cache",
+      "off",
+      "--distributed-executor-backend",
+      "mp",
+      "--encoder-cache-tokens",
+      "262144"
+    ],
+    "normalization": "Only deployment interpreter/script prefix and model/output paths are normalized; all C service options/order preserved.",
+    "fallback_overrides": {
+      "--encoder-cache-tokens": "0",
+      "--gpu-memory-utilization": "0.9"
+    },
+    "fallback_scope": "original ERQA shape/processor profile with default scheduler; other explicit ERQA arguments unchanged"
+  },
+  "quality": {
+    "baseline_correct": 219,
+    "total": 400,
+    "max_drop_pp": 2,
+    "min_correct": 211,
+    "actual_correct_each_pass": 216,
+    "actual_accuracy": 0.54,
+    "delta_from_baseline_pp": -0.75,
+    "all_passes_count": 12,
+    "each_pass_count": 400,
+    "failed": 0,
+    "retry_count": 0,
+    "choice_changes_within_window_comparisons": 0,
+    "probability_policy": "retain full differences; no per-probability or per-choice equality veto",
+    "accuracy_gate_enforced_window": "fullset-util085"
+  },
+  "protocol": {
+    "readiness": "GET only; no text/image warmup",
+    "passes": [
+      "fresh-process cold-first400",
+      "same-process same-order natural-second400"
+    ],
+    "client_concurrency": 1,
+    "eval_retries_cli": 1,
+    "total_attempts_per_question": 1,
+    "encoder_timing_and_extra_per_step_logging": false,
+    "physical_card": 7,
+    "chips": [
+      0,
+      1
+    ]
+  },
+  "versions": {
+    "adoption_base": "62e037a6ab343f7747514364bf090601afb9e7ea",
+    "candidate_commit": "3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47",
+    "adapter_commit": "62e037a6ab343f7747514364bf090601afb9e7ea",
+    "adapter_sha256": "02ebf301b08b3018aaca4339f5d07dcc19840bfccb45fdeeeb5bd164af984e02",
+    "frozen_supervisor_sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+    "inference_sha256": "76a2bec212f514eb406c5893fda1e99e702a1bde11572fea136b63c3f21be094",
+    "scheduler_sha256": "f9ec1f99761d81ecb76cb0b75651cf7f65af46a15b22e43c32ef6381ba9d9bde",
+    "joint_source_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "vllm_commit": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+    "vllm_ascend_commit": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+    "evaluation_commit": "cc7f32842a78786a8f0e5da373f66597752ea9ab"
+  },
+  "inputs": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "request_reference_sha256": "3059be6b07aa1a5bd35e7313b0ace8acb3017ccf5825b8fea4ff8d3802f974ba",
+    "expected_inputs_sha256": "35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af",
+    "fixed_order": "erqa-0000..erqa-0399; identical400 input identity/reference across windows"
+  },
+  "windows": [
+    {
+      "id": "forward-util09",
+      "gpu_memory_utilization": 0.9,
+      "planned_order": [
+        16384,
+        131072,
+        262144
+      ],
+      "executed_order": [
+        16384,
+        131072
+      ],
+      "analysis": {
+        "owner": "clef-27b-ascend-27",
+        "collection": "clef27-vision-final-stage-n48rran6",
+        "file": "result-analysis.json",
+        "sha256": "c5e8aac6c8c1035454b6ebbcaf98ca3ff2bc372874c4ac472826560d76dacb31",
+        "bytes": 12280
+      },
+      "core_archive_sha256": "4cff876e4f1ffa337e4131645aa92664a418b308a87cda01d08c604602f7769f",
+      "rows": [
+        {
+          "capacity": 16384,
+          "phase": "cold-first",
+          "mean_ms": 214.35191592550837,
+          "p95_ms": 311.10566274728626,
+          "wall_s": 86.86570566007867
+        },
+        {
+          "capacity": 16384,
+          "phase": "natural-second",
+          "mean_ms": 200.41348345461302,
+          "p95_ms": 299.24370162189007,
+          "wall_s": 81.23305073007941
+        },
+        {
+          "capacity": 131072,
+          "phase": "cold-first",
+          "mean_ms": 212.06794214318506,
+          "p95_ms": 288.9616212807592,
+          "wall_s": 85.96602205000818
+        },
+        {
+          "capacity": 131072,
+          "phase": "natural-second",
+          "mean_ms": 199.59147234912962,
+          "p95_ms": 270.4034405294805,
+          "wall_s": 80.91166015993804
+        }
+      ],
+      "same_window_comparisons": [
+        {
+          "comparison": "B_vs_A_cold",
+          "choice_changed": 0,
+          "probability_rows_exact": 382,
+          "max_abs_probability_delta": 0.06851935386657715,
+          "mean_delta_pct": -1.0655252473306676,
+          "p95_delta_pct": -7.117852266326274,
+          "wall_delta_pct": -1.0357178396628974
+        },
+        {
+          "comparison": "B_vs_A_natural_second",
+          "choice_changed": 0,
+          "probability_rows_exact": 382,
+          "max_abs_probability_delta": 0.06641674041748047,
+          "mean_delta_pct": -0.41015758586400164,
+          "p95_delta_pct": -9.637716996580503,
+          "wall_delta_pct": -0.39564015785802376
+        }
+      ],
+      "hbm": [
+        {
+          "arm": "A-16384",
+          "samples": 51,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            4123168604,
+            4123168604
+          ],
+          "max_worker_mb": [
+            58186,
+            58186
+          ]
+        },
+        {
+          "arm": "B-131072",
+          "samples": 51,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            2748779069,
+            3435973836
+          ],
+          "max_worker_mb": [
+            59136,
+            59136
+          ]
+        }
+      ],
+      "skipped_arms": [
+        {
+          "capacity": 262144,
+          "skipped": "HBM conservative admission",
+          "prior_min_free_bytes": [
+            2748779069,
+            3435973836
+          ],
+          "required": 3672279040
+        }
+      ],
+      "lifecycle": {
+        "window_ok": true,
+        "adapter_rc": 0,
+        "restore_attempts": 1,
+        "old_groups_empty": true
+      }
+    },
+    {
+      "id": "reverse-util09",
+      "gpu_memory_utilization": 0.9,
+      "planned_order": [
+        131072,
+        16384
+      ],
+      "executed_order": [
+        131072,
+        16384
+      ],
+      "analysis": {
+        "owner": "clef-27b-ascend-27",
+        "collection": "clef27-vision-reverse-prep-19rkrtnr",
+        "file": "result-analysis.json",
+        "sha256": "26ed5794cfebee69a25997fa271d0d6dcaaf564b28f30388a9ab7db31b24bfdc",
+        "bytes": 12089
+      },
+      "core_archive_sha256": "d3f7916d5b44e51ee8e1f1afd338067899ab26ffe080dee09f20295280bd1bc4",
+      "rows": [
+        {
+          "capacity": 131072,
+          "phase": "cold-first",
+          "mean_ms": 212.98881619935855,
+          "p95_ms": 296.3527231477201,
+          "wall_s": 86.50613310979679
+        },
+        {
+          "capacity": 131072,
+          "phase": "natural-second",
+          "mean_ms": 200.45957267517224,
+          "p95_ms": 270.9181719692424,
+          "wall_s": 81.37959879962727
+        },
+        {
+          "capacity": 16384,
+          "phase": "cold-first",
+          "mean_ms": 216.80330849951133,
+          "p95_ms": 309.6025788225233,
+          "wall_s": 87.889540260192
+        },
+        {
+          "capacity": 16384,
+          "phase": "natural-second",
+          "mean_ms": 208.24101948179305,
+          "p95_ms": 297.47074078768486,
+          "wall_s": 84.52762939967215
+        }
+      ],
+      "same_window_comparisons": [
+        {
+          "comparison": "B_vs_A_cold",
+          "choice_changed": 0,
+          "probability_rows_exact": 382,
+          "max_abs_probability_delta": 0.06851935386657715,
+          "mean_delta_pct": -1.7594253180695185,
+          "p95_delta_pct": -4.279633498272172,
+          "wall_delta_pct": -1.5740293398960992
+        },
+        {
+          "comparison": "B_vs_A_natural_second",
+          "choice_changed": 0,
+          "probability_rows_exact": 382,
+          "max_abs_probability_delta": 0.06641674041748047,
+          "mean_delta_pct": -3.736750245453513,
+          "p95_delta_pct": -8.926111101929834,
+          "wall_delta_pct": -3.7242622588645413
+        }
+      ],
+      "hbm": [
+        {
+          "arm": "B-131072",
+          "samples": 53,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            2748779069,
+            3435973836
+          ],
+          "max_worker_mb": [
+            59136,
+            59136
+          ]
+        },
+        {
+          "arm": "A-16384",
+          "samples": 53,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            4123168604,
+            4123168604
+          ],
+          "max_worker_mb": [
+            58186,
+            58186
+          ]
+        }
+      ],
+      "skipped_arms": [],
+      "lifecycle": {
+        "window_ok": true,
+        "adapter_rc": 0,
+        "restore_attempts": 1,
+        "old_groups_empty": true
+      }
+    },
+    {
+      "id": "fullset-util085",
+      "gpu_memory_utilization": 0.85,
+      "planned_order": [
+        131072,
+        262144
+      ],
+      "executed_order": [
+        131072,
+        262144
+      ],
+      "analysis": {
+        "owner": "clef-27b-ascend-27",
+        "collection": "clef27-vision-util85-prep-fifinha5",
+        "file": "result-analysis.json",
+        "sha256": "8ed479aabf199725a167dc0ea0a61d797c4a50c2a00ee2e1c3740fa32150576f",
+        "bytes": 15919
+      },
+      "core_archive_sha256": "d46ff7ee7d4f095f4759a71e704afb79cc44c55f2330724f2ffcf19c79b503da",
+      "rows": [
+        {
+          "capacity": 131072,
+          "phase": "cold-first",
+          "mean_ms": 215.0842707103584,
+          "p95_ms": 298.45159552060056,
+          "wall_s": 87.32696390990168
+        },
+        {
+          "capacity": 131072,
+          "phase": "natural-second",
+          "mean_ms": 201.68760702596046,
+          "p95_ms": 270.3363582957536,
+          "wall_s": 81.76831683982164
+        },
+        {
+          "capacity": 262144,
+          "phase": "cold-first",
+          "mean_ms": 214.97392170480452,
+          "p95_ms": 297.88495327811677,
+          "wall_s": 87.31041938997805
+        },
+        {
+          "capacity": 262144,
+          "phase": "natural-second",
+          "mean_ms": 170.17590173170902,
+          "p95_ms": 251.78961153142112,
+          "wall_s": 69.1769478097558
+        }
+      ],
+      "same_window_comparisons": [
+        {
+          "comparison": "C_vs_B_cold",
+          "choice_changed": 0,
+          "probability_rows_exact": 400,
+          "max_abs_probability_delta": 0.0,
+          "mean_delta_pct": -0.05130500951530115,
+          "p95_delta_pct": -0.1898606846096329,
+          "wall_delta_pct": -0.01894548852139355
+        },
+        {
+          "comparison": "C_vs_B_natural_second",
+          "choice_changed": 0,
+          "probability_rows_exact": 395,
+          "max_abs_probability_delta": 0.047025322914123535,
+          "mean_delta_pct": -15.624016645799843,
+          "p95_delta_pct": -6.8606187052508645,
+          "wall_delta_pct": -15.398836024387585
+        },
+        {
+          "comparison": "B_natural_second_vs_cold",
+          "choice_changed": 0,
+          "probability_rows_exact": 395,
+          "max_abs_probability_delta": 0.047025322914123535,
+          "mean_delta_pct": -6.228565036463518,
+          "p95_delta_pct": -9.42036753926695,
+          "wall_delta_pct": -6.365327295490419
+        },
+        {
+          "comparison": "C_natural_second_vs_cold",
+          "choice_changed": 0,
+          "probability_rows_exact": 400,
+          "max_abs_probability_delta": 0.0,
+          "mean_delta_pct": -20.83881599118369,
+          "p95_delta_pct": -15.474209502505243,
+          "wall_delta_pct": -20.768966300835
+        }
+      ],
+      "hbm": [
+        {
+          "arm": "B-131072",
+          "samples": 55,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            6871947673,
+            6871947673
+          ],
+          "max_worker_mb": [
+            55716,
+            55716
+          ]
+        },
+        {
+          "arm": "C-262144",
+          "samples": 51,
+          "all_ok": true,
+          "min_free_lower_bytes": [
+            5497558138,
+            6184752906
+          ],
+          "max_worker_mb": [
+            56596,
+            56596
+          ]
+        }
+      ],
+      "skipped_arms": [],
+      "lifecycle": {
+        "window_ok": true,
+        "adapter_rc": 0,
+        "restore_attempts": 1,
+        "old_groups_empty": true
+      }
+    }
+  ],
+  "selected_startup_memory": {
+    "scope": "startup/after-warmup allocator log values per rank; separate from request-window process peaks",
+    "available_kv_gib_by_rank": [
+      24.21,
+      24.22
+    ],
+    "kv_tokens": 725109,
+    "allocated_gib_by_rank": [
+      50.12,
+      50.12
+    ],
+    "reserved_gib_by_rank": [
+      50.3,
+      50.3
+    ],
+    "source_logs": {
+      "B-131072": {
+        "member": "window/B-131072/service/service.log",
+        "sha256": "33511400510a6a58fd64642aa084618b4b702a839057b8ce541a14b3d0a72809",
+        "bytes": 120867
+      },
+      "C-262144": {
+        "member": "window/C-262144/service/service.log",
+        "sha256": "0e960c31a784b3e84805f626268495d6c5b2254efa234ef9268adafd3d12c871",
+        "bytes": 120628
+      }
+    }
+  },
+  "memory_units": {
+    "min_free_lower_bytes": "per-chip conservative HBM estimate from usage percentage with one percentage point deducted",
+    "max_worker_mb": "npu-smi Process memory(MB), per worker; process accounting",
+    "allocator_gib": "GiB as printed by startup logs"
+  },
+  "limits": [
+    "Each window uses its recorded serial arm order; natural-second follows a full400 cold-first in the same process.",
+    "Cross-window combinations are descriptive; order and time differ, so they do not isolate one causal variable.",
+    "Exact encoder cache-hit/miss, prefill segment and unique tensor-storage bytes were not measured; JPEG/hash proxy and process HBM do not supply these counters."
+  ],
+  "selected_evidence": {
+    "owner": "clef-27b-ascend-27",
+    "plan": {
+      "file": "plan.json",
+      "sha256": "ecc3f31ecfccd5ac7dd0f53652560a19c9f74483b1ae38f5d4a15181d8f19c8b",
+      "bytes": 71327
+    },
+    "commands": {
+      "file": "commands.json",
+      "sha256": "538d978b0921e8b252b2013bce407b080c3d3be52e0d58f9ddcb5a0f54de3172",
+      "bytes": 17962
+    },
+    "actual_C_manifest": {
+      "archive": "vision-cache-util85-core-evidence.zip",
+      "member": "window/C-262144/service/launch-manifest.json",
+      "sha256": "c5d6e8be9b03945f29c4e97732d640df419dc2b61e3925a4f05469daed74745d",
+      "bytes": 26818
+    },
+    "artifacts": [
+      {
+        "owner": "clef-27b-ascend-27",
+        "file": "vision-cache-util85-core-evidence.zip",
+        "sha256": "d46ff7ee7d4f095f4759a71e704afb79cc44c55f2330724f2ffcf19c79b503da",
+        "bytes": 6273481
+      },
+      {
+        "owner": "clef-27b-ascend-27",
+        "file": "vision-cache-util85-full-dedup.zip",
+        "sha256": "7305b0f99060d8b1bf0fe9282906be4b1214793bc78cecbe74c6dc8b5f2407f1",
+        "bytes": 97441701
+      }
+    ],
+    "core_manifest_sha256": "6af3903e1b8e685c490197f18f67c6027320e8ca3b000d6b307a842bff8d7561",
+    "full_manifest_sha256": "80092cbcf182b2473d40326da62c9c58925adf17b6784e62daa755d251b0c57b"
+  },
+  "final_restore": {
+    "completed_at_cst": "2026-11-20T14:04:25+08:00",
+    "window_ok": true,
+    "experiment_ok": true,
+    "adapter_rc": 0,
+    "restore_attempts": 1,
+    "subreaper_restored": true,
+    "health_workers_text_image_checks_passed": true,
+    "root_pid": 1430223,
+    "profile": "aa3e S1/4096/TP2/encoder default0/util0.9",
+    "live_pins_verified": 52,
+    "postscan_sha256": "e276346951728fc3e4c05b947f281400f7c41d59aacd960dd8ea8a243949571b"
+  }
+}

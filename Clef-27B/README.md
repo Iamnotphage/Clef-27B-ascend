@@ -94,13 +94,18 @@ bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B \
 
 服务接口：`GET /health`（JSON：status/model/revision）、`GET /v1/decide/info`（身份、任务、协议、缓存）、`POST /v1/systemone`（文本决策）、`POST /v1/decide`（文本/图文决策，与 systemone 同协议）。
 
-ERQA 优选启动配置（2026-11-20 已采用）：在上述启动命令后追加以下参数，encoder cache 为 **131072**；显式改为 `--encoder-cache-tokens 0` 可回退原路径。S1/S2 默认值保持原配置。已审全量 A/B 四遍均为 **216/400、choice 0 翻转**；131072 的冷/暖 P95 分别改善 **7.12% / 9.64%**，18 题概率变化保留为数值差异记录，准确率满足 2PP。
+ERQA 优选启动配置（2026-11-20 已采用）：加载上述环境后，使用现有入口与以下参数：encoder cache **262144**、`gpu-memory-utilization=0.85`。完整回退同时改为 `--encoder-cache-tokens 0 --gpu-memory-utilization 0.9`，其余 ERQA 参数保持。S1/S2 默认配置与既有文本指标保持不变。
+
+同一窗口按 **131072 → 262144** 串行，每档 fresh 进程、仅 GET 就绪后跑完整 400 题首遍，再同进程同序自然二遍；四遍均 **216/400、0 失败、0 重试**，相对原 baseline 219/400 为 −0.75pp，高于最低 211/400。262144 的 ERQA 请求冷/暖 P95 为 **297.885 / 251.790 ms**；同窗暖遍相对 131072 的 mean/P95/wall 改善 **15.62% / 6.86% / 15.40%**，冷遍接近。该窗口按上述固定顺序完成；跨窗口数据按各自顺序记录，真实 cache-hit 与 unique-storage 计数未采集。完整概率差异、三窗口参数与证据 SHA 见[机器验证记录](logs/vision-cache-20261120/adoption.json)。
 
 ```bash
---max-model-len 16384 --max-num-batched-tokens 16384 --max-num-seqs 1 \
+python Clef-27B/inference.py --config s1 \
+  --model-dir /path/to/Clef-27B --output-dir /path/to/new-erqa-run \
+  --tensor-parallel-size 2 --max-model-len 16384 --max-num-seqs 1 \
+  --max-num-batched-tokens 16384 --gpu-memory-utilization 0.85 \
   --limit-mm-per-prompt '{"image":16,"video":0}' \
   --mm-processor-kwargs '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}' \
-  --schema-token-cache off --distributed-executor-backend mp --encoder-cache-tokens 131072
+  --schema-token-cache off --distributed-executor-backend mp --encoder-cache-tokens 262144
 ```
 
 ```bash
