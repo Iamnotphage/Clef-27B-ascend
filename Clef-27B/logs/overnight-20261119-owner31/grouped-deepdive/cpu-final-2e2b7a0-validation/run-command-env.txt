@@ -1,0 +1,9 @@
+cwd: /tmp/h11-final-2e2b7a0-remote (fresh isolated)
+python: /workspace/yangchen/venvs/clef-py312/bin/python 3.12.16 (no activate)
+profile suite:
+  env TORCH_DEVICE_BACKEND_AUTOLOAD=0 timeout 60  <python> test_sample_profile_cpu.py
+  -> rc=0, Ran 38 tests in 0.247s, OK
+supervisor suite (independent process):
+  env TORCH_DEVICE_BACKEND_AUTOLOAD=0 timeout 120 <python> test_supervised_window_cpu.py
+  -> rc=0, Ran 60 tests in 10.156s, OK (Linux: 0 skipped)
+scope: no real msprof, no torch import, no device/service/18143, no old 50 standalone rerun

@@ -1,0 +1,26 @@
+FINAL fixed source 2e2b7a0a12b4b7290f52fe66bb469aa627b0456c (parent c3b08ed; cherry-pick c80ea5e)
+branch: ao/resume-cc/h11-sample-profile-cpu-20261120
+fresh dirs: /tmp/h11-final-2e2b7a0 (local) and /tmp/h11-final-2e2b7a0-remote
+python: /workspace/yangchen/venvs/clef-py312/bin/python 3.12.16
+files + SHA256 (local and remote verified):
+  supervised_probe_window.py 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28 54408
+  test_supervised_window_cpu.py d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee 62295
+  sample_profile_collector.py b680a78092dab921b8efc9d58099aff87bbb27b901fe5af728095197f502c441 37037
+  test_sample_profile_cpu.py dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b 27403
+  h11_sample_profile_plan.json 373e46b8922b8152b7ad80a138bb62e88a3b661b954f59b787a0971290d826b6 10883
+  README.md c53ed1ced0a95e281b3e4fbc8ba34e04618162850046a4a46d893bef7c203f31 53938
+  manifest.json 6ef9a2d732c20c5288d0944b4ca02f42c6a6e9365f2fc80bb3ee308d1a14b33c 95286
+commands (NOT executed; both independent processes, no activate):
+  cd /tmp/h11-final-2e2b7a0-remote
+  env TORCH_DEVICE_BACKEND_AUTOLOAD=0 timeout 60  <python> test_sample_profile_cpu.py > run-profile.stdout 2> run-profile.stderr
+  env TORCH_DEVICE_BACKEND_AUTOLOAD=0 timeout 120 <python> test_supervised_window_cpu.py > run-supervisor.stdout 2> run-supervisor.stderr
+deadline rationale:
+  profile suite observed ~0.2 s; 60 s bound.
+  supervisor shared suite: fake-clock 300 s cases do not sleep; Linux-only real-process cases use parent.wait(10/5) and short polling;
+  worst-case reviewed waits bounded well under 120 s; 120 s is the outer fail-closed bound.
+safety:
+  neither test imports torch/torch_npu; no real msprof execution; no device/service/18143; supervisor test uses its own child processes.
+residue/evidence:
+  post-run filter by fresh dir/test names/mock marks and per-PID starttime; service health/root read-only snapshot;
+  single evidence commit + SUMS after both runs.
+status: PREPARED, NOT EXECUTED; wait for 32 A safety delta PASS.

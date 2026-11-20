@@ -1,0 +1,71 @@
+{
+  "schema": "grouped-mmar-window-plan/1",
+  "run_dir": "/tmp/grouped-mmar-window-gws05pf6/run",
+  "root_identity": {
+    "pid": 4242,
+    "starttime": "1",
+    "boot_id": "b",
+    "pgid": 4242,
+    "ppid": 1
+  },
+  "stop_argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "/tmp/grouped-mmar-window-gws05pf6/stop.py",
+    "--api-pid",
+    "4242",
+    "--saved-identity",
+    "/tmp/grouped-mmar-window-gws05pf6/id.json",
+    "--out",
+    "/tmp/grouped-mmar-window-gws05pf6/run/stop.json"
+  ],
+  "child_argv": [
+    "/workspace/yangchen/venvs/clef-py312/bin/python",
+    "-c",
+    "print(1)"
+  ],
+  "child_timeout": 240.0,
+  "settle_timeout": 30.0,
+  "restore_argv": [
+    "env",
+    "-i",
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+    "CLEF_LAUNCH_CONFIG=s1",
+    "setsid",
+    "/bin/bash",
+    "-c",
+    "cd /tmp/grouped-mmar-window-gws05pf6 && source /tmp/grouped-mmar-window-gws05pf6/activate.sh && exec bash /tmp/grouped-mmar-window-gws05pf6/start.sh --model-dir /tmp/grouped-mmar-window-gws05pf6/model --output-dir /tmp/grouped-mmar-window-gws05pf6/restore"
+  ],
+  "restore_output": "/tmp/grouped-mmar-window-gws05pf6/restore",
+  "source_target": "/tmp/grouped-mmar-window-gws05pf6/clef_joint_schema.py",
+  "expected_source_sha256": "3366f280c209a95dc769a269c8ab6a737d2195989ebfff54d25abd1418265a61",
+  "port": 18143,
+  "clean_expect": "/workspace/yangchen/logs/perf-wave2-20261118/s1-final-r1/launch-manifest.json",
+  "probes": {
+    "text": "/tmp/grouped-mmar-window-gws05pf6/text.json",
+    "image": "/tmp/grouped-mmar-window-gws05pf6/image.json"
+  },
+  "success": {
+    "child_rc": 0,
+    "not_timed_out": true,
+    "no_survivors": true,
+    "source_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+    "branch": "aa3e-noop",
+    "four_checks": true,
+    "env": true,
+    "joint_env": true,
+    "two_workers": true,
+    "clients_empty": true
+  },
+  "failure_branches": [
+    "preflight identity/port/client mismatch",
+    "stop rc!=0 or post-stop port/PGID/NPU not empty",
+    "child timeout/nonzero/unknown group member",
+    "restore rc!=0/health timeout/unknown pid",
+    "branch f810->fused (isolation failure, rescue only)",
+    "source SHA drift",
+    "four-check/env/joint/worker mismatch"
+  ],
+  "no_service_writes": true,
+  "no_f810_revert": true,
+  "status": "plan_not_executed"
+}
