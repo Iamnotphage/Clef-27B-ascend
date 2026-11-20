@@ -22,7 +22,7 @@ Observation end vs task/pending endpoint (machine-readable)
   unknown endpoint => capability_unproven.
 
 Fresh layout (all paths planned, none created)
-- cell: /workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-v1
+- cell: /workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final
 - run / msprof-out / probe-temp / probe-out / logs / archive / restore under that cell.
 - runid/window/collect begin-end identity to be created at execution time by the existing tools.
 
