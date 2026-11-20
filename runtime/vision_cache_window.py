@@ -236,6 +236,13 @@ def verify_startup(frozen, plan, phase, manifest, identity, text):
                   for m in [re.search(r'EngineCore[^)]*pid=(\d+)', line)] if m}
         require(owners == {engine_pid}, 'timing evidence belongs to another EngineCore')
     argv = manifest['argv']
+    utilization = [option(phase['service_argv'], '--gpu-memory-utilization'),
+                   option(argv, '--gpu-memory-utilization')]
+    require(all(isinstance(value, str) for value in utilization), 'utilization argv type drift')
+    utilization = [float(value) for value in utilization] + [manifest['effective'].get('gpu_memory_utilization')]
+    require(all(type(value) in (int, float) and math.isfinite(value) and 0 < value <= 1
+                for value in utilization) and utilization[0] == utilization[1] == utilization[2],
+            'plan/argv/effective gpu memory utilization drift')
     for key, value in {'--scheduler-cls': gate['scheduler_cls'], '--runner': 'pooling',
                        '--dtype': 'bfloat16', '--max-model-len': '16384',
                        '--max-num-batched-tokens': '16384', '--max-num-seqs': '1',
@@ -286,7 +293,7 @@ def read_reference(frozen, plan):
     return rows
 
 
-def verify_predictions(frozen, directory, expected, reference):
+def verify_predictions(frozen, directory, expected, reference, quality=None):
     directory = Path(directory)
     rows = json_lines(directory / 'predictions.jsonl')
     require(len(rows) == len(expected) == 400, 'ERQA coverage incomplete')
@@ -330,6 +337,20 @@ def verify_predictions(frozen, directory, expected, reference):
             score['request_verification']['passed'] is True and
             score['request_verification']['mismatches'] == [] and
             score['summary_comparison']['equal'] is True, 'offline request/score verification failed')
+    if quality is not None:
+        accuracy = score.get('accuracy', {})
+        correct, total = accuracy.get('correct'), accuracy.get('total')
+        valid = (type(correct) is int and 0 <= correct <= 400 and type(total) is int and total == 400 and
+                 accuracy.get('value') == correct / 400 and
+                 all(summary.get('accuracy', {}).get(key) == accuracy.get(key)
+                     for key in ('correct', 'total', 'value')))
+        passed = valid and correct >= quality['min_correct']
+        reason = 'passed' if passed else ('below minimum correct' if valid else 'invalid score accuracy')
+        frozen.write_json(directory / 'quality-gate.json',
+                          {**quality, 'actual_correct': correct, 'actual_total': total,
+                           'passed': passed, 'reason': reason})
+        require(passed, f'ERQA quality gate: {reason}; correct={correct}/{total}, '
+                        f"baseline={quality['baseline_correct']}/400, minimum={quality['min_correct']}")
     return reference
 
 
@@ -466,6 +487,10 @@ def planned_arm_order(plan):
 def validate_plan(plan):
     require(plan['schema'] == 'clef-vision-cache-plan/2', 'plan schema mismatch')
     planned_arm_order(plan)
+    if 'quality_gate' in plan:
+        quality = plan['quality_gate']
+        require(quality == {'baseline_correct': 219, 'total': 400, 'max_drop_pp': 2, 'min_correct': 211} and
+                all(type(value) is int for value in quality.values()), 'ERQA quality policy drift')
     require(plan['candidate_commit'] == '3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47', 'candidate drift')
     require(plan['memory_guard']['sample_interval_s'] == 5 and
             plan['memory_guard']['query_timeout_s'] == 1 and
@@ -583,7 +608,7 @@ def run_phase(frozen, plan, phase, arm, expected, reference, active_deadline, fr
                 break
             time.sleep(0.2)
         require(score.returncode == 0, 'ERQA score failed')
-        reference = verify_predictions(frozen, output, expected, reference)
+        reference = verify_predictions(frozen, output, expected, reference, plan.get('quality_gate'))
         (output / 'expected-inputs.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in expected))
         require(frozen.same_process(identity, frozen.proc_identity(identity['pid'])), 'service lifetime drift')
     samples = monitor(frozen, arm, service, sampler, identity, service_dir, sampling_started, active_deadline)

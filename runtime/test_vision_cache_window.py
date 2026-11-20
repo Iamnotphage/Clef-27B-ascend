@@ -39,6 +39,9 @@ def sample(start=0, free=4*v.GIB):
                 chips=[dict(card=7, chip=c, free_lower_bytes=free) for c in (0, 1)])
 
 
+QUALITY = {'baseline_correct': 219, 'total': 400, 'max_drop_pp': 2, 'min_correct': 211}
+
+
 class VisionCPU(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -214,6 +217,59 @@ class VisionCPU(unittest.TestCase):
         for text in ('', log(constructor()) * 2, 'Clef encoder cache candidate initialized: {broken'):
             with self.assertRaises((RuntimeError, ValueError)): v.startup_record(text, 16384)
 
+    def startup_fixture(self, utilization):
+        from test_inference_launch import LaunchTests
+        case = LaunchTests(); case.setUp(); self.addCleanup(case.doCleanups)
+        text = (Path(__file__).parents[1]/'Clef-27B'/'README.md').read_text()
+        text = text.split('ERQA 优选启动配置（2026-11-20 已采用）',1)[1].split('```bash\n',1)[1].split('```',1)[0]
+        manifest = case.launch('--config','s1',*shlex.split(text.replace('\\\n', '')),
+                               '--gpu-memory-utilization',str(utilization))
+        module = Path(__file__).parents[1]/'Clef-27B'/'clef_encoder_cache_scheduler.py'
+        digest = manifest['effective']['encoder_cache_scheduler_sha256']
+        plan = {'cleanup_restore': {'source_target': 'aa3e.py'}}
+        phase = dict(cache_cli=131072, service_argv=list(manifest['argv']),
+                     startup_gate=dict(module_path=str(module),module_sha256=digest,
+                         scheduler_cls='clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler'))
+        text = '(EngineCore_DP0 pid=9000002) ' + log(constructor(131072)) + (
+            '(EngineCore_DP0 pid=9000002) ObservabilityConfig(enable_mm_processor_stats=False, '
+            'enable_logging_iteration_details=False)\n')
+        stack = ExitStack()
+        stack.enter_context(mock.patch.object(self.f,'scan',return_value={
+            9000001:ident(),9000002:ident(9000002,ppid=9000001)}))
+        stack.enter_context(mock.patch.object(self.f,'sha256',side_effect=lambda p:
+            v.AA3E if str(p)=='aa3e.py' else digest))
+        stack.enter_context(mock.patch.object(self.f,'read_root_env',return_value={
+            'PYTHONPATH':str(module.parent).encode(),'CLEF_ENCODER_CACHE_TOKENS':b'131072'}))
+        stack.enter_context(mock.patch.object(self.f,'joint_env',return_value={'ok':True}))
+        stack.enter_context(mock.patch.object(self.f,'read_json',return_value={'branch':'aa3e-noop'}))
+        return stack, plan, phase, manifest, text
+
+    def test_startup_utilization_three_way_match_with_actual_launcher_manifests(self):
+        for util in (0.85, 0.9):
+            stack, plan, phase, manifest, text = self.startup_fixture(util)
+            with self.subTest(util=util), stack:
+                result = v.verify_startup(self.f,plan,phase,manifest,ident(),text)
+                self.assertEqual(result['manifest']['effective']['gpu_memory_utilization'],util)
+
+    def test_startup_utilization_drift_missing_duplicate_and_nonfinite_rejected(self):
+        stack, plan, original, manifest, text = self.startup_fixture(0.85)
+        with stack:
+            for target in ('plan','argv','effective'):
+                for value in ('missing','duplicate','nan','inf','bad',float('nan'),float('inf'),True,0.9):
+                    if target=='effective' and value=='duplicate': continue
+                    phase, current = copy.deepcopy(original), copy.deepcopy(manifest)
+                    if target=='effective':
+                        if value=='missing': current['effective'].pop('gpu_memory_utilization')
+                        else: current['effective']['gpu_memory_utilization'] = value
+                    else:
+                        argv = phase['service_argv'] if target=='plan' else current['argv']
+                        i = argv.index('--gpu-memory-utilization')
+                        if value=='missing': del argv[i:i+2]
+                        elif value=='duplicate': argv.extend(argv[i:i+2])
+                        else: argv[i+1] = value if value is True else str(value)
+                    with self.subTest(target=target,value=value), self.assertRaises((RuntimeError,ValueError)):
+                        v.verify_startup(self.f,plan,phase,current,ident(),text)
+
     def test_hbm_conservative_reserve_and_large_arm_boundary(self):
         value = v.hbm_values('HBM Capacity(MB): 65536\nHBM Usage Rate(%): 91\n')
         self.assertEqual(value['free_lower_bytes'], 8 * 65536 * 1048576 // 100)
@@ -245,7 +301,7 @@ class VisionCPU(unittest.TestCase):
         with self.assertRaises(ValueError): v.json_lines(path, complete=False)
 
     def window(self, *, fail_arm=None, fail_close=None, stop_rc=0, reserve=4*v.GIB,
-               subreaper=True, order=None):
+               subreaper=True, order=None, phase_check=None):
         directory = self.root / ('window-' + str(len(list(self.root.iterdir()))))
         events = []
         class Arm:
@@ -270,6 +326,7 @@ class VisionCPU(unittest.TestCase):
         def phase(frozen, plan, spec, arm, expected, reference, deadline, path):
             events.append(spec['cache_cli'])
             if spec['cache_cli'] == fail_arm: raise RuntimeError('phase failure')
+            if phase_check: phase_check(spec['cache_cli'])
             free = reserve[spec['cache_cli']] if isinstance(reserve, dict) else reserve
             return ['reference'], [free, free]
         def gate(frozen, plan, saved, arms, stopped, result):
@@ -410,6 +467,19 @@ class VisionCPU(unittest.TestCase):
                     v.execute(self.f,plan,ident(),[],'frozen')
             pins.assert_not_called(); bound.assert_not_called()
 
+    def test_optional_quality_policy_is_fixed_and_legacy_absence_remains_valid(self):
+        plan = self.order_plan()
+        v.validate_plan(plan)
+        plan['quality_gate'] = dict(QUALITY); v.validate_plan(plan)
+        for key, value in (('baseline_correct',216),('total',399),('max_drop_pp',3),
+                           ('min_correct',210),('min_correct',211.0)):
+            bad = copy.deepcopy(plan); bad['quality_gate'][key]=value
+            with self.subTest(key=key,value=value), self.assertRaisesRegex(RuntimeError,'quality policy'):
+                v.validate_plan(bad)
+        for quality in (None, {}, {'enabled':False}):
+            plan['quality_gate']=quality
+            with self.assertRaisesRegex(RuntimeError,'quality policy'): v.validate_plan(plan)
+
     def test_erqa_adopted_flags_and_explicit_zero_reuse_existing_launcher(self):
         from test_inference_launch import LaunchTests
         case = LaunchTests(); case.setUp(); self.addCleanup(case.doCleanups)
@@ -438,7 +508,7 @@ class VisionCPU(unittest.TestCase):
         for config in ('s1','s2'):
             self.assertEqual(launch('--config',config),launch('--config',config,'--encoder-cache-tokens','0'))
 
-    def predictions_fixture(self):
+    def predictions_fixture(self, accuracy=None, missing_score=False):
         expected = [dict(id=f'erqa-{i:04}', record_index=i, images=[{'sha256': 'image'}], image_count=1)
                     for i in range(400)]
         rows = [dict(id=s['id'], record_index=s['record_index'], image_sha256=['image'], image_count=1,
@@ -449,12 +519,15 @@ class VisionCPU(unittest.TestCase):
         summary = dict(coverage=dict(fixed_total=400, ok=400, failed=0, retry_count=0),
                        run=dict(skipped_resumed=0, retries=1, scope='full'))
         score = dict(request_verification=dict(checked=True, passed=True, mismatches=[]), summary_comparison={'equal':True})
+        if accuracy is not None: score['accuracy'] = summary['accuracy'] = accuracy
         def reader(path):
             path = Path(path)
             if path.name == 'record.json': return {'attempts':attempts}
             if path.name == 'response.json': return {'answers': {'answer': {'probabilities': {'A':0.4,'B':0.6}}}}
             if path.name == 'summary.json': return summary
-            if path.name == 'erqa-score.json': return score
+            if path.name == 'erqa-score.json':
+                if missing_score: raise FileNotFoundError(path)
+                return score
             raise AssertionError(str(path))
         stack = ExitStack()
         stack.enter_context(mock.patch.object(v, 'json_lines', side_effect=lambda p: rows if Path(p).name=='predictions.jsonl' else attempts))
@@ -488,8 +561,44 @@ class VisionCPU(unittest.TestCase):
                 else: summary['run']['skipped_resumed'] = 1
                 with self.assertRaises(RuntimeError): v.verify_predictions(self.f, self.root, expected, reference)
 
+    def test_quality_211_boundary_210_failure_and_bad_score_with_persisted_reason(self):
+        for correct, total in ((211,400),(210,400),(216,400),(211,399)):
+            stack, expected, rows, _, _ = self.predictions_fixture(
+                dict(correct=correct,total=total,value=correct/total))
+            with self.subTest(correct=correct,total=total), stack, mock.patch.object(self.f,'write_json') as write:
+                if total==400 and correct>=211:
+                    v.verify_predictions(self.f,self.root,expected,copy.deepcopy(rows),QUALITY)
+                else:
+                    with self.assertRaisesRegex(RuntimeError,'ERQA quality gate'):
+                        v.verify_predictions(self.f,self.root,expected,copy.deepcopy(rows),QUALITY)
+                record=write.call_args.args[1]
+                self.assertEqual(record['baseline_correct'],219); self.assertEqual(record['min_correct'],211)
+                self.assertEqual(record['actual_correct'],correct)
+                self.assertEqual(record['passed'],total==400 and correct>=211)
+                self.assertIn('reason',record)
+        stack, expected, rows, _, _ = self.predictions_fixture(missing_score=True)
+        with stack, self.assertRaises(FileNotFoundError):
+            v.verify_predictions(self.f,self.root,expected,copy.deepcopy(rows),QUALITY)
+
+    def test_quality_cold_or_natural_failure_blocks_C_and_restores_once(self):
+        for failed_pass in ('cold-first','natural-second'):
+            visited=[]; proof=[]
+            def check(cap):
+                for label in ('cold-first','natural-second'):
+                    visited.append((cap,label)); correct=210 if label==failed_pass else 211
+                    stack, expected, rows, _, _ = self.predictions_fixture(
+                        dict(correct=correct,total=400,value=correct/400))
+                    with stack, mock.patch.object(self.f,'write_json',side_effect=lambda p,r:proof.append(r)):
+                        v.verify_predictions(self.f,self.root/label,expected,copy.deepcopy(rows),QUALITY)
+            with self.subTest(failed_pass=failed_pass):
+                result, events=self.window(order=(131072,262144),phase_check=check)
+                self.assertFalse(result['ok']); self.assertNotIn(262144,events)
+                self.assertEqual(result['restore_attempts'],1)
+                self.assertEqual(visited[-1],(131072,failed_pass))
+                self.assertFalse(proof[-1]['passed']); self.assertEqual(proof[-1]['actual_correct'],210)
+
     def test_get_only_then_cold_then_natural_second_in_same_process(self):
-        for cold_failure in ('ok', 'cold-failure', 'score-equal', 'score-after'):
+        for cold_failure in ('ok', 'cold-failure', 'score-equal', 'score-after', 'quality-cold', 'quality-natural'):
             directory = self.root / str(cold_failure); directory.mkdir()
             service_dir = directory/'service'
             events = []; alive = SimpleNamespace(pid=9000001, poll=lambda:None)
@@ -528,7 +637,19 @@ class VisionCPU(unittest.TestCase):
                 post = s.enter_context(mock.patch.object(self.f, 'post_json', side_effect=AssertionError('early POST')))
                 verify = s.enter_context(mock.patch.object(v, 'verify_predictions', return_value=['inputs']))
                 if cold_failure == 'cold-failure': verify.side_effect = RuntimeError('bad cold originals')
-                if cold_failure == 'cold-failure':
+                if cold_failure.startswith('quality-'):
+                    failed = 'cold-first' if cold_failure=='quality-cold' else 'natural-second'
+                    def checked(frozen, output, expected, reference, quality):
+                        self.assertEqual(quality,QUALITY)
+                        if output.name==failed: raise RuntimeError('ERQA quality gate')
+                        return ['inputs']
+                    verify.side_effect=checked
+                    with self.assertRaisesRegex(RuntimeError,'quality gate'):
+                        v.run_phase(self.f,{'candidate_environment_expect':{},'quality_gate':QUALITY},
+                                    phase,arm,[],None,1000,'frozen')
+                    self.assertEqual(verify.call_count,1 if failed=='cold-first' else 2)
+                    if failed=='cold-first': self.assertNotIn('natural-second',events)
+                elif cold_failure == 'cold-failure':
                     with self.assertRaisesRegex(RuntimeError, 'bad cold'): v.run_phase(self.f, {'candidate_environment_expect':{}}, phase, arm, [], None, 1000, 'frozen')
                     self.assertNotIn('natural-second', events)
                 elif cold_failure.startswith('score-'):
