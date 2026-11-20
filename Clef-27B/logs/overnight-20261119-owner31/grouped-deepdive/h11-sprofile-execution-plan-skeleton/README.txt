@@ -11,8 +11,8 @@ Scope
 - The msprof collector is part of the child argv (single process tree). Native run flags/semantics
   are unchanged from the frozen H11 app.
 - Adapter is the OLD FROZEN probe_adapter.so d181b15a... (verified read-only); no new .so build or switch;
-  release candidate 83598d6e is NOT used. Supervisor is 8f4b843 existing bytes d2576c63... with only
-  its path placed in a fresh isolated dir; no derived core changes.
+  release candidate 83598d6e is NOT used. Supervisor is the final integrated 3178f763.../54408 (source 2e2b7a0, c80ea5e); d2576c63 is historical only
+  and must never resolve as the actual window path.
 
 Observation end vs task/pending endpoint (machine-readable)
 - observation_start_ns/observation_end_ns: delay+duration (~10-130 s); end_kind=observation_end_only.

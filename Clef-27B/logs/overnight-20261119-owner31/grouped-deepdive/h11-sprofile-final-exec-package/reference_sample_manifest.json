@@ -1,0 +1,1146 @@
+{
+  "schema": "grouped-mmar-probe-package/1",
+  "status": "grouped_matched_small_hang_exact_cause_unresolved",
+  "branch": "ao/resume-cc/grouped-mmar-research-20261119",
+  "base_commit": "0db4d21",
+  "purpose": "investigate the aclnnGroupedMatMulAllReduce hang; no service lifecycle, no f810 revert, no aa3e entry/default change",
+  "files": {
+    "runtime/grouped_mmar/binding_probe.cpp": {
+      "role": "native MMAR binding with single-variable lifetime/thread/stream flags",
+      "sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+      "bytes": 34645
+    },
+    "runtime/grouped_mmar/probe_trace.h": {
+      "role": "C++ CLOCK_MONOTONIC trace header",
+      "sha256": "3e07139f1cd93085dd43fa1f394eabeb398934c9af2ae0eb23f8c749dbd82da9",
+      "bytes": 2979
+    },
+    "runtime/grouped_mmar/probe_trace.py": {
+      "role": "Python CLOCK_MONOTONIC trace, same fd",
+      "sha256": "13a9519862de0c69c14a921c06f773044b425a019d55cb176c7e16b21bc32cc2",
+      "bytes": 1781
+    },
+    "runtime/grouped_mmar/run_probe.py": {
+      "role": "dual-rank runner; plan-only default; A8/A0/H1/H2 + A9/A14 + H4K/H5K discriminators + A15 MRS/all_gather reconstruction; numeric result flushed before release; numeric_pass recorded separately from harness cleanup",
+      "sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+      "bytes": 30686
+    },
+    "runtime/grouped_mmar/compile_probe.sh": {
+      "role": "AOT adapter build (no load/device)",
+      "sha256": "53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb",
+      "bytes": 879
+    },
+    "runtime/grouped_mmar/fixed_gate.py": {
+      "role": "frozen original gate 041a66aa (not relaxed)",
+      "sha256": "041a66aa81c52d2a53bd825cf406323d7185759242669dff64b3551f86eba849",
+      "bytes": 4119
+    },
+    "runtime/grouped_mmar/snapshot_contract.json": {
+      "role": "31/32 snapshot checklist contract",
+      "sha256": "a954e1a0563fd14526ffe98ae7184bdcd3bc2aa5ade08af7e0d935fc1d32c7c4",
+      "bytes": 2600
+    },
+    "runtime/grouped_mmar/validate_snapshot.py": {
+      "role": "CPU snapshot validator",
+      "sha256": "817375325ae86d0a8329b7aa04c79ee002b10b2ce7770452585850ecefb36a5b",
+      "bytes": 2346
+    },
+    "runtime/grouped_mmar/test_probe_cpu.py": {
+      "role": "CPU control-flow/path/release/watchdog/snapshot/A15-flow-in-place/A15-record-shape/error-stats/torch-direct/F821/arm_output tests (30)",
+      "sha256": "ad257b5fd702d0692140dd3ece89362bdba6081f1782d7e439b7094a9f449719",
+      "bytes": 23525
+    },
+    "runtime/grouped_mmar/cell_supervisor.py": {
+      "role": "pure child PGID/source-aware supervisor with optional restore argv",
+      "sha256": "3daa1455c5f72b6834125f242944fc77771fe805a9fdcbf44f651a032509c2a4",
+      "bytes": 9198
+    },
+    "runtime/grouped_mmar/test_cell_supervisor_cpu.py": {
+      "role": "CPU supervisor tests (9)",
+      "sha256": "c5fb6f45e73c20dce2d55dad46152c0e5a97cfb53adcf596d4f53ae4e8036084",
+      "bytes": 4514
+    },
+    "runtime/grouped_mmar/supervised_probe_window.py": {
+      "role": "full window + 27 c80ea5e integrated settle CLI: --settle-timeout default 30/positive finite, deadline before clean, clean/deadline_hit mutually exclusive, consumption rejects unclean/expired even residual=[]; gate/snapshot/kill/unique restore body unchanged; old 8f4b843 d2576c63 is historical only",
+      "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+      "bytes": 54408,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/test_supervised_window_cpu.py": {
+      "role": "CPU supervisor tests (60 = old 43 pass + 7 Linux-only skip + 10 new; CLI default/range/300, FakeClock one-empty deadline, second-empty at/after deadline, empty-but-unclean, max one restore, total deadline not reset, prior 50 retained)",
+      "sha256": "d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee",
+      "bytes": 62295,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/readaddrm_msg_timing.md": {
+      "role": "read-only timing derivation for ReadAddrMsg (clock unit, w24 doubling, 960/1280 s cutoff)",
+      "sha256": "2bba59c0f421dc0cf9539803a9f57d15de0c725fbe67d8653aa76f6507dd78a7",
+      "bytes": 6143
+    },
+    "runtime/grouped_mmar/abi_turn_fields.md": {
+      "role": "read-only ABI table for Init/WriteTurnCnt/WriteFinish and the sendCnt/rcvCnt cross-check",
+      "sha256": "d3529863fc8b26f5ccfa14c84ef3d0fc6386f9a8f92427f32dc4e2e137645eca",
+      "bytes": 22912
+    },
+    "runtime/grouped_mmar/log_path_markers.md": {
+      "role": "read-only path-distinguishing Dlog/trace marker table plus the minimal rodata string dump request",
+      "sha256": "2bbddc370bb246a5e783df2995149450e74f8e66fe0e78367db1deb35e3f6c77",
+      "bytes": 19774
+    },
+    "runtime/grouped_mmar/mrs_allgather_mlp_design.md": {
+      "role": "CPU-only design for the MRS V1 + all_gather down_proj alternative (not implemented); includes the 32 six-item supplement and the full-layer HBM budget",
+      "sha256": "a1df799cc6c83ae150e8c901db0bf4e6b608cb309df1e0b167b6db5143989346",
+      "bytes": 26101
+    },
+    "runtime/grouped_mmar/h11_matched_control.md": {
+      "role": "CPU design for the matched Grouped H11 small cell; not scheduled",
+      "sha256": "fa62db6c29579cc076e43310c0f8fb4861cdbbe94f9c7613e9e386ac967b72f9",
+      "bytes": 6723
+    },
+    "runtime/grouped_mmar/README.md": {
+      "role": "first-package review, matrix, CLI, expected, recovery; H11 sample-profile CPU candidate section added 2026-11-20",
+      "sha256": "c53ed1ced0a95e281b3e4fbc8ba34e04618162850046a4a46d893bef7c203f31",
+      "bytes": 53938,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/sample_profile_collector.py": {
+      "role": "CPU-only H11 sample-profile collector helper: list argv, fresh raw/offset clock binding, mock-only classification; native/device unchanged",
+      "sha256": "b680a78092dab921b8efc9d58099aff87bbb27b901fe5af728095197f502c441",
+      "bytes": 37037,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/h11_sample_profile_plan.json": {
+      "role": "H11 sample-based plan skeleton: fixed 100 Hz/10 s/120 s flags, 130 s early-pending coverage, AND/raw-offset/fail-closed classification",
+      "sha256": "373e46b8922b8152b7ad80a138bb62e88a3b661b954f59b787a0971290d826b6",
+      "bytes": 10883,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/test_sample_profile_cpu.py": {
+      "role": "new mock-only CPU suite for the sample-profile helper; 38/38 OK macOS; existing 50 not rerun",
+      "sha256": "dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b",
+      "bytes": 27403,
+      "candidate": true
+    },
+    "runtime/grouped_mmar/a12/test_aclnn_grouped_mat_mul_all_reduce.cpp": {
+      "role": "A12 official sample source (byte copy)",
+      "sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "bytes": 21723
+    },
+    "runtime/grouped_mmar/a12/SOURCE.md": {
+      "role": "A12 provenance (commit f5703e4, path, SHAs)",
+      "sha256": "cde9e9f2b376ddb51ba38ac83c001c01cc2bb783a1dddaa39500a0aa3b4f26b6",
+      "bytes": 4367
+    },
+    "runtime/grouped_mmar/a12/SHA256SUMS": {
+      "role": "A12 package SHA256SUMS",
+      "sha256": "22cf61353bfe5d0111226577009ea07e9f125007501d1e20e99f66b33ba4d8c6",
+      "bytes": 493
+    },
+    "runtime/grouped_mmar/a12/aclnnGroupedMatMulAllReduce.docs.md": {
+      "role": "A12 reference docs (not compiled)",
+      "sha256": "31333c59bf5b5bd733a0d08520fa17859def52784d4e1176232a374b8cb8078f",
+      "bytes": 33451
+    },
+    "runtime/grouped_mmar/a12/aclnnGroupedMatMulAllReduce.sample.cpp": {
+      "role": "A12 doc-embedded sample (not compiled)",
+      "sha256": "d59a49e5277d577d294b2e8fc2324f3b49199a5389042db9acb1c03d2154610a",
+      "bytes": 21993
+    },
+    "runtime/grouped_mmar/a12/compile_and_run_sample.md": {
+      "role": "A12 build recipe reference",
+      "sha256": "c591f0e34f223c4ee4acea0dc3aaa9b90ebdb59f19da61090de14108236e979d",
+      "bytes": 8438
+    },
+    "runtime/grouped_mmar/a12/BUILD_NOTE.md": {
+      "role": "A12 derived-build labeling and semantics",
+      "sha256": "cabdc6478b3661d2461102df67b2cb6ddf886a295c1f756de81721467e22eab3",
+      "bytes": 1453
+    },
+    "runtime/grouped_mmar/a12/compile_a12.sh": {
+      "role": "A12 CMake build wrapper",
+      "sha256": "f86c5b50e8382eb5bd46dfa7c8db81c6e89dbd885bf32f6a807e6d6f210e3a9f",
+      "bytes": 1608
+    },
+    "runtime/grouped_mmar/a12/run_a12.sh": {
+      "role": "A12 run wrapper (2 devices, 1 loop, 0,1)",
+      "sha256": "087b4cef870ceb24fdd3bd69f91e22e6bc9145cee8055ff4ce9bc87444dc8044",
+      "bytes": 374
+    },
+    "runtime/grouped_mmar/a12_h6/test_aclnn_grouped_mat_mul_all_reduce_h6.cpp": {
+      "role": "A12-H6 derivative: official source + one workspace memset before launch",
+      "sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
+      "bytes": 22292
+    },
+    "runtime/grouped_mmar/a12_h6/h6.diff": {
+      "role": "A12-H6 single-variable diff",
+      "sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
+      "bytes": 1117
+    },
+    "runtime/grouped_mmar/a12_h6/compile_a12_h6.sh": {
+      "role": "A12-H6 CMake build wrapper",
+      "sha256": "8ef604f1c26866742e6c1c06f57ed23717f0a0d95ed21dcd4e6861ebbe2255c2",
+      "bytes": 1711
+    },
+    "runtime/grouped_mmar/a12_h6/README.md": {
+      "role": "A12-H6 design, contract pending, success gate",
+      "sha256": "2e0d5276c0e1b50213dc8e6337bc808e0e607760e1a8dbddb9bd366ab6a5d85b",
+      "bytes": 1557
+    }
+  },
+  "first_matrix": [
+    {
+      "arm": "A8",
+      "flags": 0,
+      "rows": 128,
+      "success": "both ranks sync returned + finite",
+      "device_build_reference": null
+    },
+    {
+      "arm": "A12",
+      "source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+      "build": "derived CMake glue; official examples/CMakeLists does not exist in f5703e4 (33 verified) -> NOT an as-is official build",
+      "argv": [
+        "2",
+        "1",
+        "0,1"
+      ],
+      "success": "API rc0 + both rank threads sync returned (liveness only; no numeric reference)",
+      "device_build_reference": {
+        "stage_manifest": "088f05f6b249d3c5ccb82132edfecc1ba93a5880db30eebd7bdb3d2e6fbf5e00",
+        "glue": "22edb89f",
+        "binary": "37929ec4",
+        "ldd_missing": 0
+      }
+    },
+    {
+      "arm": "A0",
+      "flags": 0,
+      "rows": 128,
+      "success": "API return + both ranks sync returned + finite",
+      "device_build_reference": null
+    },
+    {
+      "arm": "H1",
+      "flags": 1,
+      "rows": 128,
+      "success": "same as A0; group string created before prepare and kept past sync",
+      "device_build_reference": null
+    },
+    {
+      "arm": "H2",
+      "flags": 2,
+      "rows": 128,
+      "success": "same as A0; workspace kept until sync returned",
+      "device_build_reference": null
+    }
+  ],
+  "stage2": [
+    "H3 keep_descriptors",
+    "H11 keep_all (downgraded diagnostic)",
+    "H4 direct_launch",
+    "H5 refetch_stream",
+    "H6 memset_workspace",
+    "H7 M sweep 128/256/1024/967"
+  ],
+  "cli": {
+    "compile": "bash runtime/grouped_mmar/compile_probe.sh <absolute .so>",
+    "plan": "torchrun --nproc_per_node=2 --master_port=<free> runtime/grouped_mmar/run_probe.py --arm <A8|A0|H1|H2> --temp-root <abs> --out <abs-fresh> --adapter <so> --k 8704 --n 5120 --rows 128 --seed 20261119 --arm-timeout 60 --comm-timeout 90",
+    "execute": "same plus --execute",
+    "a12_compile": "bash runtime/grouped_mmar/a12/compile_a12.sh <absolute build dir>",
+    "a12_run": "bash runtime/grouped_mmar/a12/run_a12.sh <build>/build/bin/main"
+  },
+  "success": [
+    "API returned",
+    "both ranks observed sync return",
+    "output finite",
+    "release only after sync and only for keep arms"
+  ],
+  "failure_branches": [
+    "prepare rc!=0",
+    "launch rc!=0",
+    "sync not returned within arm timeout",
+    "group names differ across ranks",
+    "non-finite output",
+    "release rc!=0"
+  ],
+  "recovery": {
+    "routine": "official start.sh to aa3e/s1; normal success requires branch == aa3e-noop; tree stays aa3e1758; four checks/env/identity/two workers recorded",
+    "f810_to_fused": "rescue only for known source anomaly: record drift before/after SHA, trace/plog/time, mark the cell isolation-failed, report 20/32, then authorized aa3e restore; never satisfies the success gate",
+    "unknown": "stop and report; do not guess or edit source",
+    "forbidden": "old 5c/restore_prod auto-revert to f810; service tree/guard/vendor writes"
+  },
+  "inputs": {
+    "33": "C1-C6, E1/E2, support research commits 2616628/334c67f/049b5ea/d052acd; A12 frozen source 6c1a90ab; official examples/CMakeLists absent; pack v4 PACK_SHA256SUMS 6e9bc5f8 (65/65); binary_info_config d46acc38 + per-op c9bd574a",
+    "31": "snapshot 39e52eb5..., restore-spec 224b0036..., API pack v4 6e9bc5f8 (65 payload 65/65), A12 authoritative stage manifest 088f05f6 (1d529ca8 superseded), glue 22edb89f, binary 37929ec4, ldd missing 0",
+    "32": "first-package criteria, snapshot/restore tightening, A12 not single-cause proof, derived-build labeling"
+  },
+  "cpu_tests": {
+    "suites": {
+      "test_probe_cpu.py": "30/30 (3 torch-direct tests skipped on macOS; 31 Linux runs them)",
+      "test_cell_supervisor_cpu.py": "9/9",
+      "test_supervised_window_cpu.py": "40/40 (7 Linux-only fixtures skipped on macOS; 31 to run on Linux)"
+    },
+    "no_torch_npu": true,
+    "no_device": true
+  },
+  "no_service_lifecycle": true,
+  "no_f810_revert": true,
+  "no_entry_or_metrics_change": true,
+  "manifest_note": "manifest.json does not pin its own SHA; the commit/message reports it",
+  "window": {
+    "path": "runtime/grouped_mmar/supervised_probe_window.py",
+    "cli": "see README 5.2",
+    "normal_branch": "aa3e-noop",
+    "f810_to_fused": "isolation failure, rescue only",
+    "no_installer_guard_vendor_tree_writes": true,
+    "p0_fixes": [
+      "restore Popen no wait; health+manifest decide",
+      "top-level finally after stop; old alive never Popen (healthy skip / partial blocked)",
+      "Popen pre-gate: port111, empty old PGID, no child/probe/runner residual, source aa3e",
+      "A12 rc0 + no error lines + two costtime + per-PID PGID maps",
+      "per-PID maps with pid/cmdline/libs(SHA/SONAME); coverage loaded/absent; hard gate hccl+opapi only",
+      "restore_output fresh; manifest output_dir match + mtime after stop",
+      "stop script is_file; skip/blocked record health/identity/port/PGID/source",
+      "real foreground HTTP+manifest fixture; old_alive+port111 blocked no Popen"
+    ]
+  },
+  "run_probe": {
+    "default_arm_timeout_seconds": 240,
+    "keep_flags": "single-variable: keep_group/keep_workspace/keep_descriptors/keep_all; H1 does not retain workspace/lists, H2 does not retain group/lists"
+  },
+  "priority_note": "Closed: mc2_server chip:5 unsupported; H1-H12 closed for the hang; A13 control kept unexecuted for a future supported platform; no further Grouped device arms",
+  "a12_result": {
+    "status": "failed_official_sample_same_hang",
+    "window_sha256": "77528fdf076d6600",
+    "child_stdout_sha256": "c9fea1c41b483f8c",
+    "plog_debug_sha256": "0e9d96a3b1e40fe6",
+    "plog_run_sha256": "e544c870fa8ddde0",
+    "restore_launch_sha256": "80b5fcb8b27dc777",
+    "restore_joint_sha256": "f8ef9d161cc70e08",
+    "retcode": 507046,
+    "stream_id": 47,
+    "task": "KERNEL_AICORE",
+    "workspace_bytes": 16777216,
+    "hcom_names": "199.88.54.221%eth0_60000_14_1795069461197380 (both ranks)",
+    "maps_coverage": {
+      "libhccl": true,
+      "opapi_math": true,
+      "opapi_transformer": true,
+      "hccl_fwk": false,
+      "hcomm": true,
+      "libascendcl": true,
+      "libnnopbase": true
+    },
+    "binary_pids": [
+      1301080
+    ],
+    "root_cause_clue": "mc2_server.tar.gz not loaded: current device chip:5 does not support package:mc2_server.tar.gz",
+    "recovery": "branch=aa3e-noop, tree=aa3e, root=1301295, five PIDs, health/info/text/image/env/joint/source/clients all true",
+    "conclusion": "official sample fails identically; lifecycle/comm-creation binding hypotheses cannot explain the hang; platform MC2 server support is the leading blocker"
+  },
+  "a13_control": {
+    "arm": "A13",
+    "op": "aclnnMatmulAllReduce v1",
+    "dtype": "BF16 x/w/bias/output",
+    "shapes": {
+      "M": 967,
+      "K": 8704,
+      "N": 5120
+    },
+    "comm": "torch_npu multi-process group",
+    "purpose": "distinguish MC2 common-path/platform failure from grouped-op-specific failure",
+    "success": "API rc0 + both ranks sync return + finite; compare with matmul+all_reduce",
+    "hang_interpretation": "same stream47/KERNEL_AICORE pending + mc2_server chip:5 -> MC2 common/platform blocked",
+    "cli": "window --arm A13 --adapter <so> --rows 967 --k 8704 --n 5120 --seed 20261119",
+    "status": "compile_type_fixed_not_run_not_a3_registered",
+    "a3_registration": "absent; packed A3 ops-info has AllGatherMatmul/V2 and MatmulReduceScatter/V2 only",
+    "correction": "aclnnMatmulAllReduce v1 is not A3-registered; running would stop at op lookup (161001 class), not a valid MC2 control",
+    "future_control": "MatmulReduceScatter V1 (A3 AI CPU) vs V2 commMode=aiv (A3 aiv, >=200MB) only after A3 registration/platform support is confirmed",
+    "compile_fix": "single aclTensor descriptors; still stopped/not A3-registered"
+  },
+  "closure": {
+    "root_cause": "suspected first-cause: mc2_server.tar.gz skipped on chip:5; the grouped dependency on the refused package and the MC2 KFC implementation are unproven",
+    "evidence": {
+      "mc2_server_sha256": "712638354c71dff584651221d3c1227a62d809ed7de325e93c1ffa5926de25a0",
+      "package_load_ini_sha256": "38b4b47eb913cf1085561f45e65f34545947a6650a0170ec4e4c333a0dc1912f",
+      "libmc2_server_json_sha256": "8e1346767b5c88393c01c4e94ae6eaac3d7ece558b733f496a7ed85c75537e52",
+      "libaicpu_custom_sha256": "ce4f21b605b149bc9274593746c79604d2fc8197007b3e4ffd4951ae14c5e7c7",
+      "mc2_support_sums_sha256": "1f5e62c8d39bfa04098515a96a5856fb4a072a437026c6c027651fb217775fae",
+      "33_commit": "87ffb96",
+      "31_conclusion_revision": "8133e16 (file bfef1c02; suspected_environment_blockage_pending_dependency_control)",
+      "31_dependency_analysis": "d8d4050 / 31f8f1ee (dependency_status=supported_but_unproven)",
+      "31_a14_preflight_sums": "21dcae08... (header ad8f98b4, libccl 2281deca, MRS kernel HCCL/KFC, no Mc2Server/RacServer)",
+      "33_a14_commit": "013b9a0"
+    },
+    "a12": "official sample failed identically; supervision/recovery chain PASS",
+    "decision": "status narrowed; A14 MRS V1 KFC path proven live at small shape, so the refused mc2_server is not a universal blocker; remaining question is Grouped-specific (op/kernel/tiling/rac_server/context) and H12; no all-MC2 generalization",
+    "invariants": "official aa3e/f810 defaults, entry, metrics and CSV unchanged; no PR",
+    "a13_correction": "MatMulAllReduce v1 not A3-registered; A13 retained unexecuted; future AICPU control is MatmulReduceScatter V1/V2",
+    "status": "grouped_matched_small_hang_exact_cause_unresolved; thread/sync path excluded by H11+H4K; Grouped device path candidate; mc2_server dependency supported_but_unproven",
+    "established": [
+      "A12 official sample fails: stream47 KERNEL_AICORE pending, 507046@10s, both ranks",
+      "mc2_server.tar.gz and cann-tsch-compat skipped on chip:5 at TDT, before op launch",
+      "31: Mc2ServerKernel exists only in the rejected package; no installed AICPU .so exports it; libccl_kernel provides KFC/ResInit; runtime dependency unproven (suspected_environment_blockage_pending_dependency_control)",
+      "A14 small v5 (MRS V1): prepare/launch/sync rc0, sync 20.65 ms, reduced.max_abs=0.0 and bit_equal=true on both ranks under the same chip:5 mc2_server skip; Grouped still stream47/507046",
+      "H11 matched Grouped small (M128/K256/N512, BF16, single group, KEEP_ALL, same adapter/comm/window): Python device sync never returns; plog stream47 task_id=13 pendingNum=1 and KFCtaskAndTiling/AivAicpuOpParam objects"
+    ],
+    "not_established": [
+      "Grouped actual dependency on the skipped mc2_server package (optional; KFC ResInit/SrvLaunch loaded from libccl_kernel.so)",
+      "H12 MC2 context/AICPU binding",
+      "H6 workspace initial value falsified by execution; Grouped dependency on the refused mc2_server still unproven",
+      "Grouped-specific cause of stream47/507046 while A14 MRS V1 KFC path returns synchronously at small shape"
+    ],
+    "pending": [
+      "A14 large M968/K8704/N5120 CPU preparation after 32 reviews the H4K originals (device GO separately; existing code only)",
+      "A15 MRS+all_gather freeze review; no device authorization",
+      "Grouped device-path/producer-consumer evidence remains open; A13 and Grouped large paused"
+    ],
+    "previous_status_note": "old confirmed_environment_blocked text retained as history, superseded by the narrowed status",
+    "history_note": "earlier confirmed_environment_blocked wording is retained only as a revision-trail/evidence summary; it is not the current conclusion"
+  },
+  "a12_h6": {
+    "status": "falsified_by_execution",
+    "parent_source_sha256": "6c1a90aba84501a901c413eaa5391889d60beff48b766bed9865ab5bf26eeb9f",
+    "derivative_source_sha256": "4b8e6e2a483d285394b3e8136f4be493462154d09f05b4c225a6716273615181",
+    "diff_sha256": "754e2f245a58e0aca189654b3d7ed9fbb8ca286642037ffca5d266bc43b144a5",
+    "single_variable": "aclrtMemsetAsync(workspaceAddr, workspaceSize, 0, workspaceSize, rtStream) after aclrtMalloc and before launch, rc printed/checked",
+    "unchanged": "provider/libopapi, FP16 shapes, 2 devices/1 loop, buffer lifetimes",
+    "compile": "bash a12_h6/compile_a12_h6.sh <absolute build dir>",
+    "run": "bash a12/run_a12.sh <build>/bin/a12_grouped_mat_mmar_h6",
+    "success_gate": "rc0 + no [ERROR]/retcode lines + >=2 mc2 costtime + maps hard gate libhccl+opapi_math/transformer",
+    "falsification": "same 507046/stream47 -> H6 workspace-init hypothesis falsified for the hang, not a platform negative",
+    "pending": "32 review of binary/plan/identity; 20 schedule execution",
+    "api_check": "aclrtMemsetAsync declared at acl_rt.h:2563; exported by libascendcl; Async build valid (31)",
+    "static_preflight": "32: diff equals h6.diff, only 9 memset lines, same stream, single-variable holds",
+    "workspace_contract": "33: GetWorkspaceSize returns size only; caller scratch; MC2 message area in GetHcclContext<0>()->WorkSpace; same-stream memset safe, no extra sync",
+    "preflight": {
+      "commit": "6b6a865",
+      "stage_commit": "36f8141",
+      "manifest_sha256": "ab2a1855",
+      "window_sha256": "51d6bc0c",
+      "binary_sha256": "cdf485539c5fed610ad3352315d44cd114d57bad95f30a999a8f1e7cd275515f",
+      "binary_bytes": 209656,
+      "ldd_sha256": "fe47d0a087e12df91f6ddfaad0a00b4c715e6f86ba24d49daaf17e2ea2e63e6c",
+      "compile_log_sha256": "d1fa7fbcdcca2c7f38850b80836ca826c384df4754b4c174ffde5db51203b2a4",
+      "plan_sha256": "aedd3f682c1fbb6b88b0a555df8a478ed4de9b7ea23eb5088e7497e0d6663d2c",
+      "status": "plan_not_executed",
+      "child": "run_a12.sh + h6 binary",
+      "child_timeout": 240,
+      "sums_sha256": "4b4afbd49ea20fcda2047a8dedad948422ca78be332bd98d45a0a97c66a0d99d"
+    },
+    "go": "32 GO; plan aedd3f68; d0_stop 1301295 -> H6 child <=240s -> cleanup -> official start.sh aa3e",
+    "result": {
+      "memset_rc": "0 on both ranks (aclrtMemsetAsync, child stdout)",
+      "outcome": "still retcode 507046 at h6.cpp:392, TestCall execute AICPU failed; plog stream_id=47 KERNEL_AICORE task_id=2, 10s timeout; no costtime",
+      "window_ok": false,
+      "child_rc": 0,
+      "timed_out": false,
+      "maps_ok": true,
+      "conclusion": "workspace zero-init does not change the hang; H6 weakened/falsified for this incident",
+      "recovery": "branch=aa3e-noop, tree aa3e, root=1305145, five PIDs, checks all true"
+    },
+    "evidence": {
+      "window_sha256": "5bcea516",
+      "child_stdout_sha256": "a365d4fb",
+      "plog_debug_sha256": "4b7b7eab",
+      "plog_run_sha256": "c5e50599",
+      "sums_sha256": "e88d9d23",
+      "commit": "f176183"
+    }
+  },
+  "settle_candidate_20261119": {
+    "status": "CPU lifecycle candidate implemented and tested on macOS and Linux; NOT adopted and NOT deployed; the remote v2/stage historical frozen baseline is window 1f780bf8/test 228150e4; no device/NPU",
+    "base_window_sha256": "1f780bf884cd6725574ffc71e89c87011b7d1dc2d8c7f110217ce7dbe3ce85a4",
+    "base_test_sha256": "228150e4868918be5a098f424d0a2ce3b158f09adf8f2dbaa054e0bceada2677",
+    "frozen_baseline": "1f780bf8/228150e4 are the remote v2/stage historical frozen baseline, not adopted; this branch records its own new bytes below",
+    "window_sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+    "test_sha256": "5840a0d3cbefedf6ec7128ffd65d967d5d1c9a16a05909e0bd6ab5ea61fdfd17",
+    "window_bytes": 53078,
+    "test_bytes": 54483,
+    "diff_vs_base": "supervised_probe_window.py +107/-10; test_supervised_window_cpu.py +294/-9; no other files",
+    "increment_vs_7d371a1": "supervised_probe_window.py +8/-2; test_supervised_window_cpu.py +60/-9 (gate reader fix, daemon exact-PID cleanup, two gate regressions)",
+    "scope": "after the final SIGKILL cleanup, one consistent /proc snapshot per round, bounded settle (default 30 s total), two consecutive empty rounds to clear, per-pid starttime/state recorded (no state -> unknown), deadline fail-closed, gate reuses the same settle table and the unique begin_restore; verified/protected/unknown/drift/PID-reuse signal rules unchanged",
+    "trigger": "attempt2 raw 80c73d9: cleanup groups=[1354310,1354311], killed=true, unknown/drift empty; the gate still saw both pids at about SIGTERM+1.4-4.4 s; exact exit time and /proc state were not captured (D-state not asserted); parent torchrun exited rc0 and the old exception/finally cleanup is skipped when child.poll() is not None",
+    "tests": "50/50 on macOS (43 passed + 7 skipped Linux-only); new gate tests: no-settle -> real _scan_direct attribution blocks, settle table -> snapshot only/no real read; plus exit-delay, persistent, Z/reap, single-snapshot, missing state, baseline, parent-exit/one-restore",
+    "linux_failure_evidence": "31 e72b967 / SUMS e6a36fe387bf78d94849466fa89b03178ba2d348c378d27dbb06e57c90337d5f: 48 tests 47 pass/1 fail/0 skip; AttributedProcessTest.test_orphan_after_immediate_parent_exit_is_registered_and_cleaned L840 assertFalse(allow) got True, stable 3/3",
+    "linux_fix": "recovery_gate uses the passed settle table only when explicitly provided; without it, attributed_survivors(registry, child_pid) keeps the base real _scan_direct path so a mocked scan() cannot hide a live descendant; daemon fixture kills the exact grandchild PID after identity read instead of killpg(pid) whose PGID is the setsid child; no assertion or identity/protected/gate rule relaxed",
+    "attempt2_caveat": "the default 30 s settle may not cover attempt2's exit delay (observed >1.4 s, upper bound about 174 s, exact unknown); if the residual persists past 30 s the gate remains fail-closed; the candidate is not claimed to fix attempt2",
+    "unrun": [
+      "31 to rerun the Linux real-process regression (orphan + daemon + new gate tests, or full 50/43+7) on the new candidate",
+      "no device/NPU; not adopted by the v2 package"
+    ],
+    "notes": "settle runs once per window (settle_outcome reused by exception/finally/gate, no per-path 30 s accumulation); child timed_out/rc/trace facts are preserved and the timeout experiment is not reclassified as success; the two daemon residue processes observed by 31 (1361942/1361945) are addressed by the exact-PID cleanup"
+  },
+  "process_cleanup": {
+    "status": "implemented and Linux-validated on window 9a31091b (34/34 + F2/F3); awaiting 32/33 result review; device cells paused",
+    "problem": "d7e73514/f05f352f cleanup_child and survivors only covered pgid == child pid; torchrun workers run in independent PGIDs (rank0 1318300, rank1 1318301, PGID=self), so rank groups were not attributed, cleaned, or visible to the recovery gate",
+    "fix": "runtime DescendantRegistry polls the child PPID subtree plus subreaper orphans every 0.2 s and persists pid/ppid/pgid/sid/starttime/boot_id/cmdline to descendants.json; cleanup_attributed verifies pid/starttime/boot_id/pgid/sid (ppid may reparent) and signals only verified group leaders, unknown members are never group-killed; SIGTERM -> rescan -> SIGKILL -> reap; protected overlap refuses to signal; survivors and recovery_gate residual include all attributed groups; Linux subreaper failure blocks before d0_stop; plan-only is unaffected",
+    "gates": "240 s window, official aa3e restore, old_alive never Popen, restore root ppid1/pgid self/descendants same-group checks unchanged",
+    "findings_fixed": {
+      "F1": "drift/PID reuse enters attributed_survivors and cleanup members, so it blocks start_restore while never being signaled",
+      "F2": "registry.start() records synchronously and every cleanup path calls registry.stop() (final stable record) before cleanup_attributed; a probe that cleans immediately after start still sees the orphan",
+      "F3": "_record adds subreaper orphans before the fixed-point descendant expansion, and stop() repeats record until stable, covering an adopted intermediate plus its independent grandchild",
+      "F4": "cleanup_blocks_restore(outcome) turns protected_overlap into a blocked recovery gate instead of a silent no-signal"
+    },
+    "freeze": {"supervised_probe_window.py": "1f780bf8", "test_supervised_window_cpu.py": "228150e4", "test_probe_cpu.py": "ad257b5f", "run_probe": "8e308804", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)"},
+    "subreaper_lifecycle": "the window captures the original PR_GET_CHILD_SUBREAPER value (prctl 37) before enabling it; begin_restore clears the flag before start_restore and blocks the restore if clearing fails; the finally path restores the original flag via prctl 36 before exit. A Linux fixture proves a daemonized wrapper child reparents to the window while the flag is set and to PID1 after disabling. A second Linux-only fake_restore fixture runs the full path with original=1: enable -> cleanup/gate pass -> begin_restore (clear) -> wrapper forks a setsid daemon, writes the manifest, exits -> wait_restored_root gets ppid1/pgid-self; only one restore is started, the strict identity gate is unchanged, and the final flag is restored to 1. Both are skipped on macOS and pending 31's Linux run.",
+    "linux_fixture_result": {
+      "version_under_test": "a00edad (window 9a31091b)",
+      "outcome": "34/34 window tests OK on Linux, including 5 real-process cases; F2/F3 probes pass",
+      "log_sha256": "659754bd1cbc80494aa5a95c35add2d6b0eb9be264ae1675ade3f93840a71ba4",
+      "f2_f3_probe_sha256": "d180c08a042a83a4",
+      "f2_f3_script_sha256": "ab5dded182653e55",
+      "sums_sha256": "fc780c760adb45c6 (3/3)",
+      "archive": "grouped-deepdive/fixtures-a00edad/, 31 commit 165d5ad",
+      "f2": "tokened worker 1323101 registered and killed, /proc gone (zombie reaped); unrelated 1323102 without the token survived and was not registered; survivors empty",
+      "f3": "parent -> adopted intermediate -> setsid grandchild: entries 1323106/1323107, both gone after cleanup, survivors empty",
+      "residue": "none; existing system sleep 60/300 processes untouched",
+      "service": "root 1319033/399382752 healthy, config s1, TP2/4096, TP0+TP1, card7 phy14/15, boot 393ecc15 unchanged",
+      "earlier_run": "35b4fbe/0ca36426 ran 34 tests with 3 failures (zombie, over-broad adoption, chain race), all fixed before this pass",
+      "final_run": {
+        "version_under_test": "6d09515 (window 1f780bf8, test_window 228150e4)",
+        "outcome": "single fake_restore test OK; full 40/40 window tests OK on Linux",
+        "single_log_sha256": "6a369a97",
+        "unittest_log_sha256": "53cb7baff3c1f58142d370f0f2b86d6bd9ef6c19fa361a1de20fc6518d30be7e",
+        "archive": "fixtures-6d09515/ (SUMS 90f20867), 31 commit ad6d347",
+        "fixture_cleanup": "daemons 1326360/1326363 killed by exact identity; service untouched",
+        "v3_plan": "efb6fb19bef383ea9dde120af080b7a5236b7d266125d95d1991f6a91649dffa, stage-identity-v4 47ec314f, identity 1323589/399707126, window 1f780bf8, run_probe d54584b7, fresh out/run/restore a14-large-v3, port 29531 FREE, plan_not_executed",
+        "next": "32/33 increment review then one A14 large GO; v1/v2 plans superseded"
+      }
+    },
+    "linux_fixtures_pending": "31: setsid worker after immediate parent exit adopted via subreaper, registered, cleaned, survivors/recovery gate cover it; protected identity not signaled; unknown member not group-killed",
+    "semantics": "previous no_survivors claims for H11/H4K are downgraded to child-PGID-only; historical healthy restores remain recorded facts"
+  },
+  "readaddrm_timing": {
+    "status": "read-only derivation; conditional on a non-blocking ReadApiValidMsg",
+    "source": "abi-preflight5 disasm-ReadAddrMsg 9ec8e134 (SUMS ae91a530) and abi-preflight6 disasm-ReadApiValidMsg 57412224 (SUMS b8775ff6), libccl 2281deca",
+    "doc": "runtime/grouped_mmar/readaddrm_msg_timing.md",
+    "design_sha256": "2bba59c0f421dc0cf9539803a9f57d15de0c725fbe67d8653aa76f6507dd78a7",
+    "proven": [
+      "clock_gettime(4)=CLOCK_MONOTONIC_RAW; start/elapsed in nanoseconds via *1e9",
+      "20 s = 0x4a817c800 ns and 960 s = 0xdf84758000 ns constants",
+      "w24 = ubfiz(w24,#1,#7): 1,2,4,8,16,32,64,128,0; thresholds 20..2560 s",
+      "no sleep/nanosleep/usleep/select/poll call exists in ReadAddrMsg; 20 s*w24 is the timeout-log interval, not a sleep",
+      "the 960 s hard check sits inside the timeout-log branch; the first threshold above 960 s is 1280 s, so the ceiling is about 1280 s plus one poll iteration (960-1280 s if a poll straddles the cutoff), not 2560 s",
+      "the w24=128/2560 s threshold state is unreachable by the CFG (w24 becomes 128 at the 1280 s branch and the 960 s check returns); a callee that takes a long time only raises wall time and is not an exception to threshold-state reachability",
+      "33 confirmed the edges: w24 64->128, cmp, b.hi 0x7d9240, SetErrToWarnSwitch(0), 0x7d91c8 (w19=0), 0x7d8fcc, ret; 0x7d9240 has no edge back to 0x7d8d60",
+      "the 1280 s + one poll figure is a derivation under the helper-returns/control-reenters premise, not an actual upper bound for this cell",
+      "180 s lies in the 160-320 s log interval; it is not a return point and an external 180/240 s window truncates first",
+      "abi6 ReadApiValidMsg 0x7d6f20-0x7d71cc (57412224) contains no explicit sleep/poll/waiting syscall (the four syscalls are gettid); this proves only that no explicit blocking mechanism is visible, not that helper durations are bounded",
+      "at the 640 s crossing w24 is 32->64, not 128; at 1280 s it is 64->128 and the 960 s check returns, so 2560 s is not reached in a non-blocking run"
+    ],
+    "unproven": [
+      "helper durations (DlogRecord/TraceProfSubmit/CopyAndCheckApiMsg/CheckDebugMode) are not bounded; the derivation keeps the single-round return premise. CopyAndCheckApiMsg is confirmed by 31/33 as a 64-byte copy/GenXor/memcmp with no +50/+51; only CheckDebugMode body is unchecked",
+      "any ctx+0xf31d turn path is not in this disassembly (only ctx+0xF31F0 is loaded here)"
+    ],
+    "request": "33 confirmed the CFG ordering (1280 s branch returns before the 2560 s threshold state); helper duration uncertainty stays under the single-round return premise. Later work is 33's minimal actual-path observation design; static path and the actual cell remain separate"
+  },
+  "abi_turn_analysis": {
+    "status": "read-only analysis; 33 owns ReadAddrMsg/CopyAndCheckApiMsg/RcvMsg and the consumer chain",
+    "source": "abi-preflight5 SUMS ae91a530 (Init 9cac74e1, WriteFinish/Turn 29027459), abi-preflight6 SUMS b8775ff6 (Init call sites cd7f1ac6, ctx offsets 14018321, ctx196/f31d 975330ec), abi-preflight7 SUMS 09178185 (headers absent, 0x5CDF123A sites, writer candidate 0x7d6838-50), abi-preflight8 SUMS d2a4043ba4d3b13e4e7254fe5c31d2f93c7e229dbd6b260fe3e790aba290fa79 (PostMsg windows), abi-preflight9 SUMS 809265364caa52ce0114bcce089d5bdd7f7c33278cb0f384f4fd741a0c99a7a9 (correction plus getters/Init4/ctx windows), abi-preflight3 disasm-RpcSrvLaunch.txt SHA d92fee9d517c178fc7b9513cfff3249334df29bd173df429d6c66134e25c95dc, libccl 2281deca, abi4 GetSendRecvCnt",
+    "doc": "runtime/grouped_mmar/abi_turn_fields.md",
+    "design_sha256": "d3529863fc8b26f5ccfa14c84ef3d0fc6386f9a8f92427f32dc4e2e137645eca",
+    "proven": [
+      "Init(y,j,t,KFCTask*) writes base to server+0 (zero branch) or +8 (non-zero branch), computed begin/end to +16/+24, zeros +32..799, +800, task at +808, KFCTask+40 pointer at +816",
+      "Init(y) writes base at +8, zeros +800 and the 16 bytes at +808/+816",
+      "WriteFinishWhenAllFinalize writes u64 0x112210f6ca9997ff at [server+8]+0x5008+64*turn",
+      "WriteTurnCnt zeroes u64 at [server+8]+0x4008+64*turn and increments u64 at [server+8]+0x5008+64*turn",
+      "WriteFinish and WriteTurn share the same u64 address base+0x5008+64*turn",
+      "GetSendCnt reads u8 at [ctx+184]+u32[ctx+192]+50; GetRecvCnt reads u8 at that base + u16[ctx+196]*64 + 51",
+      "sendCnt/rcvCnt are 1-byte reads at +50/+51; the server turn word is 8 bytes at +8 of a 64-byte slot. The literal offsets/widths differ, but the base relation and the dynamic offset j are unproven, so a byte-range alias is NEITHER established nor excluded",
+      "abi6 call sites: Init(y,j,t,KFCTask*) at 0x76192c gets y=[ctx+184], j=[ctx+192], T=ldrh[ctx+196], server r23+0xd10; Init(y) at 0x7b67c4 gets y=[ctx+184], server x20+0xcf0; its zero branch stores C at server+0 (not +8) and computes C+j / C+j+64T, while Init(y) writes C to server+8",
+      "exact alias sets (S==C): 8-byte words at S+0x4008+64t and S+0x5008+64t; send hits iff j in union [0x3FD6+64t,0x3FDE+64t) (+0x1000 for the second array); recv iff j+64T in union [0x3FD5+64t,0x3FDD+64t) (+0x1000); T is a fixed u16 and only adds multiples of 64",
+      "byte-width correction: ReadApiValidMsg gate/consume are 4-byte words at [slot+48,slot+52), physically covering +50/+51 (gate 0x5CDF123A LE 3A 12 DF 5C; consume 0xA320EDC5 LE C5 ED 20 A3); no independent byte counter store is observed",
+      "GenMsgByTaskParam writes struct+44 valid 0x5CDF123A, +48/+49 bytes, and a u16 0x1234 at +50 covering +50/+51; CopyAndCheckApiMsg copies 64 bytes as a bulk operation, also covering those bytes",
+      "abi7: installed headers lack CommKfcParamDesc/KFCTask (no compile offsetof); 0x5CDF123A has no data-word hit and is an instruction immediate at 0x797978/0x7980f0/0x7d53f0/0x7d6f44/0x7d71dc/0x7d7344/0x7d7f0c/0x7db884/0x7dbc30; 0x7d6850 was a local +44 writer candidate, NOT a uniqueness result (GenMsgByTaskParam also writes the same magic at +44); Grouped op-info/kernel json and .o strings contain no rac_server/TurnWait/TurnNotify",
+      "abi8: 0x7d67f4-0x7d67fc are nops; the +44/+51 writer is AicpuKfcRpcServer::PostMsg(uint) 0x7d6800 (_ZNK17AicpuKfcRpcServer7PostMsgEj). Entry x0=this; 0x7d6828 ldr x0,[x0,#24] makes dest=*(void**)(this+0x18); the body stores only dest+44 (4B 0x5CDF123A=valid) and dest+51 (1B strb w1=rcvCnt); no +48/+49/+50 store. w1 is not modified inside PostMsg; callers 0x7c7f44 (w1=[ctx+352]-1) and 0x7c7f90 (w1=[ctx+352]) in RunRpcServerTwoStageWait; strb truncates to the low 8 bits (mod 256, 0-1 -> 0xFF). Order is +44 then +51 with no barrier between; the only dsb st is at 0x7d6884 after PrintMsg/dispose; no stlr. PrintMsg body is not fetched, so a write to dest there is not excluded",
+      "abi8 source semantics: rac_server.h AivAicpuOpParam offsets valid+44 (u32), isLast+48, funID+49, sendCnt+50, rcvCnt+51, everyTurnRsp+52, everyTurnWait+53, totalTurnCnt+54, res[9]+55..63; AC_MSG_VALID_MASK=0x5CDF123A and ~mask=0xA320EDC5; TurnNotifyRunSetMsg sets sendCnt=curTurn and valid=mask; TurnWait polls rcvCnt>=totalTurn then clears rcvCnt=0 and sets valid=~mask. PostMsg therefore writes the AICPU response: valid mask at +44, rcvCnt=(u8)turn at +51",
+      "abi8 conditional same-byte: Init4 zero branch ([server+816]=*(u64*)(KFCTask+40)==0) writes server+0x18=C+j+64T (C=[ctx+184], j=u32[ctx+192], T=u16[ctx+196]); GetRecvCnt reads C+j+64T+51, so dest+51 and the rcvCnt byte are the same byte iff P1 PostMsg this == the Init4 server object, P2 zero branch, P3 no later writer of server+0x18, P4 same ctx. Non-zero branch writes only server+8, so no relation. The gate's slot+48 equals the valid word at dest+44 iff j+64T=64turn+4 (slot=dest-4), unproven",
+      "abi8 widths in CheckRcvWorkMsg: 0x7d73b8 ldrb [x19,#50] (u8 zero-extended) vs 0x7d73bc ldr w1,[sp,#36] (u32; [sp,#36]=w3 saved at 0x7d7298, call passes w3=[ctx+352] at 0x7c7f10); cmp at 0x7d73c0, b.cs at 0x7d73c4. ctx+352>255 never satisfies the unsigned >=; the loop runs to the 6 s budget (x24=0x1_65a0_bc00 ns) and the timeout path reaches the same continuation 0x7d7450 (0x7d7414 tbz w0,0x7d7450) -> a 6 s delay, not a deadlock",
+      "address arithmetic: 0x7618dc adrp x23,0x191f000; 0x761918 add x0,x23,#0xd00; 0x761928 add x0,x0,#0x10; 0x76192c bl Init4 -> server_A=0x191fd10. 0x191fd00 is the enclosing struct base (counter [x2,#4], x25). 0x7620b4 add x23,x23,#0xd00 is a post-Init error/log block; local CFG over disasm-RpcSrvLaunch.txt (SHA d92fee9d) shows its exit 0x7620ec b 0x7614a4 and 0x7614a4 -> 0x76153c ret without reaching 0x761904/0x76192c, so 0x1920a10 is not used (direct branches plus blr fallthrough; no br)",
+      "abi9 correction: 0x76187c str wzr,[x28,#352] is a real ctx+352 clear (x28=AicpuGetComContext() at 0x7615ac/0x7615b0); the first abi9 summary negative was a grep truncation artifact; 0x7608c8 is another clear; the incrementing writer is still unlocated. The field labeled ctx+0xf31dc is actually ctx+0xF31BC: x26=x28+0xF0000 at 0x761654 (x28 written once), ldr w0,[x26,#12732] at 0x761848/0x761978, and 12732=0x31BC; 0x31DC=12764 appears in no instruction (scope negative). TwoStageWait is taken iff (v&~2)==1 (0x761978/984/988/990) with x1=0x191fd10. ReadAddrMsg's [x27,#12784] is ctx+0xF31F0 (x27=x23+0xF0000, x23=ctx). Cross-function ctx identity is unproven (CopyCtxInfo shows multiple contexts)"
+    ],
+    "unproven": [
+      "whether [server+8] equals [ctx+184] or how u32[ctx+192] maps to 0x4000/0x5000",
+      "whether C+j+50/51 intersects S+0x5008+64*t for the actual j/t (dynamic byte-range alias not established or excluded)",
+      "which Init overload/branch the Grouped path uses (call sites absent)",
+      "semantic intent of the WriteFinish constant vs the incremented counter at the same address",
+      "ctx+0xf31dc has no instruction in abi3-abi9; the closest real field is ctx+0xF31BC (u32, from 12732=0x31BC), whose value/copy-source semantics are unlocated; ctx+352 has literal clears but no incrementing writer",
+      "AivAicpuOpParam population (33 consumer chain)",
+      "whether the ReadAddrMsg slot pointer equals the AivAicpuOpParam base or base-4 (GenMsg and PostMsg put valid at +44 vs ReadApiValidMsg gate at +48); equality requires slot=dest-4, i.e. j+64T=64turn+4, unproven; no full-library store/alias/wide-write survey exists, so a unique +50/+51 writer claim is retracted",
+      "PostMsg premises: whether its this (TwoStageWait's second arg; 0x761994 passes x1=0x191fd10) is the same server_A object (callee prologue and callers not in windows), who else writes server+0x18, and whether AivAicpuOpParam::PrintMsg writes dest; compiled layouts because the installed headers lack CommKfcParamDesc/KFCTask"
+    ],
+    "request": "abi6 resolved Init call sites and ctx 184/192/196; abi7 gave a local +44 writer candidate (superseded, not uniqueness); abi8 identified PostMsg 0x7d6800 and proved dest=*(this+0x18), the +44/+51 stores, w1 truncation and the write order; abi3/CFG prove server_A=0x191fd10 and exclude 0x1920a10; abi9 corrected the ctx+352 clear and gave the ctx+0xF31BC expression. Remaining: the TwoStageWait callee prologue (is x19=arg2?), its callers and which server they pass, other writers of server+0x18, the AivAicpuOpParam::PrintMsg body, which server object/branch the Grouped path uses, and the ctx+0xF31BC semantics; 33 merges and 31 remains the sole remote fetcher. No new full-library store survey, no cross-DSO search, no device action"
+  },
+  "log_markers_analysis": {
+    "status": "read-only; Dlog/trace markers listed from abi3-abi10 windows; format/file text pending one targeted rodata dump; no device action",
+    "doc": "runtime/grouped_mmar/log_path_markers.md",
+    "design_sha256": "2bbddc370bb246a5e783df2995149450e74f8e66fe0e78367db1deb35e3f6c77",
+    "proven": [
+      "ForApi/RunRpcServerApi per-turn Dlog 0x7b3a24, gate HcclCheckLogLevel(1,3) at 0x7b39f0, fmt 0x14f8290, file 0x14f71a8, line 1715, x6=[ctx+12756]",
+      "OneStage 0x16 return Dlog 0x762280, gate (1,0x01000003) at 0x76224c, fmt 0x14ee650, file 0x14edee8, line 98",
+      "Init4 Dlog 0x7d67cc, gate (0,3) at 0x7d6728, fmt 0x1613f20, file 0x1613cc8, line 27, x6=y; fires before the zero/non-zero branch",
+      "ReadAddrMsg wait timeout Dlog 0x7d8d20, gate (2,0x01000003) at 0x7d8ce4, fmt 0x1614408, file 0x1613cc8, line 360, x6=turn, x7=20; then SetErrToWarnSwitch(1) and PrintAllHcclMsgArea",
+      "ReadApiValidMsg mismatch Dlogs 0x7d6fec (ret==20, gate (2,3), fmt 0x1613bd0, x6=0x1613bc0, x7=ret), 0x7d7074 (IsErrorToWarn true, fmt 0x1613c00), 0x7d70b8 (IsErrorToWarn false, level 3), 0x7d71bc (line 241, x6=[slot+48])",
+      "CheckRcvWorkMsg 6s timeout Dlog 0x7d744c, gate (3,3) at 0x7d7410 plus IsErrorToWarn, fmt 0x1614060, line 285",
+      "parameter-null Dlog 0x7615a4 (fmt 0x14eb1b0, line 433) and post-Init error/warn Dlog 0x7620e8 (fmt 0x14ee728, line 544, x6=[0x191fd04])",
+      "PostMsg response uses PrintMsg 0x7d6868, not a DlogRecord; abi11 shows PrintMsg does not write dest +24/+44/+51",
+      "TwoStageWait has no full disassembly in abi3-abi10, so no internal marker is provable; the absence of the OneStage-0x16 log is an inference, not a proof"
+    ],
+    "missing_text": [
+      "0x1613b80-0x1613d40 covers 0x1613bc0/0x1613bd0/0x1613c00/0x1613cc8/0x1613ce0",
+      "0x1613f00-0x1613f60 (0x1613f20); 0x1614040-0x16140a0 (0x1614060); 0x16143e0-0x1614440 (0x1614408)",
+      "0x14eb190-0x14eb200 (0x14eb1b0); 0x14ede80-0x14edf20 (0x14edee8); 0x14ee630-0x14ee690 (0x14ee650); 0x14ee700-0x14ee790 (0x14ee728); 0x14f7160-0x14f71f0 (0x14f71a8); 0x14f8270-0x14f82e0 (0x14f8290)"
+    ],
+    "request": "one targeted NUL-terminated rodata dump (10 ranges, about 1 KB) merged by 33 and fetched once by 31 from the same libccl 2281deca; no full-library scan, no installer change, no runtime code, no device action"
+  },
+  "mrs_allgather_alternative": {
+    "status": "A15 CPU implementation complete (bias-free MRS+all_gather with tail pad/crop); awaiting 32/33 freeze review; no device cell",
+    "design": "runtime/grouped_mmar/mrs_allgather_mlp_design.md",
+    "design_sha256": "a1df799cc6c83ae150e8c901db0bf4e6b608cb309df1e0b167b6db5143989346",
+    "a15_contract": "the current freeze expresses rows 127 via parameters only: --arm A15 --rows 127 --k 256 --n 512; flags 8 KEEP_ALL, bias nullptr, pad 128, RS blocks 64/64, AG 128, crop 127; plan-only verified, no code change needed",
+    "production_plan": "CPU design sections 13/15: flags=0, destroy the executor after launch, per-call/pooled workspace, same stream and TP group, no production sync; load-time ND only for down (skip down NZ) and compare S1/S2 + OD/ERQA 2PP against the full-NZ baseline; rollback is a flag flip/restart; a full ND dual copy would be 5.31 GiB/rank and is not the plan. Bounded steady-state plan (32 findings incorporated): baseline arm A16 keeps the weight FRACTAL_NZ29 (record ND source hash and NZ cast hash) and calls production-shaped F.linear/matmul + all_reduce on the same stream, retaining tensors to match A15 KEEP_ALL; primary comparison at M968 for both arms (secondary M967 baseline quantifies the one-row pad); ABBA, W warmups excluded, N measured, timing covers launch+collective+sync, median/p95 plus paired deltas. KEEP_ALL budget section 15.1 is a precise byte ledger for an **experimental incremental allocation budget** (1 GiB = 2^30 B/rank): retained tensors + concurrent transient tensor peak + planning reserve; adapter/runtime RSS and allocator high-water are excluded, so this is not a process-RSS guarantee. Resident x (16,833,536 B) + w (89,128,960 B) once; per-call retained 17,301,504 B small / 137,625,600 B large; **X=1,048,576 B/call is an unverified planning reserve**. Large transient lower bound is 94.44 MiB (4 float32 [967,5120] = 79,216,640 B plus BF16 full/reference 18.90 MiB). y (4,956,160 B) is already in the per-call retained ledger, not the transient set; an alternative total-footprint reading that adds it once is 103,987,200 B = 99.17 MiB (about 104 MB) and is not additive to the per-call retained sum. Using that alternative in the peak estimate instead of the 94.44 MiB lower bound gives about 861.5 MiB for W1/N4; the readings are alternatives and are never summed (earlier double-count wording was conservative by about 4.7 MiB). Formula max_calls=floor((1 GiB - resident - transient)/(per_call+X)); large = 6 by the ledger, but W1/N4=5 is robust (5 calls: 661.3 MiB retained + 101.0 MiB resident + 94.44 MiB transient = **856.75 MiB conditional estimate, not RSS**); 6 calls give 989.0 MiB (96.6%) and require X<=6.83 MiB. Shared cap W1/N3=4; small W3/N20=23 (379.5 MiB retained + 23.0 MiB reserve = 402.5 MiB). ABBA per-arm processes: A1(A15,W1+N4) -> B1(A16,W1+N4) -> B2(A16,W1+N4) -> A2(A15,W1+N4), pairs A1-B1/A2-B2, W1 excluded. Allocator cached temporaries must be measured via memory_allocated/memory_reserved or empty_cache outside timing. A16 remains design-not-implemented and no device benchmark is authorized. Production executor/workspace lifecycle remains pending and flags=0 early release is not treated as a solution. max_rel_abs uses clamp_min(|reference|, 1e-12); its position is not persisted, so max_error_reference/output identify the maximum-absolute sample only and max_rel=1.0 cannot be explained with them; it is not a gate",
+    "path": "pad x_local to T'=ceil(T/2)*2, run_mrs(x_pad, W_local [8704,5120], group, 2), all_gather_into_tensor to full [T',5120], slice [:T], unchanged native npu_add_rms_norm",
+    "shapes": "T 307/967/1595 pad to 308/968/1596; K_local=8704, N=5120, BF16; small control M128/K256/N512",
+    "bias": "nullptr in the current path; if mlp_bias=True, add the replicated bias once after the full sum",
+    "comm_cost": "ring R=2 total volume parity with all-reduce (0.5S reduce-scatter + 0.5S all-gather = S); two collectives and no matmul overlap, so performance is not expected to beat AllReduce",
+    "memory": "x_pad ~16.85 MB, MRS partial ~4.96 MB, all-gather full ~9.91 MB; a full ND down copy is 89.1 MB/rank/layer = 5.31 GiB/rank over 64 layers, so the preferred plan is load-time format replacement for down only (ND, skip NZ) with zero extra bytes and a measured rollback cost; large-shape MRS workspace untested",
+    "gates": "A14 large M968/K8704/N5120 support first; probe A15 max_abs<=0.03125/mean_abs<=1e-4 vs all-reduce reference; frozen fixed_gate; full OD 2352 + ERQA 400 within 2PP of the BF16 NZ baseline",
+    "unknowns": "MRS large support/performance, workspace, executor lifetime, NZ weight acceptance, mlp_bias config, vLLM TP group name/stream ordering",
+    "a15": {
+      "status": "implemented CPU-only; no device GO",
+      "arm": "A15 flags=8 (KEEP_ALL, the A14 success baseline per 32), bias=nullptr, rows default 967, K=8704, N=5120 reproducible",
+      "logic": "tail-pad x to ceil(T/2)*2 with non-zero pad rows, run_mrs, torch.npu.synchronize (probe), all_gather_into_tensor to [T',N], crop [:T], compare full rows against matmul+all_reduce",
+      "records": "pad rows/pad value, per-rank row block, gather_ms, reduced max_abs/mean_abs/bit_equal, equivalence and diagnostic_gate (provenance MC2 RS 0.03125; Dense SP 0.015625/2e-5; diagnostic only, not fixed_gate)",
+      "cpu_tests": "padded_rows/row_block odd+even cases, A15 plan flags=8 KEEP_ALL/bias=nullptr/rows=967, all_gather and non-zero pad source checks; 17/17 + 9/9 + 23/23 = 49/49",
+      "v3_execution_freeze": {"status": "locked and executing; do not restage or replan", "commit": "cdc8324", "run_probe.py": "103b9775", "test_probe_cpu.py": "f6fe2c99", "window": "1f780bf8", "test_window": "228150e4", "binding": "101660f8", "adapter": "d181b15a", "plan": "2fcd101b"},
+      "candidate_freeze_after_v3": {"status": "CPU-only shape guard + raw error-stat fields with torch-direct tests; NOT the executed v3 tuple", "run_probe.py": "8e308804", "test_probe_cpu.py": "ad257b5f", "cpu": "79/79 (30+9+40; 7 Linux-only + 3 torch-direct skipped on macOS)", "window": "1f780bf8 (unchanged)", "adapter": "d181b15a (unchanged)"},
+      "torch_direct_test": "TensorErrorStatsTest runs tensor_error_stats and a15_record(stats=tensor_error_stats, equal=torch.equal) on small CPU tensors (normal, zero reference, None/wrong shape) and cross-checks the list helper; float fields use assertAlmostEqual(delta=1e-6) because torch float32 accumulation differs from the double helper. Skipped when torch is absent (macOS); on the Linux venv the suite must first source activate_env.sh, otherwise torch_npu's entry point tries to load CANN and segfaults (rc 139, environment precondition, not a product defect)",
+      "error_stats": "a15_record's stats callback records max_abs/mean_abs/bit_equal plus ref_abs_max, out_abs_max, diff_nonzero_count, diff_total_count, max_error_index/position and values, max_rel_abs, and relative_l2 = ||out-ref||_2 / max(||ref||_2, 1e-12); it also stores relative_l2_denominator and relative_l2_zero_reference. These are raw measurements only; diagnostic_gate thresholds and numeric_pass are unchanged. ULP is not computed; real samples can be interpreted offline",
+      "shape_guard": "a15_record now requires both output and reference shapes to equal (rows, n) and each other; a missing reference returns missing_equivalence_record, a wrong/broadcastable shape returns invalid_equivalence_shape, and execute stores numeric_error and fails numeric_pass. CPU cases cover normal[127,512], None and a broadcastable [1,512] shape",
+      "large_v1_result": {
+        "status": "executed; functional/full-row diff and scale measured; within_bounds is FALSE in the original result",
+        "tuple": "e38b541 / run_probe 8e308804 / test ad257b5f / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan 8befce63 / identity 1334752/400276164",
+        "device": "both ranks pad {967 -> 968, pad_value 1.0}; row_block 0 (0,484) / 1 (484,968); equivalence shape [967,5120]; workspace 115,818,496 B; gather 1.13913/1.21021 ms; sync ~7.846 ms",
+        "numeric": "max_abs 2.0, mean_abs 5.1305116357980296e-05, ref_abs_max/out_abs_max 744.0, diff_nonzero 510 / 4,951,040, max_error_index 1040755 position [203,1395], max_error_reference 400.0, max_error_output 402.0, max_rel_abs 1.0, relative_l2 4.9197991043609655e-05 (denominator 293496.6875, zero_reference false), bit_equal false",
+        "gate": "diagnostic_gate max_abs_le 0.03125 / mean_abs_le 1e-4 / within_bounds FALSE / status diagnostic_only_not_an_official_gate; the code rule is AND. 31's summary text said within_bounds=true, but the archived rank0/rank1 result.json both contain false; the original is authoritative and was not rewritten",
+        "window": "child rc0, timed_out false, survivors [], cleanup_final empty; ok=false only from the maps sampling artifact",
+        "restore": "branch aa3e-noop, root 1337814/400405818, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-large-v1-cell SUMS 17/17 (2adc7ef6, 31 commit 0d8cc1a); window d75f4745, rank0 result f50dba4f/trace 7ac02b83, rank1 result 995a4443/trace 27d5f521, restore b7605e05/03c37db9",
+        "scope": "large-shape functional/full-row reference difference only: max_abs 2.0 at reference 400 is about one BF16 ulp at that magnitude and 510 of 4,951,040 elements are nonzero; not a precision pass, not a performance or production claim, no gate change"
+      },
+      "v3_result": {
+        "status": "executed on the locked tuple; diagnostic success only, not a production or precision-pass claim",
+        "tuple": "cdc8324 / run_probe 103b9775 / test f6fe2c99 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan 2fcd101b / identity 1330921/400000296",
+        "device": "both ranks pad {127 -> 128, pad_value 1.0}, row_block 0 (0,64) / 1 (64,128), gather 1.22224/1.21543 ms, workspace 17,170,432 B",
+        "numeric": "reduced max_abs=0.0, mean_abs=0.0, bit_equal=true; equivalence shape [127,512] with the same zero diff; diagnostic_gate within_bounds=true, status=diagnostic_only_not_an_official_gate; finite/both_finite/numeric_pass/pass true; numeric_error null",
+        "window": "child rc0, timed_out false, survivors []; ok=false only from the maps sampling artifact; cleanup_final killed with empty sets",
+        "restore": "branch aa3e-noop, root 1334752/400276164, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-small-v3-cell SUMS 17/17 (d7e8b90f, 31 commit 1d1daef); window f913ceef, rank0 result 34d57699/trace 267765b9, rank1 result 59162047/trace 565424b8, restore e1273081/03dacf1b",
+        "scope": "rows 127 / pad 128 / crop 127, K=256, N=512 small shape. The zero diff is a diagnostic fact for this cell only; it does not name a precision pass, does not extrapolate to the large shape or production, and the shape-guard candidate 8807597 was not used by this run"
+      },
+      "v1_result": {
+        "plan_sha256": "99db4369",
+        "failure": "NameError: name 'k' is not defined at the old run_probe.py:386 in the A15 tail-pad branch; no pad_ready/gather/equivalence/numeric",
+        "window": "child rc1, timed_out false, survivors [], cleanup_final killed with empty sets",
+        "restore": "branch aa3e-noop, root 1328734/399924959, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-small-v1-cell SUMS 18/18 (e185265f, 31 commit 2cb8fdd)"
+      },
+      "v1_fix": "use a.k; factor the real A15 path into a15_flow (pad -> run_mrs -> sync -> all_gather -> crop -> full-row reference) and add a CPU stub that runs rows 127 with NPU/comm stubs; add an F821-equivalent symtable check over run_probe.py and supervised_probe_window.py",
+      "v2_result": {
+        "plan_sha256": "a9ea5fe2",
+        "device": "both ranks pad {32767: 127 -> 128, pad_value 1.0}, row_block 0 (0,64) / 1 (64,128), gather 1.16421/1.15801 ms, workspace 17,170,432 B, sync ~7.78 ms, finite/both_finite/numeric_pass/pass true, child rc0, survivors []",
+        "defect": "the A15 lambda used dist.all_reduce (in-place, returns None), so reference=None and result.reduced/equivalence/diagnostic_gate were skipped even though the numbers existed",
+        "fix": "a15_flow computes reference=matmul then calls all_reduce(reference) and never uses the return; a15_record() builds reduced/equivalence/diagnostic and returns None for a missing reference; A15 numeric_pass also requires the three record keys and sets numeric_error=missing_equivalence_record otherwise. CPU stubs return None from all_reduce while mutating in place and assert the record appears",
+        "restore": "branch aa3e-noop, root 1330921, five PIDs, four checks true, subreaper 0->cleared->final 0, no second tree",
+        "evidence": "a15-small-v2-cell SUMS 18/18 (05b2ccc6, 31 commit 32ef246)",
+        "status": "pad/gather/workspace/sync and numeric_pass are valid facts; the equivalence record is missing and this cell is invalid for the diagnostic gate"
+      },
+      "window_note": "A15 was missing from the window --arm choices; added with a CPU plan-only child-argv test. The H4K executed cell keeps its original window d7e73514; the new window SHA is for A15 and later cells only",
+      "keep_note": "KEEP_ALL keeps group/workspace/descriptors until sync, matching the A14 success baseline and avoiding the early-release confound; the release op remains unregistered, so release_error=NotImplementedError/harness_pass=false is recorded while numeric_pass stays independent"
+    },
+    "separation": "independent equivalent substitution; does not explain the Grouped hang and does not establish the mc2_server dependency",
+    "freeze_note": "doc-only addition; H4K freeze 0d3f7fb / run_probe 508e2931 / window d7e73514 unchanged"
+  },
+  "matched_grouped_control": {
+    "status": "H11 and H4K hang with the same stream47/task13 signature; H5K invalid pre-launch; thread/sync path excluded as the differentiator; Grouped device path candidates remain",
+    "design": "runtime/grouped_mmar/h11_matched_control.md",
+    "design_sha256": "fa62db6c29579cc076e43310c0f8fb4861cdbbe94f9c7613e9e386ac967b72f9",
+    "arm": "H11 (existing arm; no new code, no adapter/binding change)",
+    "cli": "torchrun --nproc_per_node=2 --master_port=<29531 free> run_probe.py --arm H11 --rows 128 --k 256 --n 512 --seed 20261119 --temp-root <fresh> --out <fresh probe-out-h11-small-v1> --adapter <d181b15a> --arm-timeout 240",
+    "plan_sha256": "e159c897ac93287e08ca5e53658d24ac1277bf96b530bb3b673b290c98232b1e",
+    "identity": "1311514/399079056 (9802c322, health ready)",
+    "superseded_plans": ["68cc5a79 (renamed before execution)"],
+    "match": "M128/K256/N512, BF16 x/w, FP32 zero bias, single group, same HCCL comm domain/group name, same adapter/provider, same window 2202165e, KEEP_ALL, 240s",
+    "op_differences": "bias nullptr vs FP32 zero; output reduce-scatter [64,512] vs all-reduce [128,512]; op MRS vs Grouped",
+    "reference": "local x @ w then dist.all_reduce SUM (zero bias); records reduced.max_abs/bit_equal, not a pass condition",
+    "numeric_gate": "numeric_pass = api/sync/finite/both_finite; pass/exit follow numeric_pass; harness_pass also needs harness_release_ok; release NotImplementedError and any cleanup error are recorded and do not erase numbers",
+    "discriminability": "H11 hang -> Grouped op-specific; H11 returns -> small shape insufficient, move to v4r1-like large; H11 prepare failure -> record op shape constraint, pick nearest legal shape",
+    "order": "A14 small v5 numeric is complete; H11 plan e159c897 executed and hung at the Python device sync; H4K/H5K discriminators await 20/32 scheduling; large paused",
+    "result": {
+      "tuple": "f3e76cc / manifest 5531e104 / run_probe 0f90fd23 / binding 101660f8 / window 2202165e / adapter d181b15a / plan e159c897 / identity 1311514/399079056",
+      "trace": "api_return workspace 16,777,216, run_id 1; python sync_enter with no sync_return; cpp launch_return launch_rc=0; handler_return cleanup_rc=0/sync_rc=0 are KEEP_ALL defaults (no sync API called)",
+      "stream": "in-process stream_compare prepare_stream == handler_stream (0xaaab2d583bb8 on rank0); cross-process pointer equality is not used as evidence",
+      "watchdog": "child rc -9, timed_out true, survivors [], cleanup killed, isolation_failed false",
+      "window": "ok=false because the external maps sample was partial (libhccl/libascendcl true, opapi_math/transformer/nnopbase false, binary_pids empty); child rc -9; same sampling artifact as v5",
+      "plog": "both devices: stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1, three-minute timeout; device logs create KFCtaskAndTilingTraceData + AivAicpuOpParam",
+      "restore": "branch aa3e-noop, root 1313827, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no probe residue",
+      "evidence": "h11-small-v1-cell SUMS 15/15 (57932c67, 31 commit f576d23); window 30152154, rank0 trace 6431785c/result 78523809, rank1 trace eb4d9097/result fdabc46b, restore 63ea26c5/f2aa5924",
+      "interpretation": "under the same M128/K256/N512, BF16, single group, KEEP_ALL, adapter, comm and window as A14 v5, the Grouped op still leaves stream47 task_id=13 pending and the Python device sync never returns; this excludes a large-shape/tiling-only explanation and prioritizes Grouped-specific rac_server/AivAicpu/KFC task delivery candidates; single cell does not establish a cause, and the mc2_server dependency remains supported_but_unproven"
+    },
+    "h5k_result": {
+      "tuple": "0d3f7fb / manifest 21758ff5 / run_probe 508e2931 / window d7e73514 / binding 101660f8 / adapter d181b15a / plan f10bfa01 / identity 1313827/399164390",
+      "trace": "flags=40; prepare and handler stream/context/device identical in each rank; api_return workspace 16,777,216, run_id 1; sync_enter with no sync_return",
+      "plog": "only Mc2AiCpuStreamAllocAndGet stream id 12 and Mc2AiCpuInitStreamAllocAndGet stream id 11; no stream_id=47 and no three-minute timeout line",
+      "device": "only RunAicpuKfcResInitV2 / AicpuRpcResInitV2 / RunAicpuRpcSrvLaunchV2 loads; no KFCtaskAndTilingTraceData or AivAicpuOpParam creation",
+      "watchdog": "child rc 1 (torchrun aggregate), timed_out true, survivors [], result stub",
+      "stub_note": "the stub libraries=0/provider none is a flush-timing artifact before final metadata; it is not load evidence and not a load-gate result",
+      "restore": "branch aa3e-noop, root 1316176, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue",
+      "evidence": "h5k-small-v1-cell SUMS 15/15 (b89b8fa7, 31 commit 93eac05); window 2c056ce1, rank0 trace 00ca7852/result 1e678933, rank1 trace e58f0ff8/result 468177f6, restore d04d2289/55ea795e",
+      "interpretation": "H5K still hangs; its log signature differs from H11, but missing logs are not proof of no dispatch, and REFETCH causality is not established; no stream/context attribution; numeric absent",
+      "timeline": "33 commit 4766771: rank0 handler_enter @2.557746s, Python api_return @2.557772s, sync_enter @2.557821s; no stream_compare/launch_enter/launch_return/handler_return. Code fact: fields() for handler_enter calls aclrtGetDevice/aclrtGetCurrentContext before the mark; between the handler_enter mark (binding L335) and the stream_compare mark (L344) the only runtime query is L339 getCurrentNPUStream(); the L341-344 block uses only hex/snprintf and the trace mark, and probe_trace emit is POSIX clock_gettime/getpid/getpgrp/gettid/write with no ACL calls. The block is in the handler_enter->stream_compare interval, with getCurrentNPUStream internals or the trace write as candidates and no proof which; H5K is not a valid Grouped device-path discriminator and H11 remains the matched Grouped hang cell"
+    },
+    "h4k_result": {
+      "tuple": "0d3f7fb / manifest 21758ff5 / run_probe 508e2931 / window d7e73514 / binding 101660f8 / adapter d181b15a / plan 947fe77a / identity 1316176/399261496",
+      "trace": "flags=24; prepare/handler thread, stream, context and device identical; launch_enter -> launch_return rc0 -> cpp sync_enter on the calling thread with no sync_return",
+      "plog": "both devices stream_id=47, sq_id=2, task_id=13, sqHead=13, pendingNum=1 three-minute timeout, the same signature as H11",
+      "device": "KFCtaskAndTilingTraceData + AivAicpuOpParam created; RunAicpuKfcResInit (V1) plus ResInitV2/RpcSrvLaunchV2 loaded",
+      "live_snapshot": "rank0 pid 1318300 and rank1 pid 1318301 live /proc maps/stat/libs saved (PGID=self, starttime 399358649, boot 393ecc15, 15 libs each); the snapshot was taken early, before probe_adapter.so/libopapi.so were mapped, so it cannot prove the adapter load and the stub result did not flush libraries; timing limitation recorded",
+      "watchdog": "child rc -9, timed_out true, survivors [], result stub",
+      "restore": "branch aa3e-noop, root 1319033, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue",
+      "evidence": "h4k-small-v1-cell SUMS 23/23 (8fe4986b, 31 commit cd561f6); window 3b89c0b1, rank0 trace 1ef1a021/result e1a580b8, rank1 trace e3d3625b/result bfd730b7, restore 99c5c10a/eb5f25f0, rank-snapshots 8 files",
+      "interpretation": "three-point comparison: H11 (OpCommand handler + Python sync) hangs at stream47 task13; H4K (calling thread + real cpp aclrtSynchronizeStream) hangs with the same signature; H5K is invalid because its handler blocks before launch inside getCurrentNPUStream. The thread/sync path is therefore not the differentiator, and the Grouped device path (KFC task/response progress) remains the candidate; one cell does not establish a cause and the mc2_server dependency stays supported_but_unproven"
+    },
+    "next_discriminators": {
+      "status": "H5K executed (hang, signature differs); H4K preflight pending; 33 contract review done",
+      "H4K": "DIRECT_LAUNCH|KEEP_ALL=24: retention identical to H11; changes only calling-thread execution plus a real handler aclrtSynchronizeStream (still a thread+sync combination; never proves context alone)",
+      "H5K": "REFETCH_STREAM|KEEP_ALL=40: retention identical to H11; single stream-source variable in the same OpCommand handler thread; first in the schedule",
+      "freeze": {"run_probe.py": "508e2931", "supervised_probe_window.py": "d7e73514", "test_probe_cpu.py": "89acbb63", "test_supervised_window_cpu.py": "0fcdf991", "binding": "101660f8 (unchanged)", "adapter": "d181b15a (unchanged)", "cpu_tests": "48/48 (16+9+23)"},
+      "implementation": "two ARMS entries in run_probe plus H4K/H5K in the window --arm choices; binding/flags/adapter unchanged; release/maps logic untouched",
+      "order": "H5K first; if it hangs with a complete restore, one H4K combination cell follows on fresh identity; H11 hang + H5K return -> handler stream/context binding; H11 hang + H5K hang + H4K return -> calling-thread/OpCommand path candidate; all three hang -> delivery/AivAicpu-KFC protocol stronger",
+      "rule": "stream/context pointers are process-local; compare same/different relations and device id within a process, never cross-process hex equality"
+    }
+  },
+  "a14_control": {
+    "status": "small_v5_numeric_pass_complete; maps gate is a window sampling artifact, per-rank result.libraries prove actual loads",
+    "op": "aclnnMatmulReduceScatter V1",
+    "header_sha256": "6e49c20f (3158 B upstream)",
+    "sample_sha256": "0996d6f4 (8873 B)",
+    "shapes": {
+      "small": {
+        "M": 128,
+        "K": 256,
+        "N": 512
+      },
+      "v4r1_like": {
+        "M": 968,
+        "K": 8704,
+        "N": 5120,
+        "output": [
+          484,
+          5120
+        ]
+      }
+    },
+    "bias": "nullptr (A2/A3 non-zero bias unsupported)",
+    "output": "m/rank_size,n",
+    "constraints": "m % rank_size == 0; commTurn 0; streamMode 1; reduceOp sum",
+    "binding": "run_mrs",
+    "pending": "CPU-only stage/compile/plan approval by 32/20; device execution only after GO",
+    "success": "A12-equivalent gate",
+    "local_header_sha256": "ad8f98b4652207b3f7bfd5c9cefb4cc4428e79902461b1d7431829cbc0cc8041",
+    "local_header_signature": "matches run_mrs: (x1,x2,bias,group,reduceOp,commTurn,streamMode,output,ws,exec)",
+    "header_note": "local CANN header differs from upstream 6e49c20f; compile against the local header",
+    "libccl_kernel_sha256": "2281deca93f4d551965ec71bfb1d23846cc9b63f60826d3d1646a96c321a686c",
+    "libccl_symbols": "RunAicpuKfc*, HcclKernelEntrance, HcomMc2AiCpuStreamAllocAndGet, HcclMc2Com*; Mc2Server/RacServer count 0",
+    "mrs_kernel_symbols": "HCCL/KFC family (AssembleHcclMsg/HcclMsg/g_hcclContextReserved); no Mc2Server/RacServer",
+    "aicpu_kernel_dir": "6 entries only; no other mc2* variant; mc2_server 71263835",
+    "loadsysopkernel_note": "common line also in healthy service; removed from suspicion",
+    "preflight_sums_sha256": "21dcae087a84e78281ce7dbebb124ec66740245e543b4e2d695c7a12621d28ae",
+    "a3_legal_control": "33/31: A3 op-info + local header ad8f98b4 + libccl 2281deca + MRS kernel objects (b4819757/da0cf9db) confirm a legal AICPU/KFC control",
+    "mrs_kernel_objects": [
+      "b4819757",
+      "da0cf9db"
+    ],
+    "dependency_note": "Grouped/A14 both show HCCL/KFC family and no Mc2Server/RacServer; dependency on the refused mc2_server remains supported_but_unproven; A14 alone cannot decide it",
+    "execution_gate": "33 013b9a0: CPU-only stage/compile/plan by 31; 32 ready; 20 GO; then small M128/K256/N512, then v4r1-like M968/K8704/N5120 (output 484x5120)",
+    "compile_fix": "MMAR/MRS V1 take const aclTensor*; Lists.add_single owns single descriptors; grouped keeps aclTensorList",
+    "flags": "KEEP_ALL (full state kept until sync/release; no early-release confound)",
+    "old_plans_invalid": [
+      "d9b9070b",
+      "8cdbebd5",
+      "2ee38a28",
+      "bc1efa2d"
+    ],
+    "rebuild_required": "31 re-stage e0b06df (binding 101660f8, run_probe 6ae866b1 KEEP_ALL, window 2202165e), recompile/log, new identity after H6 recovery, new small plan M128/K256/N512",
+    "small_go": "after 32 reviews 101660f8+6ae866b1 and the new plan/binary/identity",
+    "large": "M968/K8704/N5120 after small + new root identity + 32 limited review",
+    "small_v2": {
+      "identity": "1305145/start 398845277 (file 4ace4a79)",
+      "plan_sha256": "18fdf185",
+      "shapes": {
+        "M": 128,
+        "K": 256,
+        "N": 512
+      },
+      "flags": "KEEP_ALL",
+      "window_sha256": "2202165e",
+      "adapter_sha256": "d181b15a",
+      "child_timeout": 240,
+      "status": "executed_aborted_pre_launch_harness_race",
+      "stage": {
+        "commit": "e0b06df",
+        "run_probe_sha256": "6ae866b1",
+        "binding_sha256": "101660f8"
+      },
+      "sums_sha256": "2e1086eb (13/13)"
+    },
+    "small_v3": {
+      "status": "executed; liveness pass, numeric rerun blocked by release harness crash",
+      "freeze": "commit f087746, manifest 02fdd342, run_probe b7f255cb, binding 101660f8, window 2202165e",
+      "freeze_note": "f087746 differs from the 32-reviewed d571641/7d39461d only in manifest metadata; binding/run_probe/window are byte-identical",
+      "plan_sha256": "8782537a",
+      "superseded_plans": ["18fdf185 (v2 harness race)", "d88250e4 (v3 rebuilt from f087746)"],
+      "shapes": {"M": 128, "K": 256, "N": 512},
+      "flags": "KEEP_ALL",
+      "child_timeout": 240,
+      "identity": "1306695/start 398875478 (file a85ff9b8, health ready)",
+      "out": "probe-out-a14-small-v3 (fresh, not reused from v2)",
+      "adapter_sha256": "d181b15a",
+      "compile_log_sha256": "fc8efe47",
+      "master_port": "29531 (preflight FREE)",
+      "stage_archive": "a14-preflight/plan/stage-identity-v5.json + identity + plan; SUMS 17/17 (4eaf108e)",
+      "stage_commit": "9600e2a",
+      "result": {
+        "cell": "Clef-27B/logs/overnight-20261119-owner31/grouped-deepdive/a14-small-v3-cell/ (SUMS 16/16, 88b823a4, 31 commit 064d469)",
+        "trace": "both ranks prepare_rc0, executor nonnull, workspace 17,170,432 B, launch_rc0, handler cleanup_rc0/sync_rc0, sync_ms 18.66017/8.16125, no stream47, no 507046",
+        "rank0_result_sha256": "33410194",
+        "rank1_result_sha256": "300eebfd",
+        "window_sha256": "c291b877",
+        "restore": "branch aa3e-noop, root 1308632/start 398926792, five PIDs, four checks/env/joint/source/clients true, no residue",
+        "interpretation": "MRS V1 A3 AICPU/KFC path works at small shape; refused mc2_server not a universal blocker; Grouped still 507046/stream47; dependency supported_but_unproven",
+        "blocker": "run_probe.py release(run_id) zero-tensor dispatch NotImplementedError after sync; result.json stub only; reduced/reference/bit_equal not computed"
+      }
+    },
+    "small_v5": {
+      "status": "executed; numeric_pass complete, bit_equal on both ranks",
+      "plan_sha256": "b6429191f75d0b66f32404a0fa62d751d44750670b28aac9a22032efb03c8080",
+      "out": "probe-out-a14-small-v5 / run-a14-small-v5 / restore-a14-small-v5 (fresh)",
+      "identity": "1308632/start 398926792 (eb3a4b42)",
+      "freeze": "f3e76cc / manifest 5531e104 / run_probe 0f90fd23 / test a8bf075f / binding 101660f8 / window 2202165e / adapter d181b15a",
+      "result": {
+        "numeric": "api/sync/finite/both_finite true; numeric_pass=true; pass=true; reduced.max_abs=0.0, bit_equal=true on both ranks; sync 20.65 ms; no stream47, no 507046",
+        "harness": "release_rc=null, release_error=NotImplementedError, harness_release_ok=false, harness_pass=false, harness_cleanup_error=null; numbers were flushed before release",
+        "window": "child rc0, survivors []; ok=false only because the external PGID maps sample caught the torchrun parent before the ranks loaded libraries (sampling artifact)",
+        "libraries": "each rank result has 17 in-process /proc/self/maps entries incl. adapter probe_adapter.so d181b15a, libhccl da6dd17f, libascendcl 1c06b9c4, libopapi eb1c788e, libnnopbase 72cd43b4, libtorch_npu 65e6be19",
+        "provider": "prepare/launch=libopapi.so, metadata=libnnopbase.so; dladdr provenance checked in binding api()",
+        "restore": "branch aa3e-noop, root 1311514, five PIDs, two workers, health/info/text/image/env/joint/source/clients true, no residue"
+      },
+      "evidence": {
+        "cell": "a14-small-v5-cell (SUMS 16/16, 5524942b, 31 commit 74eb92f)",
+        "window_sha256": "319be929",
+        "rank0_result_sha256": "bed2e1c6",
+        "rank0_trace_sha256": "4ce37e08",
+        "rank1_result_sha256": "0c81f74a",
+        "rank1_trace_sha256": "8b62c55f",
+        "restore_manifest_sha256": "d5cc432c",
+        "restore_joint_sha256": "abdb1953"
+      },
+      "maps_gate_note": "result.libraries is actual in-process mapping evidence; the window.ok=false is an external sampling-timing artifact, not a missing load. A rank-local maps_self persistence is a future harness improvement only (20: no code change now)."
+    },
+    "large_run": {
+      "status": "device path/workspace/sync pass; numeric blocked by an A14 output bug; one rerun approved",
+      "tuple": "a00edad / manifest 778c37af / run_probe 0bd1fde8 / window 9a31091b / binding 101660f8 / adapter d181b15a / plan fac2d948 / identity 1319033/399382752",
+      "device": "both ranks prepare_rc0, executor nonnull, workspace_bytes 115,818,496 (110.5 MiB), launch_rc0, Python sync_return 36.62/9.46 ms, no stream47/507046",
+      "harness_bugs": [
+        "run_probe 0bd1fde8 assigned output only for non-A14/A15 arms, so the A14 large ranks raised UnboundLocalError before reduced/reference/bit_equal",
+        "window 9a31091b required restored root ppid==1/pgid==pid immediately after health; the setsid start.sh wrapper was still the parent, so it raised a false restored-root mismatch while the service was already healthy"
+      ],
+      "fixes": [
+        "arm_output() keeps y for A14/other arms and crops the all-gathered matrix only for A15",
+        "wait_restored_root() retries the ppid1/pgid-self identity until a bounded timeout instead of failing immediately",
+        "begin_restore() clears PR_SET_CHILD_SUBREAPER before start_restore and blocks the restore if clearing fails, so the daemonized service reparents to PID1 and the strict identity contract is reachable"
+      ],
+      "service_manual": "root 1323589/start 399707126, ppid1/pgid/sid self, five PIDs, branch aa3e-noop, OPP9 7b79c5db, LD12 ca27dbb7, health/info/text/image/clients all pass",
+      "evidence": "a14-large-cell SUMS 19/19 (a560be11, 31 commit 4372c7f)",
+      "v3_result": {
+        "status": "executed; support/workspace/sync pass; numeric completed with a large actual diff; not an accuracy pass",
+        "tuple": "6d09515 / manifest f82f44ad / run_probe d54584b7 / window 1f780bf8 / binding 101660f8 / adapter d181b15a / plan efb6fb19 / identity 1323589/399707126",
+        "numeric": "both ranks numeric_pass/pass true, finite/both_finite true; reduced.max_abs=2.0, mean_abs=5.446e-05 (rank0) / 4.804e-05 (rank1), bit_equal=false; workspace 115,818,496 B; sync ~9.97 ms; wall 432/457 ms",
+        "interpretation": "MRS V1 large support, workspace and sync are established. The pre-registered 0.03125 absolute diagnostic was derived from small-magnitude probes and is not scale-invariant, so it is not applied as an A14 gate. The result logs contain only max_abs=2.0, mean_abs and bit_equal=false: no reference/output magnitudes, per-element diffs, quantiles or relative/ULP values were persisted, so the earlier '1 BF16 ulp' and '60-68 elements' readings are NOT established. Only a lower bound follows: nonzero-diff elements are at least ceil(total_abs / 2.0) = 68 (rank0) / 60 (rank1), with more possible at smaller diffs. This cell is numeric-complete but NOT a precision pass; no absolute gate is added for the A14 control arm and any adoption still needs the model-level 2PP gate",
+        "window": "child rc0, timed_out false, survivors []; cleanup_final killed=true with empty members/groups/singles/unknown/drift; ok=false only from the maps sampling artifact",
+        "restore": "branch aa3e-noop, root 1326845/399871182, five PIDs, health/info/text/image/env/joint/source/clients true; subreaper_original=0, cleared=true, final_restored=true, final=0; no second tree",
+        "evidence": "a14-large-v3-cell SUMS 18/18 (774bbdf5, 31 commit 691a826); window 5002417d, descendants 80b47430, rank0 result e50be663/trace 250ed152, rank1 result 22238683/trace aa350079, restore 55a0704b/c7134f6b",
+        "next": "32/33 interpret the actual diff and decide whether a relative/ulp or model-level gate is required; the MRS+all_gather alternative must not be described as accuracy-passing on this cell"
+      }
+    },
+    "release_fix": {
+      "scope": "run_probe-only (33 steer): binding/adapter unchanged, so adapter d181b15a is reused and no recompile is needed",
+      "run_probe": "numeric result (reduced/reference/bit_equal/finite/versions) computed and atomically flushed before release; call_release wraps release in try/except and records release_rc/release_error/harness_release_ok, then re-flushes",
+      "pass_gate": "numeric_pass = api/sync/finite/reference (no release term, completed numbers never discarded); pass/exit follow numeric_pass; harness_pass = numeric_pass and harness_release_ok, so a release/cleanup error is recorded but is not a complete harness PASS (20/33)",
+      "cleanup": "existing destroy_process_group runs in a finally guarded by dist.is_initialized(), so both ranks attempt teardown on success and failure paths; no new collective/barrier; a cleanup exception is stored as harness_cleanup_error and the flushed result is kept; the 240 s window remains the backstop (20)",
+      "shas": {"run_probe.py": "0f90fd23", "test_probe_cpu.py": "a8bf075f", "binding_probe.cpp": "101660f8 (unchanged)", "window": "2202165e (unchanged)", "adapter": "d181b15a (reused)"},
+      "cpu_tests": "15/15 + 9/9 + 22/22 = 46/46",
+      "known_limitation": "the release op stays unregistered for zero-tensor dispatch; v4 records the NotImplementedError as harness_release_ok=false. A CatchAll registration plus adapter recompile can be done later if an explicit release success gate is ever required.",
+      "v4_requirement": "final plan v5 b6429191 with out/run/restore v5 (20 naming), identity 1308632/398926792, stage-identity v7, adapter d181b15a reused, run_probe 0f90fd23, port 29531 preflight; plan v4 6da7309c kept unexecuted"
+    },
+    "go": "32 GO; plan 18fdf185, identity 1305145/398845277, KEEP_ALL, window 2202165e, adapter d181b15a",
+    "execution": "d0_stop 1305145 -> A14 small M128/K256/N512 <=240s -> exact cleanup -> official aa3e-noop restore",
+    "evidence_required": [
+      "rank result.json (api/sync/finite/both/pass, reduced max_abs/bit_equal, group/world/versions)",
+      "rank traces",
+      "child logs",
+      "window.json/per-PID maps",
+      "plog",
+      "restore identity/branch/four-check"
+    ],
+    "gate": "run_probe pass + window child_ok (adapter/libhccl/ascendcl maps); hang records stream47/mc2_server",
+    "abort_note": "both ranks raced on out.mkdir(exist_ok=False); no MC2 call, no 507046; not an A14 criterion",
+    "fix": "prepare_out shared parent exist_ok=True; rank_dir.mkdir() remains exist_ok=False",
+    "v3_requirement": "fresh out path and fresh identity after the aa3e recovery; 32 re-review plan v3",
+    "fix_commit": "d571641",
+    "fixed_run_probe_sha256": "b7f255cb",
+    "recovery_root_after_abort": "1306695 (aa3e-noop, five PIDs, four checks/env/joint/source/clients all true)",
+    "v3": "executed at identity 1306695; liveness pass (KFC path works), release harness crash; see small_v3.result",
+    "v4": "final execution plan is v5 b6429191 (20 naming decision): fresh out/run/restore v5, identity 1308632/398926792, stage-identity v7, adapter d181b15a reused, run_probe 0f90fd23, port 29531 preflight; plan v4 6da7309c and out v4 are kept unexecuted"
+
+  },
+  "sample_profile_cpu_candidate_20261120": {
+    "status": "cpu_prepared_not_deployed",
+    "baseline_commit": "8f4b843",
+    "branch": "ao/resume-cc/h11-sample-profile-cpu-20261120",
+    "mock_only": true,
+    "capability_proven": false,
+    "device_go": false,
+    "scope": "outer collector argv/plan/classification + integrated 27 c80ea5e settle CLI; native binding_probe.cpp, run_probe.py, adapter, 8ec unchanged; old 8f4b843 supervisor d2576c63/test 5840a0d3 are historical only; profile 38 + shared supervisor 60",
+    "files": {
+      "runtime/grouped_mmar/sample_profile_collector.py": {
+        "sha256": "b680a78092dab921b8efc9d58099aff87bbb27b901fe5af728095197f502c441",
+        "bytes": 37037
+      },
+      "runtime/grouped_mmar/h11_sample_profile_plan.json": {
+        "sha256": "373e46b8922b8152b7ad80a138bb62e88a3b661b954f59b787a0971290d826b6",
+        "bytes": 10883
+      },
+      "runtime/grouped_mmar/test_sample_profile_cpu.py": {
+        "sha256": "dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b",
+        "bytes": 27403
+      },
+      "runtime/grouped_mmar/supervised_probe_window.py": {
+        "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+        "bytes": 54408
+      },
+      "runtime/grouped_mmar/test_supervised_window_cpu.py": {
+        "sha256": "d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee",
+        "bytes": 62295
+      }
+    },
+    "readme": {
+      "path": "runtime/grouped_mmar/README.md",
+      "sha256": "c53ed1ced0a95e281b3e4fbc8ba34e04618162850046a4a46d893bef7c203f31",
+      "bytes": 53938
+    },
+    "fixed_command": [
+      "/usr/local/Ascend/cann-9.2.1/tools/profiler/bin/msprof",
+      "--output",
+      "<fresh-absolute-dir>",
+      "--task-time",
+      "l1",
+      "--ai-core",
+      "on",
+      "--aic-mode",
+      "sample-based",
+      "--aic-freq",
+      "100",
+      "--aic-metrics",
+      "PipeUtilization",
+      "--delay",
+      "10",
+      "--duration",
+      "120"
+    ],
+    "coverage": {
+      "scope": "early_pending_only",
+      "observation_start_s": 10,
+      "observation_end_s": 130,
+      "observation_basis": "delay + duration; not a task/pending end",
+      "task_window_basis": "task_or_pending_end",
+      "observation_end_is_not_task_end": true,
+      "delay_s": 10,
+      "duration_s": 120,
+      "total_s": 130,
+      "timeout_approx_s": 180,
+      "covers_timeout": false,
+      "covers_late_pending": false,
+      "unproven": "duration arrival flush/exit/kill/wait semantics are not documented"
+    },
+    "success_and": [
+      "valid AIC sample",
+      "kernel identity",
+      "sample time in this run task_or_pending_end window",
+      "raw/offset/clock_provenance conversion validated",
+      "this run stream/task attribution"
+    ],
+    "window_basis": "task_or_pending_end",
+    "observation_window": "10 s/130 s coverage only; observation_end_is_not_task_end; duration_end is never a task/pending end",
+    "classification": {
+      "statuses": [
+        "capability_candidate",
+        "capability_unproven",
+        "not_success"
+      ],
+      "capability_proven_default": false,
+      "capability_demonstrated_requires_manual_device_review": true,
+      "harness_pass_separate": true,
+      "no_auto_pass": true
+    },
+    "lifecycle": {
+      "tree": [
+        "msprof",
+        "app",
+        "torchrun",
+        "ranks"
+      ],
+      "outer_timeout_s": 240,
+      "collector_exit_flush_semantics": "unproven",
+      "settle": "two consecutive empty rounds; deadline priority; clean and deadline_hit mutually exclusive; clean != true or deadline_hit blocks restore even with residual=[]",
+      "settle_timeout_s": {
+        "default": 30,
+        "plan": 300,
+        "positive_finite": true,
+        "cli": "--settle-timeout",
+        "note": "300 s is a conservative upper bound, not proof of covering the old exit delay; deadline remains fail-closed"
+      },
+      "gate": "fail-closed",
+      "settle_budget_s": {
+        "requested": 300,
+        "supported_by_pinned_supervisor": true,
+        "current_default": 30,
+        "requires_new_frozen_supervisor": false,
+        "not_implemented_here": false,
+        "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+        "blocker_if_300_required": false
+      },
+      "restore": "exactly one begin_restore",
+      "no_second_tree": true,
+      "no_same_cell_retry": true,
+      "raw_artifacts": "retain stdout/output even on failure",
+      "supervisor": "supervised_probe_window.py 27 c80ea5e integrated; sha256 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28; child-argv hook unchanged"
+    },
+    "tests": {
+      "command": "python3 runtime/grouped_mmar/test_sample_profile_cpu.py",
+      "result": "38/38 OK",
+      "platform": "macOS CPU",
+      "existing_50_separate_rerun": false,
+      "existing_50_included_in_shared_60": true,
+      "mock_only": true,
+      "shared_supervisor": {
+        "command": "python3 runtime/grouped_mmar/test_supervised_window_cpu.py",
+        "result": "60 tests: 53 pass + 7 Linux-only skip",
+        "platform": "macOS CPU",
+        "source_fix": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+        "note": "27 reported 60 RC0 Darwin (43 pass + 7 skip + 10 new); local integrated rerun 60 OK (skipped=7)"
+      },
+      "linux_evidence": {
+        "commit": "de64f83",
+        "result": "31/31 OK",
+        "applies_to": "5a11477 only; not the final integrated source",
+        "intermediate_7fc_linux_run": false,
+        "note": "31 waits for the final integrated source + A difference confirmation, then runs Linux 60 (shared supervisor) + 38 (profile); no intermediate 7fc/end run"
+      }
+    },
+    "verification": {
+      "main_files_updated": true,
+      "candidate_entries": [
+        "runtime/grouped_mmar/README.md",
+        "runtime/grouped_mmar/sample_profile_collector.py",
+        "runtime/grouped_mmar/h11_sample_profile_plan.json",
+        "runtime/grouped_mmar/test_sample_profile_cpu.py",
+        "runtime/grouped_mmar/supervised_probe_window.py",
+        "runtime/grouped_mmar/test_supervised_window_cpu.py"
+      ],
+      "frozen_baseline": "top-level frozen_baseline with actual supervisor/test and historical d257/5840 entries",
+      "old_base_readme": {
+        "sha256": "56b94eb369d2d79b1e97fcea20700bd053660ebafccb3733c3216de68d028b29",
+        "bytes": 48997
+      },
+      "note": "main files table now carries the candidate README, profile files and integrated supervisor/shared test; frozen_baseline separates actual c80ea5e supervisor from historical d257/5840; old 8f4b843 README hash is only historical"
+    },
+    "mock_candidate_policy": "synthetic candidate sets mock_candidate=true and manual_device_review_required=false; capability_proven stays false",
+    "unknowns": [
+      "real msprof output field schema and attribution mapping",
+      "duration arrival flush/exit/kill/wait semantics",
+      "A3 PC sampling / wait-point capability",
+      "130 s collection window does not cover the ~180 s timeout or late pending",
+      "collector flag combination and CLI runtime acceptance"
+    ],
+    "freeze": {
+      "binding_sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+      "run_probe_sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+      "adapter_sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+      "baseline_commit": "8f4b843",
+      "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+      "supervisor_sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+      "historical_supervisor_sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+      "shared_test_sha256": "d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee",
+      "historical_test_sha256": "5840a0d3cbefedf6ec7128ffd65d967d5d1c9a16a05909e0bd6ab5ea61fdfd17",
+      "no_8ec": true,
+      "no_minus2_go": true,
+      "no_device": true
+    }
+  },
+  "frozen_baseline": {
+    "baseline_commit": "8f4b843",
+    "frozen": {
+      "runtime/grouped_mmar/binding_probe.cpp": {
+        "sha256": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+        "bytes": 34645
+      },
+      "runtime/grouped_mmar/run_probe.py": {
+        "sha256": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+        "bytes": 30686
+      },
+      "runtime/grouped_mmar/compile_probe.sh": {
+        "sha256": "53e518db87a81e00e9d4888aa1e2e68dc073852e14dd05979234e3706b0996eb",
+        "bytes": 879
+      },
+      "runtime/grouped_mmar/probe_trace.h": {
+        "sha256": "3e07139f1cd93085dd43fa1f394eabeb398934c9af2ae0eb23f8c749dbd82da9",
+        "bytes": 2979
+      },
+      "runtime/grouped_mmar/supervised_probe_window.py": {
+        "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+        "bytes": 54408,
+        "identity": "actual integrated 27 c80ea5e settle-CLI supervisor"
+      },
+      "runtime/grouped_mmar/test_supervised_window_cpu.py": {
+        "sha256": "d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee",
+        "bytes": 62295,
+        "identity": "actual shared supervisor suite (60)"
+      }
+    },
+    "historical": {
+      "runtime/grouped_mmar/supervised_probe_window.py": {
+        "sha256": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013",
+        "bytes": 53078,
+        "identity": "8f4b843 historical baseline; not the active byte identity",
+        "historical_only": true,
+        "current_file": false
+      },
+      "runtime/grouped_mmar/test_supervised_window_cpu.py": {
+        "sha256": "5840a0d3cbefedf6ec7128ffd65d967d5d1c9a16a05909e0bd6ab5ea61fdfd17",
+        "bytes": 54483,
+        "identity": "8f4b843 historical test; superseded by shared 60",
+        "historical_only": true,
+        "current_file": false
+      }
+    },
+    "supervisor_fix_commit": "c80ea5ef9048ed1f3acca8e902723cefca320f6c",
+    "adapter": {
+      "sha256": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3",
+      "source": "old frozen stage SO; not in tree"
+    },
+    "no_8ec": true,
+    "no_minus2_go": true
+  }
+}

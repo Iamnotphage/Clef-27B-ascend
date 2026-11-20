@@ -1,0 +1,181 @@
+{
+ "schema": "h11-sprofile-final-exec-package/1",
+ "status": "cpu_prepared_not_deployed",
+ "device_go": false,
+ "source_commit": "2e2b7a0a12b4b7290f52fe66bb469aa627b0456c",
+ "source_base": "c3b08ed",
+ "source_supervisor": {
+  "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+  "size": 54408
+ },
+ "historical_only": {
+  "supervisor_d257": "d2576c631e1a6b0141bba8285c51e2e2adf6e93743cb1bddf42c8f3a8d119013"
+ },
+ "native_frozen": {
+  "binding": "101660f812306177f6d09c77644492f8f1b4a7f08ec6f22fc54e3caf7986ce3f",
+  "run_probe": "8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f",
+  "adapter": "d181b15ab75e25982e527303de616c76a29e8f162038eb9f7dfe2a0c364110c3"
+ },
+ "code_stage": "/workspace/yangchen/work/grouped-deepdive-h11-sprofile-final-code",
+ "cell": "/workspace/yangchen/work/grouped-deepdive-cell-h11-sprofile-final",
+ "top_level_window_args": [
+  "--child-argv",
+  "<canonical child-argv.json>",
+  "--settle-timeout",
+  "300",
+  "--execute"
+ ],
+ "settle": {
+  "supervisor_default_s": 30,
+  "plan_choice_s": 300,
+  "conservative_bound": true
+ },
+ "gates": {
+  "order": [
+   "caller_env",
+   "preflight_ALL_PASS",
+   "collect_begin_rc0"
+  ],
+  "stop_after": "collect_begin_rc0",
+  "begin_failure_exit": 6,
+  "single_window": true,
+  "single_collect_end": true,
+  "window_failure_runs_one_end": true,
+  "end_failure_partial_marker": "INCOMPLETE"
+ },
+ "budgets_s": {
+  "stop": 120,
+  "child": 240,
+  "comm": 90,
+  "settle": 300,
+  "restore": 900,
+  "outer": 2100
+ },
+ "cpu_suite": {
+  "result": "7/7 OK",
+  "runtime_s": 0.47,
+  "scope": "fake gates/caller/window; real builder/run_window; no real preflight/torch/msprof/device/service"
+ },
+ "files": [
+  {
+   "name": "README.txt",
+   "role": "package_readme",
+   "sha256": "3c2d9cb7dc6bea4996fb67e32cd88dec3c4556d5fa432139ac56ab5812e903ca",
+   "size": 2916
+  },
+  {
+   "name": "build_window_argv.py",
+   "role": "builder",
+   "sha256": "f0e99176645a631f90b382704a490171073b93dedd288f7b38c9ff13a9948984",
+   "size": 3321
+  },
+  {
+   "name": "capture-identity-final.py",
+   "role": "identity_capture",
+   "sha256": "38fc61396d29f640e2af683b1dc974214a4717e1d104ab7b7d038bb9d12b720a",
+   "size": 1051
+  },
+  {
+   "name": "child-argv.json",
+   "role": "canonical_child_argv",
+   "sha256": "d3db38a8aed434667a1b78f264dbeb7bf6a1ad4bb5fc1a0acd1a1d2ee040d7aa",
+   "size": 1029
+  },
+  {
+   "name": "collect-raw-final.sh",
+   "role": "collect",
+   "sha256": "6077acb4a2e6bde4856c6855a7c3d3ba6e9f07a20b17f012f5957adbca1972e3",
+   "size": 10428
+  },
+  {
+   "name": "harness.stderr",
+   "role": "cpu_run_stderr",
+   "sha256": "2672adcd82e46b683ff75c73ed540e350a853a43203bb53b25d617641d71a8dd",
+   "size": 946
+  },
+  {
+   "name": "harness.stdout",
+   "role": "cpu_run_stdout",
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "size": 0
+  },
+  {
+   "name": "plan-h11-sprofile-final.json",
+   "role": "static_plan",
+   "sha256": "5ee2ab5d9bbb42193cb67c2445242d21992bcb45cdeda9e9af55c8278f213a1d",
+   "size": 2160
+  },
+  {
+   "name": "preflight-rescan-final.sh",
+   "role": "preflight",
+   "sha256": "098483e00b4f6792a354ce25c28a24f6f36e8fbadbea6d50f5166516c9cbe1d7",
+   "size": 4461
+  },
+  {
+   "name": "reference_sample_README.md",
+   "role": "source_readme_reference",
+   "sha256": "c53ed1ced0a95e281b3e4fbc8ba34e04618162850046a4a46d893bef7c203f31",
+   "size": 53938
+  },
+  {
+   "name": "reference_sample_manifest.json",
+   "role": "source_manifest_reference",
+   "sha256": "6ef9a2d732c20c5288d0944b4ca02f42c6a6e9365f2fc80bb3ee308d1a14b33c",
+   "size": 95286
+  },
+  {
+   "name": "reference_sample_plan.json",
+   "role": "source_plan_reference",
+   "sha256": "373e46b8922b8152b7ad80a138bb62e88a3b661b954f59b787a0971290d826b6",
+   "size": 10883
+  },
+  {
+   "name": "run-h11-sprofile-final.sh",
+   "role": "wrapper",
+   "sha256": "d7928ce8cfa5324fc0456b8bcf565f9655137183d34541abcef8d2a3051c387e",
+   "size": 3993
+  },
+  {
+   "name": "run_window.py",
+   "role": "window_executor",
+   "sha256": "0383d9c781a3a5d4b69f7bd7b16595e5bd051aa9b169e81acb6b34f9e3c031b3",
+   "size": 346
+  },
+  {
+   "name": "sample_profile_collector.py",
+   "role": "helper_reference",
+   "sha256": "b680a78092dab921b8efc9d58099aff87bbb27b901fe5af728095197f502c441",
+   "size": 37037
+  },
+  {
+   "name": "supervised_probe_window.py",
+   "role": "supervisor",
+   "sha256": "3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28",
+   "size": 54408
+  },
+  {
+   "name": "test_exec_package_cpu.py",
+   "role": "cpu_gate_suite",
+   "sha256": "54e88e33f9380777244ba2d0c7325705404e048a05bda68353d4d9d3dafaaa16",
+   "size": 6736
+  },
+  {
+   "name": "test_sample_profile_cpu.py",
+   "role": "source_test_sample",
+   "sha256": "dd3cbe103134d4fd9cc5d1804e39296f4a027e38549f249bbbc5e2688025f61b",
+   "size": 27403
+  },
+  {
+   "name": "test_supervised_window_cpu.py",
+   "role": "source_test_supervisor",
+   "sha256": "d73d153de0723e618250405e0bc9c8554d4b4b6066376775948445eb8cd8d2ee",
+   "size": 62295
+  },
+  {
+   "name": "write_env_sidecar.py",
+   "role": "sidecar",
+   "sha256": "f8ccacd02f6f387cd72d90516dbace46805128991a08812c75e4ec440fa646ba",
+   "size": 601
+  }
+ ]
+}
