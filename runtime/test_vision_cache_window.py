@@ -444,7 +444,7 @@ class VisionCPU(unittest.TestCase):
 
     def order_plan(self, caps=v.CAPACITIES):
         return dict(schema='clef-vision-cache-plan/2', candidate_commit='3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47',
-                    memory_guard=dict(sample_interval_s=5,query_timeout_s=1,sample_round_timeout_s=4,max_sample_age_s=10),
+                    memory_guard=dict(sample_interval_s=5,query_timeout_s=3,sample_round_timeout_s=4,max_sample_age_s=10),
                     cleanup_restore=dict(max_restore_attempts=1),
                     phases=[dict(name=str(cap),cache_cli=cap,
                                  ready=dict(method='GET',image_warmup=0,text_warmup=0),

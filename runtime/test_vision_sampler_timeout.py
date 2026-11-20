@@ -192,6 +192,7 @@ class SamplerTimeoutCPU(unittest.TestCase):
 
     def test_plan_requires_three_second_query_and_unchanged_monitor_contract(self):
         plan = prior.VisionCPU.order_plan(self)
+        plan['memory_guard']['query_timeout_s'] = 1
         with self.assertRaisesRegex(RuntimeError, 'sampler policy'):
             v.validate_plan(plan)
         plan['memory_guard']['query_timeout_s'] = 3
