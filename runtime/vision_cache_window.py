@@ -452,9 +452,20 @@ def check_pins(frozen, plan):
                 f'candidate pin drift: {path}')
 
 
+def planned_arm_order(plan):
+    order = plan.get('arm_order', list(CAPACITIES))
+    require(isinstance(order, list) and all(type(cap) is int for cap in order) and
+            tuple(order) in (CAPACITIES, (131072, 16384)), 'unsupported arm_order')
+    phases = plan['phases']
+    require(all(type(p['cache_cli']) is int for p in phases) and
+            tuple(p['cache_cli'] for p in phases) == tuple(order), 'capacity/order mismatch')
+    require(len({p['name'] for p in phases}) == len(phases), 'duplicate arm names')
+    return tuple(order)
+
+
 def validate_plan(plan):
     require(plan['schema'] == 'clef-vision-cache-plan/2', 'plan schema mismatch')
-    require(tuple(p['cache_cli'] for p in plan['phases']) == CAPACITIES, 'capacity/order mismatch')
+    planned_arm_order(plan)
     require(plan['candidate_commit'] == '3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47', 'candidate drift')
     require(plan['memory_guard']['sample_interval_s'] == 5 and
             plan['memory_guard']['query_timeout_s'] == 1 and
@@ -633,6 +644,7 @@ def verify_restore(frozen, plan, result, started_ns, deadline):
 
 
 def execute(frozen, plan, saved, expected, frozen_path):
+    order = planned_arm_order(plan)
     run_dir = Path(plan['run_root'])
     require(not run_dir.exists() and not Path(plan['cleanup_restore']['restore_output']).exists(),
             'fresh window/restore directories required')
@@ -644,7 +656,8 @@ def execute(frozen, plan, saved, expected, frozen_path):
     original_subreaper = frozen.get_subreaper()
     require(original_subreaper is not None and frozen.enable_subreaper(), 'subreaper unavailable')
     run_dir.mkdir(parents=True, exist_ok=False)
-    result = {'ok': False, 'restore_attempts': 0, 'arms': [], 'schema': 'vision-cache-window-result/1'}
+    result = {'ok': False, 'restore_attempts': 0, 'arms': [], 'arm_order': list(order),
+              'by_capacity': {}, 'schema': 'vision-cache-window-result/1'}
     stop_called, arms = False, []
     global_deadline = time.monotonic() + plan['budgets_s']['overall_outer']
     active_end = global_deadline - 900 - 420 - 120
@@ -672,12 +685,19 @@ def execute(frozen, plan, saved, expected, frozen_path):
         stop_rc = stopper.wait(timeout=120)
         closed = initial.close(18143)
         require(stop_rc == 0 and closed, 'initial stop/settle failed')
-        last_min = None
+        minima_by_capacity = {}
         for phase in plan['phases']:
-            if phase['cache_cli'] == 262144 and min(last_min) < ADMISSION_BYTES:
-                result['arms'].append({'capacity': 262144, 'skipped': 'HBM conservative admission',
-                                       'prior_min_free_bytes': last_min, 'required': ADMISSION_BYTES})
-                break
+            cap = phase['cache_cli']
+            if cap == 262144:
+                require(131072 in minima_by_capacity, '131072 evidence required before 262144')
+                prior_min = minima_by_capacity[131072]
+                if min(prior_min) < ADMISSION_BYTES:
+                    record = {'capacity': cap, 'skipped': 'HBM conservative admission',
+                              'prior_capacity': 131072, 'prior_min_free_bytes': prior_min,
+                              'required': ADMISSION_BYTES}
+                    result['arms'].append(record)
+                    result['by_capacity'][str(cap)] = record
+                    break
             require(time.monotonic() + phase['max_arm_active_s'] < active_end, 'insufficient global budget')
             final_restore_gate(frozen, restore_plan, saved, arms, stop_called, result)
             directory = run_dir / phase['name']
@@ -685,11 +705,13 @@ def execute(frozen, plan, saved, expected, frozen_path):
             arm = OwnedArm(frozen, directory, old_pids)
             arms.append(arm)
             try:
-                reference, last_min = run_phase(frozen, plan, phase, arm, expected, reference,
+                reference, arm_min = run_phase(frozen, plan, phase, arm, expected, reference,
                                                 min(active_end, time.monotonic() + phase['max_arm_active_s']),
                                                 frozen_path)
-                result['arms'].append({'capacity': phase['cache_cli'], 'ok': True,
-                                       'min_free_lower_bytes': last_min})
+                minima_by_capacity[cap] = arm_min
+                record = {'capacity': cap, 'ok': True, 'min_free_lower_bytes': arm_min}
+                result['arms'].append(record)
+                result['by_capacity'][str(cap)] = record
             finally:
                 clean = arm.close(18143)
             require(clean, 'arm cleanup/settle failed')
@@ -733,7 +755,8 @@ def main():
     plan = frozen.read_json(args.plan)
     validate_plan(plan)
     if not args.execute:
-        print(json.dumps({'status': 'plan_only', 'capacities': CAPACITIES, 'frozen_sha256': FROZEN_SHA}))
+        print(json.dumps({'status': 'plan_only', 'capacities': planned_arm_order(plan),
+                          'frozen_sha256': FROZEN_SHA}))
         return 0
     require(args.root_identity and args.expected_inputs, 'explicit root/inputs files required')
     require(frozen.sha256(args.expected_inputs) == plan['evaluation_frozen']['expected_inputs_sha256'],

@@ -979,6 +979,20 @@ def build_launch(args):
             f"单请求最多 {effective['max_model_len']} tokens）")
     effective["max_num_batched_tokens"] = batched
 
+    # Experimental retention budget. Keep the default launch path unchanged.
+    encoder_cache_tokens = getattr(args, "encoder_cache_tokens", 0)
+    if encoder_cache_tokens < 0:
+        raise ValueError("--encoder-cache-tokens 应为 0（关闭）或正整数")
+    if encoder_cache_tokens and encoder_cache_tokens < batched:
+        raise ValueError("--encoder-cache-tokens 应至少等于 --max-num-batched-tokens")
+    if encoder_cache_tokens:
+        for flag, value, _ in parsed:
+            if flag in ("--scheduler-cls", "--async-scheduling", "--scheduler-config"):
+                raise ValueError(f"encoder cache 候选与 {flag} 透传冲突")
+        encoder_scheduler = Path(__file__).resolve().with_name("clef_encoder_cache_scheduler.py")
+        if not encoder_scheduler.is_file():
+            raise ValueError(f"encoder cache 候选模块缺失：{encoder_scheduler}")
+
     command = [
         sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
         "--served-model-name", SERVED_MODEL_NAME,
@@ -1002,6 +1016,9 @@ def build_launch(args):
     if effective["mm_processor_kwargs"] is not None:
         command += ["--mm-processor-kwargs", effective["mm_processor_kwargs"]]
     command += passthrough
+    if encoder_cache_tokens:
+        command += ["--scheduler-cls",
+                    "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"]
 
     gdn_decision = gdn_decision_prefill(config, apply=not getattr(args, "dry_run", False))
 
@@ -1021,6 +1038,15 @@ def build_launch(args):
         # path.  A large cache keeps every measured length on the fast path.
         "ACLNN_CACHE_LIMIT": os.environ.get("ACLNN_CACHE_LIMIT", "1000000"),
     }
+    if encoder_cache_tokens:
+        environment["CLEF_ENCODER_CACHE_TOKENS"] = str(encoder_cache_tokens)
+        module_dir = str(encoder_scheduler.parent)
+        existing_path = os.environ.get("PYTHONPATH")
+        environment["PYTHONPATH"] = (
+            module_dir + os.pathsep + existing_path if existing_path else module_dir)
+        effective["encoder_cache_tokens"] = encoder_cache_tokens
+        effective["encoder_cache_scheduler_sha256"] = sha256_file(encoder_scheduler)
+        sources["encoder_cache_tokens"] = "explicit"
     if gdn_decision["enabled"]:
         environment["CLEF_GDN_DECISION_PREFILL"] = "1"
         environment["CLEF_GDN_NO_RECOMPUTE"] = os.environ.get(
@@ -1122,6 +1148,8 @@ def main():
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
     parser.add_argument("--max-num-batched-tokens", type=int, default=None)
+    parser.add_argument("--encoder-cache-tokens", type=int, default=0,
+                        help="实验：encoder 输出缓存 embedding 容量；0 保持默认，compute 预算不变。")
     parser.add_argument("--gpu-memory-utilization", type=float, default=None)
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')

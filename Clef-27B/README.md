@@ -94,6 +94,15 @@ bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B \
 
 服务接口：`GET /health`（JSON：status/model/revision）、`GET /v1/decide/info`（身份、任务、协议、缓存）、`POST /v1/systemone`（文本决策）、`POST /v1/decide`（文本/图文决策，与 systemone 同协议）。
 
+ERQA 优选启动配置（2026-11-20 已采用）：在上述启动命令后追加以下参数，encoder cache 为 **131072**；显式改为 `--encoder-cache-tokens 0` 可回退原路径。S1/S2 默认值保持原配置。已审全量 A/B 四遍均为 **216/400、choice 0 翻转**；131072 的冷/暖 P95 分别改善 **7.12% / 9.64%**，18 题概率变化保留为数值差异记录，准确率满足 2PP。
+
+```bash
+--max-model-len 16384 --max-num-batched-tokens 16384 --max-num-seqs 1 \
+  --limit-mm-per-prompt '{"image":16,"video":0}' \
+  --mm-processor-kwargs '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},"do_sample_frames":false}}' \
+  --schema-token-cache off --distributed-executor-backend mp --encoder-cache-tokens 131072
+```
+
 ```bash
 python scripts/verify_systemone.py \
   --report /workspace/yangchen/logs/systemone-smoke.json

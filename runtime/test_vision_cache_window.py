@@ -1,9 +1,12 @@
 """CPU mocks for vision/c80 composition only; never spawn, signal or query a device."""
 import copy
+import contextlib
 from contextlib import ExitStack
 import importlib.util
+import io
 import json
 from pathlib import Path
+import shlex
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -241,7 +244,8 @@ class VisionCPU(unittest.TestCase):
         path.write_text('{broken}\n')
         with self.assertRaises(ValueError): v.json_lines(path, complete=False)
 
-    def window(self, *, fail_arm=None, fail_close=None, stop_rc=0, reserve=4*v.GIB, subreaper=True):
+    def window(self, *, fail_arm=None, fail_close=None, stop_rc=0, reserve=4*v.GIB,
+               subreaper=True, order=None):
         directory = self.root / ('window-' + str(len(list(self.root.iterdir()))))
         events = []
         class Arm:
@@ -259,11 +263,15 @@ class VisionCPU(unittest.TestCase):
                     restore_environment_expect={}, budgets_s={'overall_outer':5760},
                     cleanup_restore=dict(restore_output=str(directory/'restore'), source_target='aa3e.py',
                                          restore_source={'selected': {'argv':['python']}}, stop_argv_template=['stop']),
-                    phases=[dict(cache_cli=cap, name=str(cap), max_arm_active_s=1020) for cap in v.CAPACITIES])
+                    phases=[dict(cache_cli=cap, name=str(cap), max_arm_active_s=1020)
+                            for cap in (v.CAPACITIES if order is None else order)])
+        if order is not None:
+            plan['arm_order'] = list(order)
         def phase(frozen, plan, spec, arm, expected, reference, deadline, path):
             events.append(spec['cache_cli'])
             if spec['cache_cli'] == fail_arm: raise RuntimeError('phase failure')
-            return ['reference'], [reserve, reserve]
+            free = reserve[spec['cache_cli']] if isinstance(reserve, dict) else reserve
+            return ['reference'], [free, free]
         def gate(frozen, plan, saved, arms, stopped, result):
             v.require(stopped and all(a.closed and a.clean for a in arms), 'closed gate')
         with ExitStack() as s:
@@ -314,6 +322,92 @@ class VisionCPU(unittest.TestCase):
         self.assertIn('skipped', result['arms'][-1])
         rows = [sample(0, free=v.ADMISSION_BYTES-1), sample(5, free=5*v.GIB)]
         self.assertEqual(v.hbm_gate(rows, 6), [v.ADMISSION_BYTES-1]*2)
+
+    def test_reverse_window_runs_131072_then_16384_with_capacity_keyed_results(self):
+        result, events = self.window(order=(131072, 16384), reserve={131072:4*v.GIB, 16384:5*v.GIB})
+        self.assertTrue(result['ok']); self.assertEqual(result['restore_attempts'], 1)
+        self.assertEqual(events, ['stop','close:initial-stop',131072,'close:131072',16384,'close:16384'])
+        self.assertEqual(result['arm_order'], [131072,16384])
+        self.assertEqual(set(result['by_capacity']), {'131072','16384'})
+        self.assertEqual(result['by_capacity']['131072']['min_free_lower_bytes'], [4*v.GIB]*2)
+        self.assertEqual(result['by_capacity']['16384']['min_free_lower_bytes'], [5*v.GIB]*2)
+
+    def test_reverse_first_arm_failure_blocks_control_and_restores_once(self):
+        result, events = self.window(order=(131072, 16384), fail_arm=131072)
+        self.assertFalse(result['ok']); self.assertEqual(result['restore_attempts'], 1)
+        self.assertNotIn(16384, events); self.assertNotIn(262144, events)
+
+    def test_legacy_large_arm_admission_uses_131072_capacity_evidence(self):
+        result, events = self.window(reserve={16384:v.ADMISSION_BYTES-1, 131072:4*v.GIB, 262144:3*v.GIB})
+        self.assertTrue(result['ok']); self.assertIn(262144, events)
+        result, events = self.window(reserve={16384:5*v.GIB, 131072:v.ADMISSION_BYTES-1})
+        self.assertNotIn(262144, events)
+        self.assertEqual(result['by_capacity']['262144']['prior_capacity'], 131072)
+        self.assertEqual(result['by_capacity']['262144']['prior_min_free_bytes'], [v.ADMISSION_BYTES-1]*2)
+
+    def order_plan(self, caps=v.CAPACITIES):
+        return dict(schema='clef-vision-cache-plan/2', candidate_commit='3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47',
+                    memory_guard=dict(sample_interval_s=5,query_timeout_s=1,sample_round_timeout_s=4,max_sample_age_s=10),
+                    cleanup_restore=dict(max_restore_attempts=1),
+                    phases=[dict(name=str(cap),cache_cli=cap,
+                                 ready=dict(method='GET',image_warmup=0,text_warmup=0),
+                                 passes=[dict(label=label,argv=['eval','--retries','1','--scope','full'],
+                                              score_argv=['score','--verify-requests'])
+                                         for label in ('cold-first','natural-second')]) for cap in caps])
+
+    def test_explicit_reverse_and_legacy_default_plan_only_report_actual_order(self):
+        for caps in (v.CAPACITIES, (131072,16384)):
+            plan = self.order_plan(caps)
+            if caps != v.CAPACITIES: plan['arm_order'] = list(caps)
+            path = self.root/'plan.json'; path.write_text(json.dumps(plan))
+            out = io.StringIO()
+            with mock.patch.object(v.sys,'argv',['vision_cache_window.py','--plan',str(path),
+                 '--plan-sha',self.f.sha256(path),'--frozen',self.f.__file__]), contextlib.redirect_stdout(out):
+                self.assertEqual(v.main(),0)
+            self.assertEqual(json.loads(out.getvalue())['capacities'], list(caps))
+
+    def test_bad_arm_order_or_duplicate_phase_rejected_before_any_preflight(self):
+        bad=[]
+        for order in ([], None, '131072,16384', [0,16384], [16384,131072], [131072,131072],
+                      [262144,131072,16384], [131072.0,16384], [True,16384]):
+            plan = self.order_plan((131072,16384)); plan['arm_order']=order; bad.append(plan)
+        bad.append(self.order_plan((131072,16384)))  # reverse must be explicit
+        plan=self.order_plan(); plan['arm_order']=[131072,16384]; bad.append(plan)
+        plan=self.order_plan(); plan['phases'][1]['name']=plan['phases'][0]['name']; bad.append(plan)
+        plan=self.order_plan(); plan['phases'][1]['cache_cli']=131072.0; bad.append(plan)
+        with mock.patch.object(v,'check_pins') as pins, mock.patch.object(v,'bound_root') as bound:
+            for plan in bad:
+                with self.subTest(plan=plan), self.assertRaises(RuntimeError):
+                    v.execute(self.f,plan,ident(),[],'frozen')
+            pins.assert_not_called(); bound.assert_not_called()
+
+    def test_erqa_adopted_flags_and_explicit_zero_reuse_existing_launcher(self):
+        from test_inference_launch import LaunchTests
+        case = LaunchTests(); case.setUp(); self.addCleanup(case.doCleanups)
+        environment = dict(v.os.environ)
+        def launch(*args):
+            # Match each real env-i launch; the launcher prepends vendor paths.
+            with mock.patch.dict(v.os.environ, environment, clear=True):
+                return case.launch(*args)
+        readme = (Path(__file__).parents[1]/'Clef-27B'/'README.md').read_text()
+        text = readme.split('ERQA 优选启动配置（2026-11-20 已采用）',1)[1].split('```bash\n',1)[1].split('```',1)[0]
+        args=shlex.split(text.replace('\\\n', ''))
+        chosen=launch('--config','s1',*args)
+        effective=chosen['effective']
+        self.assertEqual(effective['encoder_cache_tokens'],131072)
+        self.assertEqual(effective['max_model_len'],16384)
+        self.assertEqual(effective['max_num_batched_tokens'],16384)
+        self.assertEqual(effective['tensor_parallel_size'],2)
+        self.assertEqual(json.loads(effective['limit_mm_per_prompt']),{'image':16,'video':0})
+        self.assertEqual(json.loads(effective['mm_processor_kwargs'])['images_kwargs']['size'],
+                         {'shortest_edge':65536,'longest_edge':1048576})
+        self.assertEqual(v.option(chosen['argv'],'--scheduler-cls'),
+                         'clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler')
+        args[-1]='0'
+        fallback=launch('--config','s1',*args)
+        self.assertEqual(fallback,launch('--config','s1',*args[:-2]))
+        for config in ('s1','s2'):
+            self.assertEqual(launch('--config',config),launch('--config',config,'--encoder-cache-tokens','0'))
 
     def predictions_fixture(self):
         expected = [dict(id=f'erqa-{i:04}', record_index=i, images=[{'sha256': 'image'}], image_count=1)
