@@ -53,7 +53,7 @@ done
 # 4) frozen/native/source pins
 check_sha "$CODE/supervised_probe_window.py" 3178f76375e80c1f0c23525f7d0742766c1c7a531ae1550b75b89f03edd78e28 supervisor
 check_sha "$CODE/collect-raw-final.sh" 6077acb4a2e6bde4856c6855a7c3d3ba6e9f07a20b17f012f5957adbca1972e3 collect
-check_sha "$CODE/build_window_argv.py" f0e99176645a631f90b382704a490171073b93dedd288f7b38c9ff13a9948984 builder
+check_sha "$CODE/build_window_argv.py" f98cfe183a0ff7c8436ecaca9b1faf21e32fe3d0ac80ea0821260c2943b83b0e builder
 check_sha "$CODE/child-argv.json" d3db38a8aed434667a1b78f264dbeb7bf6a1ad4bb5fc1a0acd1a1d2ee040d7aa child
 check_sha "$CODE/plan-h11-sprofile-final.json" 5ee2ab5d9bbb42193cb67c2445242d21992bcb45cdeda9e9af55c8278f213a1d plan
 check_sha "$STAGE/run_probe.py" 8e3088042ad771c4d9a1b51d94ad1f49ec918c078d0b80ee25e8b3ca99cddf2f run_probe

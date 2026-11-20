@@ -55,7 +55,7 @@ Budgets and gates (machine-readable in plan-skeleton.json)
 Files
 - child-argv.json: exact child argv list (msprof + native app).
 - build_window_argv.py: canonical generator for the supervisor argv (reads child-argv.json only;
-  --settle-timeout defaults to 300 and is appended; --execute appends the top-level execution flag;
+  --settle-timeout is a builder/plan choice of 300 (supervisor CLI default remains 30); --execute appends the top-level execution flag;
   --check-argv asserts child-argv, settle-timeout and trailing --execute equality).
   $PENDING_WINDOW_PATH and $PENDING_FRESH_IDENTITY_FILE must be pinned at execution time.
 - plan-skeleton.json: plan fields, budgets, gates, pending list, status.

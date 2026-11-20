@@ -22,7 +22,8 @@ Files:
   run-h11-sprofile-final.sh    wrapper (actual path/SHA pinned in SUMS/manifest)
   preflight-rescan-final.sh    fail-closed identity/health/port/fresh/SHA checks
   collect-raw-final.sh         new-cell copy of v2 collect; single end; INCOMPLETE on failure
-  build_window_argv.py         canonical child -> supervisor argv; --settle-timeout/--execute
+  build_window_argv.py         canonical child -> supervisor argv; builder chooses --settle-timeout 300
+                              (supervisor CLI default remains 30) plus --execute
   child-argv.json              canonical child list (msprof sample-based + original H11 app)
   plan-h11-sprofile-final.json static input plan (status plan_not_executed)
   capture-identity-final.py    fresh /proc identity capture
