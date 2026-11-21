@@ -328,3 +328,5 @@ python3 "$task_raw/analyze-pmu.py"
 ```
 
 CPU检查覆盖plan/语法、精确task join正例及重复ID/错误核名/错时基/缺ID负例，实际18任务与原始计数/归一公式核同通过。无新artifact/PR，无kernel修改或全量测试。
+
+实际host tiling观测续接：既有 `/Users/chenclay/.ssh/clef-master.sock` 缺失，master检查与只读SSH均以255退出；未建立远端观测，未调用GetWorkspace/Execute，未取得实际212B，50字段runtime比较仍UNKNOWN。遵守仅复用用户master，未重建连接或修改配置/部署/服务；纯host执行边界待连接恢复后先核。设备预算保持142.562622/240s，最新服务验证仍引用上述03:47记录。精简状态见summary `v3_runtime_host_tiling`。
