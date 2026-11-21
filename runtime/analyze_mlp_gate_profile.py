@@ -6,6 +6,7 @@ Only explicit native flow destinations on the exact stream identify device tasks
 queue-worker association uses explicit enqueue/dequeue flow, never nearest time.
 """
 import argparse
+import csv
 from collections import Counter, defaultdict
 from decimal import Decimal
 import json
@@ -122,10 +123,39 @@ def parse_trace(path):
             partition_us=partition,task_count=len(kernels),task_names=dict(Counter(e['name'] for e in kernels)),
             task_sum_us=sum(e['end']-e['start'] for e in kernels)/3,streams=sorted(set(str(e['tid']) for e in kernels)),
             linked_tasks=len(matched),links=links,worker_dequeues=len(worker),
+            task_keys=[dict(stream=str(e['tid']),task_id=str(e.get('args',{}).get('Task Id')),name=e['name'],start_us=e['start']) for e in kernels],
             native_api_names=dict(Counter(e['name'] for e in apis)),
             unknown='Task internal pipeline/per-core stalls unavailable; launch-to-start is elapsed latency, not automatically avoidable wait'))
     return dict(path=str(path),trace_origin_us=str(origin),time_unit='us relative to trace_origin_us',processes=processes,samples=rows,hardware_tasks_total=len(tasks),
                 all_task_names=dict(Counter(e['name'] for e in tasks)),flow_categories=dict(Counter(k[0] for k in flows)))
+
+
+def join_kernel_details(trace, path):
+    """Join task-level PMU export by exact stream/task IDs, never nearest time.
+
+    CSV rows retain original names/units and collector aggregation semantics.
+    They do not establish per-core observations or mutually exclusive pipelines.
+    """
+    with Path(path).open() as f:rows=list(csv.DictReader(f))
+    index={}
+    for row in rows:
+        key=(str(row['Stream ID']),str(row['Task ID']))
+        if key in index:raise ValueError('duplicate task key in kernel CSV')
+        index[key]=row
+    count=0
+    for sample in trace['samples']:
+        selected=[]
+        for task in sample['task_keys']:
+            row=index[(task['stream'],task['task_id'])]
+            assert row['Name']==task['name']
+            if row.get('Start Time(us)'):
+                offset=float(Decimal(row['Start Time(us)'].strip())-Decimal(trace['trace_origin_us']))
+                assert abs(offset-task['start_us'])<.1
+            selected.append(row);count+=1
+        sample['kernel_csv_rows']=selected
+    trace['kernel_csv']=str(path);trace['csv_matched_tasks']=count
+    trace['csv_metric_columns']=[c for c in (rows[0] if rows else []) if c.startswith(('aic_','aiv_'))]
+    return trace
 
 
 def summarize_samples(rows):
@@ -147,8 +177,11 @@ def summarize_samples(rows):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--trace',type=Path,action='append',default=[])
-    p.add_argument('--samples',type=Path,action='append',default=[]);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--samples',type=Path,action='append',default=[]);p.add_argument('--kernel-csv',type=Path,action='append',default=[]);p.add_argument('--output',type=Path,required=True)
     a=p.parse_args();out=dict(traces=[parse_trace(x) for x in a.trace])
+    if a.kernel_csv:
+        assert len(a.kernel_csv)==len(out['traces'])
+        for trace,path in zip(out['traces'],a.kernel_csv):join_kernel_details(trace,path)
     if a.samples:
         docs=[json.loads(x.read_text()) for x in a.samples]
         assert all(x['status']=='complete' for x in docs)

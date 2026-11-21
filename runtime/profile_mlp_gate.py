@@ -18,6 +18,8 @@ import time
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--execute', action='store_true')
+    p.add_argument('--solo',action='store_true',help='one representative rank, serial pre/profile/post, no peer process')
+    p.add_argument('--aic-metrics',choices=['none','pipe'],default='none')
     p.add_argument('--rank', type=int, choices=(0, 1), default=0)
     p.add_argument('--vendor', type=Path)
     p.add_argument('--output', type=Path)
@@ -27,12 +29,13 @@ def main():
                 pairs=3, warmup_passes=5, arms=['vendor', 'vendor_repeat', 'v3'],
                 phases=['concurrent_pre', 'serial_pre', 'profile', 'serial_post', 'concurrent_post'],
                 original_schedule='4a51f71 ranks_serial [0,1]',
-                profile='CPU+NPU Level1/AiCoreNone; raw first, offline analyse after restore',
+                profile='CPU+NPU Level1/'+a.aic_metrics+'; raw first, offline analyse after restore',
                 semantics='same original NZ weights, BF16 canonical ND, allocation/dispatch included; 3 layers/sample',
                 excluded=['down', 'new kernel/tiling', 'per-op synchronization', 'shape/stack/memory collection'])
+    if a.solo:plan['phases']=['serial_pre','profile','serial_post']
     if not a.execute:
         print(json.dumps(plan, indent=2)); return
-    if not all((a.vendor, a.output, a.barrier)) or a.output.exists():
+    if not a.vendor or not a.output or (not a.solo and not a.barrier) or a.output.exists():
         p.error('execute requires vendor, NEW output and NEW shared barrier directory')
     os.environ['ACLNN_CACHE_LIMIT'] = '1000000'
     os.environ['ASCEND_CUSTOM_OPP_PATH'] = str(a.vendor)+':'+os.environ.get('ASCEND_CUSTOM_OPP_PATH', '')
@@ -81,11 +84,12 @@ def main():
             x = torch.load(item['path'], map_location='cpu', weights_only=True)['input']
             digest = hashlib.sha256(memoryview(x.contiguous().view(torch.uint8).numpy())).hexdigest()
             assert digest==item['input_sha256'] and x.dtype==torch.bfloat16 and x.shape==(1595,5120)
-            x = x[:967].contiguous().to(f'npu:{a.rank}')
+            prefix=x[:967].contiguous();prefix_sha=hashlib.sha256(memoryview(prefix.view(torch.uint8).numpy())).hexdigest()
+            x = prefix.to(f'npu:{a.rank}')
             ref = F.linear(x, w); y = gate(x, w)
             assert y.shape==ref.shape==(967,17408) and y.dtype==ref.dtype==torch.bfloat16
             assert y.is_contiguous() and torch_npu.get_npu_format(y)==torch_npu.get_npu_format(ref)==2
-            n = dict(layer=layer, input_sha256=digest, input_kind='explicit_prefix', preparation_s=time.perf_counter()-start)
+            n = dict(layer=layer,input_sha256=digest,prefix_sha256=prefix_sha,input_kind='explicit_prefix',preparation_s=time.perf_counter()-start,weight_identity=identity)
             for label, aa, bb in [('all', y, ref), ('gate', y[:,:8704], ref[:,:8704]), ('up', y[:,8704:], ref[:,8704:])]:
                 af, bf = aa.float(), bb.float(); assert bool(torch.isfinite(af).all() & torch.isfinite(bf).all())
                 delta = af-bf; rmse = float(delta.square().mean().sqrt()/bf.square().mean().sqrt().clamp_min(1e-30))
@@ -128,8 +132,9 @@ def main():
                             wall_ms=elapsed, cpu_ms=(after.ru_utime+after.ru_stime-usage.ru_utime-usage.ru_stime)*1000/3,
                             involuntary_switches=after.ru_nivcsw-usage.ru_nivcsw,voluntary_switches=after.ru_nvcsw-usage.ru_nvcsw))
                 save()
-            barrier('numeric_ready');samples('concurrent_pre');barrier('concurrent_pre_done')
-            if a.rank==1: wait('serial_done',0)
+            if not a.solo:
+                barrier('numeric_ready');samples('concurrent_pre');barrier('concurrent_pre_done')
+                if a.rank==1:wait('serial_done',0)
             samples('serial_pre')
             # Only this child's warmed symbols are wrapped; never change shared runtime files.
             runtime=_runtime.runtime(); original={}
@@ -140,7 +145,7 @@ def main():
                 runtime._symbols[symbol]=wrapped
             try:
                 config=torch_npu.profiler._ExperimentalConfig(profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
-                    aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone, data_simplification=False,
+                    aic_metrics=(torch_npu.profiler.AiCMetrics.PipeUtilization if a.aic_metrics=='pipe' else torch_npu.profiler.AiCMetrics.AiCoreNone), data_simplification=False,
                     record_op_args=False, export_type=[torch_npu.profiler.ExportType.Text])
                 with torch_npu.profiler.profile(activities=[torch_npu.profiler.ProfilerActivity.CPU,torch_npu.profiler.ProfilerActivity.NPU],
                     record_shapes=False,profile_memory=False,with_stack=False,with_modules=False,
@@ -149,8 +154,9 @@ def main():
                     profiled=True;samples('profile');profiled=False
             finally:
                 profiled=False;runtime._symbols.update(original)
-            samples('serial_post');signal('serial_done')
-            barrier('both_serial_done');samples('concurrent_post')
+            samples('serial_post')
+            if not a.solo:
+                signal('serial_done');barrier('both_serial_done');samples('concurrent_post')
         report['status']='complete';report['allocated_tensor_bytes']=int(torch.npu.memory_allocated(a.rank));save()
     except BaseException as exc:
         report.update(status='stopped',error=type(exc).__name__+': '+str(exc));save();raise

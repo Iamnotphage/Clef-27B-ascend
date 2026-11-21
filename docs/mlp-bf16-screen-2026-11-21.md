@@ -277,3 +277,54 @@ g++ -std=c++17 -shared -fPIC -fvisibility=hidden \
 实验硬限112s，为清理保留余量；实际 **21.858s**，累计 **133.140/240s**，剩余 **106.860s**。owner入口对进程退出后驱动释放做有界fresh空闲观察，未向历史PID或其他模型发信号，恢复无需人工补启动。最终 **2026-11-22 03:01:08（上海）RUNNING_VERIFIED**，22/22检查通过；API **1692910 / start420456310 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1693104/1693105**仅卡7双芯片。原argv/env、aa3e、OPP9/LD12、设备归属匹配；文本/图像各一次200，无POST重试，两端指针更新。manifest SHA `11c894f5e8fcf3f642bdeb1219a13ae1ee2828f500494426026e9e465100df19`。
 
 精确执行argv、入口/依赖SHA、执行后核同、三类CPU结果、工具原始错误、前控原数与恢复证据写回原summary `v3_exact_entry_attempt`。raw为系统tmp `clef40-gate-exact-ypdi4odk` 及远端同名work/logs，无新artifact/PR。默认owner入口打印计划，实际执行必须显式 `--execute` 并传入fresh私有work/output、固定vendor、已用/剩余预算；真实BasicInfo任务导出仍为后续采集前提。
+
+## 复用成功collector的单组Pipe补采 · 2026-11-22 03:23（上海恢复）
+
+**18/18目标task与PMU已命中；配对task增量中位0.308772ms，复现此前约0.313ms。** 本次取得MTE2与Fixpipe活动显著增加的证据，内部等待的独占归因、逐核负载及两臂runtime tiling继续UNKNOWN。
+
+CPU复核将msopprof空结果的断点限定在“SDK注册/range结束成功之后，目标捕获/筛选/导出尚未贯通”：应用数值完成且end(0)已调用，工具仍报 `Profiling results are empty`、`Profiling data parse failed`，无目标raw。工具injection库确实导出 `aclrtLaunchKernelWithHostArgsImpl` 等hook；e05 trace中vendor在worker线程launch、v3在main线程launch。现有证据未排他区分hook捕获与range/线程筛选，保留UNKNOWN，不声称ACLNN NZ不受支持，不再重试该空结果路径。
+
+e05成功的torch_npu Level1 raw显式配置 `ACL_AICORE_NONE`，DB只有TASK/COMPUTE_TASK_INFO/AICORE_FREQ等表，无法离线还原未采的PMU/逐核计数。本机torch_npu 2.10.0.post7的ExperimentalConfig允许Level1开启aic_metrics，CANN9.2.1 `acl_prof.h`提供 `ACL_AICORE_PIPE_UTILIZATION`。因此仅在同一成功入口增加 `--solo --aic-metrics pipe`，保留CPU+NPU Level1、关闭stack/shape/memory，原生raw先落盘，恢复后离线导出；无MSTX/preload、无application replay、未改kernel或tiling。
+
+代表rank0，M967使用历史1595输入的显式前缀，层顺序31/0/63与原三层streaming、输出分配/下发/生命期一致；原NZ一次准备，BF16 canonical ND `[967,17408]`，完整预热每臂15次独立记录。三层all/gate/up相对RMSE最大3.494e-5、normalized max最大0.002794，有限值与重复逐位检查通过；prefix与原权重SHA留summary。9项暂存入口/依赖/固定库SHA停服前核同，运行后5项入口/依赖核同。本次仅rank0短采，双rank并发与串行差距代表性沿用e05对照，未把本次数据称为新双rank慢者。
+
+| 段（ms/层，三层均摊） | vendor Event | v3 Event | 配对Event增量中位 | A/A最大绝对差 |
+| --- | ---: | ---: | ---: | ---: |
+| serial pre | 0.598740 | 0.954827 | 0.356067 | 0.010333 |
+| serial post | 0.602793 | 0.965300 | 0.352020 | 0.044187 |
+| profile | 0.651960 | 1.056973 | 0.362840 | 未采profile A/A |
+
+pre/post wall配对增量0.351227/0.354630ms，A/A最大0.014623/0.124170ms；profile wall增量0.355797ms。profile Event增量较pre/post约+1.9%/+3.1%；各臂绝对Event中位也受标记扰动。尖峰全部保留，短样本不作正式P95。三对task增量分别307.3718/308.7718/309.0518µs，约0.309ms的task惩罚稳定复现。
+
+task关联沿用原生flow/correlation，再按精确stream/task ID、核名及绝对时基核同CSV；9个vendor `aclnnMatmulWeightNz_MatMulCommon_MatMulV2`、9个v3 `ClefMlpGateGemm`，每层各一个AI_CORE任务，无新增cast/copy/layout compute task。两臂Block Num24、BF16、ND+FRACTAL_NZ输入、ND输出；vendor权重shape导出为物理NZ `320,1088,16,16`，v3为逻辑 `17408,5120`，相同原权重及格式。此描述符表示差异未产生额外布局任务。
+
+下表每臂9个task中位，时间单位µs；pipe时间为官方公式归一的平均活动时间，task duration为设备wall：
+
+| 字段 | vendor | v3 |
+| --- | ---: | ---: |
+| task duration | 592.896 | 900.394 |
+| aicore_time | 577.008 | 888.565 |
+| MAC时间 / ratio | 507.611 / 0.880 | 532.679 / 0.600 |
+| MTE1时间 / ratio | 427.521 / 0.741 | 398.056 / 0.448 |
+| MTE2时间 / ratio | 448.028 / 0.776 | 735.144 / 0.828 |
+| Fixpipe时间 / ratio | 11.078 / 0.019 | 126.644 / 0.142 |
+| context total cycles | 24,926,749 | 38,385,994 |
+
+请求组 `ACL_AICORE_PIPE_UTILIZATION`，本硬件实际组 `PipeUtilizationExct`、task-based、replay=0。官方 `profiling_bean/stars/ffts_pmu.py` 解码2304B `ffts_profile.data.0.slice_0`：18条context、0条block PMU、无overflow；新DB TASK_PMU_INFO为18×28=504条，无core ID。事件组 `0x416,0x417,0x9,0x302,0xc,0x303,0x54,0x55`，raw cycles与ID映射保留summary。硬件频率1800MHz，当前24-block单wave；官方时间公式为 `event_cycles/(24*1800)`，ratio为 `event_cycles/total_cycle`，MAC分子为r416+r417，MTE1=r302、MTE2=rc、Fixpipe=r303。18条逐项核同CSV，最大时间舍入差0.000491µs；公式来源 `msconfig/ai_core_config.py` 与 `mscalculate/stars/ffts_pmu_calculator.py`，路径/SHA留summary。`cube_utilization(%)`是平均core elapsed相对task wall的归一值，其公式未提供MAC计算占比。
+
+**证据支持的核查顺序：** ①MTE2搬入/复用效率（活动时间+287.116µs，约+64%）；②Fixpipe写出路径（相同逻辑输出，活动时间约11.43倍）；③MAC活动约+25.068µs（+4.9%），task约+52%。以上活动可重叠，不能相加解释0.309ms，不能按100%−MAC估算收益，也不能把MTE2忙直接认作HBM饱和。缺少wait/stall、传输字节数与per-core记录，独占critical-path占比、active核数/长尾、L1/L0等待仍UNKNOWN；runtime v3 TilingData及vendor opaque tiling未导出。
+
+当前值得保留的最小方向是先核runtime C写出分区/burst与搬入复用，再据证据决定实现调整。此前SDK CPU模型singleCoreN=5808时，N起点0/5808/11616对应BF16字节偏移0/11616/23232，mod512为0/352/192；该模型尚未核同runtime，仅为地址核查线索，未把512B对齐当API硬要求或已定位原因。当前v3 gate-only的task惩罚仍超过SwiGLU预算，本轮停止设备实验，保留对其他BF16融合方案的开放结论。
+
+本次外层cap40s，计算/采集 **9.422204s**，累计 **142.562622/240s**；超时/重放/POST重试均0。fresh核指针、完整树、18143、原argv/env/manifest与卡7双芯片后定向停Clef，raw落盘立即恢复，导出随后执行。最终 **2026-11-22 03:23:15（上海）RUNNING_VERIFIED**，22/22检查通过；API **1695411 / start420588963 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1695597/1695598**仅卡7 Chip0/1/Phy14/15，原argv/env、aa3e、OPP9/LD12及设备归属匹配，文本/图像各一次200。env仍c18d38bd…c2ba9/4678B，两端当前指针更新，manifest SHA `29f0790b53ed46991e99daeea4986febe704a25f3c239586ff09657279f2719c`。 **03:47:16（上海）末次只读核查**完整树/health/18143/卡归属、原argv/env/manifest与两端指针仍匹配，无实验进程。
+
+raw位于本地系统tmp `clef40-gate-pipe-d42qupyu`，远端同名work/logs；导出目录为logs下 `traces-r0/gate-r0_1695327_20261121192144653_ascend_pt/ASCEND_PROFILER_OUTPUT`。原summary新增 `v3_pipe_profile`，含精确argv、SHA、18条raw cycle、逐样本原数、归一公式、恢复与缺项。离线复现：
+
+```bash
+python3 runtime/analyze_mlp_gate_profile.py \
+  --trace "$task_raw/trace-r0.json" --kernel-csv "$task_raw/kernel_details.csv" \
+  --samples "$task_raw/rank0.json" --output "$task_raw/analysis.json"
+python3 "$task_raw/analyze-pmu.py"
+```
+
+CPU检查覆盖plan/语法、精确task join正例及重复ID/错误核名/错时基/缺ID负例，实际18任务与原始计数/归一公式核同通过。无新artifact/PR，无kernel修改或全量测试。

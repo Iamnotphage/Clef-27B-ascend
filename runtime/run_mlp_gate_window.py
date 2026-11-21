@@ -24,9 +24,10 @@ def main():
     p.add_argument('--work',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--vendor',type=Path,required=True);p.add_argument('--used-s',type=float,required=True)
     p.add_argument('--remaining-s',type=float,required=True);p.add_argument('--cap-s',type=float,default=112)
+    p.add_argument('--collector',choices=['msopprof','torch-pipe'],default='msopprof')
     a=p.parse_args()
     if not (0<a.cap_s<=a.remaining_s-8 and a.used_s+a.remaining_s<=240.001):p.error('budget must leave cleanup margin within cumulative240s')
-    if not a.execute:print(json.dumps(dict(status='plan',basic_s=22,pipe_s=27,cap_s=a.cap_s,remaining_s=a.remaining_s)));return
+    if not a.execute:print(json.dumps(dict(status='plan',collector=a.collector,basic_s=22,pipe_s=27,cap_s=a.cap_s,remaining_s=a.remaining_s)));return
     R=a.work;O=a.output;C=R/'control';O.mkdir(parents=True,exist_ok=False)
     spec=importlib.util.spec_from_file_location('f','/workspace/yangchen/work/vision-cache-owner27-3bf466d913ea269d4f4bb37b560a6ee7a3fdbf47/control/supervised_probe_window.py');f=importlib.util.module_from_spec(spec);sys.modules['f']=f;spec.loader.exec_module(f)
     record=dict(status='prepared',used_before_s=a.used_s,remaining_before_s=a.remaining_s,cap_s=a.cap_s,commands=[],basic_hits=[],pipe_hits=[])
@@ -77,21 +78,32 @@ def main():
     signal.signal(signal.SIGTERM,lambda *_:(_ for _ in ()).throw(TimeoutError('outer termination')))
     try:
         control('preflight');control('stop');stopped=True;start=time.monotonic();record['status']='running';save()
-        run(base+['--mode','control','--output-dir',str(O/'pre')],'pre',18)
-        pre=json.loads(next((O/'pre').glob('*.json')).read_text());assert pre['status']=='complete'
-        arms={arm:{r['pair']:r['device_ms'] for r in pre['samples'] if r['arm']==arm} for arm in ('vendor','vendor_repeat','v3')}
-        delta=[arms['v3'][i]-arms['vendor'][i] for i in range(3)];noise=max(abs(arms['vendor_repeat'][i]-arms['vendor'][i]) for i in range(3))
-        record['pre_gap']=dict(paired_delta_ms=delta,median_delta_ms=statistics.median(delta),aa_max_ms=noise);save()
-        if statistics.median(delta)<=max(noise,.2):raise RuntimeError('gap not reproduced')
-        for arm in ('vendor','v3'):
-            hit=collect('BasicInfo',arm,'basic',22);record['basic_hits'].append(hit);save();print('BASIC_HIT',arm,hit['task_duration_us'],flush=True)
-        record['basic_delta_us']=record['basic_hits'][1]['task_duration_us']-record['basic_hits'][0]['task_duration_us'];save()
-        if record['basic_delta_us']<200:raise RuntimeError('BasicInfo task gap not representative')
-        if a.cap_s-(time.monotonic()-start)>=68:
+        if a.collector=='torch-pipe':
+            argv=[sys.executable,str(R/'profile_mlp_gate.py'),'--execute','--solo','--aic-metrics','pipe','--rank','0','--vendor',str(a.vendor),'--output',str(O/'rank0.json')]
+            run(argv,'torch-pipe',max(1,a.cap_s-2))
+            result=json.loads((O/'rank0.json').read_text());assert result['status']=='complete'
+            infos=list((O/'traces-r0').glob('*_ascend_pt/profiler_info*.json'));assert len(infos)==1
+            info=json.loads(infos[0].read_text())
+            actual=info['config']['experimental_config']['_aic_metrics']
+            assert actual=='ACL_AICORE_PIPE_UTILIZATION',actual
+            record['capture']=dict(path=str(O/'rank0.json'),profiler_info=str(infos[0]),actual_metric=actual,export='raw only, offline after restoration')
+            record['status']='complete'
+        else:
+            run(base+['--mode','control','--output-dir',str(O/'pre')],'pre',18)
+            pre=json.loads(next((O/'pre').glob('*.json')).read_text());assert pre['status']=='complete'
+            arms={arm:{r['pair']:r['device_ms'] for r in pre['samples'] if r['arm']==arm} for arm in ('vendor','vendor_repeat','v3')}
+            delta=[arms['v3'][i]-arms['vendor'][i] for i in range(3)];noise=max(abs(arms['vendor_repeat'][i]-arms['vendor'][i]) for i in range(3))
+            record['pre_gap']=dict(paired_delta_ms=delta,median_delta_ms=statistics.median(delta),aa_max_ms=noise);save()
+            if statistics.median(delta)<=max(noise,.2):raise RuntimeError('gap not reproduced')
             for arm in ('vendor','v3'):
-                hit=collect('PipeUtilization',arm,'pipe',27);record['pipe_hits'].append(hit);save();print('PIPE_HIT',arm,hit['task_duration_us'],flush=True)
-        else:record['pipe_skipped']='insufficient time for paired group plus post control'
-        run(base+['--mode','control','--output-dir',str(O/'post')],'post',12);record['status']='complete'
+                hit=collect('BasicInfo',arm,'basic',22);record['basic_hits'].append(hit);save();print('BASIC_HIT',arm,hit['task_duration_us'],flush=True)
+            record['basic_delta_us']=record['basic_hits'][1]['task_duration_us']-record['basic_hits'][0]['task_duration_us'];save()
+            if record['basic_delta_us']<200:raise RuntimeError('BasicInfo task gap not representative')
+            if a.cap_s-(time.monotonic()-start)>=68:
+                for arm in ('vendor','v3'):
+                    hit=collect('PipeUtilization',arm,'pipe',27);record['pipe_hits'].append(hit);save();print('PIPE_HIT',arm,hit['task_duration_us'],flush=True)
+            else:record['pipe_skipped']='insufficient time for paired group plus post control'
+            run(base+['--mode','control','--output-dir',str(O/'post')],'post',12);record['status']='complete'
     except BaseException as exc:record.update(status='stopped',error=type(exc).__name__+': '+str(exc))
     finally:
         terminate();record['returncodes']=[proc.returncode for proc in children]

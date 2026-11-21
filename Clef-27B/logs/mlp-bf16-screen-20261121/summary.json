@@ -3479,5 +3479,854 @@
       ],
       "both_pointers_updated": true
     }
+  },
+  "v3_pipe_profile": {
+    "status": "TASK_PIPE_PMU_CAPTURED; runtime_tiling_per_core_wait_UNKNOWN",
+    "base_commit": "e28d020eb1bc997db73961dd87b5c7f28094d8a1",
+    "fixed_v3_semantics_commit": "4a51f71",
+    "CPU_findings": {
+      "msopprof_breakpoint": "SDK registered and range end complete; downstream target capture/filter/export not proven, no raw and empty-result/parse-failed logs. The injection library exports aclrtLaunchKernelWithHostArgsImpl; vendor-worker vs v3-main launch-thread difference is observed but not an exclusive cause.",
+      "old_raw": "e05ec7a torch_npu Level1, ACL_AICORE_NONE; no PMU table/records, cannot recover uncollected per-core/PMU counters",
+      "support": {
+        "old_metric": "ACL_AICORE_NONE",
+        "old_versions": {
+          "torch_npu": "2.10.0.post7",
+          "cann": "9.2.1"
+        },
+        "old_tables": [
+          "HOST_INFO",
+          "SESSION_TIME_INFO",
+          "META_DATA",
+          "CANN_API",
+          "COMPUTE_TASK_INFO",
+          "NPU_INFO",
+          "AICORE_FREQ",
+          "RANK_DEVICE_MAP",
+          "ENUM_OVERLAP_ANALYSIS_TYPE",
+          "ENUM_HCCL_RDMA_TYPE",
+          "ENUM_MSTX_EVENT_TYPE",
+          "ENUM_HCCL_TRANSPORT_TYPE",
+          "ENUM_HCCL_LINK_TYPE",
+          "ENUM_MEMCPY_OPERATION",
+          "ENUM_HCCL_DATA_TYPE",
+          "ENUM_MODULE",
+          "ENUM_API_TYPE",
+          "TASK",
+          "OVERLAP_ANALYSIS",
+          "STRING_IDS",
+          "PYTORCH_API",
+          "CONNECTION_IDS"
+        ],
+        "source_evidence": {
+          "/usr/local/Ascend/cann-9.2.1/include/acl/acl_prof.h": "aafd4db8466c5448409c202505c7ece5f4d736fb0ea121be4eb3a67c8556befb",
+          "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/torch_npu/profiler/experimental_config.py": "b1ab142965e45968a45a79041fb4b87cb96037d04ea6deb72ac14e12941414a6",
+          "/usr/local/Ascend/cann-9.2.1/tools/profiler/profiler_tool/analysis/msconfig/ai_core_config.py": "b8cb0d2a768b2bf15291d9c31eb764cf6bae7d4a39ecdf6820cd4f85f28f7685",
+          "/usr/local/Ascend/cann-9.2.1/tools/profiler/profiler_tool/analysis/mscalculate/stars/ffts_pmu_calculator.py": "72b65a386260f79b34ab1894e6ba4787616a62584c988272195d4a9a6909f66d",
+          "/usr/local/Ascend/cann-9.2.1/tools/profiler/profiler_tool/analysis/viewer/runtime_report.py": "2a979d6674486f733d187396805670e828dd58754b7453b0a034edb85d6a7fcb"
+        }
+      },
+      "existing_msopprof_evidence_ref": "v3_exact_entry_attempt.raw_locations and v3_range_repair; original logs/interface evidence retained"
+    },
+    "scope": {
+      "rank": 0,
+      "tokens": 967,
+      "layers": [
+        31,
+        0,
+        63
+      ],
+      "input": "historical1595 explicit_prefix967",
+      "format": "original BF16 NZ weights; canonical ND output [967,17408]",
+      "allocation_lifetime": "same three-layer streaming and mid/out lifetimes as4a51f71; allocation/dispatch included; NZ preparation once",
+      "schedule": "solo serial; e05 concurrent/serial controls reused for representativeness, no new dual-rank slow-rank claim",
+      "excluded": [
+        "kernel/tiling changes",
+        "MSTX/preload/application replay",
+        "per-op synchronization",
+        "down",
+        "S1/OD/ERQA",
+        "new artifact/PR"
+      ]
+    },
+    "execution": {
+      "argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/run_mlp_gate_window.py",
+        "--execute",
+        "--collector",
+        "torch-pipe",
+        "--work",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu",
+        "--output",
+        "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu",
+        "--vendor",
+        "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+        "--used-s",
+        "133.14041792953014",
+        "--remaining-s",
+        "106.85958207046986",
+        "--cap-s",
+        "40"
+      ],
+      "commands": [
+        {
+          "label": "torch-pipe",
+          "argv": [
+            "/workspace/yangchen/venvs/clef-py312/bin/python",
+            "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/profile_mlp_gate.py",
+            "--execute",
+            "--solo",
+            "--aic-metrics",
+            "pipe",
+            "--rank",
+            "0",
+            "--vendor",
+            "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+            "--output",
+            "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu/rank0.json"
+          ],
+          "pid": 1695327,
+          "returncode": 0,
+          "wall_s": 9.049360699951649
+        }
+      ],
+      "source_and_dependency_sha256": {
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/profile_mlp_gate.py": "3b68702a6fca7eafb947ffd0372066c739b20631e3694d9b43c0a258e2fbb445",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/run_mlp_gate_window.py": "5dd35983fa7425daef9f2c5410b7acadfc7f3bfcfcea2e1ebed1181b9c9e3d05",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/probe_mlp_gate_internal.py": "1cda872274af34111f6e7be7744677a2196e90e17c2507f991707fb8c6588f4d",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/analyze_mlp_gate_internal.py": "57ec9b6254af48bcbeac6f22b3f8d3edb2611e146d41b42f0e5883225d153fd5",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/probe_mlp_ffn.py": "659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/control/control.py": "aff8fa2f35165bcb5390f47b38c84fbcb65192c5cb1be0285b619f7f1ccd0598",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/control/verify.py": "07ff3cdb903435bf5db002359fed1c6342b17cfae90ce4f163f37fc3af44c658",
+        "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_api/lib/libcust_opapi.so": "a9786660a05b7121f6e7c7c955e9d9b732f5f7fe85e0fd3ca54eddc10e56b510",
+        "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_impl/ai_core/tbe/kernel/ascend910_93/clef_mlp_gate_gemm/ClefMlpGateGemm_ced6a5d2fdcecf78f464746334471991.o": "1a9f4d231b22a62892850cd8d35664137cc3bee7cf87f264a7670309a7d62a10"
+      },
+      "post_execution_source_sha256": {
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/profile_mlp_gate.py": "3b68702a6fca7eafb947ffd0372066c739b20631e3694d9b43c0a258e2fbb445",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/run_mlp_gate_window.py": "5dd35983fa7425daef9f2c5410b7acadfc7f3bfcfcea2e1ebed1181b9c9e3d05",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/probe_mlp_gate_internal.py": "1cda872274af34111f6e7be7744677a2196e90e17c2507f991707fb8c6588f4d",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/analyze_mlp_gate_internal.py": "57ec9b6254af48bcbeac6f22b3f8d3edb2611e146d41b42f0e5883225d153fd5",
+        "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/probe_mlp_ffn.py": "659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e"
+      },
+      "matched_before_stop_and_after": true
+    },
+    "numeric": [
+      {
+        "layer": 31,
+        "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+        "prefix_sha256": "905229444d616466a4bdc05f6636dafe408c5da5183d6590743e3ebd15e02e1d",
+        "input_kind": "explicit_prefix",
+        "preparation_s": 0.9255805099382997,
+        "all": {
+          "relative_rmse": 3.415335595491342e-05,
+          "normalized_max": 0.0027777778450399637
+        },
+        "gate": {
+          "relative_rmse": 3.4934353607241064e-05,
+          "normalized_max": 0.002793296007439494
+        },
+        "up": {
+          "relative_rmse": 3.2830936106620356e-05,
+          "normalized_max": 0.0013888889225199819
+        },
+        "repeat_equal": true,
+        "gate_up_rank_sha256": {
+          "model.language_model.layers.31.mlp.gate_proj.weight": "979ed356a510e7450d71eff85f63a68b4963cb40a1643bd179edff3c9ee81801",
+          "model.language_model.layers.31.mlp.up_proj.weight": "398b9d0a1c7b951e7cca22d6a2f1dd524370da15c3c0944e464fceb793040406"
+        }
+      },
+      {
+        "layer": 0,
+        "input_sha256": "cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa",
+        "prefix_sha256": "3623994991a6c33c1a61a70662d63393b756b7ffaf12cd668237aafb507f5c26",
+        "input_kind": "explicit_prefix",
+        "preparation_s": 0.24754283018410206,
+        "all": {
+          "relative_rmse": 3.090698010055348e-05,
+          "normalized_max": 0.0006648935959674418
+        },
+        "gate": {
+          "relative_rmse": 2.996019975398667e-05,
+          "normalized_max": 0.0006648935959674418
+        },
+        "up": {
+          "relative_rmse": 3.197264959453605e-05,
+          "normalized_max": 0.0005274261347949505
+        },
+        "repeat_equal": true,
+        "gate_up_rank_sha256": {
+          "model.language_model.layers.0.mlp.gate_proj.weight": "6e7c770817d107e7ed2c1a2be6dab2d14f762a0d28b8dafca7d01c237ba42f72",
+          "model.language_model.layers.0.mlp.up_proj.weight": "916baf7563ce39c5f7c58601b448295042a2b2ab0e70deb346855af9315cd724"
+        }
+      },
+      {
+        "layer": 63,
+        "input_sha256": "f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8",
+        "prefix_sha256": "ec18818c026c23224110a14bd0fbdaa1e51be958db317ee4bde3a688aadc8f77",
+        "input_kind": "explicit_prefix",
+        "preparation_s": 0.3046593004837632,
+        "all": {
+          "relative_rmse": 2.9617551263072528e-05,
+          "normalized_max": 0.0006009615608491004
+        },
+        "gate": {
+          "relative_rmse": 2.8507362003438175e-05,
+          "normalized_max": 0.0010869564721360803
+        },
+        "up": {
+          "relative_rmse": 3.0384824640350416e-05,
+          "normalized_max": 0.0006009615608491004
+        },
+        "repeat_equal": true,
+        "gate_up_rank_sha256": {
+          "model.language_model.layers.63.mlp.gate_proj.weight": "b844a6d471e144f5f44aad567d4f93f12d54122c7432c5351a7cd87cf550e445",
+          "model.language_model.layers.63.mlp.up_proj.weight": "7c5f3d43388a463fe99a35459643c3889dce58474872f23f20f9e568529addab"
+        }
+      }
+    ],
+    "warmup": [
+      {
+        "arm": "vendor",
+        "calls": 15,
+        "wall_s": 0.009087170474231243
+      },
+      {
+        "arm": "vendor_repeat",
+        "calls": 15,
+        "wall_s": 0.008951599709689617
+      },
+      {
+        "arm": "v3",
+        "calls": 15,
+        "wall_s": 0.013762149959802628
+      }
+    ],
+    "allocated_tensor_bytes": 1000209408,
+    "sample_columns": [
+      "phase",
+      "pair",
+      "arm",
+      "device_ms",
+      "wall_ms",
+      "cpu_ms",
+      "involuntary_switches",
+      "voluntary_switches"
+    ],
+    "sample_rows": [
+      "serial_pre,0,vendor,0.6111600001653036,0.6396363799770673,0.9290000000000317,0,323",
+      "serial_pre,0,vendor_repeat,0.6008266607920328,0.6250133737921715,0.8903333333333633,0,319",
+      "serial_pre,0,v3,0.9672266642252604,0.990863579014937,1.3463333333331533,0,446",
+      "serial_pre,1,v3,0.9475133419036865,0.9710233037670454,1.322999999999963,0,447",
+      "serial_pre,1,vendor_repeat,0.6035133202870687,0.6259499738613764,0.8886666666666118,0,318",
+      "serial_pre,1,vendor,0.5987399816513062,0.621819868683815,0.871333333333224,0,321",
+      "serial_pre,2,vendor,0.5969866514205933,0.6199066216746966,0.8673333333331831,0,320",
+      "serial_pre,2,vendor_repeat,0.5980600118637085,0.6202099223931631,0.8690000000000827,0,323",
+      "serial_pre,2,v3,0.9548266728719076,0.9830398485064507,1.2933333333332204,0,424",
+      "profile,0,vendor,0.7909066677093506,0.9498664488395056,1.6896666666666633,0,181",
+      "profile,0,v3,1.138219992319743,1.1851033195853233,1.6343333333334413,0,191",
+      "profile,1,v3,1.0569732983907063,1.1021497969826062,1.5700000000000713,0,190",
+      "profile,1,vendor,0.624293327331543,0.6896701330939928,1.0640000000002499,0,143",
+      "profile,2,vendor,0.651960015296936,0.7003800322612127,1.0963333333332177,0,138",
+      "profile,2,v3,1.014799992243449,1.0561769207318623,1.5026666666668003,0,176",
+      "serial_post,0,vendor,0.6480199893315634,0.7574999084075292,1.0966666666667457,0,121",
+      "serial_post,0,vendor_repeat,0.6038333177566528,0.6333300843834877,0.8730000000000496,0,137",
+      "serial_post,0,v3,0.9861133098602295,1.0225366180141766,1.2966666666667237,0,188",
+      "serial_post,1,v3,0.9526066780090332,0.9844002003471056,1.1723333333331827,1,177",
+      "serial_post,1,vendor_repeat,0.5925933519999186,0.6538300464550654,0.9146666666666933,0,142",
+      "serial_post,1,vendor,0.6005866527557373,0.629769948621591,0.8733333333333556,0,138",
+      "serial_post,2,vendor,0.6027933359146118,0.6316366295019785,0.8666666666666453,0,140",
+      "serial_post,2,vendor_repeat,0.6003466844558716,0.6315698847174644,0.8660000000000334,0,140",
+      "serial_post,2,v3,0.9653000036875407,0.999670165280501,1.2853333333335086,0,196"
+    ],
+    "timing": {
+      "profile": {
+        "device_ms": {
+          "medians": {
+            "vendor": 0.651960015296936,
+            "v3": 1.0569732983907063
+          },
+          "paired_delta": [
+            0.3473133246103923,
+            0.43267997105916334,
+            0.36283997694651293
+          ],
+          "median_delta": 0.36283997694651293,
+          "aa_delta": [],
+          "aa_max_abs": null
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor": 0.7003800322612127,
+            "v3": 1.1021497969826062
+          },
+          "paired_delta": [
+            0.23523687074581778,
+            0.41247966388861335,
+            0.3557968884706496
+          ],
+          "median_delta": 0.3557968884706496,
+          "aa_delta": [],
+          "aa_max_abs": null
+        }
+      },
+      "serial_post": {
+        "device_ms": {
+          "medians": {
+            "vendor": 0.6027933359146118,
+            "vendor_repeat": 0.6003466844558716,
+            "v3": 0.9653000036875407
+          },
+          "paired_delta": [
+            0.33809332052866614,
+            0.3520200252532959,
+            0.36250666777292884
+          ],
+          "median_delta": 0.3520200252532959,
+          "aa_delta": [
+            -0.04418667157491052,
+            -0.007993300755818722,
+            -0.0024466514587402344
+          ],
+          "aa_max_abs": 0.04418667157491052
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor": 0.6316366295019785,
+            "vendor_repeat": 0.6333300843834877,
+            "v3": 0.999670165280501
+          },
+          "paired_delta": [
+            0.2650367096066474,
+            0.35463025172551466,
+            0.3680335357785225
+          ],
+          "median_delta": 0.35463025172551466,
+          "aa_delta": [
+            -0.12416982402404153,
+            0.024060097833474403,
+            -6.674478451407229e-05
+          ],
+          "aa_max_abs": 0.12416982402404153
+        }
+      },
+      "serial_pre": {
+        "device_ms": {
+          "medians": {
+            "vendor": 0.5987399816513062,
+            "vendor_repeat": 0.6008266607920328,
+            "v3": 0.9548266728719076
+          },
+          "paired_delta": [
+            0.3560666640599568,
+            0.34877336025238037,
+            0.3578400214513143
+          ],
+          "median_delta": 0.3560666640599568,
+          "aa_delta": [
+            -0.010333339373270745,
+            0.0047733386357625696,
+            0.0010733604431152344
+          ],
+          "aa_max_abs": 0.010333339373270745
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor": 0.621819868683815,
+            "vendor_repeat": 0.6250133737921715,
+            "v3": 0.9830398485064507
+          },
+          "paired_delta": [
+            0.3512271990378697,
+            0.3492034350832304,
+            0.3631332268317541
+          ],
+          "median_delta": 0.3512271990378697,
+          "aa_delta": [
+            -0.01462300618489587,
+            0.004130105177561405,
+            0.00030330071846651485
+          ],
+          "aa_max_abs": 0.01462300618489587
+        }
+      }
+    },
+    "task_mapping": [
+      "0,vendor,47,327,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,592.896,24",
+      "0,vendor,47,328,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,593.115,24",
+      "0,vendor,47,329,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,594.776,24",
+      "0,v3,47,332,ClefMlpGateGemm,905.834,24",
+      "0,v3,47,333,ClefMlpGateGemm,899.214,24",
+      "0,v3,47,334,ClefMlpGateGemm,897.854,24",
+      "1,v3,47,337,ClefMlpGateGemm,902.534,24",
+      "1,v3,47,338,ClefMlpGateGemm,899.374,24",
+      "1,v3,47,339,ClefMlpGateGemm,900.394,24",
+      "1,vendor,47,342,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,592.176,24",
+      "1,vendor,47,343,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,591.715,24",
+      "1,vendor,47,344,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,592.096,24",
+      "2,vendor,47,347,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,592.595,24",
+      "2,vendor,47,348,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,593.756,24",
+      "2,vendor,47,349,aclnnMatmulWeightNz_MatMulCommon_MatMulV2,592.935,24",
+      "2,v3,47,352,ClefMlpGateGemm,904.994,24",
+      "2,v3,47,353,ClefMlpGateGemm,901.354,24",
+      "2,v3,47,354,ClefMlpGateGemm,900.094,24"
+    ],
+    "task_delta": [
+      {
+        "pair": 0,
+        "vendor_task_mean_us": 593.5955000000007,
+        "v3_task_mean_us": 900.9673333333316,
+        "delta_us": 307.37183333333087
+      },
+      {
+        "pair": 1,
+        "vendor_task_mean_us": 591.9954999999997,
+        "v3_task_mean_us": 900.7673333333345,
+        "delta_us": 308.7718333333348
+      },
+      {
+        "pair": 2,
+        "vendor_task_mean_us": 593.0955000000007,
+        "v3_task_mean_us": 902.1473333333366,
+        "delta_us": 309.05183333333594
+      }
+    ],
+    "paired_task_delta_median_us": 308.7718333333348,
+    "PMU": {
+      "summary": {
+        "vendor": {
+          "Duration(us)": {
+            "median": 592.896,
+            "minimum": 591.715,
+            "maximum": 594.776
+          },
+          "aicore_time(us)": {
+            "median": 577.008,
+            "minimum": 575.855,
+            "maximum": 579.841
+          },
+          "aic_total_cycles": {
+            "median": 24926749.0,
+            "minimum": 24876918.0,
+            "maximum": 25049130.0
+          },
+          "aic_mac_time(us)": {
+            "median": 507.611,
+            "minimum": 507.321,
+            "maximum": 507.772
+          },
+          "aic_mac_ratio": {
+            "median": 0.88,
+            "minimum": 0.876,
+            "maximum": 0.882
+          },
+          "aic_scalar_time(us)": {
+            "median": 417.944,
+            "minimum": 417.758,
+            "maximum": 418.478
+          },
+          "aic_scalar_ratio": {
+            "median": 0.725,
+            "minimum": 0.722,
+            "maximum": 0.726
+          },
+          "aic_mte1_time(us)": {
+            "median": 427.521,
+            "minimum": 427.182,
+            "maximum": 428.029
+          },
+          "aic_mte1_ratio": {
+            "median": 0.741,
+            "minimum": 0.737,
+            "maximum": 0.743
+          },
+          "aic_mte2_time(us)": {
+            "median": 448.028,
+            "minimum": 446.528,
+            "maximum": 451.721
+          },
+          "aic_mte2_ratio": {
+            "median": 0.776,
+            "minimum": 0.775,
+            "maximum": 0.783
+          },
+          "aic_fixpipe_time(us)": {
+            "median": 11.078,
+            "minimum": 11.026,
+            "maximum": 11.153
+          },
+          "aic_fixpipe_ratio": {
+            "median": 0.019,
+            "minimum": 0.019,
+            "maximum": 0.019
+          },
+          "aic_icache_miss_rate": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0
+          },
+          "cube_utilization(%)": {
+            "median": 97.285,
+            "minimum": 97.179,
+            "maximum": 97.489
+          }
+        },
+        "v3": {
+          "Duration(us)": {
+            "median": 900.394,
+            "minimum": 897.854,
+            "maximum": 905.834
+          },
+          "aicore_time(us)": {
+            "median": 888.565,
+            "minimum": 886.271,
+            "maximum": 896.101
+          },
+          "aic_total_cycles": {
+            "median": 38385994.0,
+            "minimum": 38286901.0,
+            "maximum": 38711569.0
+          },
+          "aic_mac_time(us)": {
+            "median": 532.679,
+            "minimum": 532.616,
+            "maximum": 532.896
+          },
+          "aic_mac_ratio": {
+            "median": 0.6,
+            "minimum": 0.594,
+            "maximum": 0.601
+          },
+          "aic_scalar_time(us)": {
+            "median": 365.53,
+            "minimum": 364.778,
+            "maximum": 368.158
+          },
+          "aic_scalar_ratio": {
+            "median": 0.411,
+            "minimum": 0.409,
+            "maximum": 0.412
+          },
+          "aic_mte1_time(us)": {
+            "median": 398.056,
+            "minimum": 397.752,
+            "maximum": 398.437
+          },
+          "aic_mte1_ratio": {
+            "median": 0.448,
+            "minimum": 0.444,
+            "maximum": 0.45
+          },
+          "aic_mte2_time(us)": {
+            "median": 735.144,
+            "minimum": 732.703,
+            "maximum": 744.962
+          },
+          "aic_mte2_ratio": {
+            "median": 0.828,
+            "minimum": 0.826,
+            "maximum": 0.831
+          },
+          "aic_fixpipe_time(us)": {
+            "median": 126.644,
+            "minimum": 125.586,
+            "maximum": 127.188
+          },
+          "aic_fixpipe_ratio": {
+            "median": 0.142,
+            "minimum": 0.141,
+            "maximum": 0.143
+          },
+          "aic_icache_miss_rate": {
+            "median": 0.0,
+            "minimum": 0.0,
+            "maximum": 0.0
+          },
+          "cube_utilization(%)": {
+            "median": 98.75,
+            "minimum": 98.431,
+            "maximum": 98.961
+          }
+        }
+      },
+      "group": {
+        "requested": "ACL_AICORE_PIPE_UTILIZATION",
+        "actual": "PipeUtilizationExct",
+        "mode": "task-based",
+        "replays": 0,
+        "context_records": 18,
+        "block_records": 0,
+        "event_ids": "0x416,0x417,0x9,0x302,0xc,0x303,0x54,0x55",
+        "decoder": "/usr/local/Ascend/cann-9.2.1/tools/profiler/profiler_tool/analysis/profiling_bean/stars/ffts_pmu.py",
+        "decoder_sha256": "d9ad4694fc8d86e06e9276965d1fe60e030a3e6897d7e9cd2c02b1286d20193f"
+      },
+      "normalization": {
+        "frequency_MHz": 1800,
+        "block_num": 24,
+        "cycles": "context counter sum, no core index",
+        "time_us": "event_cycles/(24*1800); this capture uses one wave of24 blocks",
+        "ratio": "event_cycles/total_cycle; MAC numerator r416+r417",
+        "max_export_rounding_error_us": 0.0004907407407017672,
+        "cube_utilization": "total_cycles/(frequency*physical_core_count*task_wall); not MAC active ratio"
+      },
+      "raw_columns": [
+        "stream_id",
+        "task_id",
+        "total_cycle",
+        "r416",
+        "r417",
+        "r9",
+        "r302",
+        "rc",
+        "r303",
+        "r54",
+        "r55"
+      ],
+      "raw_rows": [
+        "47,327,24910654,21932302,0,18060267,18479324,19310666,478556,5850286,0",
+        "47,328,24926895,21928576,0,18063878,18466606,19360697,478641,5845617,0",
+        "47,329,25049130,21935763,0,18078228,18463766,19414725,481816,5844676,0",
+        "47,332,38711569,23009541,0,15883212,17182904,32182356,5494530,4924771,5",
+        "47,333,38385994,23012440,0,15791844,17195349,31758231,5479383,4832076,3",
+        "47,334,38291538,23018448,0,15777343,17212484,31655580,5466610,4830840,3",
+        "47,337,38564095,23010919,0,15789028,17189686,31936971,5491824,4830864,3",
+        "47,338,38367444,23011754,0,15769999,17195998,31757917,5491705,4830838,3",
+        "47,339,38286901,23019533,0,15758402,17205201,31675689,5471000,4830846,3",
+        "47,342,24876918,21930702,0,18053082,18490872,19290029,477279,5850304,0",
+        "47,343,24893297,21927489,0,18049957,18469460,19341047,478822,5845550,0",
+        "47,344,24931988,21916282,0,18047167,18454244,19514364,479118,5844732,0",
+        "47,347,24898618,21929764,0,18048729,18486283,19330469,476338,5844500,0",
+        "47,348,24926749,21928809,0,18055177,18461563,19354826,477325,5844583,0",
+        "47,349,24938328,21921373,0,18060168,18468894,19448953,478298,5844614,0",
+        "47,352,38689478,23008994,0,15904414,17185724,32092994,5459929,4924760,5",
+        "47,353,38405172,23011640,0,15808864,17202482,31823545,5455026,4832118,3",
+        "47,354,38315214,23021128,0,15790879,17208177,31652759,5425323,4830842,3"
+      ],
+      "raw": {
+        "path": "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu/traces-r0/gate-r0_1695327_20261121192144653_ascend_pt/PROF_000001_20261121192144665_01695327NONJBPAC/device_0/data/ffts_profile.data.0.slice_0",
+        "sha256": "8614b0512fd6ee8d24e879a35b5d523304e5b3b6db7f7e4b228010ce776b8c4f",
+        "bytes": 2304,
+        "overflow": false
+      }
+    },
+    "conclusion": {
+      "observed_priority": [
+        "MTE2 activity +287.116us (+64%); inspect input/weight movement and reuse",
+        "Fixpipe activity +115.566us (11.43x) for same logical ND output; inspect writeback",
+        "MAC activity +25.068us (+4.9%) vs task wall +52%; scalar and MTE1 activity do not increase"
+      ],
+      "limits": "Pipeline events overlap; no additive attribution or exclusive wait percentage; no direct wait/stall/traffic bytes. HBM saturation and active-core imbalance not established. 18 context records/0 block records, no per-core ID. Runtime v3 TilingData and vendor opaque tiling UNKNOWN.",
+      "static_output_address_model": {
+        "provenance": "prior SDK named-platform CPU model; runtime tiling crosscheck still missing",
+        "singleCoreN": 5808,
+        "row_stride_bytes": 34816,
+        "partitions": [
+          {
+            "n_start": 0,
+            "output_byte_offset": 0,
+            "mod512": 0
+          },
+          {
+            "n_start": 5808,
+            "output_byte_offset": 11616,
+            "mod512": 352
+          },
+          {
+            "n_start": 11616,
+            "output_byte_offset": 23232,
+            "mod512": 192
+          }
+        ],
+        "interpretation": "check C writeback partition/burst alignment; not proof that512B alignment is the cause or a required API constraint"
+      },
+      "decision": "stop this capture window; retain runtime writeback partition/burst and movement/reuse checks as next evidence-led direction; current v3 task penalty exceeds SwiGLU budget, no new fused kernel or tile scan"
+    },
+    "budget": {
+      "used_before_s": 133.14041792953014,
+      "new_s": 9.42220363020897,
+      "cumulative_s": 142.5626215597391,
+      "remaining_s": 97.43737844026089,
+      "cap_s": 40.0,
+      "timeouts": 0,
+      "replays": 0,
+      "post_retries": 0
+    },
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gate-pipe-d42qupyu",
+      "remote_work": "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu",
+      "remote_logs": "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu",
+      "export": "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu/traces-r0/gate-r0_1695327_20261121192144653_ascend_pt/ASCEND_PROFILER_OUTPUT"
+    },
+    "raw_sha256": {
+      "rank0.json": "9e6be36c758d7c9f4a96c8dee311ac93c3738c511fc50e5e0e5500c45731934c",
+      "trace-r0.json": "1c3515a7b80b06b7b081521a5daa4c7251259b5543940cb7bd8174bf628a4fda",
+      "kernel_details.csv": "4ec6a85144aa3185e8a69f81e99c06454b47a23036426904dd936ffdc56daf3a",
+      "profiler.db": "85503e940aa6c02c2eb5dfcee59f3baeee092026e4f44549cccd309e33d883b5",
+      "raw-context-pmu.json": "d5f8433a919448be59c6a3c569610683f5f615dda90a8f1134faef45a0252f3a",
+      "pmu-summary.json": "d5e31d417d67de89ec4ac89ec250efa63c4c503fe074061ebada76349b8fabb1",
+      "cpu-evidence.json": "f40f9ffd346f098eeadd5e79cc60557648066ace17267ead575a06870a414a22",
+      "window.json": "9ce6e2c709651ba3c2d4d9f107f6bc7db9a8f0edfcfb5a94621db81000bce348",
+      "execution-argv.json": "04b2ee9d822ffb01dd742a400f6338f1134d4adf5edc507e53cf1b8df90a5b30",
+      "execution-identity.json": "8b00e6297841313e1bbcf0488ce6d910a2824830467628e8d5b12f40e429ba95",
+      "post-execution-identity.json": "67c8d75d57972fe7ec3cdfb58fbc837763a58c7b2b94c46e00aa3918d8e6cada",
+      "verification.json": "6e42b9473bf806afa7378c0c41d85f1f83f7a7a74288619be901be5685c4dc40",
+      "analyze-pmu.py": "4df107bb6006747c96e15763b74a1db9a6fee031a9c22261561b3a6774f4d2b0",
+      "fresh-service-check.json": "f5c2644a8ce823e24ef82b564855b0584d29344aab1cc610cc47df33a931e504",
+      "v3-tiling-cpu-full.json": "52771b4eb9f7a4a3cff36c0cb9752ea94a836dd01dfc37824c705372dec42fd8"
+    },
+    "restoration": {
+      "state": "RUNNING_VERIFIED",
+      "verified_at_cst": "2026-11-22T03:23:15.127988+08:00",
+      "manifest": {
+        "path": "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu/restore-s1/launch-manifest.json",
+        "sha256": "29f0790b53ed46991e99daeea4986febe704a25f3c239586ff09657279f2719c",
+        "bytes": 24398
+      },
+      "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+      "env_bytes": 4678,
+      "identity": {
+        "pid": 1695411,
+        "ppid": 1,
+        "pgid": 1695411,
+        "sid": 1695411,
+        "state": "S",
+        "starttime": "420588963",
+        "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
+      },
+      "npu": {
+        "rows": [
+          {
+            "card": 7,
+            "chip": 0,
+            "name": "python",
+            "pid": 1695411
+          },
+          {
+            "card": 7,
+            "chip": 0,
+            "name": "VLLMWorker_TP",
+            "pid": 1695597
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "name": "VLLMWorker_TP",
+            "pid": 1695598
+          }
+        ],
+        "memory": [
+          {
+            "card": 7,
+            "chip": 0,
+            "phy_id": 14,
+            "used_MB": 59929,
+            "total_MB": 65536,
+            "free_MB": 5607
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "phy_id": 15,
+            "used_MB": 59592,
+            "total_MB": 65536,
+            "free_MB": 5944
+          }
+        ],
+        "at_cst": "2026-11-22T03:23:15.116664+08:00"
+      },
+      "argv_env_matched": true,
+      "env_differences": [],
+      "requests": [
+        {
+          "label": "text",
+          "http_status": 200,
+          "elapsed_s": 0.5128638492897153,
+          "sha256": "9f975f78c3c4d56794314fe82ca1a76ec231a713f1c67d8cd0f96faddd897888"
+        },
+        {
+          "label": "image",
+          "http_status": 200,
+          "elapsed_s": 0.3094359701499343,
+          "sha256": "9f2cc01910935c9c2f34e3d91acd9563a0fd31306e50a988d34a30f32f206401"
+        }
+      ],
+      "both_pointers_updated": true,
+      "passed_checks": "22/22",
+      "final_read_only_check": {
+        "state": "RUNNING_VERIFIED",
+        "checked_at_cst": "2026-11-22T03:47:16.165020+08:00",
+        "identity": {
+          "pid": 1695411,
+          "ppid": 1,
+          "pgid": 1695411,
+          "sid": 1695411,
+          "state": "S",
+          "starttime": "420588963",
+          "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
+        },
+        "tree": [
+          1695411,
+          1695579,
+          1695580,
+          1695597,
+          1695598
+        ],
+        "npu": [
+          {
+            "card": 7,
+            "chip": 0,
+            "name": "python",
+            "pid": 1695411
+          },
+          {
+            "card": 7,
+            "chip": 0,
+            "name": "VLLMWorker_TP",
+            "pid": 1695597
+          },
+          {
+            "card": 7,
+            "chip": 1,
+            "name": "VLLMWorker_TP",
+            "pid": 1695598
+          }
+        ],
+        "phy_mapping": [
+          [
+            0,
+            14
+          ],
+          [
+            1,
+            15
+          ]
+        ],
+        "listener_owners": [
+          1695411
+        ],
+        "health": {
+          "status": "ready",
+          "model": "clef",
+          "revision": "local-65e5a3c5ffb6"
+        },
+        "argv_env_manifest_matched": true,
+        "manifest": {
+          "path": "/workspace/yangchen/logs/clef40-gate-pipe-d42qupyu/restore-s1/launch-manifest.json",
+          "sha256": "29f0790b53ed46991e99daeea4986febe704a25f3c239586ff09657279f2719c",
+          "bytes": 24398
+        },
+        "pointer_record": "/workspace/yangchen/work/clef40-gate-pipe-d42qupyu/control/verification.json",
+        "both_pointers_matched": true
+      }
+    },
+    "task_mapping_columns": [
+      "pair",
+      "arm",
+      "stream",
+      "task_id",
+      "kernel",
+      "duration_us",
+      "block_num"
+    ],
+    "CPU_validation": "py_compile; default solo/pipe and owner plan; all5 executed sources exact; join positive plus duplicate/name/clock/missing-ID negative cases; actual18 task/PMU exact match and18 raw cycle formula checks"
   }
 }
