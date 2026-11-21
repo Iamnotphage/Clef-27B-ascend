@@ -64,3 +64,30 @@ timeout --kill-after=5 90 python probe_mlp_swiglu.py --execute --phase numeric \
 ```
 
 [精简原数与哈希](../Clef-27B/logs/mlp-bf16-screen-20261121/summary.json) 包含逐阶段数值、配对数组、down慢rank/噪声、恢复身份和22项检查。大raw保留临时目录：本地 `clef40-mlp-nyklqirq`、`clef40-mlp-retest-wikqcpnu`；远端对应 `/workspace/yangchen/{work,logs}/` 同名目录。最终manifest SHA `91dcc6f9ae3486fc30ea07f7fed1e9fbc904d343bae77f684fe4b0cb4007cd50`。
+
+## v3 CPU准备：先测GEMM本体与预算
+
+本节仅CPU准备；本轮无SSH、SDK编译、NPU、停启、采集或服务源码修改。新增 [gate-only核](../runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm.cpp) 与 [预算探针](../runtime/probe_mlp_gate_only.py)，默认打印计划；新BF16/NZ组合标为 **未编译、未测量**。down支线保持结束。
+
+可用机制的证据层次：上一轮读取的实机CANN9.2.1 `matmul_client.h` 已有异步模板入口；本地固定v9.0.0官方 `matmul_perf` 有A3/DAV2201纯Cube、MDL/unitflag配置，`matmul_async_iterate_all` 明确支持A3。在线[GetTensorC文档](https://www.hiascend.com/doc_center/source/zh/CANNCommunityEdition/910beta2/API/ascendcopapi/atlasascendc_api_07_0639.html)确认A3/BF16/ND与NZ、异步GM缓存；[等待契约](https://asc.gitcode.com/api/SIMD-API/adv_api/cube_compute/Matmul_Kernel/WaitGetTensorC.html)要求Vector消费异步搬入的UB前等待。在线资料分别为9.1 beta及开发分支，当前9.2.1新组合的目标编译/运行仍缺证据。
+
+最小顺序：
+
+1. 原vendor `F.linear(x,W_NZ)` 与纯Cube `MultiCoreMatmulTiling + IterateAll` 分别输出相同canonical `[gate8704,up8704]`、BF16 `[M,17408]`。共享原NZ权重，取消配对重排；候选按完整单核任务提交，保留API内部base块和L1/L0调度，结束整个任务后才End。没有复制原vendor隐藏tiling，也没有预设更大tile。
+2. 默认M967、两rank串行，先 `--phase numeric` 检查0/31/63层，再 `--phase timing`。计时分列原/候选gate、vendor gate A/A、独立vendor SwiGLU、两种完整链；布局、分配和下发均在相应区间内，NZ准备单列。warm、256MiB读刷代理、三层真实权重streaming分列；SwiGLU单测仅消费同组预激活，独立结果不等同服务开销。局部参考与候选的实际format/stride均记录。
+3. 先检查GEMM差值是否落在A/A波动带，再用实测SwiGLU耗时作为保守预算；额外GM缓存/UB搬运/等待必须有剩余预算覆盖。差值连同波动已耗尽预算就停止。当前原数缺gate/SwiGLU独立计时，预算为UNKNOWN，尚未进入异步融合实现。
+
+后续异步方案的边界：标准 `Iterate<false>` 一次启动整个singleCore任务，C由GM workspace保留，Vector分片取结果；能够减少逐base块client握手，原始C的GM写入/读取仍然存在。`SetWorkspace(GlobalTensor)` 在启动前设置独占区域，覆盖完整singleCore输出，持续到全部消费者排空及End。不能把两个小GM槽当成完整workspace。
+
+| producer / region | consumer / region | 就绪与复用契约 |
+| --- | --- | --- |
+| Matmul → 独占GM C区域 | API GetTensorC返回的结果片 | API结果就绪后才读；保持C的BF16写回；完成整个任务后释放 |
+| GM → `C_ub[slot]` | Vector读取相同slot | API搬入时使用WaitGetTensorC；自行搬入时使用TPipe的MTE2→V队列依赖 |
+| Vector读取`C_ub[slot]` | 下一片搬入复用相同slot | 该片gate/up均已消费后释放；两槽按同一个`slot=i%2`管理，预热/尾部单独排空 |
+| Vector → 单槽输出队列 | MTE3写最终紧凑结果 | V→MTE3队列就绪、搬出完成后才允许覆盖；不自行占用Matmul内部cross-core flag |
+
+跨片Cube/Vector重叠依靠GM缓存解耦和两槽UB预取；最终仍会在消费尚未就绪的结果时等待。64×256的两槽BF16 C为64KiB；两个可复用FP32缓冲64KiB（SiLU后释放gate临时区用于up），单槽BF16输出16KiB，共144KiB，余48KiB用于API临时区/对齐；实际临时区和in-place限制待目标SDK确认。此UB片段大小不约束GEMM内部base tile，较大的结果片可继续细分给Vector。
+
+具体未解决项：原canonical N自动分核可能将gate与up分到不同producer；须确认同client成对N所有权/就绪顺序，或先验证配对布局对GEMM和恢复canonical输出的完整代价。该映射与9.2.1异步组合未确认前，不写融合流水。官方[MatmulCallBackFunc](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/910/API/ascendcopapi/docs/en/api/SIMD-API/advanced_api/matrix_compute/Matmul-Kernel/MatmulCallBackFunc.md)属于自编译Matmul实例的搬运回调，不能据此给既有F.linear/vendor内核插入SiLU回调。
+
+CPU验证：Python语法、三个M的默认计划及无输出写入检查、build.sh语法、JSON配置；同步与数据流analyzer扫描新kernel+tiling头均退出0、findings为空。SDK关联头未在本地展开，正则扫描不证明API内部同步或模板实例正确；目标编译、精度、性能和异步生命周期均保留待验证。CPU工作材料在临时目录 `clef40-v3-cpu-b1ywl5ca`。

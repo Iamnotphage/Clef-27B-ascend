@@ -660,5 +660,64 @@
     "runtime/ascendc/clef_mlp_swiglu/op_kernel/clef_mlp_swiglu.cpp": "7b46dddb85c93659ccf23728b7910fae5139e65fdd869e6084d0654f7f52e3dc",
     "runtime/ascendc/clef_mlp_swiglu/op_kernel/clef_mlp_swiglu_tiling.h": "120914043f392536ba1a12f0804edc448c813bf4ff452957b97054907772f367",
     "runtime/ascendc/clef_mlp_swiglu/op_host/clef_mlp_swiglu.cpp": "741aff1a930110c8d30547a2b71740e4b44b2a78d76f5fb7c60896d45d33c1ec"
+  },
+  "v3_cpu_preparation": {
+    "status": "cpu_prepared_uncompiled_unmeasured",
+    "plan": {
+      "schema": "clef-gate-budget/1",
+      "status": "cpu_prepared_uncompiled_unmeasured",
+      "phase": "numeric",
+      "ranks_serial": [
+        0,
+        1
+      ],
+      "device_equals_rank": true,
+      "m": 967,
+      "k": 5120,
+      "n": 17408,
+      "layers": [
+        31,
+        0,
+        63
+      ],
+      "dtype": "BF16",
+      "weight_format": "NZ29",
+      "output_contract": "canonical [gate8704,up8704], BF16 [M,17408]; actual physical format/stride recorded",
+      "arms": [
+        "vendor_gate",
+        "vendor_gate_repeat",
+        "candidate_gate",
+        "vendor_swiglu",
+        "vendor_chain",
+        "candidate_gate_chain"
+      ],
+      "modes": [
+        "warm",
+        "read_flush_proxy_256MiB",
+        "streaming_3_real_layers"
+      ],
+      "pairs": 5,
+      "preparation": "one NZ conversion of original weights shared by both arms; no paired-weight reorder",
+      "timing": "allocations/layout handling/dispatch included; preparation and conditioning outside timing",
+      "candidate": "synchronous pure-Cube API IterateAll, automatic MultiCore tiling, canonical GM output",
+      "excluded": [
+        "communication",
+        "new down implementation",
+        "service",
+        "quality claim",
+        "async fusion"
+      ],
+      "stop": "numeric/finite/repeatability failure; gate slowdown consumes measured SwiGLU budget; no automatic integration"
+    },
+    "no_ssh_or_device_or_service_action": true,
+    "sync_findings": [],
+    "flow_findings": [],
+    "boundary": "target SDK headers not expanded; no target compilation/numerical/performance/async lifetime proof",
+    "source_sha256": {
+      "runtime/probe_mlp_gate_only.py": "3ae224a17eef0642149b5a5eda9627d84a486833bbdd88e041b3243c81e3688d",
+      "runtime/ascendc/clef_mlp_gate_gemm/op_host/clef_mlp_gate_gemm.cpp": "d0cb7f9f58b087b49b0e57b04605285c30352bfbb46c56861b33818823a6e364",
+      "runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm.cpp": "3653f349e7ee72c5655e9a8041e78b05fc470ecae180751a5b23a098d5784b8a",
+      "runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm_tiling.h": "c35f953af2e188662a189b65cbd4f462337cf725ddf3784469b33089fa3f7054"
+    }
   }
 }
