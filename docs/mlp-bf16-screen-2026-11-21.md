@@ -1,6 +1,8 @@
 # BF16 gate/up + SwiGLU 验证 · 2026-11-21
 
-最新v3结论：同步纯Cube gate-only控制完成SDK编译及18组局部筛查；M967三层streaming的gate调用区间从 **0.600360→0.959673ms**，配对增量 **0.359000ms**，A/A最大差 **0.005813ms**，独立SwiGLU仅 **0.055533ms**。当前调用路径预算不足，停止异步融合实现。原aa3e/S1已恢复，最终四检22项通过；本轮没有S1或OD/ERQA候选结论。
+最新最小profile结论：M967三层streaming中，原vendor/v3的kernel task约 **0.592→0.905ms/层**，task增量约覆盖本窗profile配对差距的 **81.48%**。host桥接另有开销且与kernel重叠；当前v3 kernel惩罚已超过可省SwiGLU预算，继续停止该实现的融合路线。原aa3e/S1恢复22/22通过，详见末节。
+
+v3初次实测结论：同步纯Cube gate-only控制完成SDK编译及18组局部筛查；M967三层streaming的gate调用区间从 **0.600360→0.959673ms**，配对增量 **0.359000ms**，A/A最大差 **0.005813ms**，独立SwiGLU仅 **0.055533ms**。当前调用路径预算不足，停止异步融合实现。原aa3e/S1已恢复，最终四检22项通过；本轮没有S1或OD/ERQA候选结论。
 
 此前v1/v2结论：首版大误差定位到 **GEMM→UB 的 ND 输出 stride**，小修复后的六个数值点全部通过局部筛查；当前融合原型的 M967 完整链耗时约为原 NZ 链的 **1.9–2.1 倍**，停止集成。该结果限定于本次实现，BF16 融合机制的最佳可达性能仍未确定。down 诊断同轮收口，保留 aa3e/S1 服务。
 
@@ -127,3 +129,59 @@ NPU Event包围的是完整调用区间，包含host下发间隙，尚无独立k
 两个服务停启段分别为宿主检查失败后的立即恢复、单一对齐修正后的复测恢复；累计探针耗时 **48.4s**，在本轮累计240s预算内。每段均fresh核对指针、完整身份、18143 inode及卡7/Chip0/1/Phy14/15，保存当时manifest/argv/env。最终 **2026-11-21 16:27:38（上海）** `RUNNING_VERIFIED`，22/22通过，API **1652694 / start416641174 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1652851/1652852**仅卡7双芯片；原argv/env匹配，env仍c18d38bd…c2ba9/4678B，两端current-state指针已更新，实验进程退出。manifest SHA `e2bcba916a1c62e21e91e73d071bb27962d1eebc79c9ab8f818cffa450eaf2b9`。
 
 源码与分项数值仍见本报告的探针链接；CPU tiling诊断使用同参数直接调用SDK，命名平台避免初始化NPU。新原数/哈希加入原summary的 `v3_device_validation`，大raw在本地 `clef40-v3-run-2tt4rzwb`、`clef40-v3-aligned-3e_elijo` 及远端同名work/logs目录，无新artifact或PR。
+
+## v3最小关联profile · 2026-11-22 01:19（上海恢复）
+
+固定 `4a51f71` 的v3 gate-only与原vendor NZ，kernel/tiling未改。M967、BF16、canonical ND `[967,17408]`、同一原NZ权重；layer31/0/63历史真实输入均取1595的显式967前缀，每组三层按单层均摊，输出分配/布局/下发保留在区间内。down权重保持resident，无down计算或诊断。
+
+源码循环和原JSON的 `ranks_serial:[0,1]` 均确认原测量为rank0→rank1串行。本窗两子进程完成准备后先并发控制，再rank0串行pre/profile/post、rank1串行pre/profile/post，最后并发控制；另一rank串行期间sleep等待。每段3配对，非profile包含vendor A/A与vendor/v3 A/B，交错顺序；各臂完整预热5×3层单列。另在样本外初始化Event，记录与原探针的协议差异。记录各arm进程CPU时间、上下文切换及affinity，没有设置新绑核策略。
+
+采用 [最小采集脚本](../runtime/profile_mlp_gate.py)：torch_npu CPU+NPU Level1、AiCoreNone，关闭stack/shape/memory/硬件计数，仅粗粒度range，三层后一次同步。只在探针进程中包裹已预热的两个ctypes符号，标记GetWorkspace与launch，原参数/数学实现不变；共享runtime文件未写入。停服前将既有raw复制到私有tmp，由当前导出器成功生成trace。新raw落盘后先恢复aa3e、通过四检，再CPU导出。
+
+以下单位ms/层，每pair/arm/clock独立取较慢rank后求中位，全部原数保留：
+
+| 调度/段 | vendor Event | v3 Event | 配对增量中位 | A/A最大绝对差 |
+| --- | ---: | ---: | ---: | ---: |
+| 原4a51f71串行 | 0.600360 | 0.959673 | 0.359000 | 0.005813 |
+| 本窗串行pre | 0.601107 | 0.969880 | 0.369353 | 0.018147 |
+| 本窗串行post | 0.602367 | 0.976287 | 0.374227 | 0.035820 |
+| 并发pre | 0.606660 | 0.978680 | 0.370113 | 0.003007 |
+| 并发post | 0.604693 | 0.969040 | 0.364847 | 0.012793 |
+| 串行profile | 0.643493 | 1.027493 | 0.383087 | 未采profile A/A |
+
+串行pre/post的wall配对增量为0.362293/0.376777ms，A/A最大0.066910/0.123826；并发pre/post为0.365423/0.365760，A/A最大0.020207/0.053454。并发pre的第二对Event增量0.903220、串行post首对0.982467、并发post末对wall增量1.729446等尖峰均保留。串行pre进程总CPU（跨线程、含runtime spin，允许大于wall）vendor/v3中位0.931333/1.397333ms；并发pre为0.894333/1.427000ms，逐arm负载与切换数见summary。
+
+profile两臂Event中位较串行pre增加约7.1%/5.9%，配对增量增加约3.7%；相对post增量增加约2.4%。首profile样本的范围进入开销较大，raw未裁剪。差距在原调度及并发控制均复现，profile支持task级结构归因；这些短样本不用于正式P95，也不把profile比例精确套到历史0.359ms。
+
+[离线解析器](../runtime/analyze_mlp_gate_profile.py) 使用原生flow、精确stream目标和enqueue→dequeue关联，36/36个GEMM任务、24个Event标记均关联成功。两臂各层均一个AI_CORE任务，无额外cast/layout/copy任务；控制Event单列。先用Decimal移除epoch，再计算相对时间，避免浮点吞掉20ns相邻任务间隙。trace Event跨度与独立Event原数最大差0.0677µs/层，时基核对通过。
+
+| profile分项（ms/层） | vendor | v3 |
+| --- | ---: | ---: |
+| host submit inclusive / self | 0.089350 / 0.031890 | 0.422793 / 0.021420 |
+| 非同步native API区间union | 0.018937 | 0.051810 |
+| kernel task执行union | 0.592382 | 0.905494 |
+| 显式末端sync inclusive | 0.547903 | 0.656273 |
+| 最后kernel结束→sync返回 | 0.018972 | 0.018878 |
+| Event开始→首kernel（绑定Event慢rank） | 0.051130 | 0.124976 |
+| 上项中host范围覆盖 / 未覆盖 | 0.048750 / 0.003160 | 0.121706 / 0.002720 |
+
+表中host、API、kernel与sync会重叠，独立中位数也不具可加性。submit self扣除同主线程嵌套范围；v3 bridge inclusive/self为0.312790/0.181340ms，GetWorkspace 0.059367、launch 0.065343、输出分配0.042597，均为含采集标记的elapsed范围。GetWorkspace内的tiling/executor细分、bridge self内的descriptor/stream查询/销毁和标记开销占比仍为UNKNOWN。
+
+同一Event慢rank绑定后的三对增量：总Event **0.335353/0.383069/0.394242ms**；kernel union **0.312132/0.309223/0.314949ms**；首kernel前空档 **0.023215/0.073846/0.079286ms**。同一样本的这些区间互斥，余下仅约0.000007ms级相邻kernel/末Event间隙。kernel增量中位占总Event增量中位 **81.48%**，约0.071ms剩余量主要落在首kernel前的host下发范围；范围覆盖只证明时间落点，不能唯一拆成CPU指令或可省成本。首profile vendor样本还有0.062862ms首段未覆盖时间，原样保留。
+
+native launch返回到首kernel开始为−6.2～−2.1µs，设备可在CPU调用返回前启动。第二/三个launch到start为vendor约0.536～1.141ms、v3约0.470～1.177ms，与前序kernel占用stream重叠；两臂相邻kernel间隙仅约0.000013～0.000027ms/层。显式sync与kernel大量重叠，末kernel后返回约0.019ms，两臂接近。禁止把这些排队/同步elapsed与kernel相加，也不能把launch到start直接视为可省设备空闲。
+
+**收口依据：** v3 kernel task本体约慢53%，约0.313ms增量已经超过此前同窗SwiGLU 0.055533ms预算约5.6倍。host桥接可减少的部分仍有研究空间，当前kernel惩罚本身已耗尽融合预算。本轮停止该v3融合路线，不实现新核或扫描tile。task时长含内部stall；缺内部pipeline/per-core与实际vendor tiling证据，HBM、Cube调度、分块/权重复用各自占比仍为UNKNOWN。结论限定当前v3实现。
+
+本轮单次计算/采集 **10.512s**，低于240s上限，双rank三层数值有限、gate/up顺序与容差、重复输出检查均通过。数值/采集/四检未发生失败或POST重试；启动ready轮询在POST前执行，轮询次数未留计数。fresh绑定旧树后定向停服；探针退出即恢复。最终 **2026-11-22 01:19:09（上海）RUNNING_VERIFIED**，22/22检查通过：API **1681267 / start419844331 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1681440/1681441**仅卡7 Chip0/1/Phy14/15。原argv/env、aa3e源码、OPP9/LD12匹配，env仍c18d38bd…c2ba9/4678B；文本/图像各一次200，无实验进程残留，两端current-state指针更新。manifest SHA `d436d67db9a752e75760e8c0f2de175a92830c187735d6258cd1b93e8467b597`。
+
+复现入口：`python3 runtime/profile_mlp_gate.py` 默认仅打印计划；设备owner另建fresh恢复参考后，在总超时保护内同时启动rank0/1，传入同一全新 `--barrier`、各自全新 `--output` 及固定 `--vendor`。本次实际执行父脚本为远端私有work目录的 `window.py`，包含fresh核/停服、220s子进程总限和finally恢复；历史恢复参考只用于追溯。恢复完成后 `torch_npu.profiler.profiler.analyse(..., max_process_number=2)`，再运行解析器：
+
+```bash
+python3 runtime/analyze_mlp_gate_profile.py \
+  --trace "$task_raw/trace-r0.json" --trace "$task_raw/trace-r1.json" \
+  --samples "$task_raw/rank0.json" --samples "$task_raw/rank1.json" \
+  --output "$task_raw/analysis.json"
+```
+
+本地raw `clef40-gate-profile-41a26faq`（系统tmp），远端同名`work/logs`目录；原生PROF/FRAMEWORK/trace/API CSV留远端，完整路径、SHA、配对原数和恢复证据写回原summary的 `v3_profile_attribution`。CPU验证包含默认plan/语法、合成flow/区间union、全部36任务显式关联、24Event标记、互斥分区闭合及时基核对；无新artifact、PR或全量质量性能测试。
