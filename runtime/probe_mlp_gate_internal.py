@@ -22,14 +22,16 @@ def main():
     p.add_argument('--arm',choices=['vendor','v3'],default='vendor')
     p.add_argument('--vendor',type=Path)
     p.add_argument('--output-dir',type=Path)
+    p.add_argument('--mstx-lib',type=Path,help='host-only bridge compiled against installed CANN MSTX SDK')
     a=p.parse_args()
     plan=dict(schema='clef-gate-internal/1',rank=0,m=967,layers=[31,0,63],capture_layer=31,
         precision='original BF16/NZ -> canonical ND',pairs=3,warmup_passes_each_arm=5,
-        mode=a.mode,arm=a.arm,metrics=['PipeUtilization','Memory','MemoryL0','ResourceConflictRatio'],
-        replay='application, warm-up=0 in collector; explicit full application warmup; MSTX CLEF40_TARGET',
-        stop='numeric failure; gap not reproduced; tool unsupported; aggregate device/collection budget 240s')
+        mode=a.mode,arm=a.arm,metrics=['BasicInfo first','PipeUtilization only after both BasicInfo hits'],
+        replay='application, collector warm-up=0; explicit application warmup; native SDK MSTX range covers complete ring through existing sync, launch-count=1 selects layer31',
+        stop='numeric failure or inactive range or BasicInfo miss; cumulative cap240s with93.274s already used, remaining146.726s')
     if not a.execute: print(json.dumps(plan,indent=2));return
     if not a.vendor or not a.output_dir:p.error('execute requires vendor and private output directory')
+    if a.mode=='capture' and not a.mstx_lib:p.error('capture requires --mstx-lib')
     a.output_dir.mkdir(parents=True,exist_ok=True)
     report=dict(plan,status='running',pid=os.getpid(),preparation=[],numeric=[],warmup=[],samples=[])
     outpath=a.output_dir/(str(os.getpid())+'-'+uuid.uuid4().hex[:8]+'.json')
@@ -61,10 +63,11 @@ def main():
                 x=torch.load(item['path'],map_location='cpu',weights_only=True)['input']
                 digest=hashlib.sha256(memoryview(x.contiguous().view(torch.uint8).numpy())).hexdigest()
                 assert digest==item['input_sha256'] and x.dtype==torch.bfloat16 and x.shape==(1595,5120)
-                x=x[:967].contiguous().to('npu:0');ref=F.linear(x,w);y=gate(x,w)
+                prefix=x[:967].contiguous();prefix_sha=hashlib.sha256(memoryview(prefix.view(torch.uint8).numpy())).hexdigest()
+                x=prefix.to('npu:0');ref=F.linear(x,w);y=gate(x,w)
                 assert y.shape==ref.shape==(967,17408) and y.dtype==ref.dtype==torch.bfloat16
                 assert y.is_contiguous() and torch_npu.get_npu_format(y)==torch_npu.get_npu_format(ref)==2
-                n=dict(layer=layer,input_sha256=digest,input_kind='explicit_prefix',halves={})
+                n=dict(layer=layer,input_sha256=digest,prefix_sha256=prefix_sha,input_kind='explicit_prefix',halves={})
                 for label,aa,bb in [('gate',y[:,:8704],ref[:,:8704]),('up',y[:,8704:],ref[:,8704:])]:
                     af,bf=aa.float(),bb.float();assert bool(torch.isfinite(af).all() & torch.isfinite(bf).all())
                     delta=af-bf;rmse=float(delta.square().mean().sqrt()/bf.square().mean().sqrt().clamp_min(1e-30));norm=float(delta.abs().max()/bf.abs().max().clamp_min(1e-30))
@@ -92,14 +95,34 @@ def main():
             else:
                 # A full ring of this arm immediately precedes capture, ending at layer63.
                 ring(a.arm);torch.npu.synchronize()
-                tag=torch_npu.npu.mstx.range_start('CLEF40_TARGET',torch.npu.current_stream())
-                if not tag:
-                    raise RuntimeError('MSTX range inactive (id=0); abort before target submission')
-                y=one(a.arm,0)
-                torch_npu.npu.mstx.range_end(tag)
-                # Finish the same real three-layer sequence; no sync inside the ring.
-                for i in (1,2):mid=one(a.arm,i);out=mid
-                torch.npu.synchronize();report['mstx_range_id']=tag
+                marker=ctypes.CDLL(str(a.mstx_lib),mode=os.RTLD_LOCAL|os.RTLD_NOW)
+                marker.clef40_range_start.argtypes=[ctypes.c_char_p,ctypes.c_void_p]
+                marker.clef40_range_start.restype=ctypes.c_uint64
+                marker.clef40_range_end.argtypes=[ctypes.c_uint64]
+                marker.clef40_range_end.restype=None
+                marker.clef40_range_ready.argtypes=[]
+                marker.clef40_range_ready.restype=ctypes.c_int
+                report['target']=dict(layer=31,launch_index_in_range=0,range_gate_launches=3,
+                    input_shape=list(inputs[0].shape),input_dtype=str(inputs[0].dtype),
+                    weight_shape=list(weights[0][0].shape),weight_dtype=str(weights[0][0].dtype),
+                    weight_format=int(torch_npu.get_npu_format(weights[0][0])),
+                    input_sha256=report['numeric'][0]['input_sha256'],prefix_sha256=report['numeric'][0]['prefix_sha256'],
+                    weight_rank_hashes={k:v['sha256_rank_tensor_bytes'] for k,v in report['preparation'][0]['weight_identity']['weights'].items()})
+                report['marker_backend']='CANN SDK mstxRangeStartA/End; uint64_t native id'
+                tag=marker.clef40_range_start(b'CLEF40_TARGET',_runtime.current_stream_ptr(inputs[0].device))
+                report['mstx_native_id']=int(tag)
+                report['mstx_ready']=bool(marker.clef40_range_ready());save()
+                if not report['mstx_ready']:
+                    raise RuntimeError('native SDK MSTX callbacks not initialized; abort before target submission')
+                try:
+                    y=one(a.arm,0)
+                    for i in (1,2):mid=one(a.arm,i);out=mid
+                    # Existing ring-end sync keeps vendor worker-thread launches inside the range.
+                    torch.npu.synchronize()
+                finally:
+                    marker.clef40_range_end(tag)
+                report['target'].update(output_shape=list(y.shape),output_dtype=str(y.dtype),
+                    output_format=int(torch_npu.get_npu_format(y)),output_stride=list(y.stride()))
         report['status']='complete';save()
     except BaseException as exc:
         report.update(status='stopped',error=type(exc).__name__+': '+str(exc));save();raise

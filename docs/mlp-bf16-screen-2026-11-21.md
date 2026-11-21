@@ -1,6 +1,6 @@
 # BF16 gate/up + SwiGLU 验证 · 2026-11-21
 
-最新内部补采状态：msopprof op的Torch MSTX范围返回0，原厂臂在85秒子限停止，未取得可比PMU/实际tiling数据；内部原因保持UNKNOWN。本轮93.274s，原aa3e/S1恢复22/22通过，详见末节。
+最新采集链修正：已确认本机msopprof26.2的native ID0可有效，撤回零值失活判断，改验SDK注册/回调及BasicInfo导出。本轮BasicInfo被旧guard在提交前截断，内部原因保持UNKNOWN；累计111.282s，aa3e/S1恢复22/22通过，详见末节。
 
 最新最小profile结论：M967三层streaming中，原vendor/v3的kernel task约 **0.592→0.905ms/层**，task增量约覆盖本窗profile配对差距的 **81.48%**。host桥接另有开销且与kernel重叠；当前v3 kernel惩罚已超过可省SwiGLU预算，继续停止该实现的融合路线。原aa3e/S1恢复22/22通过，详见末节。
 
@@ -209,12 +209,47 @@ v3静态复算：singleCoreM/N/K=122/5808/5120，baseM/N/K=128/256/64，depthA1/
 
 前置rank0三对无prof控制：Event vendor/v3中位 **0.596093/0.970027ms/层**，配对增量 **0.370520ms**，A/A最大 **0.011340ms**；逐对增量0.370520/0.362213/0.373933ms。数值有限、gate/up顺序与容差、重复输出检查均通过。精确wall、预热和输入/权重身份保留原summary。该控制支持差距复现。
 
-原厂臂在85秒子限触发timeout，父wrapper停止了fresh记录的实验身份并恢复服务；v3采集及post控制未启动。工具内部完成7次application replay，每次应用数值通过、Torch MSTX `range_start`均返回 **0**；无可用OPPROF/CSV/tiling bin落盘。SDK `tools/mstx/include/mstx/ms_tools_ext.h:65`明确0表示range start失败。当前Torch桥接在此模式下未激活目标范围，具体使能/桥接原因仍UNKNOWN；CLI支持列表不能证明这条实际采集路径成功。本轮没有可用raw可离线恢复PMU，未执行人工设备重试。
+原厂臂在85秒子限触发timeout，父wrapper停止了fresh记录的实验身份并恢复服务；v3采集及post控制未启动。工具内部完成7次application replay，每次应用数值通过、Torch MSTX `range_start`均返回 **0**；无可用OPPROF/CSV/tiling bin落盘。当时按SDK `tools/mstx/include/mstx/ms_tools_ext.h:65`注释将0判为失活；后续02:37复核证明本机26.2 native注入可返回合法首ID0，该单值失活诊断撤回。原Torch桥接/范围筛选的具体失败原因仍UNKNOWN；CLI支持列表不能证明实际路径成功。本轮没有可用raw可离线恢复PMU，未执行人工设备重试。
 
-本次探针在range返回0后仍提交了目标，缺少有效性检查，形成无效回放直到超时。新增快速退出保护：range ID为0时在目标提交前报错，避免在失活范围上继续采集；该修改仅CPU语法/计划与静态顺序检查，**未再次上卡**。原始执行版本及保护版SHA分别记录。 [CPU解析器](../runtime/analyze_mlp_gate_internal.py) 已准备逐核原数/单位/计数组清单与严格v3结构解码，vendor无对应schema即保留UNKNOWN；已用合成CSV/212字节结构验证，不宣称已在实际PMU导出上验收。
+本次探针在range返回0后仍提交了目标，缺少有效性检查，形成无效回放直到超时。d12a4c8阶段曾加range ID0提前报错规则；后续已确认该规则对本机native注入不成立并撤回，改验SDK注册/回调及BasicInfo导出。该阶段CPU测试遗漏“已注册且合法0”，已在02:37阶段补齐。原始执行版本及保护版SHA分别记录。 [CPU解析器](../runtime/analyze_mlp_gate_internal.py) 已准备逐核原数/单位/计数组清单与严格v3结构解码，vendor无对应schema即保留UNKNOWN；已用合成CSV/212字节结构验证，不宣称已在实际PMU导出上验收。
 
 收口依据：目前只证实两臂请求blockDim相同，无法据此推断实际active核数或排除核间不均；tiling差异、Cube/MTE等待、写出瓶颈对0.313ms各占多少均无证据。流水占比不能互补求可省时间，task duration也不能拆成纯乘加与HBM等待。下一步最小方向为修复采集范围的使能/桥接，先以一次BasicInfo确认命中目标，再规划所需PMU；当前没有证据支持调整kernel、tile或buffer参数。本轮不继续占卡。
 
 本轮设备计算/采集累计 **93.274s**（上限240s），collector timeout1次、内部application replay7次、人工设备重试0次；CPU辅助链接首次缺libtiling_api.a，补齐后静态复算成功。恢复优先：最终 **2026-11-22 02:13:04（上海）RUNNING_VERIFIED**，22/22检查通过，文本/图像各一次200、无POST重试；API **1687258 / start420167800 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1687428/1687429**仅卡7双芯片。原argv/env、aa3e、OPP9/LD12及卡归属匹配，env仍c18d38bd…c2ba9/4678B，两端指针更新，无实验进程残留。manifest SHA `fee04f48127e12fe46d8665acbc8acf8b036a99e5fde136e3afebf5984f1ffec`。
 
 默认 `python3 runtime/probe_mlp_gate_internal.py` 仅打印计划。实际命令、七次应用记录、超时/清理、静态SDK字段/offset、已执行及未执行范围、恢复证据写回原summary的 `v3_internal_probe`。raw留系统tmp `clef40-gate-internal-api39v66`，远端同名work/logs目录；无新artifact、PR、质量全量或down实验。
+
+## MSTX零值语义修正与BasicInfo退出 · 2026-11-22 02:37
+
+**确定修正：本机msopprof26.2的native range ID 0可为有效首个range，按ID是否为0判断失活的规则已撤回。** 本轮BasicInfo在目标提交前被旧guard截断，未获得内部数据；0.313ms内部原因继续UNKNOWN，未形成kernel/tiling空间结论。
+
+SDK `ms_tools_ext.h:65`注释写明0表示失败，SDK无注入时也返回0；这两点不能覆盖工具注入后的实际ID规则。本机固定 `libmsopprof_injection.so` 复核：`MsTx`构造函数0x1f7958及reset 0x1f75cc将对象+272计数器置0；`MstxRangeAdd`先用当前计数器插入range map，0x1f7068～0x1f7070读取旧值并递增保存，0x1f70a0返回旧值；`MstxRangeEnd`按同一个uint64 key查询map，支持key0。SDK文字约定与26.2注入实现存在差异。此前将Torch返回0直接归为“未激活”的诊断也撤回，旧七次未导出的具体原因仍未定位。
+
+[host桥接](../runtime/mstx_gate_range.cpp) 只调用SDK `mstxRangeStartA/End`。SDK按 `MSTX_INJECTION_PATH` 加载库，或在全局符号中查找 `InitInjectionMstx`，通过函数表绑定回调；本机工具导出该入口，返回协议与SDK一致。uint64 ID完整保留。Torch `MstxMgr`具体使能路径仍UNKNOWN，native桥接避免依赖其开关。将range结束移到原有三层ring末同步之后，覆盖vendor异步工作线程下发，未增加逐op同步或改变计算。
+
+最初CPU测试只覆盖“未注册0/已注册非零”，遗漏“已注册且合法0”，导致本轮canary被错误guard提前结束。CPU修正后，桥接额外提供本地SDK初始化完成且start/end回调已绑定的状态；探针与owner wrapper检查该状态，接受已注册的0。该状态仅证明SDK接入，**最终命中必须由BasicInfo导出验证**。已补三分支CPU注入测试：无注册ID0/ready=false；注册回调返回0且end(0)确实调用；注册回调返回4294967297且64位完整。导入Torch后的mock正例同样通过，未复现全局符号抢占。修正后未再上卡。
+
+[命中检查](../runtime/analyze_mlp_gate_internal.py) 要求每臂一条BasicInfo任务，核名匹配vendor MatMul/v3 ClefMlpGateGemm、BlockDim24；结合该native范围首launch的实时shape/dtype/格式、prefix SHA和原权重rank SHA建立映射。BasicInfo不直接导出的shape/dtype明确来自应用元数据，不冒充工具字段。合成已注册ID0及未注册负例通过CPU检查，真实硬件命中尚未完成。
+
+本轮单次窗口执行：
+
+| 阶段 | 实际结果 |
+| --- | --- |
+| rank0三层无prof AA/AB | Event vendor/v3中位0.594140/0.966480ms；配对增量0.371480，A/A最大0.017833ms；wall增量0.361434ms |
+| 数值/稳定 | pre与应用的3层gate/up容差、有限值、重复检查通过，原BF16/NZ/ND不变 |
+| vendor BasicInfo | native ID0，旧guard在目标提交前退出；0个命中、无CSV/tiling dump |
+| v3 BasicInfo / Pipe / post | 未启动，未追加设备尝试 |
+
+BasicInfo工具上限24s、后续只允许双命中后单组Pipe，未再跑四组指标。此次实际计算/采集 **18.008s**，与前轮93.274s累计 **111.282s / 240s**，剩余 **128.718s**；不将未命中算为已采。单次验证退出要求已执行。具体SDK实际注册状态在当时未记录，故实际那个0仍不能区分“合法首ID”与“未接入”，修正后的检查待后续真实命中验证。
+
+清理后首次恢复前空闲检查遇到驱动上下文释放延迟；fresh读取显示卡上无进程，无需额外信号，随后恢复。最终 **2026-11-22 02:37:20（上海）RUNNING_VERIFIED**，22/22通过，原argv/env、aa3e、OPP9/LD12和卡归属匹配，文本/图像各一次200，无POST重试。API **1690118 / start420313325 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1690285/1690286**仅卡7双芯片；两端指针更新。manifest SHA `571fd2a18ebb3e0aa6ee411243e8d5ecf749dd429ba1c853b14f486086613359`。
+
+代码/复现与判断写回原summary `v3_range_repair`，包含已执行版本与CPU修正版SHA、二进制控制流证据及具体未执行阶段。raw在系统tmp `clef40-gate-hit-54tjmh8q`、远端同名work/logs。独立host桥接构建：
+
+```bash
+g++ -std=c++17 -shared -fPIC -fvisibility=hidden \
+  -I/usr/local/Ascend/cann-9.2.1/tools/mstx/include \
+  runtime/mstx_gate_range.cpp -ldl -o "$task_dir/mstx_gate_range.so"
+```
+
+下一步先完成“已注册回调、接受native ID0、BasicInfo实际一任务命中”的验证，再决定补哪一组PMU。当前缺少实际tiling、逐核及Cube/MTE证据，继续保留UNKNOWN，不调整计算kernel/tiling，不据未命中否定融合机制。无PR、新artifact或全量测试。

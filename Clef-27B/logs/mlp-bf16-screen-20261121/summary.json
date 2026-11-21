@@ -2099,7 +2099,7 @@
     }
   },
   "v3_internal_probe": {
-    "status": "INCONCLUSIVE: MSTX range inactive; no comparable internal PMU/tiling data",
+    "status": "INCONCLUSIVE: no PMU; numeric-zero-only inactivity diagnosis retracted by v3_range_repair",
     "base_commit": "e05ec7a57fd358b7a89bb85df693fdc4803f8d50",
     "decision": "STOP this collection attempt; no kernel/tiling change supported. Next prerequisite is working target-range observability and a minimal BasicInfo hit before PMU.",
     "scope": {
@@ -2403,7 +2403,7 @@
       "launch_count": 1,
       "mstx_include": "CLEF40_TARGET",
       "requested_group_meaning": "per-core activity/total cycles; L1/L0 traffic; wait ratios. Actual counter definitions and normalization could not be validated without exports.",
-      "failure": "Torch MSTX range id=0 in all seven completed application replays; SDK ms_tools_ext.h:65 documents 0 as range-start failure. Why this profiler mode did not enable the Torch bridge remains UNKNOWN.",
+      "failure": "Seven completed applications returned Torch range ID0 and produced no PMU export; ID0 alone does not establish inactive injection. Prior inactivity diagnosis retracted; exact original bridge/filter failure UNKNOWN.",
       "csv_count": 0,
       "tiling_bin_count": 0,
       "successful_profile_targets": 0,
@@ -2462,10 +2462,11 @@
       "tool_returncode": -15
     },
     "code_guard": {
-      "change": "abort before target submission when MSTX range id is zero",
+      "change": "HISTORICAL d12a4c8 numeric-zero abort, now withdrawn; current native guard verifies SDK initialization and callbacks, BasicInfo export determines hit",
       "validation": "CPU syntax/plan/guard ordering only; not executed on NPU",
       "executed_runner_sha256": "8eaaf6d54eebc3af643e4e66bdf207a828a406abb0e1b01c80e1615cd174c630",
-      "committed_runner_sha256": "af7ae456e742864bf19ccaa5558200b318d3898fa04aa6b967a070cc698b5a47"
+      "committed_runner_sha256": "af7ae456e742864bf19ccaa5558200b318d3898fa04aa6b967a070cc698b5a47",
+      "superseded": "d12a4c8 zero-only guard superseded: native msopprof26.2 zero can be valid; see v3_range_repair"
     },
     "fixed_vendor_library_sha256": "a9786660a05b7121f6e7c7c955e9d9b732f5f7fe85e0fd3ca54eddc10e56b510",
     "failure_counts": {
@@ -2655,6 +2656,432 @@
           "http_status": 200,
           "elapsed_s": 0.2618876798078418,
           "sha256": "859422b09c5c463a0bb51c99a73b8191f4e831277f96877f03cee1ec7d271b98"
+        }
+      ],
+      "both_pointers_updated": true
+    }
+  },
+  "v3_range_repair": {
+    "status": "INCONCLUSIVE: BasicInfo target not submitted after zero-ID-only guard; CPU guard corrected, no further device attempt",
+    "base_commit": "d12a4c80b99e6ad42d9d8a3726d9eb52ca0708aa",
+    "core_correction": "SDK header says zero is failure, but installed msopprof26.2 native backend allocates ranges from zero. Numeric ID alone cannot prove inactive registration or a profiler hit.",
+    "cpu_evidence": {
+      "sdk_header": "/usr/local/Ascend/cann-9.2.1/tools/mstx/include/mstx/ms_tools_ext.h:65",
+      "sdk_loading": "MSTX_INJECTION_PATH dlopen, or global dlsym InitInjectionMstx; module function table",
+      "native_id_type": "uint64_t",
+      "injection_binary": "/usr/local/Ascend/cann-9.2.1/tools/msopprof/lib64/libmsopprof_injection.so",
+      "binary_version": "26.2.0/884ac969494a186a9c63ac45c4c39ad7289b3215",
+      "constructor": "0x1f7958: range counter at object+272 initialized to zero; MstxAttrReset also zeroes it at0x1f75cc",
+      "range_add": "0x1f701c inserts current counter into range map; 0x1f7068..0x1f7070 reads old counter/increments stored counter; 0x1f70a0 returns old counter",
+      "range_end": "0x1f5e9c..0x1f5f04 looks up range map by uint64 key, including zero; no numeric-zero rejection",
+      "tests": [
+        "no injection: ID0 + ready=false",
+        "registered callback returning0: ready=true, end(0) dispatched",
+        "registered callback returning4294967297: full uint64 preserved",
+        "Torch imported plus mock injection: positive ID preserved, no symbol preemption reproduced"
+      ],
+      "limitations": "mock tests and binary control flow prove the zero-only guard is unsound; actual failed-run callback registration state was not recorded, so that particular zero remains ambiguous"
+    },
+    "changes": [
+      "host-only native SDK range bridge; no computation or tensor kernels",
+      "range remains open through existing full-ring sync to cover vendor worker-thread enqueue, no extra per-op sync",
+      "guard on SDK initState COMPLETE and bound start/end callbacks, accept registered native ID0",
+      "BasicInfo task/name/block/count plus live tensor/SHA mapping validator remains the final hit condition"
+    ],
+    "scope": {
+      "rank": 0,
+      "device": 0,
+      "m": 967,
+      "layers": [
+        31,
+        0,
+        63
+      ],
+      "target_layer": 31,
+      "precision": "original BF16 NZ -> canonical ND",
+      "fixed_compute_source": "aligned4a51f71",
+      "requested": [
+        "BasicInfo vendor once",
+        "BasicInfo v3 only if vendor hits",
+        "one PipeUtilization group only after both hits"
+      ]
+    },
+    "controls": {
+      "pre": {
+        "device_ms": {
+          "arm_median": {
+            "vendor": 0.5941400130589803,
+            "vendor_repeat": 0.5977133512496948,
+            "v3": 0.966480016708374
+          },
+          "paired_delta": [
+            0.36307998498280836,
+            0.3714799483617146,
+            0.3731600046157837
+          ],
+          "median_delta": 0.3714799483617146,
+          "aa_delta": [
+            -0.01783331235249841,
+            -0.0008133649826049805,
+            0.004686673482259152
+          ],
+          "aa_max": 0.01783331235249841
+        },
+        "wall_ms": {
+          "arm_median": {
+            "vendor": 0.6483467295765877,
+            "vendor_repeat": 0.6306134164333344,
+            "v3": 1.0025867571433384
+          },
+          "paired_delta": [
+            0.36143356313308084,
+            0.36818006386359525,
+            0.3511399651567141
+          ],
+          "median_delta": 0.36143356313308084,
+          "aa_delta": [
+            -0.020263095696767208,
+            0.023730099201202393,
+            -0.01873013873895013
+          ],
+          "aa_max": 0.023730099201202393
+        }
+      },
+      "pre_sample_columns": [
+        "pair",
+        "arm",
+        "device_ms",
+        "wall_ms"
+      ],
+      "pre_samples_csv": [
+        "0,vendor,0.6155466636021932,0.6508765121301016",
+        "0,vendor_repeat,0.5977133512496948,0.6306134164333344",
+        "0,v3,0.9786266485850016,1.0123100752631824",
+        "1,v3,0.965619961420695,1.0025867571433384",
+        "1,vendor_repeat,0.5933266480763754,0.6581367924809456",
+        "1,vendor,0.5941400130589803,0.6344066932797432",
+        "2,vendor,0.5933200120925903,0.6483467295765877",
+        "2,vendor_repeat,0.5980066855748495,0.6296165908376375",
+        "2,v3,0.966480016708374,0.9994866947333018"
+      ],
+      "numeric": [
+        {
+          "layer": 31,
+          "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+          "prefix_sha256": "905229444d616466a4bdc05f6636dafe408c5da5183d6590743e3ebd15e02e1d",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 3.4934353607241064e-05,
+              "normalized_max": 0.002793296007439494
+            },
+            "up": {
+              "relative_rmse": 3.2830936106620356e-05,
+              "normalized_max": 0.0013888889225199819
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 0,
+          "input_sha256": "cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa",
+          "prefix_sha256": "3623994991a6c33c1a61a70662d63393b756b7ffaf12cd668237aafb507f5c26",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.996019975398667e-05,
+              "normalized_max": 0.0006648935959674418
+            },
+            "up": {
+              "relative_rmse": 3.197264959453605e-05,
+              "normalized_max": 0.0005274261347949505
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 63,
+          "input_sha256": "f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8",
+          "prefix_sha256": "ec18818c026c23224110a14bd0fbdaa1e51be958db317ee4bde3a688aadc8f77",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.8507362003438175e-05,
+              "normalized_max": 0.0010869564721360803
+            },
+            "up": {
+              "relative_rmse": 3.0384824640350416e-05,
+              "normalized_max": 0.0006009615608491004
+            }
+          },
+          "repeat_equal": true
+        }
+      ],
+      "warmup": [
+        {
+          "arm": "vendor",
+          "calls": 15,
+          "wall_s": 0.009109940379858017
+        },
+        {
+          "arm": "v3",
+          "calls": 15,
+          "wall_s": 0.013912640511989594
+        }
+      ],
+      "post": "not run after early exit"
+    },
+    "actual_attempt": {
+      "basic_vendor": "guard exit at native ID0 before target launch, no completed BasicInfo hit",
+      "basic_v3": "not started",
+      "pipe": "not started",
+      "target_submitted": false,
+      "csv_count": 0,
+      "tiling_bin_count": 0,
+      "app_paths": [
+        "/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q/basic-app/vendor/1689880-10dee61b.json"
+      ],
+      "app_record": {
+        "status": "stopped",
+        "pid": 1689880,
+        "arm": "vendor",
+        "error": "RuntimeError: native SDK MSTX range start failed (id=0); abort before target submission",
+        "marker_backend": "CANN SDK mstxRangeStartA/End; uint64_t native id",
+        "mstx_native_id": 0,
+        "target": {
+          "layer": 31,
+          "launch_index_in_range": 0,
+          "range_gate_launches": 3,
+          "input_shape": [
+            967,
+            5120
+          ],
+          "input_dtype": "torch.bfloat16",
+          "weight_shape": [
+            17408,
+            5120
+          ],
+          "weight_dtype": "torch.bfloat16",
+          "weight_format": 29,
+          "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+          "prefix_sha256": "905229444d616466a4bdc05f6636dafe408c5da5183d6590743e3ebd15e02e1d",
+          "weight_rank_hashes": {
+            "model.language_model.layers.31.mlp.gate_proj.weight": "979ed356a510e7450d71eff85f63a68b4963cb40a1643bd179edff3c9ee81801",
+            "model.language_model.layers.31.mlp.up_proj.weight": "398b9d0a1c7b951e7cca22d6a2f1dd524370da15c3c0944e464fceb793040406",
+            "model.language_model.layers.31.mlp.down_proj.weight": "148c9ae2893ff9a0f2edb97f15ddb53cae174b327152ddad8b4c05ba65c1b7d3"
+          }
+        }
+      },
+      "app_sha256": "d1eef0dd7d20a6a55470a6728491b89e76482ff99d8f4ede257c16486c5d625f",
+      "numeric_checks_before_guard": "three layers finite/halves/repeat checked before guard; full raw preserved by application SHA"
+    },
+    "decision": "No additional device retry under the single BasicInfo attempt scope. Internal0.313ms attribution remains UNKNOWN; no kernel/tiling-space conclusion or parameter change.",
+    "budget": {
+      "prior_used_s": 93.274,
+      "new_used_s": 18.00844636000693,
+      "cumulative_used_s": 111.28244636000693,
+      "remaining_s": 128.71755363999307,
+      "cap_s": 240
+    },
+    "failures": {
+      "zero_only_guard_rejection": 1,
+      "manual_collection_retries": 0,
+      "PMU_replays": 0,
+      "initial_restore_idle_check": "driver context release lag; fresh read showed no processes, no additional signals, launched restoration then verified",
+      "acceptance_POST_retries": 0
+    },
+    "commands": [
+      {
+        "label": "pre",
+        "argv": [
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/probe_mlp_gate_internal.py",
+          "--execute",
+          "--vendor",
+          "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+          "--mode",
+          "control",
+          "--output-dir",
+          "/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q/pre"
+        ],
+        "pid": 1689833,
+        "returncode": 0,
+        "wall_s": 8.741489420644939
+      },
+      {
+        "label": "basic-vendor",
+        "argv": [
+          "/usr/local/Ascend/cann-9.2.1/bin/msprof",
+          "op",
+          "--aic-metrics=BasicInfo",
+          "--replay-mode=application",
+          "--warm-up=0",
+          "--launch-count=1",
+          "--mstx=true",
+          "--mstx-include=CLEF40_TARGET",
+          "--output=/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q/basic/vendor",
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/probe_mlp_gate_internal.py",
+          "--execute",
+          "--vendor",
+          "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+          "--mode",
+          "capture",
+          "--arm",
+          "vendor",
+          "--mstx-lib",
+          "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/mstx_gate_range.so",
+          "--output-dir",
+          "/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q/basic-app/vendor"
+        ],
+        "pid": 1689874
+      }
+    ],
+    "code_versions": {
+      "executed_and_sdk": {
+        "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/probe_mlp_gate_internal.py": "0b651df3be33f732be71c1d97aa51350cc84d2dea69005a9b4db01f718750c0c",
+        "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/mstx_gate_range.cpp": "2ddb1c9289edac9c4998475a9c2c7fc24c2560fc6b0d55532d49b24e5b8f9a02",
+        "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q/mstx_gate_range.so": "8e687d32289d549ddf27e152eed5e5450e74e477eda50b53f286569157c54012",
+        "/usr/local/Ascend/cann-9.2.1/tools/msopprof/lib64/libmsopprof_injection.so": "41c7c7dd2bccad3317dfe960a7eca36de0b00afb15b5157f499beaad12af2d0d",
+        "/usr/local/Ascend/cann-9.2.1/tools/mstx/include/mstx/ms_tools_ext.h": "ae91cf91ab4106d4a315a9ea664ac768f1604b442599c178e48e87e495f6f188"
+      },
+      "CPU_corrected_not_device_executed": {
+        "runtime/mstx_gate_range.cpp": "4e5d465086a498f9bbceba6ccbb326181a4a06bf71321d800e1c7750e5af3cfd",
+        "runtime/probe_mlp_gate_internal.py": "d7615a23d7700cd047fc5d39f719a87c09c347c217c929b518ff5abb286fc471",
+        "runtime/analyze_mlp_gate_internal.py": "57ec9b6254af48bcbeac6f22b3f8d3edb2611e146d41b42f0e5883225d153fd5"
+      },
+      "owner_wrapper_CPU_corrected": {
+        "path": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gate-hit-54tjmh8q/window-registration-check-CPU-only.py",
+        "sha256": "8c51ace54ab6c6945071841a68dfde5e98017e823ddcc985dbb343f586ce26c9",
+        "executed": false
+      }
+    },
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gate-hit-54tjmh8q",
+      "remote_work": "/workspace/yangchen/work/clef40-gate-hit-54tjmh8q",
+      "remote_logs": "/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q"
+    },
+    "raw_sha256": {
+      "window.json": "ff21795407db79111269d34631aa04a3b2b5a63565739d62fa187adae680421a",
+      "attempt-inventory.json": "595eda90fca88f75427e7fa29d736a8f09eb67e01967c2c130642bc9525c57c4",
+      "verification.json": "3fde913a22a436782afa37d16d25bcbaf34af710ab676b80a4e3c13e15088e0b",
+      "native-cpu-test.stdout": "33b4e1657d3a6947208e5613ae24b383be9d63afa04b4f8eb834182d0a176df4",
+      "native-checked-cpu.stdout": "ee226fb3bb27be6283f46f2114cfaf9d70ba9cec0712b6738d408048a97efbe5",
+      "mstx-range-add.disasm.txt": "1e5a4d10cec3aadb97f955e907daef1927b6c8c61c9ef52ab8b23b1f963757ef",
+      "mstx-constructor.disasm.txt": "8a17e761ce9cdcc7937324bf4ed9a37774d2efd26f9e31231e2b12240d6933d2"
+    },
+    "restoration": {
+      "state": "RUNNING_VERIFIED",
+      "verified_at_cst": "2026-11-22T02:37:20.340052+08:00",
+      "identity": {
+        "pid": 1690118,
+        "ppid": 1,
+        "pgid": 1690118,
+        "sid": 1690118,
+        "state": "S",
+        "starttime": "420313325",
+        "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+        "cmdline": [
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "-m",
+          "vllm.entrypoints.cli.main",
+          "serve",
+          "/workspace/yangchen/models/Clef-27B",
+          "--served-model-name",
+          "clef",
+          "--runner",
+          "pooling",
+          "--dtype",
+          "bfloat16",
+          "--tensor-parallel-size",
+          "2",
+          "--enforce-eager",
+          "--max-model-len",
+          "4096",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "4096",
+          "--gpu-memory-utilization",
+          "0.9",
+          "--no-enable-prefix-caching",
+          "--no-enable-chunked-prefill",
+          "--skip-mm-profiling",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18143",
+          "--limit-mm-per-prompt",
+          "{\"image\":1,\"video\":1}",
+          "--distributed-executor-backend",
+          "mp",
+          "--mm-processor-kwargs",
+          "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+        ]
+      },
+      "npu": [
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "VLLMWorker_TP",
+          "pid": 1690285
+        },
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "python",
+          "pid": 1690118
+        },
+        {
+          "card": 7,
+          "chip": 1,
+          "name": "VLLMWorker_TP",
+          "pid": 1690286
+        }
+      ],
+      "manifest": {
+        "path": "/workspace/yangchen/logs/clef40-gate-hit-54tjmh8q/restore-s1/launch-manifest.json",
+        "sha256": "571fd2a18ebb3e0aa6ee411243e8d5ecf749dd429ba1c853b14f486086613359",
+        "bytes": 24384
+      },
+      "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+      "env_bytes": 4678,
+      "checks": {
+        "new_manifest": true,
+        "root_identity": true,
+        "argv": true,
+        "effective": true,
+        "rawargv": true,
+        "service_environment": true,
+        "OPP9_LD12": true,
+        "joint_env": true,
+        "encoder_default0": true,
+        "aa3e_noop": true,
+        "aa3e_source": true,
+        "tree_group": true,
+        "workers": true,
+        "health": true,
+        "info": true,
+        "text": true,
+        "image": true,
+        "final_workers": true,
+        "final_identity": true,
+        "health_final": true,
+        "no_runtime_errors": true,
+        "no_pending_clients": true
+      },
+      "requests": [
+        {
+          "label": "text",
+          "http_status": 200,
+          "elapsed_s": 0.5170531999319792,
+          "sha256": "2c71cf92461b9090d0e6eb1daf9fc69f1fb3ff1b09ab1172415fbe8d822a907f"
+        },
+        {
+          "label": "image",
+          "http_status": 200,
+          "elapsed_s": 0.27439116034656763,
+          "sha256": "2ea6af0e35dd690335bb3f0d088302eaa6c3c1112120bfe147dd7da33bfbd6ea"
         }
       ],
       "both_pointers_updated": true

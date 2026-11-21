@@ -56,6 +56,40 @@ def inventory(root, schema):
     return out
 
 
+def validate_basic(root, app_root, arm):
+    """Fail closed on any target mismatch. Shape/dtype provenance is explicit.
+
+    msopprof BasicInfo exports task name/block/count; live tensor metadata and
+    SHA come from the single selected first launch in the native MSTX range.
+    """
+    paths=[p for p in root.rglob('*.csv') if p.stem.replace('_','').lower()=='opbasicinfo']
+    rows=[(p,row) for p in paths for row in csv.DictReader(p.open())]
+    if len(rows)!=1:raise ValueError(f'{arm}: expected one BasicInfo task, got {len(rows)}')
+    path,row=rows[0];cols={''.join(c for c in k.lower() if c.isalnum()):v for k,v in row.items()}
+    name=cols.get('opname','')+' '+cols.get('optype','')+' '+cols.get('kernelname','')
+    slug=''.join(c for c in name.lower() if c.isalnum())
+    if arm=='v3':assert 'clefmlpgategemm' in slug, name
+    else:assert 'matmul' in slug and 'clefmlp' not in slug, name
+    block=cols.get('blockdim',cols.get('blocknum',''))
+    assert number(block)==24, block
+    duration=number(cols.get('taskdurationus',''))
+    assert duration and duration>0, row
+    apps=[(p,json.loads(p.read_text())) for p in app_root.glob('*.json')]
+    assert apps, 'no application mapping'
+    for p,j in apps:
+        t=j.get('target',{})
+        assert j['status']=='complete' and j.get('mstx_ready') is True and 'mstx_native_id' in j
+        assert j['arm']==arm and t.get('launch_index_in_range')==0 and t.get('layer')==31
+        assert t.get('input_shape')==[967,5120] and t.get('input_dtype')=='torch.bfloat16'
+        assert t.get('weight_shape')==[17408,5120] and t.get('weight_dtype')=='torch.bfloat16' and t.get('weight_format')==29
+        assert t.get('output_shape')==[967,17408] and t.get('output_dtype')=='torch.bfloat16' and t.get('output_format')==2
+        assert len(t.get('prefix_sha256',''))==64 and t.get('weight_rank_hashes')
+    return dict(arm=arm,path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest(),raw_row=row,
+                task_duration_us=duration,block_dim=24,task_count=1,
+                provenance='task identity/block/count from collector; tensor shape/dtype/SHA from matched first native-range launch',
+                applications=[dict(path=str(p),sha256=hashlib.sha256(p.read_bytes()).hexdigest(),native_range_id=j['mstx_native_id'],target=j['target']) for p,j in apps])
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--root',type=Path,action='append',required=True)
     p.add_argument('--schema',type=Path);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
