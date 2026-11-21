@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Measure the pure BF16 matmul ceiling for the real TP2 MLP shapes.
+"""Measure vendor BF16 matmul for the real TP2 MLP shapes.
 
 The MLP chain timing includes SwiGLU and two matmuls.  This probe isolates each
 matmul with the real per-rank weights:
 
-* gate/up: ``[M, 5120] x [5120, 34816]``
-* down:     ``[M, 17408] x [17408, 5120]``
+* gate/up: ``[M, 5120] x [5120, 17408]``
+* down:     ``[M, 8704] x [8704, 5120]``
 
 It reports warm and cold (256 MiB L2 flush) times and TFLOPS, compares ND vs
-FRACTAL_NZ29, and adds a 4096^3 square matmul as a practical Cube ceiling.  It
-also pads M to 128-multiples to quantify tail-tile waste.
+FRACTAL_NZ29, and adds a 4096^3 square matmul as an empirical reference. It
+also tests M padding to 128-multiples. Actual vendor tiling, per-core work
+and custom BF16 tilings are outside this probe's scope.
 """
 
 from __future__ import annotations
@@ -140,9 +141,8 @@ def main() -> int:
         del x, y
         torch.npu.empty_cache()
 
-    # Pad M to the next 128-multiple: the same number of Cube tiles, but the
-    # last tile is full.  Effective TFLOPS uses the real M, padded TFLOPS uses
-    # the padded M.
+    # Test gate/up M padding to the next 128-multiple. The actual vendor tile
+    # is unobserved. Effective TFLOPS uses real M, padded TFLOPS uses padded M.
     for tokens in token_values:
         padded = ((tokens + 127) // 128) * 128
         if padded == tokens:
@@ -154,7 +154,7 @@ def main() -> int:
         del x
         torch.npu.empty_cache()
 
-    # Practical Cube ceiling: a large square matmul, no edge effects.
+    # Empirical reference: a large square vendor matmul.
     size = 4096
     a = (torch.randn(size, size) * 0.5).to(device, torch.bfloat16)
     b = (torch.randn(size, size) * 0.5).to(device, torch.bfloat16)

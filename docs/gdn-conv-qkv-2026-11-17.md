@@ -243,10 +243,11 @@ export CLEF_CONV_QKV_VENDOR=<install-v3>/packages/vendors/clef_conv_qkv
 export CLEF_CONV_QKV_TILE=32
 ```
 
-## 7. MLP matmul 上限复核（负结果，2026-11-17 晚）
+## 7. MLP vendor matmul 复核（2026-11-17 晚，2026-11-21 修正证据范围）
 
-在采纳 conv+QKV 与 chunk128 后重新确认「MLP 自定义 tiling 还有多少空间」，
-用 `runtime/probe_matmul_ceiling.py` 在真实 TP2 权重上复测（第 31 层、rank 0）：
+在采纳 conv+QKV 与 chunk128 后，用 `runtime/probe_matmul_ceiling.py`
+在真实 TP2 权重上复测 vendor `F.linear` / `torch.matmul` 的 ND/NZ、M padding
+与 4096³ 方阵（第 31 层、rank 0、随机输入，共 16 case）。该实验未测自定义 BF16 tiling。
 
 | 场景 | warm ms | warm TFLOPS | cold ms | cold TFLOPS |
 | --- | ---: | ---: | ---: | ---: |
@@ -260,17 +261,19 @@ export CLEF_CONV_QKV_TILE=32
 | 967 down NZ | 0.3013 | 286.0 | **0.3217** | **267.9** |
 | 1595 down ND | **0.4468** | 318.2 | 0.4977 | 285.6 |
 | 1595 down NZ | 0.4686 | 303.3 | **0.4837** | **293.9** |
-| 4096³ 方阵（参考上限） | 0.4287 | 320.6 | 0.4666 | 294.6 |
+| 4096³ 方阵（经验参考） | 0.4287 | 320.6 | 0.4666 | 294.6 |
 | 967 gate/up NZ，M padding 1024 | 0.5816 | 296.4 | 0.6005 | 288.0 |
 
-- **冷态才是真实服务的情形**（每层 534 MB 权重从 HBM 流式读取，不可能常驻 L2）：
-  MLP 两段 matmul 冷态 285.9–303.4 TFLOPS，**已经达到甚至超过 4096³ 方阵的 294.6 TFLOPS**。
-- warm 下 ND 在 1595 领先 3–5%，但 cold 下 NZ 全面领先或持平，说明 warm 优势是 L2 驻留伪影，
-  不能作为布局切换依据。
-- M padding（967→1024）冷态仅 0.4% 收益，1,595 反而更差。
-- **结论：MLP matmul 没有可挖的自定义 tiling 空间**，profile 里估计的 2–3% 端到端不成立；
-  不建议投入 Ascend C matmul 重写。剩余 MLP 相关项只有 SwiGLU（2.39 ms / 1.6%）与 AddRmsNorm（5.96 ms）
-  这类小算子，收益与风险比不划算。
+- TP2 每 rank 每层完整 MLP 权重为 **255 MiB**（gate/up 170、down 85），64 层约 **15.94 GiB**。
+  此处 cold 使用 256 MiB 读刷代理，warm 使用单权重重复；二者与服务全层 streaming 分列解释。
+- 已测 case 中，warm 下 ND 在 1595 领先 3–5%，cold 下 NZ 领先或持平，支持保留 NZ。
+  gate/up 冷态 285.9–303.4 TFLOPS；down 的 967/1595 冷态分别为 **267.897/293.915 TFLOPS**
+  （**0.321720/0.483680 ms**）。4096³ 的 294.579 TFLOPS 为经验参考。
+- 已测 gate/up M padding（967→1024）冷态仅约 0.4% 差异，1595 更差；表内未测 down padding。
+- 该实验支持已测布局与简单 padding 的结论。实际 tiling、逐核尾部负载、L1/L0 复用和依赖等待
+  均未采集，自定义 BF16 核的空间与收益仍需具体证据。MAC/Cube 忙比例及不同窗口的
+  gate 时差均不能直接换算可实现的端到端收益。2026-11-21 最小诊断见
+  [`runtime/down_gemm_probe.md`](../runtime/down_gemm_probe.md)。
 - 证据：`Clef-27B/logs/perf-next-20261117/mlp-ceiling.json.gz`
   （远端 `/workspace/yangchen/logs/perf-next-20261117/mlp-ceiling.json`）。
 
