@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CPU-default plan for gate GEMM-only and measured SwiGLU budget screening.
 
-Execution is reserved for the device owner in a later authorized window. No
+Execution requires explicit --execute in the device owner's bounded window. No
 SSH, service calls, source installation, compiler invocation or down tuning.
 """
 import argparse
@@ -33,7 +33,7 @@ def arguments():
 
 
 def plan(a):
-    return dict(schema='clef-gate-budget/1',status='cpu_prepared_uncompiled_unmeasured',
+    return dict(schema='clef-gate-budget/1',status='plan_only',
                 phase=a.phase,ranks_serial=a.ranks,device_equals_rank=True,m=a.tokens,k=5120,n=17408,
                 layers=[31,0,63],dtype='BF16',weight_format='NZ29',
                 output_contract='canonical [gate8704,up8704], BF16 [M,17408]; actual physical format/stride recorded',
@@ -104,10 +104,14 @@ def execute(a,report):
             n.update(layer=layer,input_sha256=digest,input_kind='full_capture' if a.tokens in (307,1595) else 'explicit_prefix',
                      reference_format=int(torch_npu.get_npu_format(ref)),candidate_format=int(torch_npu.get_npu_format(actual)),
                      reference_stride=list(ref.stride()),candidate_stride=list(actual.stride()))
+            n['gate_half']=numeric(actual[:,:8704],ref[:,:8704])
+            n['up_half']=numeric(actual[:,8704:],ref[:,8704:])
+            n['bf16_output']=str(actual.dtype)=='torch.bfloat16'
+            n['repeat_equal']=[bool(torch.equal(gate(x,w),actual)) for _ in range(2)]
             n['chain']=numeric(F.linear(torch_npu.npu_swiglu(actual),d),
                                F.linear(torch_npu.npu_swiglu(ref),d))
             record['numeric'].append(n);save()
-            if not n['pass_screen'] or not n['chain']['pass_screen'] or not torch.equal(gate(x,w),actual):raise ValueError('gate numerical/stability screen failed')
+            if not n['pass_screen'] or not n['gate_half']['pass_screen'] or not n['up_half']['pass_screen'] or not n['chain']['pass_screen'] or not all(n['repeat_equal']):raise ValueError('gate numerical/stability screen failed')
             weights.append((w,d));x_values.append(x);preacts.append(ref)
         if a.phase=='numeric':return
         flush=torch.ones(256*1024*1024//2,dtype=torch.bfloat16,device=f'npu:{rank}')

@@ -1,6 +1,8 @@
 # BF16 gate/up + SwiGLU 验证 · 2026-11-21
 
-结论：首版大误差定位到 **GEMM→UB 的 ND 输出 stride**，小修复后的六个数值点全部通过局部筛查；当前融合原型的 M967 完整链耗时约为原 NZ 链的 **1.9–2.1 倍**，停止集成。该结果限定于本次实现，BF16 融合机制的最佳可达性能仍未确定。down 诊断同轮收口，保留 aa3e/S1 服务。
+最新v3结论：同步纯Cube gate-only控制完成SDK编译及18组局部筛查；M967三层streaming的gate调用区间从 **0.600360→0.959673ms**，配对增量 **0.359000ms**，A/A最大差 **0.005813ms**，独立SwiGLU仅 **0.055533ms**。当前调用路径预算不足，停止异步融合实现。原aa3e/S1已恢复，最终四检22项通过；本轮没有S1或OD/ERQA候选结论。
+
+此前v1/v2结论：首版大误差定位到 **GEMM→UB 的 ND 输出 stride**，小修复后的六个数值点全部通过局部筛查；当前融合原型的 M967 完整链耗时约为原 NZ 链的 **1.9–2.1 倍**，停止集成。该结果限定于本次实现，BF16 融合机制的最佳可达性能仍未确定。down 诊断同轮收口，保留 aa3e/S1 服务。
 
 基线 `bcb98d9201a8f63e009349d1c2a96898d64064cd`。全程原权重 64 层 dense BF16、无量化、无答案缓存；仅卡7内逻辑 NPU0/1（Phy14/15）。40独占 SSH/设备/服务操作，41只做CPU诊断。无PR、无合并。
 
@@ -46,7 +48,7 @@ M967完整 `gate GEMM + SwiGLU + down GEMM`：5轮同窗A/B交错；每pair/arm/
 
 两个窗口均fresh核进程树/18143/卡归属，绑定新身份后定向停服，退出即恢复原启动argv/env。最终 **2026-11-21 14:17:19（上海，远端记录）** 四检22项全部通过，文本/图像各一次200，实验进程退出；共享源码未写入。恢复启动期曾有一次health连接拒绝，发生在POST之前；ready后四检通过，原记录保留。
 
-当前 `RUNNING_VERIFIED`：API **1641972 / start415870686**，boot `393ecc15-721f-46f7-b119-21fa327a2b3b`；TP worker **1642119/1642120**，卡7 Chip0/1。aa3e/S1/TP2/BF16/eager/4096/seq1/batched4096/util.9/default0、原processor/cacheoff；原env仍 `c18d38bd…c2ba9 / 4678B`。两端 `/tmp/clef27-service-current-state.json` 已更新。
+v2恢复历史记录 `RUNNING_VERIFIED`：API **1641972 / start415870686**，boot `393ecc15-721f-46f7-b119-21fa327a2b3b`；TP worker **1642119/1642120**，卡7 Chip0/1。aa3e/S1/TP2/BF16/eager/4096/seq1/batched4096/util.9/default0、原processor/cacheoff；原env仍 `c18d38bd…c2ba9 / 4678B`。两端 `/tmp/clef27-service-current-state.json` 已更新。
 
 ## 复现与原数
 
@@ -66,6 +68,8 @@ timeout --kill-after=5 90 python probe_mlp_swiglu.py --execute --phase numeric \
 [精简原数与哈希](../Clef-27B/logs/mlp-bf16-screen-20261121/summary.json) 包含逐阶段数值、配对数组、down慢rank/噪声、恢复身份和22项检查。大raw保留临时目录：本地 `clef40-mlp-nyklqirq`、`clef40-mlp-retest-wikqcpnu`；远端对应 `/workspace/yangchen/{work,logs}/` 同名目录。最终manifest SHA `91dcc6f9ae3486fc30ea07f7fed1e9fbc904d343bae77f684fe4b0cb4007cd50`。
 
 ## v3 CPU准备：先测GEMM本体与预算
+
+以下为3816d8c阶段状态，后续SDK与设备验证见下一节。
 
 本节仅CPU准备；本轮无SSH、SDK编译、NPU、停启、采集或服务源码修改。新增 [gate-only核](../runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm.cpp) 与 [预算探针](../runtime/probe_mlp_gate_only.py)，默认打印计划；新BF16/NZ组合标为 **未编译、未测量**。down支线保持结束。
 
@@ -91,3 +95,35 @@ timeout --kill-after=5 90 python probe_mlp_swiglu.py --execute --phase numeric \
 具体未解决项：原canonical N自动分核可能将gate与up分到不同producer；须确认同client成对N所有权/就绪顺序，或先验证配对布局对GEMM和恢复canonical输出的完整代价。该映射与9.2.1异步组合未确认前，不写融合流水。官方[MatmulCallBackFunc](https://www.hiascend.com/document/detail/en/CANNCommunityEdition/910/API/ascendcopapi/docs/en/api/SIMD-API/advanced_api/matrix_compute/Matmul-Kernel/MatmulCallBackFunc.md)属于自编译Matmul实例的搬运回调，不能据此给既有F.linear/vendor内核插入SiLU回调。
 
 CPU验证：Python语法、三个M的默认计划及无输出写入检查、build.sh语法、JSON配置；同步与数据流analyzer扫描新kernel+tiling头均退出0、findings为空。SDK关联头未在本地展开，正则扫描不证明API内部同步或模板实例正确；目标编译、精度、性能和异步生命周期均保留待验证。CPU工作材料在临时目录 `clef40-v3-cpu-b1ywl5ca`。
+
+## v3实测与收口 · 2026-11-21 16:27（上海）
+
+`3816d8c` 的独立vendor首轮SDK编译通过。第一次M967调用在宿主 `GetWorkspaceSize` 的tiling阶段返回561002，尚无候选数值样本，随即恢复aa3e并完成22项检查。恢复后使用**显式命名平台** `PlatformAscendCManager::GetInstance("Ascend910_9382")` 单点CPU诊断：API返回0，但 `singleCoreN=5803`，触发了本地NZ起点16对齐检查。
+
+唯一修复为向上对齐singleCoreN，保持baseM/N/K=128/256/64及base块数量：M967为5803→5808，M307/1595为726→736；CPU列覆盖均为17408。该修正保障 `B_NZ + n_start*16` 的物理块边界，无tile或padding扫描。修正版SDK再次编译通过，fresh绑定新服务身份后做一次定向复测。
+
+两rank×M967/307/1595×layer0/31/63共18组：canonical `[M,17408]`，参考与候选均ND/BF16，所有gate/up/chain有限、局部容差通过，每组两次重复逐位稳定；6/18 gate结果与vendor逐位一致。最大gate relRMSE=3.7365e-5、max abs=0.0625；最大chain relRMSE=3.0133e-4、max abs=1.0（各组normalized max均≤0.02，详见summary）。这些是局部筛查，比赛四项2PP未在当前控制核上评测。
+
+M967同窗5配对，各pair/arm/clock取两rank较慢值，再求中位数。单位ms；gate包含输出分配、ACLNN/torch下发和canonical输出GM写入，原NZ权重共享且一次准备，无新增输出去重排。三层streaming按单层均摊，down维持原实现。完整预热每arm/条件5轮单列。
+
+| 条件 | vendor gate device | v3 gate device | SwiGLU device | 原链 device | v3 gate链 device |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| warm | 0.599700 | 1.015020 | 0.062840 | 0.957180 | 1.394160 |
+| 256MiB读刷代理 | 0.613160 | 1.080800 | 0.071800 | 0.961880 | 1.414840 |
+| 三层权重streaming | 0.600360 | 0.959673 | 0.055533 | 0.946860 | 1.299660 |
+
+| 条件 | vendor gate wall | v3 gate wall | SwiGLU wall | 原链 wall | v3 gate链 wall |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| warm | 0.686220 | 1.143360 | 0.156820 | 1.042540 | 1.487040 |
+| 256MiB读刷代理 | 0.697120 | 1.168380 | 0.160320 | 1.043960 | 1.498320 |
+| 三层权重streaming | 0.631230 | 0.988443 | 0.083570 | 0.979683 | 1.329667 |
+
+三个条件gate调用耗时配对中位数分别为vendor的约1.70/1.76/1.60倍，每rank每条件5/5退化。device配对增量中位数0.418280/0.467640/0.359000，A/A最大绝对差0.013840/0.016900/0.005813。streaming wall配对增量0.357647，A/A最大差0.033637；warm wall保留一次A/A尖峰0.963940ms（中位差0.012150），该条件wall最大噪声不支持单独判定，其他条件证据支持收口，无补跑。
+
+以 `median(SwiGLU) - max(0,median(v3_gate-vendor_gate)) - max_abs(A/A)` 作为保守预算，device为 **−0.369280/−0.412740/−0.309280ms**；streaming wall为−0.307713ms。即使给出全部独立SwiGLU时间作为可省上限，当前额外调用成本仍无法覆盖。SwiGLU分项消费同组预激活，缓存条件与链内存在差异；分项不能用于直接拆出down或kernel细分ms。
+
+NPU Event包围的是完整调用区间，包含host下发间隙，尚无独立kernel trace或host tiling占比。本结论限定于当前pure-Cube API调用实现。标准异步的GM workspace成本没有扣除，也没有据此否决其他BF16融合实现。本窗口不写或运行异步融合，不进行S1/OD/ERQA全量，不重开down。
+
+两个服务停启段分别为宿主检查失败后的立即恢复、单一对齐修正后的复测恢复；累计探针耗时 **48.4s**，在本轮累计240s预算内。每段均fresh核对指针、完整身份、18143 inode及卡7/Chip0/1/Phy14/15，保存当时manifest/argv/env。最终 **2026-11-21 16:27:38（上海）** `RUNNING_VERIFIED`，22/22通过，API **1652694 / start416641174 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1652851/1652852**仅卡7双芯片；原argv/env匹配，env仍c18d38bd…c2ba9/4678B，两端current-state指针已更新，实验进程退出。manifest SHA `e2bcba916a1c62e21e91e73d071bb27962d1eebc79c9ab8f818cffa450eaf2b9`。
+
+源码与分项数值仍见本报告的探针链接；CPU tiling诊断使用同参数直接调用SDK，命名平台避免初始化NPU。新原数/哈希加入原summary的 `v3_device_validation`，大raw在本地 `clef40-v3-run-2tt4rzwb`、`clef40-v3-aligned-3e_elijo` 及远端同名work/logs目录，无新artifact或PR。

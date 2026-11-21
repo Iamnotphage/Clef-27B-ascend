@@ -1,7 +1,7 @@
 {
   "schema": "clef-mlp-bf16-screen/1",
   "base_commit": "bcb98d9201a8f63e009349d1c2a96898d64064cd",
-  "decision": "v1_local_C_stride_defect_fixed; v2_numeric_passed; v2_full_chain_1.9_to_2.1x_slower_rejected; down_diagnosis_stopped; aa3e_s1_restored",
+  "decision": "v1_stride_fixed; v2_full_chain_regression; v3_NZ_partition_aligned_and_numeric_passed_but_gate_call_budget_insufficient; aa3e_s1_restored",
   "precision": "original dense BF16; no quantization; no answer cache",
   "raw_locations": {
     "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-mlp-nyklqirq",
@@ -139,14 +139,14 @@
   },
   "restoration": {
     "state": "RUNNING_VERIFIED",
-    "verified_at_cst": "2026-11-21T14:17:19.415531+08:00",
+    "verified_at_cst": "2026-11-21T16:27:38.794282+08:00",
     "identity": {
-      "pid": 1641972,
+      "pid": 1652694,
       "ppid": 1,
-      "pgid": 1641972,
-      "sid": 1641972,
+      "pgid": 1652694,
+      "sid": 1652694,
       "state": "S",
-      "starttime": "415870686",
+      "starttime": "416641174",
       "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
       "cmdline": [
         "/workspace/yangchen/venvs/clef-py312/bin/python",
@@ -187,8 +187,8 @@
       ]
     },
     "manifest": {
-      "path": "/workspace/yangchen/logs/clef40-mlp-retest-wikqcpnu/restore-s1/launch-manifest.json",
-      "sha256": "91dcc6f9ae3486fc30ea07f7fed1e9fbc904d343bae77f684fe4b0cb4007cd50",
+      "path": "/workspace/yangchen/logs/clef40-v3-aligned-3e_elijo/restore-s1/launch-manifest.json",
+      "sha256": "e2bcba916a1c62e21e91e73d071bb27962d1eebc79c9ab8f818cffa450eaf2b9",
       "bytes": 24412
     },
     "checks": {
@@ -220,19 +220,19 @@
         "card": 7,
         "chip": 0,
         "name": "VLLMWorker_TP",
-        "pid": 1642119
+        "pid": 1652851
       },
       {
         "card": 7,
         "chip": 0,
         "name": "python",
-        "pid": 1641972
+        "pid": 1652694
       },
       {
         "card": 7,
         "chip": 1,
         "name": "VLLMWorker_TP",
-        "pid": 1642120
+        "pid": 1652852
       }
     ],
     "env_bytes": 4678,
@@ -718,6 +718,391 @@
       "runtime/ascendc/clef_mlp_gate_gemm/op_host/clef_mlp_gate_gemm.cpp": "d0cb7f9f58b087b49b0e57b04605285c30352bfbb46c56861b33818823a6e364",
       "runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm.cpp": "3653f349e7ee72c5655e9a8041e78b05fc470ecae180751a5b23a098d5784b8a",
       "runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm_tiling.h": "c35f953af2e188662a189b65cbd4f462337cf725ddf3784469b33089fa3f7054"
+    }
+  },
+  "v3_device_validation": {
+    "decision": "stop_current_gate_API_path_budget_insufficient",
+    "base_commit": "3816d8cf2507d96379aab0e046a9dec8a25922bb",
+    "initial_host_failure": {
+      "status": 561002,
+      "stage": "GetWorkspaceSize/host tiling; no candidate numerical sample",
+      "error": "aclnnClefMlpGateGemmGetWorkspaceSize failed with aclnnStatus=561002. Error message: [PID: 1649712] 2026-11-21-08:11:57.909.362 Execution_Error(EZ1008): Failed to execute operator ClefMlpGateGemm_0. Reason: Failed to execute tiling function.\n        Solution: 1.If the tiling function does not exist, check whether the tiling function is registered successfully. 2.If the tiling function fails to be executed, check the implementation logic of the tiling function.\nTraceBack (most recent call last):\n        Check NnopbaseExecutorDoTiling(executor) failed\n        Check NnopbaseExecutorTilingAndUpdateBinInfo(executor) failed\n        Check NnopbaseExecutorMatchCache(executor) failed\n        Check NnopbaseRunForWorkspace(*executor, workspaceSize) failed",
+      "cpu_same_argument_result": "aic=24 aiv=48 rc=0 M=967 N=17408 singleM=122 singleN=5803 cores=24 baseM=128 baseN=256 baseK=64 guard_N_mod16=11"
+    },
+    "targeted_fix": "align singleCoreN to16 for NZ B offset; unchanged baseM/N/K and ceil(base-block count)",
+    "cpu_alignment_checks": [
+      "M=967 rc=0 singleM=122 oldN=5803 alignedN=5808 baseM=128 baseN=256 baseK=64 cores=24 coverage=17408",
+      "M=307 rc=0 singleM=320 oldN=726 alignedN=736 baseM=128 baseN=256 baseK=64 cores=24 coverage=17408",
+      "M=1595 rc=0 singleM=1600 oldN=726 alignedN=736 baseM=128 baseN=256 baseK=64 cores=24 coverage=17408"
+    ],
+    "sdk_builds": "initial and aligned packages both rc0, CANN9.2.1 ascend910_93 BF16",
+    "numeric": [
+      {
+        "m": 967,
+        "rank": 0,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 0,
+        "gate_rel_rmse_max": 3.415335595491342e-05,
+        "gate_abs_max": 0.0625,
+        "gate_normalized_max": 0.0027777778450399637,
+        "chain_rel_rmse_max": 0.0002479068352840841,
+        "chain_abs_max": 0.25,
+        "chain_normalized_max": 0.0009689922444522381,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      {
+        "m": 967,
+        "rank": 1,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 0,
+        "gate_rel_rmse_max": 3.575408845790662e-05,
+        "gate_abs_max": 0.0625,
+        "gate_normalized_max": 0.0015432098880410194,
+        "chain_rel_rmse_max": 0.0002691764384508133,
+        "chain_abs_max": 0.125,
+        "chain_normalized_max": 0.0006648935959674418,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      {
+        "m": 307,
+        "rank": 0,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 0,
+        "gate_rel_rmse_max": 3.4876335121225566e-05,
+        "gate_abs_max": 0.0625,
+        "gate_normalized_max": 0.0013888889225199819,
+        "chain_rel_rmse_max": 0.0002601922315079719,
+        "chain_abs_max": 0.125,
+        "chain_normalized_max": 0.0006127451197244227,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      {
+        "m": 307,
+        "rank": 1,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 0,
+        "gate_rel_rmse_max": 3.73645088984631e-05,
+        "gate_abs_max": 0.0625,
+        "gate_normalized_max": 0.0014450866729021072,
+        "chain_rel_rmse_max": 0.000301334512187168,
+        "chain_abs_max": 1.0,
+        "chain_normalized_max": 0.0009881423320621252,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      {
+        "m": 1595,
+        "rank": 0,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 3,
+        "gate_rel_rmse_max": 0.0,
+        "gate_abs_max": 0.0,
+        "gate_normalized_max": 0.0,
+        "chain_rel_rmse_max": 0.0,
+        "chain_abs_max": 0.0,
+        "chain_normalized_max": 0.0,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      },
+      {
+        "m": 1595,
+        "rank": 1,
+        "layers": [
+          31,
+          0,
+          63
+        ],
+        "finite": true,
+        "repeat_equal": true,
+        "bf16": true,
+        "gate_bit_equal": 3,
+        "gate_rel_rmse_max": 0.0,
+        "gate_abs_max": 0.0,
+        "gate_normalized_max": 0.0,
+        "chain_rel_rmse_max": 0.0,
+        "chain_abs_max": 0.0,
+        "chain_normalized_max": 0.0,
+        "formats": [
+          [
+            2,
+            2
+          ]
+        ]
+      }
+    ],
+    "timing_summary": [
+      {
+        "mode": "warm",
+        "device_ms": {
+          "medians": {
+            "vendor_gate": 0.5996999740600586,
+            "vendor_gate_repeat": 0.6029000282287598,
+            "candidate_gate": 1.0150200128555298,
+            "vendor_swiglu": 0.06283999979496002,
+            "vendor_chain": 0.9571800231933594,
+            "candidate_gate_chain": 1.3941600322723389
+          },
+          "gate_speedup_median": 0.5879095976853889,
+          "gate_delta_median_ms": 0.4182800054550171,
+          "aa_noise_abs_max_ms": 0.013840019702911377,
+          "aa_noise_abs_median_ms": 0.00616002082824707,
+          "chain_delta_median_ms": 0.439799964427948,
+          "conservative_swiglu_budget_remaining_ms": -0.36928002536296844,
+          "all_5_gate_pairs_slower": true,
+          "gate_delta_range_ms": [
+            0.37522000074386597,
+            0.4553000330924988
+          ]
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor_gate": 0.6862198933959007,
+            "vendor_gate_repeat": 0.6964299827814102,
+            "candidate_gate": 1.1433600448071957,
+            "vendor_swiglu": 0.15681982040405273,
+            "vendor_chain": 1.0425401851534843,
+            "candidate_gate_chain": 1.4870399609208107
+          },
+          "gate_speedup_median": 0.6001885745753516,
+          "gate_delta_median_ms": 0.4580998793244362,
+          "aa_noise_abs_max_ms": 0.9639402851462364,
+          "aa_noise_abs_median_ms": 0.012150034308433533,
+          "chain_delta_median_ms": 0.4455000162124634,
+          "conservative_swiglu_budget_remaining_ms": -1.2652203440666199,
+          "all_5_gate_pairs_slower": false,
+          "gate_delta_range_ms": [
+            -0.5783503875136375,
+            0.49766991287469864
+          ]
+        }
+      },
+      {
+        "mode": "read_flush_proxy_256MiB",
+        "device_ms": {
+          "medians": {
+            "vendor_gate": 0.6131600141525269,
+            "vendor_gate_repeat": 0.6099200248718262,
+            "candidate_gate": 1.0808000564575195,
+            "vendor_swiglu": 0.07180000096559525,
+            "vendor_chain": 0.9618800282478333,
+            "candidate_gate_chain": 1.4148399829864502
+          },
+          "gate_speedup_median": 0.5673400718812007,
+          "gate_delta_median_ms": 0.4676400423049927,
+          "aa_noise_abs_max_ms": 0.01690000295639038,
+          "aa_noise_abs_median_ms": 0.0032399892807006836,
+          "chain_delta_median_ms": 0.4527999758720398,
+          "conservative_swiglu_budget_remaining_ms": -0.4127400442957878,
+          "all_5_gate_pairs_slower": true,
+          "gate_delta_range_ms": [
+            0.45374006032943726,
+            0.4780200123786926
+          ]
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor_gate": 0.6971200928092003,
+            "vendor_gate_repeat": 0.7011201232671738,
+            "candidate_gate": 1.1683800257742405,
+            "vendor_swiglu": 0.160320196300745,
+            "vendor_chain": 1.0439599864184856,
+            "candidate_gate_chain": 1.4983201399445534
+          },
+          "gate_speedup_median": 0.600525074210623,
+          "gate_delta_median_ms": 0.4609101451933384,
+          "aa_noise_abs_max_ms": 0.04327017813920975,
+          "aa_noise_abs_median_ms": 0.014059711247682571,
+          "chain_delta_median_ms": 0.45480020344257355,
+          "conservative_swiglu_budget_remaining_ms": -0.34386012703180313,
+          "all_5_gate_pairs_slower": true,
+          "gate_delta_range_ms": [
+            0.45063020661473274,
+            0.47128042206168175
+          ]
+        }
+      },
+      {
+        "mode": "streaming_3_real_layers",
+        "device_ms": {
+          "medians": {
+            "vendor_gate": 0.6003599961598715,
+            "vendor_gate_repeat": 0.5963133176167806,
+            "candidate_gate": 0.9596733252207438,
+            "vendor_swiglu": 0.055533334612846375,
+            "vendor_chain": 0.9468599955240885,
+            "candidate_gate_chain": 1.2996599674224854
+          },
+          "gate_speedup_median": 0.625861791851005,
+          "gate_delta_median_ms": 0.35900000731150306,
+          "aa_noise_abs_max_ms": 0.0058133602142333984,
+          "aa_noise_abs_median_ms": 0.005126635233561161,
+          "chain_delta_median_ms": 0.35279997189839685,
+          "conservative_swiglu_budget_remaining_ms": -0.3092800329128901,
+          "all_5_gate_pairs_slower": true,
+          "gate_delta_range_ms": [
+            0.35485335191090905,
+            0.40107337633768714
+          ]
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor_gate": 0.6312299519777298,
+            "vendor_gate_repeat": 0.6285233733554682,
+            "candidate_gate": 0.9884433820843697,
+            "vendor_swiglu": 0.08356990292668343,
+            "vendor_chain": 0.9796833619475365,
+            "candidate_gate_chain": 1.3296666244665782
+          },
+          "gate_speedup_median": 0.6386287608823344,
+          "gate_delta_median_ms": 0.35764665032426524,
+          "aa_noise_abs_max_ms": 0.03363657742738724,
+          "aa_noise_abs_median_ms": 0.007676581541697147,
+          "chain_delta_median_ms": 0.3533698618412019,
+          "conservative_swiglu_budget_remaining_ms": -0.30771332482496905,
+          "all_5_gate_pairs_slower": true,
+          "gate_delta_range_ms": [
+            0.35579673325022065,
+            0.39247997726003336
+          ]
+        }
+      }
+    ],
+    "timing_scope": "M967, 5 alternating pairs; max rank per pair/arm/clock then medians; allocations/dispatch/output GM included; three-layer streaming averaged per layer; down unchanged",
+    "measurement_boundary": "NPU Event elapsed includes host enqueue gaps; no isolated kernel trace; no attribution to tiling, HBM or dispatch fractions",
+    "budget_formula": "median vendor SwiGLU - max(0, median paired gate(candidate-vendor)) - max absolute paired gate A/A",
+    "outlier": "warm wall gate A/A maximum .963940285ms retained; other condition/device evidence supports stop without another timing run",
+    "async_fusion": "not implemented or executed; standard async GM workspace not counted as eliminated traffic",
+    "raw_locations": {
+      "initial_local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-v3-run-2tt4rzwb",
+      "aligned_local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-v3-aligned-3e_elijo",
+      "remote_work": "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo",
+      "remote_logs": "/workspace/yangchen/logs/clef40-v3-aligned-3e_elijo"
+    },
+    "raw_sha256": {
+      "numeric-967.json": "df680e59f5024ce620de118bd0b3616397519a8eb618bfde27a221b0b54c0fa1",
+      "numeric-307.json": "b57d27f9eee15aaaf277bbc4e8473ba2490a267461cc7ab136867bfee2fe798e",
+      "numeric-1595.json": "e3c02a865169ff5d5c979148f1a1cfcfb814aece487e4018221299b06a9d6139",
+      "timing-967.json": "863d1d9a486d29354b42169985f6bf0322a6bc3d4fa016d6d2ec0150e343523d",
+      "timing-summary.json": "608d56d59492622763edd8b8449d939d6ab154e83f3af375d679012cf4f8f4b7",
+      "verification.json": "2b2d48561a57d21e4e70cad40debfe11be916664aa807ff1b9b8bd41ce50e0b8",
+      "preflight.json": "2f78b45fd01eb7b9bff9666feac99ad296080491979575a12d786c25825e0c87",
+      "stop.json": "bedb5d54b9a2d19d1cd7135a31d6e3a0aea61fb1dc83ab9757e3e2e6198a202b"
+    },
+    "executed_source_sha256": {
+      "candidate/op_host/clef_mlp_gate_gemm.cpp": "40077d5d4fd0260d36646204996d0bc328bafd0705e87bb6e37670797e9658ca",
+      "candidate/op_kernel/clef_mlp_gate_gemm.cpp": "3653f349e7ee72c5655e9a8041e78b05fc470ecae180751a5b23a098d5784b8a",
+      "candidate/op_kernel/clef_mlp_gate_gemm_tiling.h": "c35f953af2e188662a189b65cbd4f462337cf725ddf3784469b33089fa3f7054",
+      "probe_mlp_gate_only.py": "30c8182af05f24faaad23577af610492c769069a0c51b287141859639f4b84fb"
+    },
+    "initial_window": {
+      "steps": [
+        {
+          "label": "numeric-967",
+          "rc": 1,
+          "seconds": 8.08129592007026
+        },
+        {
+          "label": "restore-launch",
+          "rc": 0,
+          "seconds": 0.4694735100492835
+        }
+      ],
+      "compute_limit_s": 240,
+      "all_numeric_passed": false
+    },
+    "aligned_window": {
+      "steps": [
+        {
+          "label": "numeric-967",
+          "rc": 0,
+          "seconds": 10.032201659865677
+        },
+        {
+          "label": "numeric-307",
+          "rc": 0,
+          "seconds": 9.22788259992376
+        },
+        {
+          "label": "numeric-1595",
+          "rc": 0,
+          "seconds": 9.781090799719095
+        },
+        {
+          "label": "timing-967",
+          "rc": 0,
+          "seconds": 11.279923839960247
+        },
+        {
+          "label": "restore-launch",
+          "rc": 0,
+          "seconds": 0.4715289198793471
+        }
+      ],
+      "compute_limit_s": 231,
+      "all_numeric_passed": true
+    },
+    "final_source_sha256": {
+      "runtime/probe_mlp_gate_only.py": "0b57678b2f584025128d45376a6f2e085f7fc26a0e336873d86a615f630b8105",
+      "runtime/ascendc/clef_mlp_gate_gemm/op_host/clef_mlp_gate_gemm.cpp": "ec7577ec77b97fe2a0372241901cb398291b6a35c6fff645b58dd42b2490267b",
+      "runtime/ascendc/clef_mlp_gate_gemm/op_kernel/clef_mlp_gate_gemm.cpp": "52d09c62b345763cb4bf06d21e2b8fe9d6cc59f2930f98d50465d7af9234ae54"
     }
   }
 }

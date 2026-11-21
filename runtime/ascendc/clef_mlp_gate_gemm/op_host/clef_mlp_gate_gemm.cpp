@@ -1,4 +1,4 @@
-// CPU-prepared diagnostic. Target SDK compilation and device checks pending.
+// Gate-only diagnostic; validation evidence is recorded in docs/mlp-bf16-screen-2026-11-21.md.
 #include "../op_kernel/clef_mlp_gate_gemm_tiling.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
@@ -23,7 +23,15 @@ static ge::graphStatus TilingFunc(gert::TilingContext* ctx) {
     mm.SetBufferSpace(-1,-1,-1);
     // Preserve the API's complete L1/L0 schedule; no fixed base tile or padding sweep.
     if(mm.GetTiling(t->cube)!=0 || t->cube.singleCoreM==0 || t->cube.singleCoreN==0 ||
-       t->cube.usedCoreNum==0 || t->cube.singleCoreN%16!=0) return ge::GRAPH_FAILED;
+       t->cube.usedCoreNum==0 || t->cube.baseN==0 || t->cube.baseN%16!=0) return ge::GRAPH_FAILED;
+    // MultiCore tiling may return an unaligned N partition (967: 5803).
+    // NZ-transposed B offsets require a whole 16-row block. Align only the
+    // partition boundary; base tiles and the number of base blocks stay fixed.
+    const uint32_t oldN=t->cube.singleCoreN;
+    const uint32_t alignedN=(oldN+15)/16*16;
+    if((oldN+t->cube.baseN-1)/t->cube.baseN !=
+       (alignedN+t->cube.baseN-1)/t->cube.baseN) return ge::GRAPH_FAILED;
+    t->cube.singleCoreN=alignedN;
     t->tokens=x.GetDim(0);
     t->mTasks=(t->tokens+t->cube.singleCoreM-1)/t->cube.singleCoreM;
     t->nTasks=(17408+t->cube.singleCoreN-1)/t->cube.singleCoreN;

@@ -1,5 +1,5 @@
 // Gate GEMM-only control: canonical BF16 output, original NZ weights.
-// CPU preparation only. No claim of SDK compilation, numerical or speed acceptance.
+// API-managed base blocks within each core task; output includes canonical GM writes.
 #include "kernel_operator.h"
 #define ASCENDC_CUBE_ONLY
 #include "lib/matmul_intf.h"
