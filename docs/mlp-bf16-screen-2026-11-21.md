@@ -1,8 +1,10 @@
 # BF16 gate/up + SwiGLU 验证 · 2026-11-21
 
-最新采集链修正：已确认本机msopprof26.2的native ID0可有效，撤回零值失活判断，改验SDK注册/回调及BasicInfo导出。本轮BasicInfo被旧guard在提交前截断，内部原因保持UNKNOWN；累计111.282s，aa3e/S1恢复22/22通过，详见末节。
+最新执行状态：同一入口/依赖字节核同及有效0路径已贯通；vendor唯一BasicInfo尝试由工具明确返回空结果，尚无内部数据。累计133.140s，余106.860s；aa3e/S1恢复22/22通过，详见末节。
 
-最新最小profile结论：M967三层streaming中，原vendor/v3的kernel task约 **0.592→0.905ms/层**，task增量约覆盖本窗profile配对差距的 **81.48%**。host桥接另有开销且与kernel重叠；当前v3 kernel惩罚已超过可省SwiGLU预算，继续停止该实现的融合路线。原aa3e/S1恢复22/22通过，详见末节。
+02:37阶段采集链修正（历史）：已确认本机msopprof26.2的native ID0可有效，撤回零值失活判断，改验SDK注册/回调及BasicInfo导出。本轮BasicInfo被旧guard在提交前截断，内部原因保持UNKNOWN；累计111.282s，aa3e/S1恢复22/22通过，详见末节。
+
+已取得的task级profile结论：M967三层streaming中，原vendor/v3的kernel task约 **0.592→0.905ms/层**，task增量约覆盖本窗profile配对差距的 **81.48%**。host桥接另有开销且与kernel重叠；当前v3 kernel惩罚已超过可省SwiGLU预算，继续停止该实现的融合路线。原aa3e/S1恢复22/22通过，详见末节。
 
 v3初次实测结论：同步纯Cube gate-only控制完成SDK编译及18组局部筛查；M967三层streaming的gate调用区间从 **0.600360→0.959673ms**，配对增量 **0.359000ms**，A/A最大差 **0.005813ms**，独立SwiGLU仅 **0.055533ms**。当前调用路径预算不足，停止异步融合实现。原aa3e/S1已恢复，最终四检22项通过；本轮没有S1或OD/ERQA候选结论。
 
@@ -253,3 +255,25 @@ g++ -std=c++17 -shared -fPIC -fvisibility=hidden \
 ```
 
 下一步先完成“已注册回调、接受native ID0、BasicInfo实际一任务命中”的验证，再决定补哪一组PMU。当前缺少实际tiling、逐核及Cube/MTE证据，继续保留UNKNOWN，不调整计算kernel/tiling，不据未命中否定融合机制。无PR、新artifact或全量测试。
+
+## 统一执行入口后的真实BasicInfo尝试 · 2026-11-22 03:01
+
+本轮入口一致性与合法0路径已实测通过，**BasicInfo仍未命中**。工具正常返回0，但日志明确报告 `Profiling results are empty. No kernel profiling data was generated.` 和 `Profiling data parse failed.`；输出目录为空，排除单纯CSV命名差异。0.313ms内部原因继续UNKNOWN，未据此判断kernel/tiling空间。
+
+新增 [统一owner入口](../runtime/run_mlp_gate_window.py)，直接导入探针的同一 `capture_failure`；[探针](../runtime/probe_mlp_gate_internal.py) 的CPU `--marker-self-test` 与真实capture复用同一 `NativeRange` 类。所有本轮执行路径均接受已注册的native ID0，并正确调用end(0)；缺少注册观测时保留UNKNOWN，仅明确ready=false或应用失败才提前退出。历史临时window.py保留为执行证据，本轮不使用。
+
+三类CPU用例跑在本轮同一个暂存脚本/桥接：无注册0→ready=false、exit2；注册有效0→ready=true、exit0且mock end(0)计数1；4294967297→64位完整传递。owner入口的实际import路径也检查合法0、UNKNOWN、显式false。实际venv解释器对同一入口补核同样通过。停服前只读核对9项源文件/依赖及桥接二进制SHA，保存精确argv；执行后SHA仍一致，无旧guard/字节版本错配。未增加海量pins，未改计算kernel、tiling或输入语义。
+
+| 阶段 | 结果 |
+| --- | --- |
+| 三层streaming前控，rank0/3配对 | Event vendor/v3中位0.600947/0.963213ms，配对增量0.363427ms；A/A最大0.007327ms |
+| wall前控 | 配对增量0.362257ms，A/A最大0.011060ms |
+| vendor应用 | 数值/重复通过，native ID0、ready=true、end_called=true；原BF16/NZ→ND，实时shape/dtype/prefix及权重SHA已记录 |
+| vendor BasicInfo | 唯一一次，13.868s，工具返回0但明确空结果/parse失败；实际导出任务0、无tiling或计数raw |
+| v3 BasicInfo / Pipe / post | 全部未启动，miss后自动清理恢复，无重试 |
+
+注册和end(0)字段属于SDK辅助观测，不等同工具目标命中。应用元数据为输入 `[967,5120]` BF16、权重 `[17408,5120]` BF16/NZ29、输出 `[967,17408]` BF16/ND2；它们不冒充未取得的工具task字段。现在可排除本轮入口字节错误和数值零值guard拒绝；注册之后的目标捕获/范围筛选/导出环节仍未贯通，具体原因未归因。本轮不扩native调查，不在窗口内换桥接或反复采集。
+
+实验硬限112s，为清理保留余量；实际 **21.858s**，累计 **133.140/240s**，剩余 **106.860s**。owner入口对进程退出后驱动释放做有界fresh空闲观察，未向历史PID或其他模型发信号，恢复无需人工补启动。最终 **2026-11-22 03:01:08（上海）RUNNING_VERIFIED**，22/22检查通过；API **1692910 / start420456310 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1693104/1693105**仅卡7双芯片。原argv/env、aa3e、OPP9/LD12、设备归属匹配；文本/图像各一次200，无POST重试，两端指针更新。manifest SHA `11c894f5e8fcf3f642bdeb1219a13ae1ee2828f500494426026e9e465100df19`。
+
+精确执行argv、入口/依赖SHA、执行后核同、三类CPU结果、工具原始错误、前控原数与恢复证据写回原summary `v3_exact_entry_attempt`。raw为系统tmp `clef40-gate-exact-ypdi4odk` 及远端同名work/logs，无新artifact/PR。默认owner入口打印计划，实际执行必须显式 `--execute` 并传入fresh私有work/output、固定vendor、已用/剩余预算；真实BasicInfo任务导出仍为后续采集前提。

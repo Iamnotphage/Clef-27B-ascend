@@ -15,20 +15,62 @@ import time
 import uuid
 
 
+class NativeRange:
+    """One checked host SDK path shared by capture and CPU entry tests."""
+    def __init__(self, path, stream):
+        self.lib=ctypes.CDLL(str(path),mode=os.RTLD_LOCAL|os.RTLD_NOW)
+        self.lib.clef40_range_start.argtypes=[ctypes.c_char_p,ctypes.c_void_p]
+        self.lib.clef40_range_start.restype=ctypes.c_uint64
+        self.lib.clef40_range_end.argtypes=[ctypes.c_uint64]
+        self.lib.clef40_range_end.restype=None
+        self.lib.clef40_range_ready.argtypes=[]
+        self.lib.clef40_range_ready.restype=ctypes.c_int
+        self.stream=stream;self.native_id=None;self.ready=None;self.ended=False
+    def start(self):
+        self.native_id=int(self.lib.clef40_range_start(b'CLEF40_TARGET',self.stream))
+        self.ready=bool(self.lib.clef40_range_ready())
+        if self.ready is not True:
+            raise RuntimeError('native SDK MSTX callbacks not initialized')
+        return self.native_id
+    def end(self):
+        if self.ready is True and not self.ended:
+            self.lib.clef40_range_end(self.native_id);self.ended=True
+    def evidence(self):
+        return dict(mstx_native_id=self.native_id,mstx_ready=self.ready,mstx_end_called=self.ended)
+
+
+def capture_failure(record):
+    # Missing registration evidence is UNKNOWN; numeric ID0 is accepted.
+    if record.get('mstx_ready') is False:return 'SDK callbacks not initialized'
+    if record.get('status')=='stopped':return record.get('error','application stopped')
+    return None
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--execute',action='store_true')
+    p.add_argument('--marker-self-test',action='store_true',help='CPU-only: exercise the same NativeRange path with injected test callbacks')
     p.add_argument('--mode',choices=['control','capture'],default='control')
     p.add_argument('--arm',choices=['vendor','v3'],default='vendor')
     p.add_argument('--vendor',type=Path)
     p.add_argument('--output-dir',type=Path)
     p.add_argument('--mstx-lib',type=Path,help='host-only bridge compiled against installed CANN MSTX SDK')
     a=p.parse_args()
+    if a.marker_self_test:
+        if not a.mstx_lib:p.error('marker test requires --mstx-lib')
+        marker=NativeRange(a.mstx_lib,None)
+        try:
+            marker.start();marker.end();e=marker.evidence()
+            assert capture_failure(dict(e,status='complete')) is None
+            print(json.dumps(dict(e,status='complete')));return
+        except RuntimeError as exc:
+            e=marker.evidence();assert capture_failure(dict(e,status='stopped',error=str(exc)))
+            print(json.dumps(dict(e,status='stopped',error=str(exc))));raise SystemExit(2)
     plan=dict(schema='clef-gate-internal/1',rank=0,m=967,layers=[31,0,63],capture_layer=31,
         precision='original BF16/NZ -> canonical ND',pairs=3,warmup_passes_each_arm=5,
         mode=a.mode,arm=a.arm,metrics=['BasicInfo first','PipeUtilization only after both BasicInfo hits'],
         replay='application, collector warm-up=0; explicit application warmup; native SDK MSTX range covers complete ring through existing sync, launch-count=1 selects layer31',
-        stop='numeric failure or inactive range or BasicInfo miss; cumulative cap240s with93.274s already used, remaining146.726s')
+        stop='numeric failure, observed unbound callbacks or BasicInfo miss; owner wrapper supplies remaining cumulative budget')
     if not a.execute: print(json.dumps(plan,indent=2));return
     if not a.vendor or not a.output_dir:p.error('execute requires vendor and private output directory')
     if a.mode=='capture' and not a.mstx_lib:p.error('capture requires --mstx-lib')
@@ -95,13 +137,7 @@ def main():
             else:
                 # A full ring of this arm immediately precedes capture, ending at layer63.
                 ring(a.arm);torch.npu.synchronize()
-                marker=ctypes.CDLL(str(a.mstx_lib),mode=os.RTLD_LOCAL|os.RTLD_NOW)
-                marker.clef40_range_start.argtypes=[ctypes.c_char_p,ctypes.c_void_p]
-                marker.clef40_range_start.restype=ctypes.c_uint64
-                marker.clef40_range_end.argtypes=[ctypes.c_uint64]
-                marker.clef40_range_end.restype=None
-                marker.clef40_range_ready.argtypes=[]
-                marker.clef40_range_ready.restype=ctypes.c_int
+                marker=NativeRange(a.mstx_lib,_runtime.current_stream_ptr(inputs[0].device))
                 report['target']=dict(layer=31,launch_index_in_range=0,range_gate_launches=3,
                     input_shape=list(inputs[0].shape),input_dtype=str(inputs[0].dtype),
                     weight_shape=list(weights[0][0].shape),weight_dtype=str(weights[0][0].dtype),
@@ -109,18 +145,17 @@ def main():
                     input_sha256=report['numeric'][0]['input_sha256'],prefix_sha256=report['numeric'][0]['prefix_sha256'],
                     weight_rank_hashes={k:v['sha256_rank_tensor_bytes'] for k,v in report['preparation'][0]['weight_identity']['weights'].items()})
                 report['marker_backend']='CANN SDK mstxRangeStartA/End; uint64_t native id'
-                tag=marker.clef40_range_start(b'CLEF40_TARGET',_runtime.current_stream_ptr(inputs[0].device))
-                report['mstx_native_id']=int(tag)
-                report['mstx_ready']=bool(marker.clef40_range_ready());save()
-                if not report['mstx_ready']:
-                    raise RuntimeError('native SDK MSTX callbacks not initialized; abort before target submission')
+                try:
+                    marker.start()
+                finally:
+                    report.update(marker.evidence());save()
                 try:
                     y=one(a.arm,0)
                     for i in (1,2):mid=one(a.arm,i);out=mid
                     # Existing ring-end sync keeps vendor worker-thread launches inside the range.
                     torch.npu.synchronize()
                 finally:
-                    marker.clef40_range_end(tag)
+                    marker.end();report.update(marker.evidence())
                 report['target'].update(output_shape=list(y.shape),output_dtype=str(y.dtype),
                     output_format=int(torch_npu.get_npu_format(y)),output_stride=list(y.stride()))
         report['status']='complete';save()

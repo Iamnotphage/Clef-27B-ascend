@@ -3086,5 +3086,398 @@
       ],
       "both_pointers_updated": true
     }
+  },
+  "v3_exact_entry_attempt": {
+    "status": "INCONCLUSIVE: tested exact entry accepts valid native0 and end(0); collector explicitly produced empty profiling results",
+    "base_commit": "d401ebf61a4493cb83349089772dcef40029b624",
+    "changes": [
+      "one NativeRange implementation shared by --marker-self-test and capture",
+      "one capture_failure imported by actual owner entry, accepts valid0 and leaves unobserved readiness UNKNOWN",
+      "new versioned run_mlp_gate_window.py replaces historical temporary wrappers; no numeric-zero guards in executed dependency graph",
+      "bounded fresh-device-empty observation before restoration"
+    ],
+    "execution": {
+      "argv": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/run_mlp_gate_window.py",
+        "--execute",
+        "--work",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk",
+        "--output",
+        "/workspace/yangchen/logs/clef40-gate-exact-ypdi4odk",
+        "--vendor",
+        "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+        "--used-s",
+        "111.28244636000693",
+        "--remaining-s",
+        "128.71755363999307",
+        "--cap-s",
+        "112"
+      ],
+      "identity": {
+        "verified": {
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/probe_mlp_gate_internal.py": "1cda872274af34111f6e7be7744677a2196e90e17c2507f991707fb8c6588f4d",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/run_mlp_gate_window.py": "6fb1ceeea15d57c72693a66b289c180688958f6de74bb2e0876aac06b0f5f0a8",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/analyze_mlp_gate_internal.py": "57ec9b6254af48bcbeac6f22b3f8d3edb2611e146d41b42f0e5883225d153fd5",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/probe_mlp_ffn.py": "659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/mstx_gate_range.cpp": "4e5d465086a498f9bbceba6ccbb326181a4a06bf71321d800e1c7750e5af3cfd",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/control/control.py": "aff8fa2f35165bcb5390f47b38c84fbcb65192c5cb1be0285b619f7f1ccd0598",
+          "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/control/verify.py": "97797555e34466c8e297c48dd8d89efe65108a376d92ac48f142b2aa16fe8f79",
+          "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_api/lib/libcust_opapi.so": "a9786660a05b7121f6e7c7c955e9d9b732f5f7fe85e0fd3ca54eddc10e56b510",
+          "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_impl/ai_core/tbe/kernel/ascend910_93/clef_mlp_gate_gemm/ClefMlpGateGemm_ced6a5d2fdcecf78f464746334471991.o": "1a9f4d231b22a62892850cd8d35664137cc3bee7cf87f264a7670309a7d62a10"
+        },
+        "bridge_binary": {
+          "path": "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/mstx_gate_range.so",
+          "sha256": "2718e18ddd7dbcca5b58feb9ea5cfe23ff408e9905be00ea9b6eda8623990246",
+          "bytes": 20144
+        }
+      },
+      "post_execution_sha256": {
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/run_mlp_gate_window.py": "6fb1ceeea15d57c72693a66b289c180688958f6de74bb2e0876aac06b0f5f0a8",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/probe_mlp_gate_internal.py": "1cda872274af34111f6e7be7744677a2196e90e17c2507f991707fb8c6588f4d",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/analyze_mlp_gate_internal.py": "57ec9b6254af48bcbeac6f22b3f8d3edb2611e146d41b42f0e5883225d153fd5",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/mstx_gate_range.cpp": "4e5d465086a498f9bbceba6ccbb326181a4a06bf71321d800e1c7750e5af3cfd",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/mstx_gate_range.so": "2718e18ddd7dbcca5b58feb9ea5cfe23ff408e9905be00ea9b6eda8623990246",
+        "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk/probe_mlp_ffn.py": "659b6e24af1e7b6b4979e9e3c1f20ed4f83d052733cb02690dd5d878b923ca8e"
+      },
+      "readback_verified_before_stop": true,
+      "bytecode_or_old_source_mismatch": false
+    },
+    "CPU_cases": {
+      "entry": "probe_mlp_gate_internal.py --marker-self-test --mstx-lib SAME_STAGED_SO",
+      "results": [
+        "unregistered0 ready=false => exit2",
+        "registered0 ready=true => exit0, end(0) callback count1",
+        "registered4294967297 ready=true => exit0, full64bit end preserved",
+        "actual owner capture_failure accepts registered0, leaves missing readiness UNKNOWN, rejects explicit false"
+      ],
+      "same_scripts_and_bridge_as_device": true,
+      "venv_executable": "/workspace/yangchen/venvs/clef-py312/bin/python",
+      "venv_rerun": "same entry rechecked on actual interpreter after capture, all cases pass"
+    },
+    "pre_control": {
+      "device_ms": {
+        "arm_median": {
+          "vendor": 0.6009466648101807,
+          "vendor_repeat": 0.6004800001780192,
+          "v3": 0.9632133642832438
+        },
+        "paired_delta": [
+          0.36579998334248864,
+          0.35811336835225427,
+          0.36342668533325195
+        ],
+        "median_delta": 0.36342668533325195,
+        "aa_delta": [
+          -0.007326682408650642,
+          0.0016066630681356164,
+          0.0006933212280273438
+        ],
+        "aa_max": 0.007326682408650642
+      },
+      "wall_ms": {
+        "arm_median": {
+          "vendor": 0.6245564048488935,
+          "vendor_repeat": 0.6274233261744181,
+          "v3": 0.9868135675787926
+        },
+        "paired_delta": [
+          0.35748351365327835,
+          0.3626067191362381,
+          0.36225716272989905
+        ],
+        "median_delta": 0.36225716272989905,
+        "aa_delta": [
+          -0.01105976601441705,
+          0.0037032489975292737,
+          -0.0013066455721855164
+        ],
+        "aa_max": 0.01105976601441705
+      }
+    },
+    "pre_sample_csv_columns": [
+      "pair",
+      "arm",
+      "device_ms",
+      "wall_ms"
+    ],
+    "pre_samples_csv": [
+      "0,vendor,0.6069800059000651,0.6406931206583977",
+      "0,vendor_repeat,0.5996533234914144,0.6296333546439806",
+      "0,v3,0.9727799892425537,0.998176634311676",
+      "1,v3,0.9590600331624349,0.9863267963131269",
+      "1,vendor_repeat,0.6025533278783163,0.6274233261744181",
+      "1,vendor,0.6009466648101807,0.6237200771768888",
+      "2,vendor,0.5997866789499918,0.6245564048488935",
+      "2,vendor_repeat,0.6004800001780192,0.623249759276708",
+      "2,v3,0.9632133642832438,0.9868135675787926"
+    ],
+    "actual_attempt": {
+      "vendor_BasicInfo_attempts": 1,
+      "tool_returncode": 0,
+      "tool_wall_s": 13.868298839777708,
+      "native_id": 0,
+      "registration_observed": true,
+      "end0_observed": true,
+      "application_status": "complete",
+      "target": {
+        "layer": 31,
+        "launch_index_in_range": 0,
+        "range_gate_launches": 3,
+        "input_shape": [
+          967,
+          5120
+        ],
+        "input_dtype": "torch.bfloat16",
+        "weight_shape": [
+          17408,
+          5120
+        ],
+        "weight_dtype": "torch.bfloat16",
+        "weight_format": 29,
+        "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+        "prefix_sha256": "905229444d616466a4bdc05f6636dafe408c5da5183d6590743e3ebd15e02e1d",
+        "weight_rank_hashes": {
+          "model.language_model.layers.31.mlp.gate_proj.weight": "979ed356a510e7450d71eff85f63a68b4963cb40a1643bd179edff3c9ee81801",
+          "model.language_model.layers.31.mlp.up_proj.weight": "398b9d0a1c7b951e7cca22d6a2f1dd524370da15c3c0944e464fceb793040406",
+          "model.language_model.layers.31.mlp.down_proj.weight": "148c9ae2893ff9a0f2edb97f15ddb53cae174b327152ddad8b4c05ba65c1b7d3"
+        },
+        "output_shape": [
+          967,
+          17408
+        ],
+        "output_dtype": "torch.bfloat16",
+        "output_format": 2,
+        "output_stride": [
+          17408,
+          1
+        ]
+      },
+      "numeric": [
+        {
+          "layer": 31,
+          "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+          "prefix_sha256": "905229444d616466a4bdc05f6636dafe408c5da5183d6590743e3ebd15e02e1d",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 3.4934353607241064e-05,
+              "normalized_max": 0.002793296007439494
+            },
+            "up": {
+              "relative_rmse": 3.2830936106620356e-05,
+              "normalized_max": 0.0013888889225199819
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 0,
+          "input_sha256": "cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa",
+          "prefix_sha256": "3623994991a6c33c1a61a70662d63393b756b7ffaf12cd668237aafb507f5c26",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.996019975398667e-05,
+              "normalized_max": 0.0006648935959674418
+            },
+            "up": {
+              "relative_rmse": 3.197264959453605e-05,
+              "normalized_max": 0.0005274261347949505
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 63,
+          "input_sha256": "f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8",
+          "prefix_sha256": "ec18818c026c23224110a14bd0fbdaa1e51be958db317ee4bde3a688aadc8f77",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.8507362003438175e-05,
+              "normalized_max": 0.0010869564721360803
+            },
+            "up": {
+              "relative_rmse": 3.0384824640350416e-05,
+              "normalized_max": 0.0006009615608491004
+            }
+          },
+          "repeat_equal": true
+        }
+      ],
+      "warmup": [
+        {
+          "arm": "vendor",
+          "calls": 15,
+          "wall_s": 0.009192549623548985
+        },
+        {
+          "arm": "v3",
+          "calls": 15,
+          "wall_s": 0.013958570547401905
+        }
+      ],
+      "exported_target_files": 0,
+      "basic_task_hits": 0,
+      "tool_messages": [
+        "Profiling results are empty. No kernel profiling data was generated.",
+        "Profiling data parse failed."
+      ],
+      "v3_BasicInfo": "not started",
+      "PipeUtilization": "not started",
+      "post_control": "not run after miss",
+      "application_path": "/workspace/yangchen/logs/clef40-gate-exact-ypdi4odk/basic-app/vendor/1692706-e8df564d.json",
+      "application_sha256": "fb2c36c1f7ded876044931626897404d825f91995978b0baed8467edaefd17d1"
+    },
+    "conclusion": "Source/version and numeric-zero guard issues eliminated in the executed path. SDK registration and matching end(0) observed. Actual target capture/filter/export still failed; no counter or runtime tiling attribution available. No kernel/tiling-space conclusion.",
+    "budget": {
+      "used_before_s": 111.28244636000693,
+      "new_used_s": 21.857971569523215,
+      "cumulative_used_s": 133.14041792953014,
+      "remaining_s": 106.85958207046986,
+      "new_stage_cap_s": 112,
+      "cumulative_cap_s": 240
+    },
+    "failures": {
+      "collector_empty_result": 1,
+      "tool_error_despite_zero_exit": 1,
+      "vendor_retries": 0,
+      "v3_attempts": 0,
+      "PMU_groups": 0,
+      "acceptance_POST_retries": 0
+    },
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gate-exact-ypdi4odk",
+      "remote_work": "/workspace/yangchen/work/clef40-gate-exact-ypdi4odk",
+      "remote_logs": "/workspace/yangchen/logs/clef40-gate-exact-ypdi4odk"
+    },
+    "raw_sha256": {
+      "window.json": "274a7473b2be4949b9fdd6b5b1ef4f3ef80f634755dd8446822f17ac2bf170b9",
+      "execution-identity.json": "99e09aad90804b7ceed4c5cab08803e1ebf4a356b9e8a3c5e5116cad749cf0d3",
+      "execution-argv.json": "fc1ee1104fd3931e607d9586fbe8a99967a2da768c6539cc6a9d19579cb7373a",
+      "attempt-inventory.json": "90b763ab0b4f6f92511f78fb6bfc7cf51326c4ff987802a70e7db1c1efc942da",
+      "exact-entry-tests.stdout": "4e4140d770cf99114a667a60fb0d192167e08c6791fe405d50f11bd2aee5b880",
+      "exact-entry-tests-venv.stdout": "4e4140d770cf99114a667a60fb0d192167e08c6791fe405d50f11bd2aee5b880",
+      "basic-vendor.stdout": "e4a56ebc2f8d7ebb02685660ce96863e0995d6a724ae1e1b1d7804c3bc74bee7",
+      "basic-vendor.stderr": "ce029b7f9f7180430053bc44bd803209853d1f80472692043e9eaa9d956a7572",
+      "verification.json": "3e744885a2e82de3704c14b99430795c2d268bcab039e90c5f0aa09638d990ea"
+    },
+    "restoration": {
+      "state": "RUNNING_VERIFIED",
+      "verified_at_cst": "2026-11-22T03:01:08.434695+08:00",
+      "identity": {
+        "pid": 1692910,
+        "ppid": 1,
+        "pgid": 1692910,
+        "sid": 1692910,
+        "state": "S",
+        "starttime": "420456310",
+        "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+        "cmdline": [
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "-m",
+          "vllm.entrypoints.cli.main",
+          "serve",
+          "/workspace/yangchen/models/Clef-27B",
+          "--served-model-name",
+          "clef",
+          "--runner",
+          "pooling",
+          "--dtype",
+          "bfloat16",
+          "--tensor-parallel-size",
+          "2",
+          "--enforce-eager",
+          "--max-model-len",
+          "4096",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "4096",
+          "--gpu-memory-utilization",
+          "0.9",
+          "--no-enable-prefix-caching",
+          "--no-enable-chunked-prefill",
+          "--skip-mm-profiling",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18143",
+          "--limit-mm-per-prompt",
+          "{\"image\":1,\"video\":1}",
+          "--distributed-executor-backend",
+          "mp",
+          "--mm-processor-kwargs",
+          "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+        ]
+      },
+      "npu": [
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "VLLMWorker_TP",
+          "pid": 1693104
+        },
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "python",
+          "pid": 1692910
+        },
+        {
+          "card": 7,
+          "chip": 1,
+          "name": "VLLMWorker_TP",
+          "pid": 1693105
+        }
+      ],
+      "manifest": {
+        "path": "/workspace/yangchen/logs/clef40-gate-exact-ypdi4odk/restore-s1/launch-manifest.json",
+        "sha256": "11c894f5e8fcf3f642bdeb1219a13ae1ee2828f500494426026e9e465100df19",
+        "bytes": 24412
+      },
+      "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+      "env_bytes": 4678,
+      "checks": {
+        "new_manifest": true,
+        "root_identity": true,
+        "argv": true,
+        "effective": true,
+        "rawargv": true,
+        "service_environment": true,
+        "OPP9_LD12": true,
+        "joint_env": true,
+        "encoder_default0": true,
+        "aa3e_noop": true,
+        "aa3e_source": true,
+        "tree_group": true,
+        "workers": true,
+        "health": true,
+        "info": true,
+        "text": true,
+        "image": true,
+        "final_workers": true,
+        "final_identity": true,
+        "health_final": true,
+        "no_runtime_errors": true,
+        "no_pending_clients": true
+      },
+      "requests": [
+        {
+          "label": "text",
+          "http_status": 200,
+          "elapsed_s": 0.5281582698225975,
+          "sha256": "13800f1141a666c46465961601f0617ca94702e011b775e3443454949f95e39b"
+        },
+        {
+          "label": "image",
+          "http_status": 200,
+          "elapsed_s": 0.2616856200620532,
+          "sha256": "5366c6e966ac07119bb94a76206b3f57c7e71add5923a988aeedaf576e90176c"
+        }
+      ],
+      "both_pointers_updated": true
+    }
   }
 }
