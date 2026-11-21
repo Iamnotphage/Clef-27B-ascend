@@ -1,0 +1,664 @@
+{
+  "schema": "clef-mlp-bf16-screen/1",
+  "base_commit": "bcb98d9201a8f63e009349d1c2a96898d64064cd",
+  "decision": "v1_local_C_stride_defect_fixed; v2_numeric_passed; v2_full_chain_1.9_to_2.1x_slower_rejected; down_diagnosis_stopped; aa3e_s1_restored",
+  "precision": "original dense BF16; no quantization; no answer cache",
+  "raw_locations": {
+    "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-mlp-nyklqirq",
+    "remote_work": "/workspace/yangchen/work/clef40-mlp-nyklqirq",
+    "remote_logs": "/workspace/yangchen/logs/clef40-mlp-nyklqirq"
+  },
+  "raw_sha256": {
+    "gate-rank0.json": "956202a531c0e95b78fc4f42435672fabe8d8b82f92320a193e9ba232d7e8f76",
+    "down-timing.json": "b9201a59a22db86fac6f216739193ac5b0d7ca9b2b63889cdccedd6d3ab679a7",
+    "down-summary.json": "a2bdc81dad7680aca5691ccfbb5245dd30883983e7e7a848c558b69a4bc11325",
+    "verification.json": "acb78d3cada55100b5af83fa36c91210c3ac99a3cee1ec1c9cc76450f23a1e59",
+    "preflight.json": "f1fddea7d1d97440c8cd79a302791ec0996047f6cf4b91d6f923e88cf0c2b39e",
+    "stop.json": "8600b3b54fbf92f78bb024ebde017023779888aaed6615b745eaad0b3c58f07d"
+  },
+  "down": {
+    "status": "complete",
+    "timed_samples": 180,
+    "all_timed_bit_equal": true,
+    "slower_rank_medians": [
+      {
+        "m": 307,
+        "mode": "warm",
+        "slower_device_rank": 1,
+        "slower_wall_rank": 1,
+        "device_ms": 0.11459999904036522,
+        "wall_ms": 0.19348482601344585,
+        "aa_noise_max_pct": 8.24794855875367,
+        "aa_wall_noise_max_pct": 135.2875502889157
+      },
+      {
+        "m": 307,
+        "mode": "read_flush_proxy",
+        "slower_device_rank": 0,
+        "slower_wall_rank": 1,
+        "device_ms": 0.13853000104427338,
+        "wall_ms": 0.21392013877630234,
+        "aa_noise_max_pct": 18.285948692057683,
+        "aa_wall_noise_max_pct": 17.660311071024864
+      },
+      {
+        "m": 307,
+        "mode": "streamed_down_ring",
+        "slower_device_rank": 1,
+        "slower_wall_rank": 1,
+        "device_ms": 0.12997999787330627,
+        "wall_ms": 0.20923023112118244,
+        "aa_noise_max_pct": 0.9971914049922955,
+        "aa_wall_noise_max_pct": 2.8805575732728466
+      },
+      {
+        "m": 967,
+        "mode": "warm",
+        "slower_device_rank": 0,
+        "slower_wall_rank": 1,
+        "device_ms": 0.3187299966812134,
+        "wall_ms": 0.3898001741617918,
+        "aa_noise_max_pct": 4.774605505592161,
+        "aa_wall_noise_max_pct": 6.0487574370205826
+      },
+      {
+        "m": 967,
+        "mode": "read_flush_proxy",
+        "slower_device_rank": 0,
+        "slower_wall_rank": 1,
+        "device_ms": 0.33257000148296356,
+        "wall_ms": 0.40682521648705006,
+        "aa_noise_max_pct": 3.205456475845511,
+        "aa_wall_noise_max_pct": 1.3512190345637913
+      },
+      {
+        "m": 967,
+        "mode": "streamed_down_ring",
+        "slower_device_rank": 1,
+        "slower_wall_rank": 1,
+        "device_ms": 0.3197399973869324,
+        "wall_ms": 0.4014198202639818,
+        "aa_noise_max_pct": 5.61007356687341,
+        "aa_wall_noise_max_pct": 4.051186581804844
+      },
+      {
+        "m": 1595,
+        "mode": "warm",
+        "slower_device_rank": 1,
+        "slower_wall_rank": 1,
+        "device_ms": 0.4781299978494644,
+        "wall_ms": 0.5618249997496605,
+        "aa_noise_max_pct": 13.091732766721153,
+        "aa_wall_noise_max_pct": 15.251874149113437
+      },
+      {
+        "m": 1595,
+        "mode": "read_flush_proxy",
+        "slower_device_rank": 1,
+        "slower_wall_rank": 1,
+        "device_ms": 0.49883000552654266,
+        "wall_ms": 0.5770849529653788,
+        "aa_noise_max_pct": 2.431625305147987,
+        "aa_wall_noise_max_pct": 2.335426851088837
+      },
+      {
+        "m": 1595,
+        "mode": "streamed_down_ring",
+        "slower_device_rank": 0,
+        "slower_wall_rank": 1,
+        "device_ms": 0.4816800057888031,
+        "wall_ms": 0.5595947150141001,
+        "aa_noise_max_pct": 4.3985099085023105,
+        "aa_wall_noise_max_pct": 4.236861213267581
+      }
+    ],
+    "clock_scope": "device and wall each independently use max of rank medians; ranks executed serially",
+    "collection": "none; no actual vendor tiling/per-core output; no tile sweep",
+    "worker_commit": "92fd985",
+    "raw_summary_sha256": "a2bdc81dad7680aca5691ccfbb5245dd30883983e7e7a848c558b69a4bc11325"
+  },
+  "window": {
+    "steps": [
+      {
+        "label": "gate-rank0",
+        "rc": 2,
+        "seconds": 7.372596740722656
+      },
+      {
+        "label": "down",
+        "rc": 0,
+        "seconds": 8.77449631690979
+      },
+      {
+        "label": "restore-launch",
+        "rc": 0,
+        "seconds": 0.46448802947998047
+      }
+    ],
+    "gate_stopped": "numeric_or_runtime_failure"
+  },
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "verified_at_cst": "2026-11-21T14:17:19.415531+08:00",
+    "identity": {
+      "pid": 1641972,
+      "ppid": 1,
+      "pgid": 1641972,
+      "sid": 1641972,
+      "state": "S",
+      "starttime": "415870686",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+      "cmdline": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "1",
+        "--max-num-batched-tokens",
+        "4096",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ]
+    },
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-mlp-retest-wikqcpnu/restore-s1/launch-manifest.json",
+      "sha256": "91dcc6f9ae3486fc30ea07f7fed1e9fbc904d343bae77f684fe4b0cb4007cd50",
+      "bytes": 24412
+    },
+    "checks": {
+      "new_manifest": true,
+      "root_identity": true,
+      "argv": true,
+      "effective": true,
+      "rawargv": true,
+      "service_environment": true,
+      "OPP9_LD12": true,
+      "joint_env": true,
+      "encoder_default0": true,
+      "aa3e_noop": true,
+      "aa3e_source": true,
+      "tree_group": true,
+      "workers": true,
+      "health": true,
+      "info": true,
+      "text": true,
+      "image": true,
+      "final_workers": true,
+      "final_identity": true,
+      "health_final": true,
+      "no_runtime_errors": true,
+      "no_pending_clients": true
+    },
+    "npu_rows": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1642119
+      },
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "python",
+        "pid": 1641972
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1642120
+      }
+    ],
+    "env_bytes": 4678,
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "source_hashes": {
+      "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/clef_joint_schema.py": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+      "/workspace/yangchen/work/src/vllm/vllm/model_executor/models/qwen2_moe.py": "efd3c5a3ac286c48bf9a1ed14574a6d5a30c61557d387036148452ca318a9fdb"
+    },
+    "pointers_updated": [
+      "local:/tmp/clef27-service-current-state.json",
+      "remote:/tmp/clef27-service-current-state.json"
+    ]
+  },
+  "v1": {
+    "numeric": [
+      {
+        "tokens": 967,
+        "layer": 31,
+        "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank0.pt",
+        "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+        "input_kind": "explicit_prefix",
+        "mid": {
+          "finite": true,
+          "bit_equal": false,
+          "max_abs": 8.443359375,
+          "relative_rmse": 1.4941024780273438,
+          "normalized_max": 1.0472383499145508
+        },
+        "chain": {
+          "finite": true,
+          "bit_equal": false,
+          "max_abs": 4.2578125,
+          "relative_rmse": 1.446256399154663,
+          "normalized_max": 1.0562015771865845
+        }
+      }
+    ],
+    "stopped": "numeric_screen_failed",
+    "timed_calls": 0,
+    "numeric_scope": "only rank0/layer31/M967 explicit historical prefix; stopped before rank1/guards/timing/stability",
+    "first_known_defect": "GetTensorC default nonsequential ND output uses orgN17408 when orgKc=0; local C/epilogue assumed256"
+  },
+  "v2": {
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-mlp-retest-wikqcpnu",
+      "remote": "/workspace/yangchen/work/clef40-mlp-retest-wikqcpnu",
+      "control": "/workspace/yangchen/work/clef40-mlp-retest-wikqcpnu/control",
+      "output": "/workspace/yangchen/logs/clef40-mlp-retest-wikqcpnu",
+      "restore": "/workspace/yangchen/logs/clef40-mlp-retest-wikqcpnu/restore-s1",
+      "previous_local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-mlp-nyklqirq"
+    },
+    "raw_sha256": {
+      "numeric-rank0.json": "5be1773932576dd77daf87376e20e77a9fffd89e52551426b36bb5c6dbb8f995",
+      "numeric-rank1.json": "7042061d4799c4f712cfc66a3764deebbf14a373291f0bbf858e1ce757c4eaeb",
+      "timing-rank0.json": "7203d450e284631c311919dfedd9ab73a537fb75635f316bc05c3b5c85f374f3",
+      "timing-rank1.json": "0dcf5d2c370c85bf1872a29dbccf22c303edc82b06bd8f90d2c3dc9a831ed2f1",
+      "timing-summary.json": "dfe5df8f493077a5075981f99b91c95425952de6e560476ef1ae994afa8575ea",
+      "verification.json": "c54b117bc22ef0ecedad6a22d399aa8e633666597ac5880d9abcc25dccbcb5d2",
+      "verification-env-check.json": "6de824fb26be0a894264b27a9ed8deaf2c2f684e4e9ca38b9e7aaace3d02d69c"
+    },
+    "numeric": [
+      {
+        "rank": 0,
+        "completed": true,
+        "stability_repeats_per_case": 2,
+        "cases": [
+          {
+            "tokens": 967,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank0.pt",
+            "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+            "input_kind": "explicit_prefix",
+            "gate": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.015625,
+              "relative_rmse": 3.4934353607241064e-05,
+              "normalized_max": 0.002793296007439494
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.2830936106620356e-05,
+              "normalized_max": 0.0013888889225199819
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 4.701671059592627e-05,
+              "normalized_max": 0.0009689922444522381
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.00390625,
+              "relative_rmse": 0.0002479068352840841,
+              "normalized_max": 0.0009689922444522381
+            }
+          },
+          {
+            "tokens": 307,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0105-7b4ab816610eaeda.layer31.rank0.pt",
+            "input_sha256": "5a5b6117e34f692a0d429f3ad28579963e488880fcf7d3a2fb0e18852421e76e",
+            "input_kind": "full_capture",
+            "gate": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.712554098456167e-05,
+              "normalized_max": 0.001396648003719747
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.0968847568146884e-05,
+              "normalized_max": 0.0013888889225199819
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 5.789121496491134e-05,
+              "normalized_max": 0.0009191176504828036
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.001953125,
+              "relative_rmse": 0.0002601922315079719,
+              "normalized_max": 0.0006127451197244227
+            }
+          },
+          {
+            "tokens": 1595,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank0.pt",
+            "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+            "input_kind": "full_capture",
+            "gate": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            }
+          }
+        ]
+      },
+      {
+        "rank": 1,
+        "completed": true,
+        "stability_repeats_per_case": 2,
+        "cases": [
+          {
+            "tokens": 967,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank1.pt",
+            "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+            "input_kind": "explicit_prefix",
+            "gate": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.2431235013064e-05,
+              "normalized_max": 0.0013888889225199819
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.649648715509102e-05,
+              "normalized_max": 0.001308900536969304
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 6.029478754498996e-05,
+              "normalized_max": 0.0006830600905232131
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.00390625,
+              "relative_rmse": 0.0002691764384508133,
+              "normalized_max": 0.0006648935959674418
+            }
+          },
+          {
+            "tokens": 307,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0105-7b4ab816610eaeda.layer31.rank1.pt",
+            "input_sha256": "5a5b6117e34f692a0d429f3ad28579963e488880fcf7d3a2fb0e18852421e76e",
+            "input_kind": "full_capture",
+            "gate": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.72118956875056e-05,
+              "normalized_max": 0.0017857142956927419
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.0078125,
+              "relative_rmse": 3.232270319131203e-05,
+              "normalized_max": 0.0014450866729021072
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.01171875,
+              "relative_rmse": 8.371565490961075e-05,
+              "normalized_max": 0.001209677429869771
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": false,
+              "max_abs": 0.00390625,
+              "relative_rmse": 0.000301334512187168,
+              "normalized_max": 0.0007062146905809641
+            }
+          },
+          {
+            "tokens": 1595,
+            "layer": 31,
+            "input_file": "/workspace/yangchen/logs/mlp-20261115-1027/capture/od-0677-a3153de1d6509904.layer31.rank1.pt",
+            "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+            "input_kind": "full_capture",
+            "gate": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "up": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "mid": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            },
+            "chain": {
+              "finite": true,
+              "bit_equal": true,
+              "max_abs": 0.0,
+              "relative_rmse": 0.0,
+              "normalized_max": 0.0
+            }
+          }
+        ]
+      }
+    ],
+    "timing": [
+      {
+        "mode": "warm",
+        "reference_device_ms": 0.9383919715881348,
+        "candidate_device_ms": 1.867959976196289,
+        "paired_speedup_device_ms": {
+          "ratios": [
+            0.49956359015961704,
+            0.5032677319321305,
+            0.5020913005941282,
+            0.5033781204379506,
+            0.5018804668217571
+          ],
+          "median": 0.5020913005941282,
+          "mad": 0.0011764313380022706,
+          "all_faster": false
+        },
+        "reference_wall_ms": 0.9575339965522289,
+        "candidate_wall_ms": 1.8845099955797195,
+        "paired_speedup_wall_ms": {
+          "ratios": [
+            0.6022579693324547,
+            0.5121978641518669,
+            0.5069887177595073,
+            0.5081452495990949,
+            0.5077143227787196
+          ],
+          "median": 0.5081452495990949,
+          "mad": 0.0011565318395876378,
+          "all_faster": false
+        }
+      },
+      {
+        "mode": "cold_proxy_256MiB",
+        "reference_device_ms": 0.9614599943161011,
+        "candidate_device_ms": 1.9575599431991577,
+        "paired_speedup_device_ms": {
+          "ratios": [
+            0.4903233053083797,
+            0.4858336179159177,
+            0.48859806434400693,
+            0.5010488311995642,
+            0.4914384546577917
+          ],
+          "median": 0.4903233053083797,
+          "mad": 0.001725240964372765,
+          "all_faster": false
+        },
+        "reference_wall_ms": 1.041419804096222,
+        "candidate_wall_ms": 2.04445980489254,
+        "paired_speedup_wall_ms": {
+          "ratios": [
+            0.5221822537890505,
+            0.5093862944157812,
+            0.5073041077685565,
+            0.5173046333361879,
+            0.5102350296547269
+          ],
+          "median": 0.5102350296547269,
+          "mad": 0.00293092188617039,
+          "all_faster": false
+        }
+      },
+      {
+        "mode": "streaming_3_real_layers",
+        "reference_device_ms": 0.9679693222045899,
+        "candidate_device_ms": 1.8512613932291666,
+        "paired_speedup_device_ms": {
+          "ratios": [
+            0.522706930707344,
+            0.523501548250974,
+            0.5213173553078692,
+            0.5240496376739759,
+            0.5210663649775141
+          ],
+          "median": 0.522706930707344,
+          "mad": 0.001342706966631968,
+          "all_faster": false
+        },
+        "reference_wall_ms": 0.9736453493436178,
+        "candidate_wall_ms": 1.8570379974941413,
+        "paired_speedup_wall_ms": {
+          "ratios": [
+            0.5242280724771775,
+            0.5248511176709085,
+            0.5228957818871446,
+            0.5255984166472571,
+            0.5222771213210311
+          ],
+          "median": 0.5242280724771775,
+          "mad": 0.0013322905900329252,
+          "all_faster": false
+        }
+      }
+    ],
+    "timing_scope": "M967 only; five alternating pairs; slower rank independently per pair/arm/clock, then median; reference/candidate speedup",
+    "stopped": "mainpoint_full_chain_has_no_stable_win; no307/1595timing; nointegration/S1/OD/ERQA",
+    "numeric_scope": "historical layer31 captures, M967 explicit prefix; stage1 gate/stage2 up/stage0 SwiGLU/down; local RMSE<=.01 and normalizedMax<=.02, no competition-quality claim",
+    "fix": "explicit orgKc=256 each tile; GetTensorC(...,enSequentialWrite=true); gate/up debug stages; no new tiling search",
+    "readiness_attempt": {
+      "before_ready": "GET refused; zero text/image POSTs; preserved verification-env-check.json",
+      "final_text_posts": 1,
+      "final_image_posts": 1
+    },
+    "window": {
+      "steps": [
+        {
+          "label": "numeric-rank0",
+          "rc": 0,
+          "seconds": 7.37273097038269
+        },
+        {
+          "label": "numeric-rank1",
+          "rc": 0,
+          "seconds": 6.922223091125488
+        },
+        {
+          "label": "timing-rank0",
+          "rc": 3,
+          "seconds": 7.973231315612793
+        },
+        {
+          "label": "timing-rank1",
+          "rc": 3,
+          "seconds": 8.223832845687866
+        },
+        {
+          "label": "restore-launch",
+          "rc": 0,
+          "seconds": 0.4645524024963379
+        }
+      ],
+      "numeric_both_ranks_passed": true
+    }
+  },
+  "source_sha256": {
+    "runtime/probe_mlp_swiglu.py": "e13adad7cb06273ea783a5738f1fd7f87b09957b388255e68a6c1e4073828cb3",
+    "runtime/audit_mlp_swiglu_layout.py": "ec018b165b11504d6a988e164b4851d715f59b68b48e87500adfe598fd9ae68a",
+    "runtime/ascendc/clef_mlp_swiglu/op_kernel/clef_mlp_swiglu.cpp": "7b46dddb85c93659ccf23728b7910fae5139e65fdd869e6084d0654f7f52e3dc",
+    "runtime/ascendc/clef_mlp_swiglu/op_kernel/clef_mlp_swiglu_tiling.h": "120914043f392536ba1a12f0804edc448c813bf4ff452957b97054907772f367",
+    "runtime/ascendc/clef_mlp_swiglu/op_host/clef_mlp_swiglu.cpp": "741aff1a930110c8d30547a2b71740e4b44b2a78d76f5fb7c60896d45d33c1ec"
+  }
+}
