@@ -1,5 +1,7 @@
 # BF16 gate/up + SwiGLU 验证 · 2026-11-21
 
+最新内部补采状态：msopprof op的Torch MSTX范围返回0，原厂臂在85秒子限停止，未取得可比PMU/实际tiling数据；内部原因保持UNKNOWN。本轮93.274s，原aa3e/S1恢复22/22通过，详见末节。
+
 最新最小profile结论：M967三层streaming中，原vendor/v3的kernel task约 **0.592→0.905ms/层**，task增量约覆盖本窗profile配对差距的 **81.48%**。host桥接另有开销且与kernel重叠；当前v3 kernel惩罚已超过可省SwiGLU预算，继续停止该实现的融合路线。原aa3e/S1恢复22/22通过，详见末节。
 
 v3初次实测结论：同步纯Cube gate-only控制完成SDK编译及18组局部筛查；M967三层streaming的gate调用区间从 **0.600360→0.959673ms**，配对增量 **0.359000ms**，A/A最大差 **0.005813ms**，独立SwiGLU仅 **0.055533ms**。当前调用路径预算不足，停止异步融合实现。原aa3e/S1已恢复，最终四检22项通过；本轮没有S1或OD/ERQA候选结论。
@@ -185,3 +187,34 @@ python3 runtime/analyze_mlp_gate_profile.py \
 ```
 
 本地raw `clef40-gate-profile-41a26faq`（系统tmp），远端同名`work/logs`目录；原生PROF/FRAMEWORK/trace/API CSV留远端，完整路径、SHA、配对原数和恢复证据写回原summary的 `v3_profile_attribution`。CPU验证包含默认plan/语法、合成flow/区间union、全部36任务显式关联、24Event标记、互斥分区闭合及时基核对；无新artifact、PR或全量质量性能测试。
+
+## 内部PMU补采收口 · 2026-11-22 02:13（上海恢复）
+
+本轮 **INCONCLUSIVE**：请求的内部tiling/逐核/Cube-MTE对照未取得可用数据，当前无法对约0.313ms设备task增量做内部原因排序。保持kernel/tiling固定，不据此调参或否决其他BF16融合实现。
+
+先复用e05ec7a数据，核对结果如下：
+
+| 项目 | 已有/新增CPU证据 | 当前缺口 |
+| --- | --- | --- |
+| task与关联 | 36/36任务、每层一个GEMM、原时基核对，复用 | 无需重采host关联 |
+| 请求blockDim | 两rank旧kernel_details中，两臂均24 | 实际active核数与每核工作分布待测 |
+| v3 tiling | SDK静态复算全50字段，结构200+12字节 | 本次runtime TilingData未落盘，核同未完成 |
+| vendor tiling | 请求blockDim24 | base/singleCore/L1/L0/step/DB及schema均UNKNOWN |
+| 核间负载 | 旧aggregate无法提供逐核数据 | min/median/max、长尾与工作分布UNKNOWN |
+| 流水与访存 | 工具help列出所需计数组及逐核接口 | 本次无可用PMU/cycle/访存/等待导出，UNKNOWN |
+
+v3静态复算：singleCoreM/N/K=122/5808/5120，baseM/N/K=128/256/64，depthA1/B1=4/8，stepM/N=1/1，stepKa/Kb=2/4，dbL0A/B/C=2/2/1，shareL1/L0C=327680/131072字节，usedCoreNum24。源代码推算mTasks/nTasks=8/3，M最后113行、N最后5792列。以上仅为**命名平台的CPU复算与源码工作模型**，未作为本次runtime实际tile或性能因果证据；未用相似算子、默认值猜测vendor字段。
+
+本机CANN9.2.1提供msopprof26.2.0，`msprof op --help`支持application replay、MSTX筛选和PipeUtilization/Memory/MemoryL0/ResourceConflictRatio；二进制具有tiling dump接口。选择rank0/layer31，其旧task中位vendor/v3为0.593396/0.902014ms，差0.308619ms，接近三层均摊的0.313ms。新 [补采探针](../runtime/probe_mlp_gate_internal.py) 固定同一BF16/NZ/ND和1595→967历史输入前缀，保留layer31/0/63真实权重ring、输出分配和下发；各臂显式预热15调用、collector warm-up=0，目标仅layer31的MSTX范围。未改部署/原厂库或共享GEV；原vendor opapi库SHA与上一轮相同。
+
+前置rank0三对无prof控制：Event vendor/v3中位 **0.596093/0.970027ms/层**，配对增量 **0.370520ms**，A/A最大 **0.011340ms**；逐对增量0.370520/0.362213/0.373933ms。数值有限、gate/up顺序与容差、重复输出检查均通过。精确wall、预热和输入/权重身份保留原summary。该控制支持差距复现。
+
+原厂臂在85秒子限触发timeout，父wrapper停止了fresh记录的实验身份并恢复服务；v3采集及post控制未启动。工具内部完成7次application replay，每次应用数值通过、Torch MSTX `range_start`均返回 **0**；无可用OPPROF/CSV/tiling bin落盘。SDK `tools/mstx/include/mstx/ms_tools_ext.h:65`明确0表示range start失败。当前Torch桥接在此模式下未激活目标范围，具体使能/桥接原因仍UNKNOWN；CLI支持列表不能证明这条实际采集路径成功。本轮没有可用raw可离线恢复PMU，未执行人工设备重试。
+
+本次探针在range返回0后仍提交了目标，缺少有效性检查，形成无效回放直到超时。新增快速退出保护：range ID为0时在目标提交前报错，避免在失活范围上继续采集；该修改仅CPU语法/计划与静态顺序检查，**未再次上卡**。原始执行版本及保护版SHA分别记录。 [CPU解析器](../runtime/analyze_mlp_gate_internal.py) 已准备逐核原数/单位/计数组清单与严格v3结构解码，vendor无对应schema即保留UNKNOWN；已用合成CSV/212字节结构验证，不宣称已在实际PMU导出上验收。
+
+收口依据：目前只证实两臂请求blockDim相同，无法据此推断实际active核数或排除核间不均；tiling差异、Cube/MTE等待、写出瓶颈对0.313ms各占多少均无证据。流水占比不能互补求可省时间，task duration也不能拆成纯乘加与HBM等待。下一步最小方向为修复采集范围的使能/桥接，先以一次BasicInfo确认命中目标，再规划所需PMU；当前没有证据支持调整kernel、tile或buffer参数。本轮不继续占卡。
+
+本轮设备计算/采集累计 **93.274s**（上限240s），collector timeout1次、内部application replay7次、人工设备重试0次；CPU辅助链接首次缺libtiling_api.a，补齐后静态复算成功。恢复优先：最终 **2026-11-22 02:13:04（上海）RUNNING_VERIFIED**，22/22检查通过，文本/图像各一次200、无POST重试；API **1687258 / start420167800 / boot393ecc15-721f-46f7-b119-21fa327a2b3b**，TP **1687428/1687429**仅卡7双芯片。原argv/env、aa3e、OPP9/LD12及卡归属匹配，env仍c18d38bd…c2ba9/4678B，两端指针更新，无实验进程残留。manifest SHA `fee04f48127e12fe46d8665acbc8acf8b036a99e5fde136e3afebf5984f1ffec`。
+
+默认 `python3 runtime/probe_mlp_gate_internal.py` 仅打印计划。实际命令、七次应用记录、超时/清理、静态SDK字段/offset、已执行及未执行范围、恢复证据写回原summary的 `v3_internal_probe`。raw留系统tmp `clef40-gate-internal-api39v66`，远端同名work/logs目录；无新artifact、PR、质量全量或down实验。

@@ -2097,5 +2097,567 @@
       "runtime/profile_mlp_gate.py": "39c78ce09ed1062e49b9bea0c1d3ea4032498fbc40f88f836f0e553f5ff07ee8",
       "runtime/analyze_mlp_gate_profile.py": "e2e15e2cc95daffcd25cddae22dc8c9490b1353c2cbdcadd3245432c74f6a810"
     }
+  },
+  "v3_internal_probe": {
+    "status": "INCONCLUSIVE: MSTX range inactive; no comparable internal PMU/tiling data",
+    "base_commit": "e05ec7a57fd358b7a89bb85df693fdc4803f8d50",
+    "decision": "STOP this collection attempt; no kernel/tiling change supported. Next prerequisite is working target-range observability and a minimal BasicInfo hit before PMU.",
+    "scope": {
+      "rank": 0,
+      "device": 0,
+      "physical_card": 7,
+      "phy_id": 14,
+      "m": 967,
+      "capture_layer": 31,
+      "conditioning_layers": [
+        0,
+        63
+      ],
+      "source_kernel_and_tiling": "fixed aligned 4a51f71 v3; original NZ vendor",
+      "precision": "original BF16 NZ weights to canonical ND",
+      "pairs": 3,
+      "collector_warmup": 0,
+      "explicit_warmup_calls_each_arm": 15
+    },
+    "evidence_inventory": [
+      {
+        "item": "task, streams, correlation, timebase",
+        "existing": "e05ec7a 36/36 tasks, one kernel/layer, task0.592382/0.905494ms",
+        "added": "reused"
+      },
+      {
+        "item": "blockDim",
+        "existing": "old kernel_details both ranks and both arms 24",
+        "added": "reused CSV hashes; blockDim does not prove active core count"
+      },
+      {
+        "item": "runtime TilingData",
+        "existing": "none",
+        "added": "none; no tiling dump generated; vendor schema and actual v3 tiling UNKNOWN"
+      },
+      {
+        "item": "per-core task load",
+        "existing": "none",
+        "added": "none; active cores/min/median/max UNKNOWN"
+      },
+      {
+        "item": "Cube/MTE/Fixpipe activity/wait/traffic",
+        "existing": "none for comparable v3 pair",
+        "added": "none; no PMU counter/cycle/denominator data. No inference from percentages or elapsed task time"
+      }
+    ],
+    "old_blockdim_evidence": [
+      {
+        "path": "/workspace/yangchen/logs/clef40-gate-profile-41a26faq/traces-r0/gate-r0_1681144_20261121171737487_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "sha256": "26908d62b84b8124108183c2195f883aa6d31db90a7be87d09588ee9d8f0a40e",
+        "arms": {
+          "vendor": {
+            "count": 9,
+            "block_num": [
+              "24"
+            ]
+          },
+          "v3": {
+            "count": 9,
+            "block_num": [
+              "24"
+            ]
+          }
+        }
+      },
+      {
+        "path": "/workspace/yangchen/logs/clef40-gate-profile-41a26faq/traces-r1/gate-r1_1681145_20261121171738132_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "sha256": "8e9b85abe76ce2b5ea006327d992e6b9bbfc3fd2f8295e233775ba0f4a91f4e5",
+        "arms": {
+          "vendor": {
+            "count": 9,
+            "block_num": [
+              "24"
+            ]
+          },
+          "v3": {
+            "count": 9,
+            "block_num": [
+              "24"
+            ]
+          }
+        }
+      }
+    ],
+    "old_representative": {
+      "vendor": {
+        "rank": 0,
+        "layer": 31,
+        "task_us": [
+          593.3960000000006,
+          593.5354999999981,
+          592.7955000000002
+        ],
+        "median_us": 593.3960000000006
+      },
+      "v3": {
+        "rank": 0,
+        "layer": 31,
+        "task_us": [
+          901.5544999999984,
+          902.0144999999975,
+          904.153999999995
+        ],
+        "median_us": 902.0144999999975
+      },
+      "median_delta_us": 308.61849999999686
+    },
+    "v3_cpu_tiling": {
+      "provenance": "CANN9.2.1 named PlatformAscendC Ascend910_9382 static recomputation only; not runtime dump",
+      "fields": {
+        "usedCoreNum": 24,
+        "M": 967,
+        "N": 17408,
+        "Ka": 5120,
+        "Kb": 5120,
+        "singleCoreM": 122,
+        "singleCoreN": 5808,
+        "singleCoreK": 5120,
+        "baseM": 128,
+        "baseN": 256,
+        "baseK": 64,
+        "depthA1": 4,
+        "depthB1": 8,
+        "stepM": 1,
+        "stepN": 1,
+        "isBias": 0,
+        "transLength": 0,
+        "iterateOrder": 0,
+        "shareMode": 0,
+        "shareL1Size": 327680,
+        "shareL0CSize": 131072,
+        "shareUbSize": 0,
+        "batchM": 1,
+        "batchN": 1,
+        "singleBatchM": 1,
+        "singleBatchN": 1,
+        "stepKa": 2,
+        "stepKb": 4,
+        "depthAL1CacheUB": 0,
+        "depthBL1CacheUB": 0,
+        "dbL0A": 2,
+        "dbL0B": 2,
+        "dbL0C": 1,
+        "ALayoutInfoB": 0,
+        "ALayoutInfoS": 0,
+        "ALayoutInfoN": 0,
+        "ALayoutInfoG": 0,
+        "ALayoutInfoD": 0,
+        "BLayoutInfoB": 0,
+        "BLayoutInfoS": 0,
+        "BLayoutInfoN": 0,
+        "BLayoutInfoG": 0,
+        "BLayoutInfoD": 0,
+        "CLayoutInfoB": 0,
+        "CLayoutInfoS1": 0,
+        "CLayoutInfoN": 0,
+        "CLayoutInfoG": 0,
+        "CLayoutInfoS2": 0,
+        "BatchNum": 0,
+        "mxTypePara": 0
+      },
+      "schema_sizes": {
+        "cube_size": 200,
+        "v3_size": 212
+      },
+      "runtime_crosscheck": "NOT AVAILABLE"
+    },
+    "controls": {
+      "pre": {
+        "device_ms": {
+          "medians": {
+            "vendor": 0.5960933367411295,
+            "vendor_repeat": 0.5964999993642172,
+            "v3": 0.9700266520182291
+          },
+          "paired_delta": [
+            0.3705199956893921,
+            0.3622133334477743,
+            0.3739333152770996
+          ],
+          "median_delta": 0.3705199956893921,
+          "aa_delta": [
+            -0.011339982350667244,
+            0.00921332836151123,
+            0.0004066626230876391
+          ],
+          "aa_max_abs": 0.011339982350667244
+        },
+        "wall_ms": {
+          "medians": {
+            "vendor": 0.6245635449886322,
+            "vendor_repeat": 0.6292564794421196,
+            "v3": 1.0048002004623413
+          },
+          "paired_delta": [
+            0.36562979221344005,
+            0.3650433694322903,
+            0.3802366554737091
+          ],
+          "median_delta": 0.36562979221344005,
+          "aa_delta": [
+            -0.01685693860054016,
+            0.012790163358052498,
+            0.004692934453487396
+          ],
+          "aa_max_abs": 0.01685693860054016
+        }
+      },
+      "sample_csv_columns": [
+        "pair",
+        "arm",
+        "device_ms",
+        "wall_ms"
+      ],
+      "rank0_pre_samples_csv": [
+        "0,vendor,0.606879989306132,0.6424101690451304",
+        "0,vendor_repeat,0.5955400069554647,0.6255532304445902",
+        "0,v3,0.977399984995524,1.0080399612585704",
+        "1,v3,0.9578666687011719,0.9880100066463152",
+        "1,vendor_repeat,0.6048666636149088,0.6357568005720774",
+        "1,vendor,0.5956533352533976,0.6229666372140249",
+        "2,vendor,0.5960933367411295,0.6245635449886322",
+        "2,vendor_repeat,0.5964999993642172,0.6292564794421196",
+        "2,v3,0.9700266520182291,1.0048002004623413"
+      ],
+      "numeric": [
+        {
+          "layer": 31,
+          "input_sha256": "5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 3.4934353607241064e-05,
+              "normalized_max": 0.002793296007439494
+            },
+            "up": {
+              "relative_rmse": 3.2830936106620356e-05,
+              "normalized_max": 0.0013888889225199819
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 0,
+          "input_sha256": "cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.996019975398667e-05,
+              "normalized_max": 0.0006648935959674418
+            },
+            "up": {
+              "relative_rmse": 3.197264959453605e-05,
+              "normalized_max": 0.0005274261347949505
+            }
+          },
+          "repeat_equal": true
+        },
+        {
+          "layer": 63,
+          "input_sha256": "f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8",
+          "input_kind": "explicit_prefix",
+          "halves": {
+            "gate": {
+              "relative_rmse": 2.8507362003438175e-05,
+              "normalized_max": 0.0010869564721360803
+            },
+            "up": {
+              "relative_rmse": 3.0384824640350416e-05,
+              "normalized_max": 0.0006009615608491004
+            }
+          },
+          "repeat_equal": true
+        }
+      ],
+      "warmup": [
+        {
+          "arm": "vendor",
+          "calls": 15,
+          "wall_s": 0.009179909713566303
+        },
+        {
+          "arm": "v3",
+          "calls": 15,
+          "wall_s": 0.01401028037071228
+        }
+      ],
+      "post": "NOT RUN: stop and restore after collector timeout",
+      "v3_collector": "NOT STARTED"
+    },
+    "collector": {
+      "version": "msopprof26.2.0 (884ac969494a186a9c63ac45c4c39ad7289b3215)",
+      "interface": "msprof op",
+      "metrics_requested": [
+        "PipeUtilization",
+        "Memory",
+        "MemoryL0",
+        "ResourceConflictRatio"
+      ],
+      "replay_mode": "application",
+      "launch_count": 1,
+      "mstx_include": "CLEF40_TARGET",
+      "requested_group_meaning": "per-core activity/total cycles; L1/L0 traffic; wait ratios. Actual counter definitions and normalization could not be validated without exports.",
+      "failure": "Torch MSTX range id=0 in all seven completed application replays; SDK ms_tools_ext.h:65 documents 0 as range-start failure. Why this profiler mode did not enable the Torch bridge remains UNKNOWN.",
+      "csv_count": 0,
+      "tiling_bin_count": 0,
+      "successful_profile_targets": 0,
+      "applications": [
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1685884-b758daa5.json",
+          "sha256": "32814617bf7a4b0bdf9cc47af4bc200e9b0e1af376c0b974450e8b148866e3f0",
+          "pid": 1685884,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1686071-2595c1b8.json",
+          "sha256": "423d89e02e1887d772831fecf3619defcd0bb023961ef1bee6a74140d60204a7",
+          "pid": 1686071,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1686256-c00af5f4.json",
+          "sha256": "0a6a1208ed543686638f7c01cf41a1ff24f9eb87dc32bf2e36fe056d97c17453",
+          "pid": 1686256,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1686446-627fc2ea.json",
+          "sha256": "3c1c41d832a1a6d78bac8e5a23f55754caa3447b0c2072544066913cf2667665",
+          "pid": 1686446,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1686683-f7426854.json",
+          "sha256": "25705e2970c4dd5ece46be47ced024482c04941d510553b8dfea19aa75de089b",
+          "pid": 1686683,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1686874-e7aa8543.json",
+          "sha256": "4ddaba2ed34c354d6cb560c4851ffeb1f483c9ef682e073591d0d9d75350be99",
+          "pid": 1686874,
+          "status": "complete",
+          "mstx_range_id": 0
+        },
+        {
+          "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app/1687060-8a288e1b.json",
+          "sha256": "1d9fc7ff805ffe15e688da086472723638f7bab51042e5f002a8cb833263a2b9",
+          "pid": 1687060,
+          "status": "complete",
+          "mstx_range_id": 0
+        }
+      ],
+      "timeout_s": 85,
+      "tool_returncode": -15
+    },
+    "code_guard": {
+      "change": "abort before target submission when MSTX range id is zero",
+      "validation": "CPU syntax/plan/guard ordering only; not executed on NPU",
+      "executed_runner_sha256": "8eaaf6d54eebc3af643e4e66bdf207a828a406abb0e1b01c80e1615cd174c630",
+      "committed_runner_sha256": "af7ae456e742864bf19ccaa5558200b318d3898fa04aa6b967a070cc698b5a47"
+    },
+    "fixed_vendor_library_sha256": "a9786660a05b7121f6e7c7c955e9d9b732f5f7fe85e0fd3ca54eddc10e56b510",
+    "failure_counts": {
+      "collector_timeout": 1,
+      "application_replays_with_inactive_range": 7,
+      "manual_device_retries": 0,
+      "acceptance_post_retries": 0,
+      "cpu_helper_link": "first link lacked libtiling_api.a; corrected on CPU, no NPU invocation"
+    },
+    "window": {
+      "compute_collection_s": 93.27366591058671,
+      "budget_s": 240,
+      "children_returncodes": [
+        0,
+        -15
+      ],
+      "commands": [
+        {
+          "label": "pre",
+          "argv": [
+            "/workspace/yangchen/venvs/clef-py312/bin/python",
+            "/workspace/yangchen/work/clef40-gate-internal-api39v66/probe_mlp_gate_internal.py",
+            "--execute",
+            "--vendor",
+            "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+            "--mode",
+            "control",
+            "--output-dir",
+            "/workspace/yangchen/logs/clef40-gate-internal-api39v66/pre"
+          ],
+          "pid": 1685847,
+          "returncode": 0,
+          "wall_s": 8.223208639770746
+        },
+        {
+          "label": "vendor",
+          "argv": [
+            "/usr/local/Ascend/cann-9.2.1/bin/msprof",
+            "op",
+            "--aic-metrics=PipeUtilization,Memory,MemoryL0,ResourceConflictRatio",
+            "--replay-mode=application",
+            "--warm-up=0",
+            "--launch-count=1",
+            "--mstx=true",
+            "--mstx-include=CLEF40_TARGET",
+            "--output=/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor",
+            "/workspace/yangchen/venvs/clef-py312/bin/python",
+            "/workspace/yangchen/work/clef40-gate-internal-api39v66/probe_mlp_gate_internal.py",
+            "--execute",
+            "--vendor",
+            "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm",
+            "--mode",
+            "capture",
+            "--arm",
+            "vendor",
+            "--output-dir",
+            "/workspace/yangchen/logs/clef40-gate-internal-api39v66/vendor-app"
+          ],
+          "pid": 1685878
+        }
+      ],
+      "cleanup": "fresh observed experiment identities terminated, before-restore NPU empty verified"
+    },
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gate-internal-api39v66",
+      "remote_work": "/workspace/yangchen/work/clef40-gate-internal-api39v66",
+      "remote_logs": "/workspace/yangchen/logs/clef40-gate-internal-api39v66"
+    },
+    "raw_sha256": {
+      "window.json": "ed5f6e471c334464aeb495608b0b29c244892cab09e775edc91a1c98ceb09349",
+      "cpu-inventory.json": "d82ec8cb0cd87c125bd5c231f0d7c5255649c141138a40cb5051f79a1d9bcf83",
+      "tiling-schema.json": "0bde798f8c8bbada044cad87a56ef891b1ede654365a9f70f1df7bbdd9fcec32",
+      "v3-tiling-cpu-full.json": "52771b4eb9f7a4a3cff36c0cb9752ea94a836dd01dfc37824c705372dec42fd8",
+      "verification.json": "71727c8e87a5752933161873f529fb4a3ab23c55551af58f7630e9a4d3b4ea8f",
+      "vendor.stdout": "1aa8a0ed4012dd466d87a9fb2060070dd8b3c673ec24ced61761b1f5afaa5bed",
+      "vendor.stderr": "c7df368e3153893a5e2c48688d45eab5734a66eacd193f85d250a4646e232f45"
+    },
+    "restoration": {
+      "state": "RUNNING_VERIFIED",
+      "verified_at_cst": "2026-11-22T02:13:04.973677+08:00",
+      "identity": {
+        "pid": 1687258,
+        "ppid": 1,
+        "pgid": 1687258,
+        "sid": 1687258,
+        "state": "S",
+        "starttime": "420167800",
+        "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+        "cmdline": [
+          "/workspace/yangchen/venvs/clef-py312/bin/python",
+          "-m",
+          "vllm.entrypoints.cli.main",
+          "serve",
+          "/workspace/yangchen/models/Clef-27B",
+          "--served-model-name",
+          "clef",
+          "--runner",
+          "pooling",
+          "--dtype",
+          "bfloat16",
+          "--tensor-parallel-size",
+          "2",
+          "--enforce-eager",
+          "--max-model-len",
+          "4096",
+          "--max-num-seqs",
+          "1",
+          "--max-num-batched-tokens",
+          "4096",
+          "--gpu-memory-utilization",
+          "0.9",
+          "--no-enable-prefix-caching",
+          "--no-enable-chunked-prefill",
+          "--skip-mm-profiling",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "18143",
+          "--limit-mm-per-prompt",
+          "{\"image\":1,\"video\":1}",
+          "--distributed-executor-backend",
+          "mp",
+          "--mm-processor-kwargs",
+          "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+        ]
+      },
+      "npu": [
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "python",
+          "pid": 1687258
+        },
+        {
+          "card": 7,
+          "chip": 0,
+          "name": "VLLMWorker_TP",
+          "pid": 1687428
+        },
+        {
+          "card": 7,
+          "chip": 1,
+          "name": "VLLMWorker_TP",
+          "pid": 1687429
+        }
+      ],
+      "manifest": {
+        "path": "/workspace/yangchen/logs/clef40-gate-internal-api39v66/restore-s1/launch-manifest.json",
+        "sha256": "fee04f48127e12fe46d8665acbc8acf8b036a99e5fde136e3afebf5984f1ffec",
+        "bytes": 24454
+      },
+      "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+      "env_bytes": 4678,
+      "checks": {
+        "new_manifest": true,
+        "root_identity": true,
+        "argv": true,
+        "effective": true,
+        "rawargv": true,
+        "service_environment": true,
+        "OPP9_LD12": true,
+        "joint_env": true,
+        "encoder_default0": true,
+        "aa3e_noop": true,
+        "aa3e_source": true,
+        "tree_group": true,
+        "workers": true,
+        "health": true,
+        "info": true,
+        "text": true,
+        "image": true,
+        "final_workers": true,
+        "final_identity": true,
+        "health_final": true,
+        "no_runtime_errors": true,
+        "no_pending_clients": true
+      },
+      "requests": [
+        {
+          "label": "text",
+          "http_status": 200,
+          "elapsed_s": 0.5832231603562832,
+          "sha256": "7abeb9344d3db94de6c8083896a86ef63265040226393219345590cee20cc63f"
+        },
+        {
+          "label": "image",
+          "http_status": 200,
+          "elapsed_s": 0.2618876798078418,
+          "sha256": "859422b09c5c463a0bb51c99a73b8191f4e831277f96877f03cee1ec7d271b98"
+        }
+      ],
+      "both_pointers_updated": true
+    }
   }
 }
