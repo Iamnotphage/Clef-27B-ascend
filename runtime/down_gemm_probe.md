@@ -72,7 +72,7 @@ python runtime/analyze_down_gemm.py \
   --requests 10 --layers 64 --tokens 967 --output <existing-summary.json>
 ```
 
-解析器分别取双 rank 的较慢 device/wall 中位数，保留 A/A 最大绝对差作为观测噪声。
+解析器分别取双 rank 的较慢 device/wall 中位数，分别保留两类 A/A 最大绝对差作为观测噪声。
 
 ## 一次必要补采与停止条件
 
@@ -96,5 +96,40 @@ L1/L0 搬运量与命中、MTE1/2/Cube/Fixpipe 活动及依赖等待、原始 CS
 缺具体气泡/不均衡证据则结束诊断；候选改善不超过同窗口 A/A 配对噪声则停止该候选。
 不重跑 ND/SP/MC2/N1 已败机制、不研究通信融合、不据 MAC 活动或经验方阵推算剩余空间。
 
-CPU 验证：AST/计划入口、精确 shape 筛选与计数、缺 rank/缺配对拒绝、本地两 rank
-旧 CSV 复算。NPU 运行与后续判断由 owner 回传原数后补记。
+## 单次实测与收口
+
+40 在同一设备窗口串行执行成功，torch `2.10.0+cpu`、torch_npu `2.10.0.post7`。
+原数 `/workspace/yangchen/logs/clef40-mlp-nyklqirq/down-timing.json`，SHA-256
+`b9201a59a22db86fac6f216739193ac5b0d7ca9b2b63889cdccedd6d3ab679a7`；执行探针 SHA-256
+`971118a385d47f329d6a1dc2777b0cc08ce6d5e4e000bf911eb0075fc27bd66a`。
+两 rank 各 3 个 M、每条件 5 对，共 180 个计时样本，重复输出逐位检查全部通过；
+6/6 捕获输入的完整张量 SHA 与既有 `capture-requests.json` 相符，活跃张量最高 811.06 MiB。
+
+以下分别取两个 rank 的 device/wall 中位数较大者；噪声为两个 rank 所有 A/A 对的
+`200*abs(A-B)/(A+B)` 最大值。缓存条件保留独立范围，没有候选收益或服务加速结论。
+
+| M | 条件 | device ms | wall ms | device A/A max % | wall A/A max % |
+| ---: | --- | ---: | ---: | ---: | ---: |
+| 307 | warm | .114600 | .193485 | 8.248 | 135.288 |
+| 307 | read flush | .138530 | .213920 | 18.286 | 17.660 |
+| 307 | down ring | .129980 | .209230 | .997 | 2.881 |
+| 967 | warm | .318730 | .389800 | 4.775 | 6.049 |
+| 967 | read flush | .332570 | .406825 | 3.205 | 1.351 |
+| 967 | down ring | .319740 | .401420 | 5.610 | 4.051 |
+| 1595 | warm | .478130 | .561825 | 13.092 | 15.252 |
+| 1595 | read flush | .498830 | .577085 | 2.432 | 2.335 |
+| 1595 | down ring | .481680 | .559595 | 4.399 | 4.237 |
+
+967 ring 的 rank0/1 device 中位数分别为 .315250/.319740 ms；warm 为 .318730/.306220，
+read flush 为 .332570/.330070。与旧 profile 约 .321 ms/层处在相近量级，版本、输入、
+缓存条件与窗口差异保留，不能将该差值记为优化收益。307 warm 有一次 wall 1.003390 ms
+离群值，原数完整保留。
+
+40 确认本轮没有 actual tiling/per-core 导出结果，设备采集到此停止。
+**结论：已有证据未发现显著 rank 级失衡或 SwiGlu→down 邻接 dispatch 气泡；
+核内尾块、L1/L0 复用与 MTE/Cube/Fixpipe 等待仍无法归因，当前缺少专用 BF16 down
+核的立项依据。本轮结束，不启动专用核、不扩展 tile/尾点扫描。**
+
+CPU 验证：5 项单测全部通过，覆盖精确 shape/计数/时间单位、独立选择 device/wall 慢 rank、
+A/A 噪声、缺 rank/缺配对/非 finite 拒绝及设备执行参数边界；AST/计划、旧两 rank CSV
+与 owner 原数解析通过。41 全程 CPU-only，服务恢复和身份校验由唯一 owner 40 负责。

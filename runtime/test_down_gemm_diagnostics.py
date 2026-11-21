@@ -76,7 +76,7 @@ class DiagnosticTests(unittest.TestCase):
                     for repeat in (0, 1):
                         samples.append({"mode": mode, "pair": pair, "repeat": repeat,
                                         "device_ms": .32 + rank * .01 + repeat * .001,
-                                        "wall_ms": .5 + rank * .02, "enqueue_ms": .04,
+                                        "wall_ms": .52 - rank * .02 + repeat * .002, "enqueue_ms": .04,
                                         "conditioning_wall_ms": .8, "bit_equal": True})
             data["ranks"].append({"rank": rank, "cases": [{"m": 967, "capture_prefix": True, "samples": samples}]})
         return data
@@ -85,9 +85,11 @@ class DiagnosticTests(unittest.TestCase):
         result = analysis.summarize_probe(self.timing_fixture())
         for row in result["slower_rank_medians"]:
             self.assertEqual(row["slower_device_rank"], 1)
+            self.assertEqual(row["slower_wall_rank"], 0)
             self.assertAlmostEqual(row["device_ms"], .3305)
-            self.assertAlmostEqual(row["wall_ms"], .52)
+            self.assertAlmostEqual(row["wall_ms"], .521)
             self.assertAlmostEqual(row["aa_noise_max_pct"], 200 * .001 / .641)
+            self.assertAlmostEqual(row["aa_wall_noise_max_pct"], 200 * .002 / 1.002)
 
     def test_incomplete_or_invalid_timing_stops(self):
         source = self.timing_fixture()

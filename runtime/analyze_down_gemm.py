@@ -91,7 +91,7 @@ def summarize_probe(data):
         for case in rank["cases"]:
             for mode in data["modes"]:
                 samples = [x for x in case["samples"] if x["mode"] == mode]
-                pairs = []
+                pairs, wall_pairs = [], []
                 for pair in range(data["pairs"]):
                     matched = sorted((x for x in samples if x["pair"] == pair), key=lambda x: x["repeat"])
                     if len(matched) != 2 or [x["repeat"] for x in matched] != [0, 1]:
@@ -100,12 +100,15 @@ def summarize_probe(data):
                         raise ValueError("Invalid or non-repeatable timed sample")
                     a, b = [x["device_ms"] for x in matched]
                     pairs.append(200 * abs(a - b) / (a + b))
+                    a, b = [x["wall_ms"] for x in matched]
+                    wall_pairs.append(200 * abs(a - b) / (a + b))
                 rows.append({"rank": rank["rank"], "m": case["m"], "mode": mode,
                              "device_ms": distribution([x["device_ms"] for x in samples]),
                              "wall_ms": distribution([x["wall_ms"] for x in samples]),
                              "enqueue_ms": distribution([x["enqueue_ms"] for x in samples]),
                              "conditioning_wall_ms": distribution([x["conditioning_wall_ms"] for x in samples]),
                              "paired_aa_abs_delta_pct": distribution(pairs),
+                             "paired_aa_wall_abs_delta_pct": distribution(wall_pairs),
                              "input_is_prefix": case["capture_prefix"]})
     slowest = []
     for m in data["m"]:
@@ -115,9 +118,11 @@ def summarize_probe(data):
                 raise ValueError("Each M/mode must have both ranks")
             slowest.append({"m": m, "mode": mode,
                             "slower_device_rank": max(selected, key=lambda x: x["device_ms"]["median"])["rank"],
+                            "slower_wall_rank": max(selected, key=lambda x: x["wall_ms"]["median"])["rank"],
                             "device_ms": max(x["device_ms"]["median"] for x in selected),
                             "wall_ms": max(x["wall_ms"]["median"] for x in selected),
-                            "aa_noise_max_pct": max(x["paired_aa_abs_delta_pct"]["max"] for x in selected)})
+                            "aa_noise_max_pct": max(x["paired_aa_abs_delta_pct"]["max"] for x in selected),
+                            "aa_wall_noise_max_pct": max(x["paired_aa_wall_abs_delta_pct"]["max"] for x in selected)})
     return {"rank_modes": rows, "slower_rank_medians": slowest,
             "decision": "Baseline diagnostics only; no custom-kernel gain measured. Stop tile search without concrete tiling/pipe evidence."}
 
