@@ -29,3 +29,5 @@ L307/1595、候选2/7。多字段和长图文保持回退，采用前补必要�
 
 CPU准备验证：三个脚本 py_compile、默认plan（不初始化设备）、五请求SHA。
 执行状态和关键原数原位更新至 `Clef-27B/logs/head-packed-kv-20261122/summary.json`。
+
+阶段阻点：私有stock捕获服务加载期间，用户master socket消失。启动等待与finally清理均返回SSH 255；无head请求/数值/配对结果，局部计算账0s。共享aa3e源码未改。当前远端服务状态UNKNOWN、恢复待通道；已准备fresh绑定私有实例的恢复入口，用户通道恢复后优先执行22项恢复。
