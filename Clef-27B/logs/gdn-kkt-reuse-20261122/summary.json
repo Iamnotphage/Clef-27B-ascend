@@ -1,0 +1,70 @@
+{
+  "schema": "clef-gdn-kkt-reuse/1",
+  "base_commit": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
+  "branch": "perf/gdn-kkt-reuse-20261122",
+  "status": "private_stock_kernels_compiled; reuse_remaining_incremental_build; no_device_validation",
+  "release_commit": "5cc699069c7f91a35aabd583032c8720a0b626fa",
+  "wheel_archive_sha256": "0e0febfe0b524df54c02dead985b787cf51f276ef904e4c2f88c5d43707a370b",
+  "active_libraries": {
+    "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/libfla_npu_stable.so": "6ba3a87064a4b69f5f73f35e9f834ead239460daf0f8fb54b250fd17f00ea978",
+    "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib/libcust_opapi.so": "602100543245497bcbf8b2b90f8ee1a53af35ee21eb3346f0e6ed89737a283a3",
+    "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so": "82526cee26b331df10a0f4a14ba8229df20b35722fab01b48c58a6c1cdcf97a3"
+  },
+  "archive_byte_match_count": 92,
+  "kernel_source_compare": {
+    "count": 89,
+    "raw_equal": 1,
+    "LF_equal": 89
+  },
+  "binary_provenance_limit": "release wheel bundles these sources and active binaries; reproducible byte-identical compilation not established; same-source stock must calibrate against production wheel",
+  "deployed_contract": "BSND/BF16, Hk/Hv8/24, K/V128, chunk128, raw-g BTH with prepared-cumsum; no initial/final state; single-sequence metadata",
+  "tiling_key": {
+    "source_expected": 3,
+    "actual_observation": "pending"
+  },
+  "scope": "Stage P raw FP32 score tasks only B*Hv*NT -> B*Hk*NT; consumer shared read-only slots; original ABC taskNum/g/beta/mask/FP32 solve/WU unchanged",
+  "synchronization": "KktCube drains FIX_M before SCORE_READY; every AIC and AIV joins existing prepared-cumsum SyncAll<false>; all physical groups retain one local notification including zero producer groups",
+  "local_plan": [
+    "compile private separately named stock/reuse with packaged dependencies while service runs",
+    "fresh save restore reference; one <=240s hard-bounded local window; numerical stages/repeat before timing",
+    "calibrate stock output and speed against wheel; >=5 interleaved AA/AB, per-rank/device/wall/slow-rank",
+    "local stable gain only: reversible service integration, formal S1 three rounds and full OD+ERQA <=2pp"
+  ],
+  "guard": "BF16/BSND/raw-g key3, B1 Hk8/Hv24 K/V128 BT128, T1..1595, canonical one-sequence host metadata, no state; unknown/multifield/long/multisegment fall back wheel until separately verified",
+  "device_window": {
+    "limit_s": 240,
+    "used_s": 0,
+    "started": false
+  },
+  "mlp_budget_s": 142.5626215597391,
+  "raw_locations": {
+    "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy",
+    "remote": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy",
+    "base": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
+    "device_budget_s": 240
+  },
+  "raw_sha256": {
+    "installed-inventory.json": "59157526dc515d3c9f3f54b7b98d09a3ae6b470afd44ff467b2f52622aba3172",
+    "source-comparison.json": "b02295611de9024784eb2db376b0f599c699c55f399f603f917d93211dd52129",
+    "release-source.tar": "59a17aaa70dea41622366db4e9efe1b5eac83f5912a5357cfdd61c0e063b395a"
+  },
+  "cpu_screen": {
+    "index_lengths": [
+      127,
+      128,
+      129,
+      307,
+      967,
+      1595
+    ],
+    "guard_cases": 11,
+    "static_sync": {
+      "stock": 59,
+      "reuse": 59,
+      "normalized_message_multiset_equal": true,
+      "critical": 30,
+      "flow_findings": 0,
+      "boundary": "regex frontend; macro/template/cross-file coverage incomplete; static candidates retained and not disproved"
+    }
+  }
+}
