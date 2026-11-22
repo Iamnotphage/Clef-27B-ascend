@@ -1,20 +1,65 @@
-# CATLASS跨输出tile首K片预取（2026-11-22）
+# CATLASS跨输出tile首K片预取（2026-11-22，当前ON负结果）
 
-固定CATLASS `eec373fbe601446c72cac422cf63142221d85bf9`，base `5086ad4`，分支`perf/mlp-cross-tile-prefetch-20261122`。私有CANN9.2.1/ascend910_93编译通过，aa3e服务保持运行。设备数值与性能尚未执行。
+固定官方模板在CANN9.2.1/A3可编译并通过真实数值门。跨输出tile预取ON未带来完整链收益，停止当前ON；不进入epilogue、服务集成或S1/OD/ERQA。OFF同源基线的纯task优势单独保留。
 
-单变量：同一官方BlockMmadPreload、同一ELF与固定L1(128,256,256)/L0(128,256,64)，FP32整K累加，K shuffle关闭、unit flag开启。OFF每个输出tile入口载首K片；ON沿用末K片预取下一输出tile首片。只改变block调用的isFirstBlock/hasNextBlock两个关联布尔量，官方搬运/MMAD/Fixpipe和事件实现保持原字节。
+base `5086ad4`，分支`perf/mlp-cross-tile-prefetch-20261122`；CPU/编译提交`b0c0634`，执行入口`a95b9d8`。固定CATLASS `eec373fbe601446c72cac422cf63142221d85bf9`（公开v1.2.0），官方头文件保持原字节，五个关键SHA核同。私有vendor未安装进CANN或服务。
 
-原BF16 [N17408,K5120] NZ物理存储作为逻辑B[K,N]的nZ，174,080个边界/内点索引核同；L1双缓冲384KiB、L0A双缓冲32KiB、L0B双缓冲64KiB、L0C FP32 128KiB。全K的80次K64累加只在首片清零，最终一次F322BF16、CFG_ROW_MAJOR canonical ND GM写出。编译验证BF16/nZ模板，实际舍入仍待真实数值门。
+## 单变量合同与CPU可行性
 
-M967有544输出tile；24核ON提前520次跨tile首K片，OFF/ON的A/B片读取均10,880次。M307/1595对应204/884 tile、180/860次提前。CPU逐slot模型检查供需、调度覆盖与最终释放；该模型保留硬件排序/模板展开的证据边界。没有减少理论流量，不将预取计为收益。
+同一官方`BlockMmadPreload`、同一ELF、同编译/分配/输出路径，固定L1(128,256,256)/L0(128,256,64)、24核、unit flag开启、K shuffle关闭。两臂保留tile内部下一K片预取；仅以两个关联布尔参数切换跨输出tile首K片：OFF每tile入口加载首片；ON在末K片期间提前加载下一tile首片。末tile仍传有效next shape以避免无效K/地址哨兵。
 
-CPU编译初两次分别报MakeCoord<int>不能转换MatrixCoord、MatrixCoord字面量32/64重载歧义；定向改为MatrixCoord(128U,256U)后通过。数学、tile和官方同步未改。生成GetWorkspace参数实读为x/weight/int64 prefetch/out/workspace/executor。
+原BF16 [N17408,K5120] FRACTAL_NZ物理存储直接作为逻辑B[K,N]的nZ；174,080个边界/内点偏移核同。L1双缓冲384KiB、L0A双缓冲32KiB、L0B双缓冲64KiB、FP32 L0C128KiB。K5120按80个K64块保持FP32累加，仅首块初始化，最后一次`F322BF16`/`CFG_ROW_MAJOR`写canonical ND [M,17408]。采用公开K256切片双缓冲；K全载MDL与IBShare-B的前提不在该路径。
+
+M967有544输出tile，24核ON提前520次首K片，OFF/ON各10,880次A/B片读取；M307/1595为204/884 tile、180/860次提前。CPU逐slot模型验证调度覆盖、生产/消费与最终释放；不把相同理论流量的搬入时机调整记为减少bytes。
+
+写出两臂保持相同行距34,816B、N256边界、尾M和Fixpipe调用。unit flag开启分支在block入口省去显式FIX_M等待，OFF首K片载入也具备与前tile异步写出重叠的源码条件；ON进一步前移到末K计算期间。实际重叠比例、内部MTE/Fixpipe等待与GM基址相位效应未隔离。
+
+首两次编译分别遇到MakeCoord<int>转换、MatrixCoord 32/64位重载歧义；定向改为`MatrixCoord(128U,256U)`后通过。数学、tile与官方事件未改。实读生成GetWorkspace签名为x/weight/**int64 prefetch**/out/workspace/executor。
+
+## 真实数值
+
+历史11-15捕获与原权重：layer31/0/63×两rank，M967先过，再M307/1595，共18个唯一case；967明确为od-0677/1595的前缀，307为完整od-0105。父输入SHA、权重来源在原数。NZ转换一次并在计时外，两臂共享同值输入/权重。
+
+18组ON/OFF均逐位、有限且重复稳定，canonical ND与gate/up顺序检查通过。相对vendor最大relRMSE **3.73645e−5**、max_abs **0.0625**；vendor对照存在微小数值差，保持原BF16和FP32累加位置。完整gate+SwiGLU+原NZ down数值门通过。此局部精度门不替代四项全量2pp验收。
+
+## 同窗完整调用
+
+两rank串行、各5对交错，完整预热单列；每pair各arm先取慢rank，再算配对差。主口径layer31→0→63 streaming，以下每层均摊ms。Event含host下发，wall含完成等待；输出分配、布局/cast、生成API桥接/下发和GM写出全部计入。vendor gate/chain与stock gate提供各自A/A。
+
+| 路径 | Event中位ms | wall中位ms |
+|---|---:|---:|
+| vendor gate | 0.603500 | 0.634877 |
+| stock OFF gate | 0.618433 | 0.645927 |
+| prefetch ON gate | 0.618133 | 0.649906 |
+| vendor完整MLP链 | 0.950827 | 0.985000 |
+| stock OFF完整链 | 0.963667 | 0.994970 |
+| prefetch ON完整链 | 0.965193 | 0.993753 |
+| vendor SwiGLU独立 | 0.061327 | 0.091103 |
+
+配对Event：ON−OFF gate中位 **−1.687µs**，stock A/A最大 **9.520µs**，仅3/5对更快；ON−vendor gate **+12.947µs**，vendor A/A最大 **4.333µs**，未进入vendor带。ON完整链−vendor **+14.567µs**，A/A最大 **6.433µs**，0/5对更快。wall对应ON−OFF **+2.390µs**、ON−vendor gate **+11.846µs**、链 **+9.480µs**；其A/A最大11.593/12.900/21.107µs，未出现稳定收益。
+
+warm单layer31另列：vendor/OFF/ON gate Event **0.606580/0.710380/0.696240ms**，wall **0.698110/0.791661/0.785790ms**；相应完整链Event **0.963020/1.081380/1.124740ms**。不以warm局部差代替streaming结论。两rank逐对原数和完整预热见summary。
+
+## 最小task关联
+
+成功路径CPU+NPU Level1/AiCoreNone，无PMU/MSTX/application replay。代表rank0、相同3层streaming，4个gate arm、3对profile，前后各2对无prof控制。12个range/36个GEMM按原生flow及stream/task/name/start精确核同CSV：每层1kernel、BlockDim24，无额外布局/cast/copy任务。
+
+| 路径 | kernel union中位µs/层 | 核名 |
+|---|---:|---|
+| vendor | 596.6623 | aclnnMatmulWeightNz_MatMulCommon_MatMulV2 |
+| vendor repeat | 595.9957 | 同上 |
+| stock OFF | 563.5405 | ClefMlpCrossPrefetch |
+| prefetch ON | 585.4285 | 同一个ClefMlpCrossPrefetch |
+
+ON−OFF三对task差 **+22.668/+17.868/+35.109µs**，中位 **+22.668µs**；vendor task A/A最大0.913µs。profile未采stock repeat，stock A/A保留主无prof计时。OFF任务快于vendor，完整wrapper仍落后；当前接口/非kernel区间的具体host、排队、等待占比继续UNKNOWN，不能将不同样本Event减task直接记为纯host耗时。活动重叠与内部等待无新计数证据。
+
+采集扰动与代表性：rank0 streaming vendor Event前/profile/后 **0.598320/0.612940/0.603667ms**，OFF为 **0.618680/0.625120/0.621027ms**，ON为 **0.631400/0.643660/0.630543ms**。该短采4个gate arm，主计时10臂的邻接负载不同；前后控制与短采同4臂。其task结构/差异只代表该点，不能替代两rank完整链结果或正式P95。原v3的约309µs差距属于另一实现/窗口；本模板改变GEMM主循环与tile布局，跨实现差距不能归因于本次预取开关。
 
 ## 同步静态边界
 
 正则扫描官方block+回写与私有入口：11项红线/高候选、1项性能候选；flow扫描0项。以下原样保留message，完整detail在tmp sync-audit.json；不将有限CPU模型当硬件同步证明，不据此改官方同步或增加审批链。
 
-|编号|等级/条目|官方block行|message|
+|编号|等级/条目|源码行|message|
 |---|---|---:|---|
 |1|红线/SYNC-04|222|Set/Wait 个数不一致: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext] Set=0 Wait=2|
 |2|红线/SYNC-04|222|Wait 无对应 Set（死等风险）: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext]|
@@ -29,14 +74,15 @@ CPU编译初两次分别报MakeCoord<int>不能转换MatrixCoord、MatrixCoord�
 |11|高/SYNC-01|305|Wait 先于 Set（同函数消费+生产，可能为 ping-pong 合法序）: 方向=M_MTE1 flag=l0BEventList[l0BBufId]|
 |12|性能/SYNC-09|54|PipeBarrier<PIPE_ALL> 粒度过粗|
 
-## 数值与性能门
 
-先双rank M967真实冻结输入，再M307/1595护栏；核gate/up顺序、BF16/finite、OFF/ON逐位和重复稳定、最终MLP链。通过后5对交错vendor A/A、同源stock A/A、stock/ON，warm单列，layer31/0/63 streaming主口径。包含全部输出分配/布局/下发/写出与原SwiGLU+NZ down。候选须进入vendor A/A带或领先，完整链稳定改善才具备后续依据；慢自编译stock的相对改善单列。失败或噪声内停止，当前无epilogue/服务集成。
+第1–11项来自官方block_mmad_preload.hpp，第12项来自私有入口clef_mlp_cross_prefetch.cpp。上述静态候选保留，18组局部数值/重复覆盖仅代表已选路径。
 
-新MLP局部预算240s，当前0；GDN76.87979675224051s、Head22.48895183391869s冻结。原MLP账不改。只用卡7逻辑0/1，设备前fresh身份/argv/env/manifest/18143/归属；退出先恢复aa3e/S1并核22项、health、指针与卡归属。
+## 账目、恢复与复现
 
-原始材料本地 `/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u`，远端 `/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u`；编译包仅私有目录，不安装。build-metadata.json记录实际ELF/JSON的SHA及五个关键官方header核同。
+新MLP局部计算/采集累计 **40.16165188048035/240s**，包含4个有界probe子进程的完整wall；编译/加载/恢复另设界。GDN **76.87979675224051s**、Head **22.48895183391869s**与旧MLP账均保持冻结。未跑shape/tile矩阵扫描，307/1595性能阶段因M967未过门而未进入。
 
-复现CPU：`python3 runtime/check_catlass_cross_prefetch.py --catlass-root FIXED_SOURCE_ROOT`；编译：在私有副本设置`CATLASS_ROOT=FIXED_SOURCE_ROOT`运行`bash build.sh`。仅调用编译，不启动NPU。
+原aa3e/S1 **RUNNING_VERIFIED**：API **1754374/start424176890**，boot `393ecc15-721f-46f7-b119-21fa327a2b3b`。22项worker/health/text/image等通过，原argv/env核同；离线导出后再次fresh核完整身份、源码、env、health、卡7/chip0/1（逻辑0/1、Phy14/15）归属与双端指针，私有probe树已清理。用户master、共享GEV及生产源码保持原样。
 
-局部入口`runtime/probe_mlp_cross_prefetch.py`默认只打印CPU plan；`--execute`后显式调用实际生成的int64 prefetch接口。数值按M967双rank→307/1595推进；5对vendor/stock A/A与ON及完整链，warm/三层streaming分列。每个probe子进程有timeout与内部deadline；远端独立supervisor finally恢复，使用户SSH断开后仍能优先恢复。执行字节SHA在tmp execution-sha.json，单一窗口预算由window.json累计。
+原数本地tmp `clef40-cross-prefetch-at10fi3u`，远端`/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u`。`window.json`为预算/实际命令/返回码；`numeric967.json`、`numeric_guards.json`、`timing967.json`、`profile.json`为完整原数；`task-analysis.json`保存36任务关联，原生trace/CSV路径与SHA见summary。大raw仅留tmp。
+
+CPU复现：`python3 runtime/check_catlass_cross_prefetch.py --catlass-root FIXED_SOURCE_ROOT`；私有编译设置`CATLASS_ROOT=FIXED_SOURCE_ROOT`后运行工程`build.sh`。默认`python3 runtime/probe_mlp_cross_prefetch.py`只打印plan；实际`--execute --phase numeric/timing/profile`的tokens/ranks/vendor/output/timeout见tmp window记录。离线解析复用`runtime/analyze_mlp_gate_profile.py --sample-prefix crosspref/ --divisor 3 --trace ... --kernel-csv ... --output ...`。CPU语法、固定source SHA、3M逐slot模型与实际36任务映射均通过。精简原数在`Clef-27B/logs/mlp-cross-tile-prefetch-20261122/summary.json`。

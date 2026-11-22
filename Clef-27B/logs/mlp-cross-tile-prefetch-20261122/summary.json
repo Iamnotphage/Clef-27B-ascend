@@ -1,8 +1,8 @@
 {
-  "status": "DEVICE_WINDOW_READY",
+  "status": "STOP_CURRENT_CROSS_TILE_PREFETCH",
   "base": "5086ad4b7385971821caeba5a4a5b210179bd1f1",
   "catlass": "eec373fbe601446c72cac422cf63142221d85bf9",
-  "device_used_s": 0,
+  "device_used_s": 40.16165188048035,
   "budget_s": 240,
   "gdn_frozen_s": 76.87979675224051,
   "head_frozen_s": 22.48895183391869,
@@ -95,105 +95,476 @@
     "device_numeric": "NOT_RUN",
     "boundary": "finite-state contract only; regex sync candidates not resolved by this model"
   },
-  "sync_static_candidates": [
-    {
-      "code": "SYNC-04",
-      "severity": "红线",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 222,
-      "message": "Set/Wait 个数不一致: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext] Set=0 Wait=2",
-      "detail": "Set: []; Wait: ['block_mmad_preload.hpp:222', 'block_mmad_preload.hpp:245'] | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-04",
-      "severity": "红线",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 222,
-      "message": "Wait 无对应 Set（死等风险）: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext]",
-      "detail": "Wait@222 in void operator，未见同组 SetFlag | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-04",
-      "severity": "红线",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 228,
-      "message": "Set/Wait 个数不一致: 方向=MTE1_MTE2 flag=l1BEventList[l1ListIdNext] Set=0 Wait=2",
-      "detail": "Set: []; Wait: ['block_mmad_preload.hpp:228', 'block_mmad_preload.hpp:251'] | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-04",
-      "severity": "红线",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 228,
-      "message": "Wait 无对应 Set（死等风险）: 方向=MTE1_MTE2 flag=l1BEventList[l1ListIdNext]",
-      "detail": "Wait@228 in void operator，未见同组 SetFlag | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-01",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 167,
-      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=FIX_M flag=EVENT_ID0",
-      "detail": "Wait@167 早于 Set@365，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-01",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 192,
-      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=MTE1_MTE2 flag=l1AEventList[l1ListId]",
-      "detail": "Wait@192 早于 Set@290，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-01",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 198,
-      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=MTE1_MTE2 flag=l1BEventList[l1ListId]",
-      "detail": "Wait@198 早于 Set@316，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-02",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 225,
-      "message": "循环内 Set 多于 Wait（疑似 buffer 复用缺循环顶部 Wait）: 方向=MTE2_MTE1 flag=l1AEventList[l1ListIdNext]",
-      "detail": "循环内 Set=2 Wait=0，多出 2 个 Set 无 Wait 消费；若涉及 L0C/buffer 复用（如 FIX_M/MTE1_M），循环顶部应补 Wait 等上一轮搬完 | 历史 case: cann/ops-nn PR#4190 (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -434,8 +434,13 @@ __aicore__ inline void InitTque(Intf *self)\n         uint32_t baseMN = self->ct..."
-    },
-    {
-      "code": "SYNC-02",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 231,
-      "message": "循环内 Set 多于 Wait（疑似 buffer 复用缺循环顶部 Wait）: 方向=MTE2_MTE1 flag=l1BEventList[l1ListIdNext]",
-      "detail": "循环内 Set=2 Wait=0，多出 2 个 Set 无 Wait 消费；若涉及 L0C/buffer 复用（如 FIX_M/MTE1_M），循环顶部应补 Wait 等上一轮搬完 | 历史 case: cann/ops-nn PR#4190 (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -434,8 +434,13 @@ __aicore__ inline void InitTque(Intf *self)\n         uint32_t baseMN = self->ct..."
-    },
-    {
-      "code": "SYNC-01",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 282,
-      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=M_MTE1 flag=l0AEventList[l0ABufId]",
-      "detail": "Wait@282 早于 Set@349，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-01",
-      "severity": "高",
-      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
-      "line": 305,
-      "message": "Wait 先于 Set（同函数消费+生产，可能为 ping-pong 合法序）: 方向=M_MTE1 flag=l0BEventList[l0BBufId]",
-      "detail": "Wait@305 早于 Set@345，同函数 void operator 既 Wait 又 Set；若该函数被循环调用则为合法跨迭代序；若单次调用则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
-    },
-    {
-      "code": "SYNC-09",
-      "severity": "性能",
-      "file": "runtime/ascendc/clef_mlp_cross_prefetch/op_kernel/clef_mlp_cross_prefetch.cpp",
-      "line": 54,
-      "message": "PipeBarrier<PIPE_ALL> 粒度过粗",
-      "detail": "若仅需 V 排序可用 PipeBarrier<PIPE_V>；确认无跨 PIPE 依赖后再收窄"
-    }
-  ],
   "sync_flow_candidates": 0,
   "production": "aa3e/S1 running unchanged; no device computation yet",
-  "probe_sha256": "a0267ee0bfee279e6696ff1d79dad15eff4e655ea82562e8370b261b4a143f36"
+  "probe_sha256": "a0267ee0bfee279e6696ff1d79dad15eff4e655ea82562e8370b261b4a143f36",
+  "adopted": false,
+  "execution_code_commit": "a95b9d8",
+  "numerical": {
+    "columns": ["m","rank","layer","on_off_equal","stock_relrmse","on_relrmse","gate_half_relrmse","up_half_relrmse","chain_relrmse","on_max_abs","repeat_equal"],
+    "cases": [
+      [967,0,31,true,3.415335595491342e-05,3.415335595491342e-05,3.4934353607241064e-05,3.2830936106620356e-05,0.0002479068352840841,0.015625,true],
+      [967,0,0,true,3.090698010055348e-05,3.090698010055348e-05,2.996019975398667e-05,3.197264959453605e-05,0.00010890844714595005,0.001953125,true],
+      [967,0,63,true,2.9617551263072528e-05,2.9617551263072528e-05,2.8507362003438175e-05,3.0384824640350416e-05,0.00011944951984332874,0.0625,true],
+      [967,1,31,true,3.406075848033652e-05,3.406075848033652e-05,3.2431235013064e-05,3.649648715509102e-05,0.0002691764384508133,0.0078125,true],
+      [967,1,0,true,3.575408845790662e-05,3.575408845790662e-05,3.86831998184789e-05,3.212536466890015e-05,0.0001672793150646612,0.00390625,true],
+      [967,1,63,true,3.4198146749986336e-05,3.4198146749986336e-05,3.29869581037201e-05,3.5298664442962036e-05,0.00013780912559013814,0.0625,true],
+      [307,0,31,true,3.4876335121225566e-05,3.4876335121225566e-05,3.712554098456167e-05,3.0968847568146884e-05,0.0002601922315079719,0.0078125,true],
+      [307,0,0,true,3.121409099549055e-05,3.121409099549055e-05,3.107461816398427e-05,3.137303428957239e-05,0.0001444387889932841,0.001953125,true],
+      [307,0,63,true,3.12534612021409e-05,3.12534612021409e-05,2.6612131478032097e-05,3.365427619428374e-05,7.186071161413565e-05,0.0625,true],
+      [307,1,31,true,3.536325311870314e-05,3.536325311870314e-05,3.72118956875056e-05,3.232270319131203e-05,0.000301334512187168,0.0078125,true],
+      [307,1,0,true,2.7383894121157937e-05,2.7383894121157937e-05,3.092394399573095e-05,2.2680082111037336e-05,9.916541603161022e-05,0.0009765625,true],
+      [307,1,63,true,3.73645088984631e-05,3.73645088984631e-05,3.863263191306032e-05,3.638979251263663e-05,0.00021311765885911882,0.0625,true],
+      [1595,0,31,true,0.0,0.0,0.0,0.0,0.0,0.0,true],
+      [1595,0,0,true,0.0,0.0,0.0,0.0,0.0,0.0,true],
+      [1595,0,63,true,0.0,0.0,0.0,0.0,0.0,0.0,true],
+      [1595,1,31,true,0.0,0.0,0.0,0.0,0.0,0.0,true],
+      [1595,1,0,true,0.0,0.0,0.0,0.0,0.0,0.0,true],
+      [1595,1,63,true,0.0,0.0,0.0,0.0,0.0,0.0,true]
+    ],
+    "all_finite": true,
+    "all_screen_pass": true,
+    "all_on_off_equal": true,
+    "reference_bit_equal": false,
+    "max_vendor_relrmse": 3.73645088984631e-05,
+    "max_chain_relrmse": 0.000301334512187168,
+    "max_abs": 0.0625,
+    "format_contract": "all reference/candidate format2; BF16 contiguous [M,17408], stride [17408,1]",
+    "input_provenance_columns": ["m","rank","layer","kind","parent_sha256"],
+    "input_provenance": [
+      [967,0,31,"explicit_prefix","5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204"],
+      [967,0,0,"explicit_prefix","cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa"],
+      [967,0,63,"explicit_prefix","f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8"],
+      [967,1,31,"explicit_prefix","5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204"],
+      [967,1,0,"explicit_prefix","cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa"],
+      [967,1,63,"explicit_prefix","f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8"],
+      [307,0,31,"full_capture","5a5b6117e34f692a0d429f3ad28579963e488880fcf7d3a2fb0e18852421e76e"],
+      [307,0,0,"full_capture","deea1e81fe83f2e1ad9bbd30632d236e1889821b49bbc49bbe55390b46eebe0d"],
+      [307,0,63,"full_capture","828b4f9ccf9d7af05962f44fe4a7e01dd8f38035f4d5b5d96a91d27761c523f8"],
+      [307,1,31,"full_capture","5a5b6117e34f692a0d429f3ad28579963e488880fcf7d3a2fb0e18852421e76e"],
+      [307,1,0,"full_capture","deea1e81fe83f2e1ad9bbd30632d236e1889821b49bbc49bbe55390b46eebe0d"],
+      [307,1,63,"full_capture","828b4f9ccf9d7af05962f44fe4a7e01dd8f38035f4d5b5d96a91d27761c523f8"],
+      [1595,0,31,"full_capture","5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204"],
+      [1595,0,0,"full_capture","cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa"],
+      [1595,0,63,"full_capture","f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8"],
+      [1595,1,31,"full_capture","5d37b03fad0b8651d7919f8332eea2d5e05a4543254e3cfbe7aef5ddc34b4204"],
+      [1595,1,0,"full_capture","cdddce5c17fc8f17097362afce5ed739aaeb3bf7231a90d82ffa0511eb9a2daa"],
+      [1595,1,63,"full_capture","f79a4f5c3d74b50ad3253ddfcac65b7d1c3a88243733070ebe92a1c0d5934af8"]
+    ]
+  },
+  "rank_timing": [
+    {
+      "rank": 0,
+      "active_tensor_bytes": 1000209408,
+      "samples": {
+        "warm_layer31": {
+          "event_ms": {
+            "vendor_gate": [0.6065800189971924,0.6018999814987183,0.5987799763679504,0.6037600040435791,0.5983800292015076],
+            "vendor_gate_repeat": [0.6150599718093872,0.6164399981498718,0.5862600207328796,0.6123800277709961,0.5862600207328796],
+            "stock_gate": [0.7209200263023376,0.684220016002655,0.6959199905395508,0.6887000203132629,0.704800009727478],
+            "stock_gate_repeat": [0.7031199932098389,0.6879799962043762,0.696399986743927,0.6889399886131287,0.6819199919700623],
+            "prefetch_gate": [0.6827800273895264,0.7116600275039673,0.6766200065612793,0.7138599753379822,0.6815400123596191],
+            "vendor_chain": [0.9548599720001221,0.9420199990272522,0.9589200019836426,0.9527199864387512,0.9630200266838074],
+            "vendor_chain_repeat": [0.9424200057983398,0.9569200277328491,0.9522200226783752,0.9556800127029419,0.9676600098609924],
+            "stock_chain": [1.0556600093841553,1.0843000411987305,1.0557399988174438,1.0861599445343018,1.0619399547576904],
+            "prefetch_chain": [1.2223999500274658,1.0992799997329712,1.0980600118637085,1.1087599992752075,1.1028800010681152],
+            "vendor_swiglu": [0.07689999788999557,0.08076000213623047,0.08438000082969666,0.08907999843358994,0.07412000000476837]
+          },
+          "wall_ms": {
+            "vendor_gate": [1.7881495878100395,0.6898399442434311,0.6952192634344101,0.6928201764822006,0.7056593894958496],
+            "vendor_gate_repeat": [0.7206900045275688,0.710279680788517,0.6756298243999481,0.7018400356173515,0.6799306720495224],
+            "stock_gate": [0.8180802688002586,0.7916605100035667,0.7866295054554939,0.7788902148604393,0.8007995784282684],
+            "stock_gate_repeat": [0.7998701184988022,0.7823705673217773,0.7834099233150482,0.782109797000885,0.7795402780175209],
+            "prefetch_gate": [0.7857903838157654,0.8161496371030807,0.7675802335143089,0.8199792355298996,0.7774000987410545],
+            "vendor_chain": [1.0497299954295158,1.0437797755002975,1.058800145983696,1.0540597140789032,1.0611005127429962],
+            "vendor_chain_repeat": [1.0338500142097473,1.0580802336335182,1.047009602189064,1.0531898587942123,1.0667508468031883],
+            "stock_chain": [13.573700562119484,1.178160309791565,1.1471593752503395,1.1805305257439613,1.1575603857636452],
+            "prefetch_chain": [1.3420507311820984,1.1990303173661232,1.1907201260328293,1.2074094265699387,1.1981995776295662],
+            "vendor_swiglu": [0.1849103718996048,0.18311012536287308,0.18548034131526947,0.19754935055971146,0.18185004591941833]
+          }
+        },
+        "streaming_layers31_0_63": {
+          "event_ms": {
+            "vendor_gate": [0.6087466478347778,0.5959933201471964,0.6020333369572958,0.5972266594568888,0.6039599974950155],
+            "vendor_gate_repeat": [0.6034666697184244,0.6070733467737833,0.6063666741053263,0.6053333282470703,0.6045666535695394],
+            "stock_gate": [0.6100066502888998,0.622219999631246,0.6067399978637695,0.6024933258692423,0.6081399917602539],
+            "stock_gate_repeat": [0.6007599830627441,0.5684599876403809,0.619213342666626,0.621666669845581,0.6104666789372762],
+            "prefetch_gate": [0.6181333462397257,0.6013799905776978,0.6137666702270508,0.6027533213297526,0.6134200096130371],
+            "vendor_chain": [0.9496933619181315,0.9491066932678223,0.9413599967956543,0.9504266579945883,0.9518400033315023],
+            "vendor_chain_repeat": [0.9456133047739664,0.9469066460927328,0.95086669921875,0.9530999660491943,0.9582733313242594],
+            "stock_chain": [0.9555266698201498,0.951366662979126,0.9545266628265381,0.9516399701436361,0.9538799921671549],
+            "prefetch_chain": [0.9431400299072266,0.9500400225321451,0.9452199935913086,0.952893336613973,0.9481200377146403],
+            "vendor_swiglu": [0.05667999883492788,0.043353334069252014,0.05896000067392985,0.04173333446184794,0.05533333122730255]
+          },
+          "wall_ms": {
+            "vendor_gate": [0.645593119164308,0.631313460568587,0.635060171286265,0.6314367055892944,0.6348767007390658],
+            "vendor_gate_repeat": [0.6344902018706003,0.6452531864245733,0.6390133251746496,0.6400430575013161,0.6324499845504761],
+            "stock_gate": [0.6445767357945442,0.6531899174054464,0.6375166897972425,0.6341598927974701,0.6394165878494581],
+            "stock_gate_repeat": [0.6331133966644605,0.6329799070954323,0.6511832276980082,0.6572902202606201,0.6436798721551895],
+            "prefetch_gate": [0.6499063844482104,0.6351231907804807,0.6469065944353739,0.6343899294734001,0.646016870935758],
+            "vendor_chain": [0.9823466340700785,0.9861066937446594,0.9878634785612425,0.9828601032495499,0.984999972085158],
+            "vendor_chain_repeat": [0.9782233585913976,0.9846165776252747,1.008970042069753,0.9921668097376823,0.9929801647861799],
+            "stock_chain": [0.9882499774297079,0.9836234773198763,0.9874633202950159,0.9849931423862776,0.9875502437353134],
+            "prefetch_chain": [0.9761899709701538,0.9835766007502874,0.9780135005712509,0.9838566184043884,0.9809865926702818],
+            "vendor_swiglu": [0.0896332785487175,0.07826679696639378,0.09110321601231892,0.07782007257143657,0.08918313930432002]
+          }
+        }
+      },
+      "warmup": [
+        ["warm_layer31","vendor_gate",5,0.0030507799237966537],
+        ["warm_layer31","vendor_gate_repeat",5,0.0029869694262742996],
+        ["warm_layer31","stock_gate",5,0.003041890449821949],
+        ["warm_layer31","stock_gate_repeat",5,0.0028752796351909637],
+        ["warm_layer31","prefetch_gate",5,0.0028429701924324036],
+        ["warm_layer31","vendor_chain",5,0.004766789264976978],
+        ["warm_layer31","vendor_chain_repeat",5,0.0047536203637719154],
+        ["warm_layer31","stock_chain",5,0.004811599850654602],
+        ["warm_layer31","prefetch_chain",5,0.004894389770925045],
+        ["warm_layer31","vendor_swiglu",5,0.0002522198483347893],
+        ["streaming_layers31_0_63","vendor_gate",15,0.00907135009765625],
+        ["streaming_layers31_0_63","vendor_gate_repeat",15,0.008999220095574856],
+        ["streaming_layers31_0_63","stock_gate",15,0.008629209361970425],
+        ["streaming_layers31_0_63","stock_gate_repeat",15,0.013703710399568081],
+        ["streaming_layers31_0_63","prefetch_gate",15,0.008639169856905937],
+        ["streaming_layers31_0_63","vendor_chain",15,0.014208570122718811],
+        ["streaming_layers31_0_63","vendor_chain_repeat",15,0.014190210029482841],
+        ["streaming_layers31_0_63","stock_chain",15,0.013723109848797321],
+        ["streaming_layers31_0_63","prefetch_chain",15,0.013630619272589684],
+        ["streaming_layers31_0_63","vendor_swiglu",15,0.0009102402254939079]
+      ],
+      "warmup_columns": ["mode","arm","calls","wall_s"]
+    },
+    {
+      "rank": 1,
+      "active_tensor_bytes": 1000209408,
+      "samples": {
+        "warm_layer31": {
+          "event_ms": {
+            "vendor_gate": [0.5993199944496155,0.6051999926567078,0.6060400009155273,0.6120399832725525,0.6125400066375732],
+            "vendor_gate_repeat": [0.6251199841499329,0.6202600002288818,0.619379997253418,0.6212000250816345,0.6119599938392639],
+            "stock_gate": [0.7230799794197083,0.6959199905395508,0.7117800116539001,0.6960600018501282,0.7103800177574158],
+            "stock_gate_repeat": [0.7176200151443481,0.6994400024414062,0.7011200189590454,0.7002000212669373,0.7031800150871277],
+            "prefetch_gate": [0.6940199732780457,0.7565000057220459,0.6962400078773499,0.7465199828147888,0.6908800005912781],
+            "vendor_chain": [0.9615200161933899,0.9699199795722961,0.9557600021362305,0.968500018119812,0.9603599905967712],
+            "vendor_chain_repeat": [0.966759979724884,0.9592199921607971,0.9603599905967712,0.9617199897766113,0.9627799987792969],
+            "stock_chain": [1.080299973487854,1.125939965248108,1.0809999704360962,1.1117600202560425,1.081380009651184],
+            "prefetch_chain": [1.1263400316238403,1.1247400045394897,1.1218199729919434,1.128119945526123,1.1225999593734741],
+            "vendor_swiglu": [0.08715999871492386,0.07773999869823456,0.0868000015616417,0.0810599997639656,0.09482000023126602]
+          },
+          "wall_ms": {
+            "vendor_gate": [0.9687691926956177,0.6887298077344894,0.6981100887060165,0.6915498524904251,0.6945598870515823],
+            "vendor_gate_repeat": [0.7276292890310287,0.7077297195792198,0.7015103474259377,0.7121795788407326,0.6974702700972557],
+            "stock_gate": [0.8083106949925423,0.786980614066124,0.7913494482636452,0.7801894098520279,0.7981499657034874],
+            "stock_gate_repeat": [0.8170194923877716,0.7866807281970978,0.7897699251770973,0.7885899394750595,0.7930798456072807],
+            "prefetch_gate": [0.7797097787261009,0.8448408916592598,0.7831603288650513,0.8307397365570068,0.7782606407999992],
+            "vendor_chain": [1.0524699464440346,1.0560797527432442,1.0431893169879913,1.0509500280022621,1.0461295023560524],
+            "vendor_chain_repeat": [1.0714801028370857,1.0627508163452148,1.046529971063137,1.0478999465703964,1.049630343914032],
+            "stock_chain": [1.1820197105407715,1.2119002640247345,1.1761803179979324,1.1963602155447006,1.162809319794178],
+            "prefetch_chain": [1.2159096077084541,1.2150099501013756,1.207980327308178,1.2163808569312096,1.2066299095749855],
+            "vendor_swiglu": [0.17138011753559113,0.16824062913656235,0.16909930855035782,0.16702059656381607,0.1820400357246399]
+          }
+        },
+        "streaming_layers31_0_63": {
+          "event_ms": {
+            "vendor_gate": [0.6076866785685221,0.6035000085830688,0.6017933289210001,0.6034666697184244,0.6034666697184244],
+            "vendor_gate_repeat": [0.6073933442433676,0.6061600049336752,0.601253350575765,0.6059666474660238,0.6009999910990397],
+            "stock_gate": [0.6198199987411499,0.6129133303960165,0.6184333165486654,0.6167866786321005,0.6176000038782755],
+            "stock_gate_repeat": [0.6182666619618734,0.6126999855041504,0.6129133303960165,0.6177733341852824,0.6134466727574667],
+            "prefetch_gate": [0.614306648572286,0.6276400089263916,0.6149799823760986,0.6199800173441569,0.6157799959182739],
+            "vendor_chain": [0.9508266448974609,0.9465866883595785,0.9519000053405762,0.9466400146484375,0.9486200014750162],
+            "vendor_chain_repeat": [0.9492200215657552,0.9494933287302653,0.9481666882832845,0.9465333620707194,0.9496133327484131],
+            "stock_chain": [0.9661533037821451,0.9617199897766113,0.9636666774749756,0.962220033009847,0.9685333569844564],
+            "prefetch_chain": [0.9605333010355631,0.9651933511098226,0.9646533330281576,0.9678333600362142,0.9664066632588705],
+            "vendor_swiglu": [0.06377333402633667,0.07953999936580658,0.06132666766643524,0.055160000920295715,0.0590799997250239]
+          },
+          "wall_ms": {
+            "vendor_gate": [0.6389968718091646,0.6323534374435743,0.6291366492708524,0.6300465514262518,0.6310868387420973],
+            "vendor_gate_repeat": [0.6384265919526418,0.636046752333641,0.6291534130771955,0.6347931921482086,0.6294666479031245],
+            "stock_gate": [0.647516610721747,0.6413934752345085,0.6456167126695315,0.6459265326460203,0.644276849925518],
+            "stock_gate_repeat": [0.6482166548569998,0.6415968139966329,0.6434299672643343,0.6462267289559046,0.6418734168012937],
+            "prefetch_gate": [0.6447266787290573,0.657029760380586,0.6445835654934248,0.650423268477122,0.6454400718212128],
+            "vendor_chain": [0.9803700571258863,0.9768701468904814,0.9812169397870699,0.978393480181694,0.9776301061113676],
+            "vendor_chain_repeat": [0.9774966165423393,0.980039748052756,0.9796566640337309,0.9780734156568845,0.9780966987212499],
+            "stock_chain": [0.9953298916419347,0.9945599983135859,0.9949700906872749,0.9947468837102255,0.9971633553504944],
+            "prefetch_chain": [0.9918265665570895,0.9937531625231107,0.9935799365242323,0.9958799928426743,0.9950964401165644],
+            "vendor_swiglu": [0.09167349586884181,0.11304672807455063,0.08967674026886623,0.08307987203200658,0.08739003290732701]
+          }
+        }
+      },
+      "warmup": [
+        ["warm_layer31","vendor_gate",5,0.0030987998470664024],
+        ["warm_layer31","vendor_gate_repeat",5,0.002991660498082638],
+        ["warm_layer31","stock_gate",5,0.002945510670542717],
+        ["warm_layer31","stock_gate_repeat",5,0.0028800293803215027],
+        ["warm_layer31","prefetch_gate",5,0.002833649516105652],
+        ["warm_layer31","vendor_chain",5,0.004761269316077232],
+        ["warm_layer31","vendor_chain_repeat",5,0.0047578997910022736],
+        ["warm_layer31","stock_chain",5,0.004958069883286953],
+        ["warm_layer31","prefetch_chain",5,0.005018679425120354],
+        ["warm_layer31","vendor_swiglu",5,0.00024710968136787415],
+        ["streaming_layers31_0_63","vendor_gate",15,0.009081200696527958],
+        ["streaming_layers31_0_63","vendor_gate_repeat",15,0.009004910476505756],
+        ["streaming_layers31_0_63","stock_gate",15,0.008684239350259304],
+        ["streaming_layers31_0_63","stock_gate_repeat",15,0.008621019311249256],
+        ["streaming_layers31_0_63","prefetch_gate",15,0.008662629872560501],
+        ["streaming_layers31_0_63","vendor_chain",15,0.014174659736454487],
+        ["streaming_layers31_0_63","vendor_chain_repeat",15,0.014173810370266438],
+        ["streaming_layers31_0_63","stock_chain",15,0.013846410438418388],
+        ["streaming_layers31_0_63","prefetch_chain",15,0.013858379796147346],
+        ["streaming_layers31_0_63","vendor_swiglu",15,0.0005930904299020767]
+      ],
+      "warmup_columns": ["mode","arm","calls","wall_s"]
+    }
+  ],
+  "slow_per_pair_screen": {
+    "event_ms": {
+      "medians": {
+        "vendor_gate": 0.6035000085830688,
+        "vendor_gate_repeat": 0.6063666741053263,
+        "stock_gate": 0.6184333165486654,
+        "stock_gate_repeat": 0.6182666619618734,
+        "prefetch_gate": 0.6181333462397257,
+        "vendor_chain": 0.9508266448974609,
+        "vendor_chain_repeat": 0.95086669921875,
+        "stock_chain": 0.9636666774749756,
+        "prefetch_chain": 0.9651933511098226,
+        "vendor_swiglu": 0.06132666766643524
+      },
+      "vendor_aa_max_ms": 0.004333337148030525,
+      "stock_aa_max_ms": 0.009520014127095577,
+      "chain_aa_max_ms": 0.0064333279927570874,
+      "on_minus_stock_ms": -0.0016866525014241907,
+      "on_minus_vendor_ms": 0.01294664541880286,
+      "chain_minus_vendor_ms": 0.014566659927368164,
+      "gate_stock_win_pairs": 3,
+      "chain_vendor_win_pairs": 0,
+      "vendor_band": false,
+      "pass_gate": false
+    },
+    "wall_ms": {
+      "medians": {
+        "vendor_gate": 0.6348767007390658,
+        "vendor_gate_repeat": 0.6390133251746496,
+        "stock_gate": 0.6459265326460203,
+        "stock_gate_repeat": 0.6482166548569998,
+        "prefetch_gate": 0.6499063844482104,
+        "vendor_chain": 0.984999972085158,
+        "vendor_chain_repeat": 0.9921668097376823,
+        "stock_chain": 0.9949700906872749,
+        "prefetch_chain": 0.9937531625231107,
+        "vendor_swiglu": 0.09110321601231892
+      },
+      "vendor_aa_max_ms": 0.012899748980998993,
+      "stock_aa_max_ms": 0.011593103408813477,
+      "chain_aa_max_ms": 0.02110656350851048,
+      "on_minus_stock_ms": 0.002389773726463318,
+      "on_minus_vendor_ms": 0.011846423149108887,
+      "chain_minus_vendor_ms": 0.009479932487010956,
+      "gate_stock_win_pairs": 0,
+      "chain_vendor_win_pairs": 0,
+      "vendor_band": true,
+      "pass_gate": false
+    }
+  },
+  "trace": {
+    "arms": {
+      "vendor_gate": {
+        "task_counts": [3,3,3],
+        "names": {
+          "aclnnMatmulWeightNz_MatMulCommon_MatMulV2": 3
+        },
+        "kernel_union_us": 596.6623333333313,
+        "kernel_sum_us": 596.6623333333313,
+        "block_nums": ["24"]
+      },
+      "vendor_gate_repeat": {
+        "task_counts": [3,3,3],
+        "names": {
+          "aclnnMatmulWeightNz_MatMulCommon_MatMulV2": 3
+        },
+        "kernel_union_us": 595.9956666666645,
+        "kernel_sum_us": 595.9956666666645,
+        "block_nums": ["24"]
+      },
+      "stock_gate": {
+        "task_counts": [3,3,3],
+        "names": {
+          "ClefMlpCrossPrefetch": 3
+        },
+        "kernel_union_us": 563.5404999999979,
+        "kernel_sum_us": 563.5404999999979,
+        "block_nums": ["24"]
+      },
+      "prefetch_gate": {
+        "task_counts": [3,3,3],
+        "names": {
+          "ClefMlpCrossPrefetch": 3
+        },
+        "kernel_union_us": 585.4284999999994,
+        "kernel_sum_us": 585.4284999999994,
+        "block_nums": ["24"]
+      }
+    },
+    "samples": 12,
+    "matched_tasks": 36,
+    "controls": {
+      "pre": {
+        "vendor_gate": {
+          "event_ms": 0.5983199874560039,
+          "wall_ms": 0.8218102157115936
+        },
+        "vendor_gate_repeat": {
+          "event_ms": 0.6092633207639059,
+          "wall_ms": 0.6452733650803566
+        },
+        "stock_gate": {
+          "event_ms": 0.6186800003051758,
+          "wall_ms": 0.6495416164398193
+        },
+        "prefetch_gate": {
+          "event_ms": 0.6314000089963278,
+          "wall_ms": 0.6584917816023032
+        }
+      },
+      "profile": {
+        "vendor_gate": {
+          "event_ms": 0.6129399935404459,
+          "wall_ms": 0.6632100169857343
+        },
+        "vendor_gate_repeat": {
+          "event_ms": 0.6159400145212809,
+          "wall_ms": 0.6763298685352007
+        },
+        "stock_gate": {
+          "event_ms": 0.6251200040181478,
+          "wall_ms": 0.6815797338883082
+        },
+        "prefetch_gate": {
+          "event_ms": 0.6436599890391032,
+          "wall_ms": 0.7130401208996773
+        }
+      },
+      "post": {
+        "vendor_gate": {
+          "event_ms": 0.6036666631698608,
+          "wall_ms": 0.6395365732411543
+        },
+        "vendor_gate_repeat": {
+          "event_ms": 0.6029566725095112,
+          "wall_ms": 0.6362133038540682
+        },
+        "stock_gate": {
+          "event_ms": 0.6210266550381978,
+          "wall_ms": 0.6490034672121208
+        },
+        "prefetch_gate": {
+          "event_ms": 0.6305433313051859,
+          "wall_ms": 0.6605450374384721
+        }
+      }
+    },
+    "trace_path": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/traces-r0/crosspref-r0_1754289_20261122051943867_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+    "trace_sha256": "eaef1ebd9e7078087cb2fbb7a42e006318fe3c127b653e532729f7df68422ede",
+    "kernel_csv_path": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/traces-r0/crosspref-r0_1754289_20261122051943867_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+    "kernel_csv_sha256": "d0937eb5594eeddb3638ef93992b068c571ce5d69fd26022b5c7070443c4cf8d",
+    "representative": "rank0 only; 3 real layers averaged; same serial scheduling as primary run",
+    "kernel_union_per_pair_us": {
+      "vendor_gate": [596.6623333333313,596.9158333333326,596.3423333333291],
+      "vendor_gate_repeat": [595.8091666666636,596.0025000000023,595.9956666666645],
+      "stock_gate": [562.7603333333294,565.1738333333342,563.5404999999979],
+      "prefetch_gate": [585.4284999999994,583.0416666666715,598.6493333333298]
+    },
+    "task_aa_scope": "vendor repeat only in profile; stock A/A available in no-profiler primary timings",
+    "paired_kernel_union_delta_us": {
+      "vendor_gate_repeat minus vendor_gate": [-0.8531666666676756,-0.9133333333302289,-0.3466666666645324],
+      "prefetch_gate minus stock_gate": [22.668166666670004,17.86783333333733,35.10883333333186],
+      "prefetch_gate minus vendor_gate": [-11.233833333331859,-13.87416666666104,2.3070000000006985]
+    },
+    "limitation": "rank0/4 gate arms only; no stock task A/A in profile; no-profiler main has stock A/A. Main 10-arm adjacency differs; profiles cannot replace full wrapper verdict."
+  },
+  "device_budget_phases": [
+    {
+      "label": "numeric967",
+      "wall_s": 9.327104450203478,
+      "returncode": 0,
+      "argv": ["bash","-c","source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec timeout --kill-after=3 70 python /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/probe_mlp_cross_prefetch.py --execute --phase numeric --tokens 967 --ranks 0,1 --vendor /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_cross_prefetch --output /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/numeric967.json --limit-s 62"]
+    },
+    {
+      "label": "numeric_guards",
+      "wall_s": 11.479589280672371,
+      "returncode": 0,
+      "argv": ["bash","-c","source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec timeout --kill-after=3 80 python /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/probe_mlp_cross_prefetch.py --execute --phase numeric --tokens 307,1595 --ranks 0,1 --vendor /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_cross_prefetch --output /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/numeric_guards.json --limit-s 72"]
+    },
+    {
+      "label": "timing967",
+      "wall_s": 10.2782033495605,
+      "returncode": 0,
+      "argv": ["bash","-c","source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec timeout --kill-after=3 65 python /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/probe_mlp_cross_prefetch.py --execute --phase timing --tokens 967 --ranks 0,1 --vendor /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_cross_prefetch --output /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/timing967.json --limit-s 57"]
+    },
+    {
+      "label": "profile",
+      "wall_s": 9.076754800044,
+      "returncode": 0,
+      "argv": ["bash","-c","source /workspace/yangchen/Clef-27B-ascend/scripts/activate_env.sh && exec timeout --kill-after=3 45 python /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/probe_mlp_cross_prefetch.py --execute --phase profile --tokens 967 --ranks 0 --vendor /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_cross_prefetch --output /workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/profile.json --limit-s 37"]
+    }
+  ],
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "identity": {
+      "pid": 1754374,
+      "starttime": "424176890",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+      "ppid": 1,
+      "pgid": 1754374,
+      "sid": 1754374
+    },
+    "devices": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "python",
+        "pid": 1754374
+      },
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1754528
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1754529
+      }
+    ],
+    "phy_mapping": [
+      [0,14],
+      [1,15]
+    ],
+    "health": {
+      "status": "ready",
+      "model": "clef",
+      "revision": "local-65e5a3c5ffb6"
+    },
+    "checks22": true,
+    "argv_env_match": true,
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-cross-prefetch-at10fi3u/restore-s1/launch-manifest.json",
+      "sha256": "1fa276d56b86ec5690e6f50ea759ca8de525101e3ee887d5989decf54cd14a8e",
+      "bytes": 24468
+    },
+    "both_pointers_match": true,
+    "probe_tree_cleared": true
+  },
+  "stop_reason": "ON does not beat stock A/A, primary streaming gate outside vendor Event A/A band, complete chain loses all5 pairs. OFF task advantage retained independently; no epilogue/integration/quality run.",
+  "validation": ["CPU offsets174080 and3M slot/scheduler model","CANN9.2.1 ascend910_93 compile; one same ELF for0/1","18 unique real shape/rank/layer cases plus timing/profile setup rechecks","5 paired rounds, two ranks, warm+three-layer streaming","12 native profile ranges/36 exact stream/task/name/start CSV joins, no extra layout/cast kernels","22 restore checks and final fresh identity/health/env/ownership/pointers"],
+  "sync_static_candidates": {
+    "red_high_count": 11,
+    "performance_count": 1,
+    "raw": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/sync-audit.json",
+    "sha256": "a7769fa480683ac0f34935088e353a612e2504e6570b53ae5fd3a1ae89ba6489",
+    "status": "retained; CPU finite-state model does not resolve hardware ordering"
+  }
 }
