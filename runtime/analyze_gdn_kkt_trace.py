@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 import statistics as st
-from analyze_mlp_gate_profile import parse_trace
+from analyze_mlp_gate_profile import parse_trace, join_kernel_details
 
 
 def paired(rows, metric):
@@ -41,15 +41,22 @@ def main():
     for trace_file,sample_file in zip(a.trace,a.samples):
         doc=json.loads(sample_file.read_text());assert doc['status']=='profile_complete'
         rank=doc['rank'];trace=parse_trace(trace_file,divisor=1)
+        csv_file=trace_file.with_name('kernel_details.csv')
+        if csv_file.exists():join_kernel_details(trace,csv_file)
         for row in trace['samples']:
             assert row['phase'] in ('profile_wrapper','profile_prebuilt')
             main_tasks=[]
             for task in row['task_keys']:
                 compact=re.sub('[^a-z0-9]','',task['name'].lower())
-                if any(x in compact for x in ('clefgdnkktstock','clefgdnkktreuse','chunkgateddeltarulefwd')):
+                if task['task_type']=='MIX_AIC' and any(x in compact for x in ('clefgdnkktstock','clefgdnkktreuse','chunkgateddeltarulefwd')):
                     main_tasks.append(task)
             if len(main_tasks)!=1:raise ValueError('expected one GDN task: '+str((rank,row['phase'],row['arm'],row['task_keys'])))
             row.update(rank=rank,main_task=main_tasks[0],main_task_us=main_tasks[0]['duration_us'])
+            if 'kernel_csv_rows' in row:
+                csv_main=next(x for x in row['kernel_csv_rows'] if
+                    str(x['Task ID'])==main_tasks[0]['task_id'] and str(x['Stream ID'])==main_tasks[0]['stream'])
+                assert abs(float(csv_main['Duration(us)'])-row['main_task_us'])<.01
+                row['main_task_csv']={k:csv_main[k] for k in ('Name','Type','Accelerator Core','Block Num','Mix Block Num','Duration(us)')}
             all_tasks.append(row)
         output['traces'].append(trace)
         samples.extend(dict(row,rank=rank) for row in doc['samples'])

@@ -1,8 +1,8 @@
 {
-  "schema": "clef-gdn-kkt-reuse/1",
+  "schema": "clef-gdn-kkt-reuse/2",
   "base_commit": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
   "branch": "perf/gdn-kkt-reuse-20261122",
-  "status": "numeric_calibrated_pass; minimal_task_trace_prepared",
+  "status": "numeric_pass; task_and_wrapper_no_stable_gain; implementation_stopped; aa3e_running_verified",
   "release_commit": "5cc699069c7f91a35aabd583032c8720a0b626fa",
   "wheel_archive_sha256": "0e0febfe0b524df54c02dead985b787cf51f276ef904e4c2f88c5d43707a370b",
   "active_libraries": {
@@ -10,63 +10,19 @@
     "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_api/lib/libcust_opapi.so": "602100543245497bcbf8b2b90f8ee1a53af35ee21eb3346f0e6ed89737a283a3",
     "/workspace/yangchen/venvs/clef-py312/lib/python3.12/site-packages/fla_npu/opp/vendors/fla_npu_transformer/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so": "82526cee26b331df10a0f4a14ba8229df20b35722fab01b48c58a6c1cdcf97a3"
   },
-  "archive_byte_match_count": 92,
-  "kernel_source_compare": {
-    "count": 89,
-    "raw_equal": 1,
-    "LF_equal": 89
-  },
-  "binary_provenance_limit": "release wheel bundles these sources and active binaries; reproducible byte-identical compilation not established; same-source stock must calibrate against production wheel",
-  "deployed_contract": "BSND/BF16, Hk/Hv8/24, K/V128, chunk128, raw-g BTH with prepared-cumsum; no initial/final state; single-sequence metadata",
-  "tiling_key": {
-    "actual_private_stock": 3,
-    "actual_private_reuse": 3,
-    "production_wheel_direct_observation": "UNKNOWN"
+  "source_identity": {
+    "archive_byte_match_count": 92,
+    "kernel_LF_match": "89/89",
+    "compiled_source_match": {
+      "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-host-build.json",
+      "all_arch22_host_files_equal_generated_source": true,
+      "kernel_elf_unchanged": true
+    },
+    "compiled_ELFs_byte_identical_to_wheel": "not_established; production-boundary functional calibration passed"
   },
   "scope": "Stage P raw FP32 score tasks only B*Hv*NT -> B*Hk*NT; consumer shared read-only slots; original ABC taskNum/g/beta/mask/FP32 solve/WU unchanged",
-  "synchronization": "KktCube drains FIX_M before SCORE_READY; every AIC and AIV joins existing prepared-cumsum SyncAll<false>; all physical groups retain one local notification including zero producer groups",
-  "local_plan": [
-    "compile private separately named stock/reuse with packaged dependencies while service runs",
-    "fresh save restore reference; one <=240s hard-bounded local window; numerical stages/repeat before timing",
-    "calibrate stock output and speed against wheel; >=5 interleaved AA/AB, per-rank/device/wall/slow-rank",
-    "local stable gain only: reversible service integration, formal S1 three rounds and full OD+ERQA <=2pp"
-  ],
   "guard": "BF16/BSND/raw-g key3, B1 Hk8/Hv24 K/V128 BT128, T1..1595, canonical one-sequence host metadata, no state; unknown/multifield/long/multisegment fall back wheel until separately verified",
-  "device_window": {
-    "limit_s": 240,
-    "used_s": 61.29450741922483,
-    "remaining_s": 178.70549258077517,
-    "windows": 3,
-    "status": "closed",
-    "counting": "capture request + probe subprocess wall; compilation/service loading/stop/restoration separately bounded"
-  },
-  "mlp_budget_s": 142.5626215597391,
-  "raw_locations": {
-    "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy",
-    "remote": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy",
-    "base": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
-    "device_budget_s": 240,
-    "recheck": {
-      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41",
-      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-recheck-5zx25_41"
-    },
-    "calibration": {
-      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3",
-      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-cal-g6ur8jr3",
-      "source": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-fixed-source"
-    }
-  },
-  "raw_sha256": {
-    "installed-inventory.json": "59157526dc515d3c9f3f54b7b98d09a3ae6b470afd44ff467b2f52622aba3172",
-    "source-comparison.json": "b02295611de9024784eb2db376b0f599c699c55f399f603f917d93211dd52129",
-    "release-source.tar": "59a17aaa70dea41622366db4e9efe1b5eac83f5912a5357cfdd61c0e063b395a",
-    "numeric-rank0.json": "989c17f00dad2004548e320a8a2d7236f9b9aef78f447dfa8f8423b740566f0c",
-    "numeric-rank0.tiling.log": "249f6add6b8ae22e8dc7f25b6f8197fc42057d222fa315ec44deacc6b35066d5",
-    "capture-metadata.json": "62242264f85589752d89239e8c686d0028b7764c8b2a5a3223bd9ed1a0833051",
-    "package-capacity.json": "c7c063f2b8b9a1fea95417a4c5c60fe74e91ba9f32a71b880e89799e3b07b747",
-    "compiled-source-match.json": "2f0f0141a84d596751e3675bcb0ab7912de51c7a2d9069ce66c8f4baa34f1b53",
-    "fresh-service-check.json": "9e223cbfbf9995f327631450c9f3479a958f240972afd05632c597f605ed6261"
-  },
+  "synchronization": "KktCube drains FIX_M before SCORE_READY; every AIC and AIV joins existing prepared-cumsum SyncAll<false>; all physical groups retain one local notification including zero producer groups",
   "cpu_screen": {
     "index_lengths": [
       127,
@@ -86,11 +42,6 @@
       "boundary": "regex frontend; macro/template/cross-file coverage incomplete; static candidates retained and not disproved"
     }
   },
-  "compiled_source_match": {
-    "files": 10,
-    "exact": 10,
-    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/compiled-source-match.json"
-  },
   "build": {
     "status": "compiled_private_package",
     "vendor": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy/source/build/_CPack_Packages/Linux/External/fla_npu_linux-aarch64.run/packages/vendors/clef40_kkt_transformer",
@@ -108,10 +59,43 @@
       "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/package-capacity.json"
     }
   },
-  "first_runtime_failure": {
-    "stage": "stock GetWorkspace before custom kernel launch",
-    "message": "Phase6 combined tiling exceeds raw tiling capacity",
-    "restored_checks": 22
+  "abi_calibration": {
+    "normal_API_attr_width": 4,
+    "composite_API_attr_width": 8,
+    "private_reader": "float only for generated normal API; final O field remains FP32",
+    "production_composite_unchanged": true,
+    "kernel_ELF_unchanged": 8,
+    "host_sha256": "e425558155993c5ccc43acc92267c68bfaadd29adab3ee39b3ab1657f32506d2",
+    "runtime_oScale": 0.0883883461356163,
+    "runtime_oScale_bits": "0x3db504f3",
+    "historical_5_6875": "resolved by private scale-reader fix; old actual scale not observed",
+    "production_FP32_solve_input_x": "UNKNOWN: public boundary unavailable",
+    "ranks": [
+      {
+        "rank": 0,
+        "status": "calibration_passed",
+        "wheel_export_noexport_o": true,
+        "private_stock_wheel_o": true,
+        "exported_boundary_arms": {
+          "stock_flat": true,
+          "stock_dense": true,
+          "reuse_dense": true
+        },
+        "raw_record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank0.json"
+      },
+      {
+        "rank": 1,
+        "status": "calibration_passed",
+        "wheel_export_noexport_o": true,
+        "private_stock_wheel_o": true,
+        "exported_boundary_arms": {
+          "stock_flat": true,
+          "stock_dense": true,
+          "reuse_dense": true
+        },
+        "raw_record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank1.json"
+      }
+    ]
   },
   "capture": {
     "source": "one armed original OD-0677 request SHA e5132ea63a84a823e4fd9056322366b61488f95cd1e36528b5b8855ddc0abff6 in private capture instance",
@@ -182,453 +166,7 @@
     },
     "full_metadata": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/capture-metadata.json"
   },
-  "not_executed": [
-    "independent task-duration trace",
-    "varlen/long/fallback device guards (CPU dispatcher guards passed)",
-    "service integration",
-    "formal S1/OD/ERQA/S2"
-  ],
-  "performance_claim": "no stable local performance gain; no end-to-end gain or quality claim",
-  "restoration": {
-    "state": "RUNNING_VERIFIED",
-    "identity": {
-      "pid": 1737460,
-      "ppid": 1,
-      "pgid": 1737460,
-      "sid": 1737460,
-      "state": "S",
-      "starttime": "423304809",
-      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
-      "cmdline": [
-        "/workspace/yangchen/venvs/clef-py312/bin/python",
-        "-m",
-        "vllm.entrypoints.cli.main",
-        "serve",
-        "/workspace/yangchen/models/Clef-27B",
-        "--served-model-name",
-        "clef",
-        "--runner",
-        "pooling",
-        "--dtype",
-        "bfloat16",
-        "--tensor-parallel-size",
-        "2",
-        "--enforce-eager",
-        "--max-model-len",
-        "4096",
-        "--max-num-seqs",
-        "1",
-        "--max-num-batched-tokens",
-        "4096",
-        "--gpu-memory-utilization",
-        "0.9",
-        "--no-enable-prefix-caching",
-        "--no-enable-chunked-prefill",
-        "--skip-mm-profiling",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "18143",
-        "--limit-mm-per-prompt",
-        "{\"image\":1,\"video\":1}",
-        "--distributed-executor-backend",
-        "mp",
-        "--mm-processor-kwargs",
-        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
-      ]
-    },
-    "workers": [
-      {
-        "card": 7,
-        "chip": 0,
-        "name": "VLLMWorker_TP",
-        "pid": 1737601
-      },
-      {
-        "card": 7,
-        "chip": 1,
-        "name": "VLLMWorker_TP",
-        "pid": 1737602
-      }
-    ],
-    "checks": {
-      "new_manifest": true,
-      "root_identity": true,
-      "argv": true,
-      "effective": true,
-      "rawargv": true,
-      "service_environment": true,
-      "OPP9_LD12": true,
-      "joint_env": true,
-      "encoder_default0": true,
-      "aa3e_noop": true,
-      "aa3e_source": true,
-      "tree_group": true,
-      "workers": true,
-      "health": true,
-      "info": true,
-      "text": true,
-      "image": true,
-      "final_workers": true,
-      "final_identity": true,
-      "health_final": true,
-      "no_runtime_errors": true,
-      "no_pending_clients": true
-    },
-    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
-    "manifest": {
-      "path": "/workspace/yangchen/logs/clef40-gdn-kkt-cal-g6ur8jr3/restore-s1/launch-manifest.json",
-      "sha256": "64765c52499ae9b25e7822277716436ef10730d667f0b43f67a8962ad69a753a",
-      "bytes": 24426
-    },
-    "argv_env_manifest_matched": true,
-    "both_pointers_matched": true,
-    "no_experiment_processes": true,
-    "fresh_at_cst": "2026-11-22T10:59:22.907298+08:00",
-    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/verification.json"
-  },
-  "resume_condition": "Only revisit this implementation with a concrete change that can overcome measured AA and production-wrapper cost; numerical calibration has passed. No automatic further device collection or tuning.",
-  "next_queue": "Deferred by latest user guidance: remain on KKT; MLP/down/head queue not started in this stage.",
-  "previous_reference_mismatch": {
-    "rank": 0,
-    "tokens": 967,
-    "input_kind": "explicit_prefix_of_actual_1595_post_normalization_capture",
-    "raw_shared_tiles": 64,
-    "raw_stock_mapping_exact_checks": 192,
-    "independent_cpu_fp32_checks": 64,
-    "independent_cpu_max_abs": 6.556510925292969e-07,
-    "gated_fp32_A_exact_checks": 192,
-    "candidate_stock_final": {
-      "finite": true,
-      "equal": true,
-      "max_abs": 0.0
-    },
-    "candidate_repeats": [
-      {
-        "finite": true,
-        "equal": true,
-        "max_abs": 0.0
-      },
-      {
-        "finite": true,
-        "equal": true,
-        "max_abs": 0.0
-      }
-    ],
-    "end_canary": true,
-    "stock_wheel_final": {
-      "finite": true,
-      "equal": false,
-      "max_abs": 5.6875
-    },
-    "actual_tiling": {
-      "stock": {
-        "key": "3",
-        "reuse": "0",
-        "B": "1",
-        "Hk": "8",
-        "Hv": "24",
-        "T": "967",
-        "BT": "128",
-        "NT": "8",
-        "tasks": "192",
-        "scoreBytes": "12582912",
-        "scoreOffset": "75163648",
-        "solveInputOffset": "107936768",
-        "sysBytes": "16777216"
-      },
-      "reuse": {
-        "key": "3",
-        "reuse": "1",
-        "B": "1",
-        "Hk": "8",
-        "Hv": "24",
-        "T": "967",
-        "BT": "128",
-        "NT": "8",
-        "tasks": "192",
-        "scoreBytes": "4194304",
-        "scoreOffset": "75163648",
-        "solveInputOffset": "99548160",
-        "sysBytes": "16777216"
-      }
-    },
-    "first_failed_check": "same-source private L0 stock final o vs production wheel final o",
-    "root_cause": "UNKNOWN: private-wrapper/compiled-stock equivalence to production is unestablished; shared-score change is not implicated by observed stock/reuse equality"
-  },
-  "calibration": {
-    "root_cause": "private generated normal ACLNN converts Float scale to float4B; original composite host expects OP_ATTR double8B. Read float only in private generated-API host, preserving final O float value.",
-    "production_composite_unchanged": true,
-    "kernel_elf_unchanged": 8,
-    "host_sha256": "e425558155993c5ccc43acc92267c68bfaadd29adab3ee39b3ab1657f32506d2",
-    "actual_o_scale": 0.0883883461356163,
-    "old_actual_o_scale": "UNKNOWN: not recorded before fix; no zero-padding assumption used as runtime evidence",
-    "input_contract": "unchanged frozen q/k/v/g/beta; QK normalisation already applied by aa3e",
-    "production_solve_input_x": "UNKNOWN: public interface does not export pre-solve FP32 x",
-    "ranks": [
-      {
-        "rank": 0,
-        "status": "calibration_passed",
-        "private_stock_wheel_noexport": {
-          "finite": true,
-          "equal": true,
-          "max_abs": 0.0
-        },
-        "public_export_noexport_o": {
-          "finite": true,
-          "equal": true,
-          "max_abs": 0.0
-        },
-        "arms": {
-          "stock_flat": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          },
-          "stock_dense": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          },
-          "reuse_dense": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          }
-        },
-        "actual_tiling": {
-          "stock": {
-            "key": "3",
-            "reuse": "0",
-            "B": "1",
-            "Hk": "8",
-            "Hv": "24",
-            "T": "967",
-            "BT": "128",
-            "NT": "8",
-            "tasks": "192",
-            "scoreBytes": "12582912",
-            "scoreOffset": "75163648",
-            "solveInputOffset": "107936768",
-            "sysBytes": "16777216",
-            "oScale": "0x1.6a09e6p-4",
-            "rawSize": "1032",
-            "rawCapacity": "2048",
-            "oOffset": "168",
-            "trailerOffset": "456",
-            "trailerBytes": "576",
-            "export": "0",
-            "cores": "24",
-            "tilesPerCore": "8",
-            "gcOffset": "107843584",
-            "qkvLayout": "1",
-            "oLayout": "1"
-          },
-          "reuse": {
-            "key": "3",
-            "reuse": "1",
-            "B": "1",
-            "Hk": "8",
-            "Hv": "24",
-            "T": "967",
-            "BT": "128",
-            "NT": "8",
-            "tasks": "192",
-            "scoreBytes": "4194304",
-            "scoreOffset": "75163648",
-            "solveInputOffset": "99548160",
-            "sysBytes": "16777216",
-            "oScale": "0x1.6a09e6p-4",
-            "rawSize": "1040",
-            "rawCapacity": "2048",
-            "oOffset": "168",
-            "trailerOffset": "456",
-            "trailerBytes": "584",
-            "export": "0",
-            "cores": "24",
-            "tilesPerCore": "8",
-            "gcOffset": "99454976",
-            "qkvLayout": "1",
-            "oLayout": "1"
-          }
-        },
-        "descriptor_evidence": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank0.json"
-      },
-      {
-        "rank": 1,
-        "status": "calibration_passed",
-        "private_stock_wheel_noexport": {
-          "finite": true,
-          "equal": true,
-          "max_abs": 0.0
-        },
-        "public_export_noexport_o": {
-          "finite": true,
-          "equal": true,
-          "max_abs": 0.0
-        },
-        "arms": {
-          "stock_flat": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          },
-          "stock_dense": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          },
-          "reuse_dense": {
-            "cumsum": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "solved_A": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0,
-              "chunks": 192
-            },
-            "o": {
-              "finite": true,
-              "equal": true,
-              "max_abs": 0.0
-            },
-            "canary": true
-          }
-        },
-        "actual_tiling": {
-          "stock": {
-            "key": "3",
-            "reuse": "0",
-            "B": "1",
-            "Hk": "8",
-            "Hv": "24",
-            "T": "967",
-            "BT": "128",
-            "NT": "8",
-            "tasks": "192",
-            "scoreBytes": "12582912",
-            "scoreOffset": "75163648",
-            "solveInputOffset": "107936768",
-            "sysBytes": "16777216",
-            "oScale": "0x1.6a09e6p-4",
-            "rawSize": "1032",
-            "rawCapacity": "2048",
-            "oOffset": "168",
-            "trailerOffset": "456",
-            "trailerBytes": "576",
-            "export": "0",
-            "cores": "24",
-            "tilesPerCore": "8",
-            "gcOffset": "107843584",
-            "qkvLayout": "1",
-            "oLayout": "1"
-          },
-          "reuse": {
-            "key": "3",
-            "reuse": "1",
-            "B": "1",
-            "Hk": "8",
-            "Hv": "24",
-            "T": "967",
-            "BT": "128",
-            "NT": "8",
-            "tasks": "192",
-            "scoreBytes": "4194304",
-            "scoreOffset": "75163648",
-            "solveInputOffset": "99548160",
-            "sysBytes": "16777216",
-            "oScale": "0x1.6a09e6p-4",
-            "rawSize": "1040",
-            "rawCapacity": "2048",
-            "oOffset": "168",
-            "trailerOffset": "456",
-            "trailerBytes": "584",
-            "export": "0",
-            "cores": "24",
-            "tilesPerCore": "8",
-            "gcOffset": "99454976",
-            "qkvLayout": "1",
-            "oLayout": "1"
-          }
-        },
-        "descriptor_evidence": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank1.json"
-      }
-    ]
-  },
-  "numeric_result": {
+  "numeric": {
     "status": "numeric_passed",
     "cases": 12,
     "ranks": [
@@ -652,134 +190,7 @@
     "repeats_equal": true,
     "workspace_end_canary_pass": true
   },
-  "performance": {
-    "metric_definition": "five interleaved pairs, rank raw retained; per pair take slower rank then median paired gain=(1-reuse/stock)*100; AA=abs(stock_repeat/stock-1)*100",
-    "summary": {
-      "device_ms": {
-        "rank_medians": {
-          "wheel": [
-            0.4675599932670593,
-            0.47077998518943787
-          ],
-          "stock": [
-            0.8285800218582153,
-            0.8427600264549255
-          ],
-          "stock_repeat": [
-            0.8090199828147888,
-            0.8052200078964233
-          ],
-          "reuse": [
-            0.8097400069236755,
-            0.8058800101280212
-          ]
-        },
-        "slow_rank_medians": {
-          "wheel": 0.47773998975753784,
-          "stock": 0.8464599847793579,
-          "stock_repeat": 0.8090199828147888,
-          "reuse": 0.8097400069236755
-        },
-        "paired_gain_pct": [
-          11.848721856128797,
-          -5.084236687578891,
-          5.566257453908396,
-          -1.528803409585322,
-          6.34878977486617
-        ],
-        "paired_gain_median_pct": 5.566257453908396,
-        "aa_pct": [
-          16.897817595822275,
-          28.75300952048505,
-          5.8906489693742685,
-          0.41605128758214205,
-          6.204661535941714
-        ],
-        "aa_max_pct": 28.75300952048505
-      },
-      "wall_ms": {
-        "rank_medians": {
-          "wheel": [
-            0.6183600053191185,
-            0.605190172791481
-          ],
-          "stock": [
-            0.9289700537919998,
-            0.9472006931900978
-          ],
-          "stock_repeat": [
-            0.9086402133107185,
-            0.9084995836019516
-          ],
-          "reuse": [
-            0.9229304268956184,
-            0.901930034160614
-          ]
-        },
-        "slow_rank_medians": {
-          "wheel": 0.6183600053191185,
-          "stock": 0.9472006931900978,
-          "stock_repeat": 0.9086402133107185,
-          "reuse": 0.9229304268956184
-        },
-        "paired_gain_pct": [
-          12.957426886921864,
-          -6.774875710407802,
-          3.654650100138057,
-          -6.324644208084962,
-          4.933587270623141
-        ],
-        "paired_gain_median_pct": 3.654650100138057,
-        "aa_pct": [
-          12.36749554409795,
-          23.387692026149097,
-          5.146415446537944,
-          0.2449153227002232,
-          5.535328189693911
-        ],
-        "aa_max_pct": 23.387692026149097
-      },
-      "prebuilt_launch_event": {
-        "rank_medians": {
-          "stock": [
-            0.40215998888015747,
-            0.40630000829696655
-          ],
-          "stock_repeat": [
-            0.392300009727478,
-            0.4023999869823456
-          ],
-          "reuse": [
-            0.4082399904727936,
-            0.41405999660491943
-          ]
-        },
-        "slow_rank_medians": {
-          "stock": 0.40630000829696655,
-          "stock_repeat": 0.4046199917793274,
-          "reuse": 0.42006000876426697
-        },
-        "gain_pct": [
-          -3.223046829359011,
-          -0.18123455835510338,
-          -1.5118365229634945,
-          1.2088374682772018,
-          -4.336696259694928
-        ],
-        "aa_pct": [
-          4.8597507077807744,
-          3.472126080861837,
-          1.0841432461974554,
-          4.840073947891077,
-          0.9598870871226794
-        ]
-      }
-    },
-    "conclusion": "measured complete-wrapper gain does not exceed AA; prebuilt launch Event has no stable positive gain; no integration",
-    "kernel_task_duration": "UNKNOWN: no independent task trace was collected; prebuilt interval includes host launch/queue gaps",
-    "production_reference": "stable wheel full wrapper remains final reference; slower private Python/generated stock gain cannot substitute for production benefit"
-  },
-  "runtime_tiling_observation": {
+  "runtime_tiling": {
     "stock_bytes": 1032,
     "reuse_bytes": 1040,
     "stock_trailer_bytes": 576,
@@ -796,40 +207,361 @@
     ],
     "production_wheel_actual_tiling_key": "UNKNOWN: functional public-boundary calibration succeeded; no direct production host key dump"
   },
-  "latest_raw_sha256": {
-    "calibration-rank0.json": "072232fa5dc45a84758be5983595cb3552cf496239aa84663f50e7e4008ab977",
-    "calibration-rank1.json": "2f479cbbe99d62165a2515676a9dfd165ba3f8bb609e249a880b59cff8f82622",
-    "numeric-rank0.json": "1b8262197c37fbe970b08e25d449b9b908a8521935456c4cda22ec6d692d6ac1",
-    "numeric-rank1.json": "7158fd54c7da057fb76d20bf599f7a717eeaeaa1902054b5361edc84ce6edf82",
-    "timing-rank0.json": "f97e0331768771cbfd9b8f92b6e90a3c80b387c6058a28abc7e5fbc77df464b1",
-    "timing-rank1.json": "ebb19cf5da70683ae471969910dadd2107d88d8759d59c6d6be203b6426fcb57",
-    "paired-summary.json": "96ea0a5a92f223baa10b8e151f6bed1e63744a7224041bfeb2fa802d1e149133",
-    "decoded-runtime-tiling.json": "dc60c398c342b824164c7cd3d627d4d979a6b538e592910cf5bdaa9b6ccfc119",
-    "fresh-service-check.json": "509503ad21c02f86b3ce92532769f9d2849e6320e8891399e12cbb01fd3bffdf",
-    "window.json": "2da5a4019e638cfdd2acf87a6b33b43347159c6147a36415e219c0d75f35a61d"
+  "preliminary_five_pairs": {
+    "summary_file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/paired-summary.json",
+    "sha256": "96ea0a5a92f223baa10b8e151f6bed1e63744a7224041bfeb2fa802d1e149133",
+    "wrapper_wall_gain_median_pct": 3.654650100138057,
+    "wrapper_wall_AA_max_pct": 23.387692026149097,
+    "prebuilt_event_gain_median_pct": -1.5118365229634945,
+    "prebuilt_event_AA_max_pct": 4.8597507077807744
   },
-  "executed_probe_sha256": "857c3280c441db45a0b37169791792e1ea9980c37f465e4670452b06a2775202",
-  "compiled_source_match_after_scale_fix": {
-    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-host-build.json",
-    "all_arch22_host_files_equal_generated_source": true,
-    "kernel_elf_unchanged": true
-  },
-  "task_trace_plan": {
+  "task_trace": {
     "path": "torch_npu CPU+NPU Level1/AiCoreNone",
-    "rank_schedule": "serial0then1",
+    "collection_commit": "69f8a08",
+    "executed_probe_sha256": "63806252149dfe9899a0697e5f459e2817e084cf3e71fec101cf81e1dbfd5d44",
+    "rank_schedule": "serial0then1; same frozen M967 inputs/cache/ELFs",
     "profile_pairs": 3,
     "pre_post_pairs": 2,
-    "metrics": [
-      "complete wrapper wall/Event",
-      "prebuilt L0 wall/Event",
-      "explicitly correlated complete GDN task duration"
-    ],
-    "no_kernel_or_tiling_changes": true,
+    "stack_shape_memory_op_args": false,
     "pmu": false,
-    "replay": false,
     "mstx": false,
-    "export_after_restore": true,
-    "per_rank_hard_limit_s": 55,
-    "initial_budget_used_s": 61.29450741922483
+    "replay": false,
+    "export": "offline after aa3e22 restoration",
+    "main_tasks_mapped": 42,
+    "samples_mapped": 42,
+    "CSV_rows_matched": 90,
+    "clock_validation": "exact stream/task ID/name; timestamp difference<0.1us, duration difference<0.01us",
+    "main_type": "MIX_AIC",
+    "block_num": 24,
+    "mix_block_num": 48,
+    "wrapper_tasks_per_sample": 3,
+    "wrapper_tasks": [
+      "Cast",
+      "Transpose",
+      "one GDN MIX_AIC"
+    ],
+    "prebuilt_tasks_in_sample": 1,
+    "prebuilt_preparation": "Cast/Transpose and prep sync outside range, fully retained in raw; not eliminated",
+    "extra_cumsum_solve_or_copy_tasks": "no separate nodes among exported correlated samples",
+    "internal_per_stage_per_core_stalls": "UNKNOWN; no PMU",
+    "task_duration_us": {
+      "profile_wrapper": {
+        "rank_medians": {
+          "wheel": {
+            "0": 356.36149999999907,
+            "1": 368.867499999993
+          },
+          "stock": {
+            "0": 357.3610000000044,
+            "1": 358.9070000000065
+          },
+          "stock_repeat": {
+            "0": 360.2014999999956,
+            "1": 357.1474999999991
+          },
+          "reuse": {
+            "0": 371.56200000000536,
+            "1": 369.12699999999313
+          }
+        },
+        "slow_rank_medians": {
+          "wheel": 368.867499999993,
+          "stock": 358.9070000000065,
+          "stock_repeat": 362.1414999999979,
+          "reuse": 371.56200000000536
+        },
+        "paired_delta": [
+          13.560500000006869,
+          -0.705500000010943,
+          9.53550000001269
+        ],
+        "median_delta": 9.53550000001269,
+        "aa_delta": [
+          4.139999999999418,
+          3.5599999999976717,
+          -3.4254999999975553
+        ],
+        "aa_max_abs": 4.139999999999418,
+        "paired_gain_pct": [
+          -3.787833291203224,
+          0.19656902763416362,
+          -2.6223300250016734
+        ],
+        "aa_max_pct": 1.1564197356713324
+      },
+      "profile_prebuilt": {
+        "rank_medians": {
+          "stock": {
+            "0": 356.18099999999686,
+            "1": 355.62699999999313
+          },
+          "stock_repeat": {
+            "0": 356.6609999999928,
+            "1": 356.9470000000001
+          },
+          "reuse": {
+            "0": 359.6015000000043,
+            "1": 356.96749999999884
+          }
+        },
+        "slow_rank_medians": {
+          "stock": 359.661500000002,
+          "stock_repeat": 356.9470000000001,
+          "reuse": 359.6015000000043
+        },
+        "paired_delta": [
+          15.635000000009313,
+          1.3405000000057044,
+          -0.059999999997671694
+        ],
+        "median_delta": 1.3405000000057044,
+        "aa_delta": [
+          -4.080499999996391,
+          8.51500000001397,
+          -3.000500000009197
+        ],
+        "aa_max_abs": 8.51500000001397,
+        "paired_gain_pct": [
+          -4.330695030159615,
+          -0.3769398836437343,
+          0.016682352711550053
+        ],
+        "aa_max_pct": 2.394362632762448
+      }
+    },
+    "controls_ms": {
+      "pre": {
+        "wrapper": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.4823499917984009,
+              "stock": 0.8706299960613251,
+              "stock_repeat": 0.8422499895095825,
+              "reuse": 0.8296700119972229
+            },
+            "paired_delta_median": -0.04095998406410217,
+            "aa_max_abs": 0.0707399845123291
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.5898447707295418,
+              "stock": 0.9638350456953049,
+              "stock_repeat": 0.9353403002023697,
+              "reuse": 0.9227949194610119
+            },
+            "paired_delta_median": -0.041040126234292984,
+            "aa_max_abs": 0.07229018956422806
+          }
+        },
+        "prebuilt": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "stock": 0.39917999505996704,
+              "stock_repeat": 0.40036000311374664,
+              "reuse": 0.4122999906539917
+            },
+            "paired_delta_median": 0.013119995594024658,
+            "aa_max_abs": 0.003940016031265259
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "stock": 0.4947250708937645,
+              "stock_repeat": 0.5022101104259491,
+              "reuse": 0.5032806657254696
+            },
+            "paired_delta_median": 0.008555594831705093,
+            "aa_max_abs": 0.014389865100383759
+          }
+        }
+      },
+      "profile": {
+        "wrapper": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.5418599843978882,
+              "stock": 0.9179400205612183,
+              "stock_repeat": 0.9212200045585632,
+              "reuse": 0.9119399785995483
+            },
+            "paired_delta_median": -0.011520028114318848,
+            "aa_max_abs": 2.783519983291626
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.6609596312046051,
+              "stock": 1.0446803644299507,
+              "stock_repeat": 1.0401196777820587,
+              "reuse": 1.0347701609134674
+            },
+            "paired_delta_median": -0.016069971024990082,
+            "aa_max_abs": 2.798359841108322
+          }
+        },
+        "prebuilt": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "stock": 0.4305799901485443,
+              "stock_repeat": 0.4271799921989441,
+              "reuse": 0.42847999930381775
+            },
+            "paired_delta_median": 0.0019799768924713135,
+            "aa_max_abs": 0.004859983921051025
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "stock": 0.5570100620388985,
+              "stock_repeat": 0.5547497421503067,
+              "reuse": 0.5560498684644699
+            },
+            "paired_delta_median": 0.0025704503059387207,
+            "aa_max_abs": 0.012209638953208923
+          }
+        }
+      },
+      "post": {
+        "wrapper": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.6139000207185745,
+              "stock": 1.1277700066566467,
+              "stock_repeat": 0.8013400137424469,
+              "reuse": 0.8011899888515472
+            },
+            "paired_delta_median": -0.3265800178050995,
+            "aa_max_abs": 0.6540800333023071
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "wheel": 0.9144102223217487,
+              "stock": 1.2195599265396595,
+              "stock_repeat": 0.8957497775554657,
+              "reuse": 0.8842898532748222
+            },
+            "paired_delta_median": -0.33527007326483727,
+            "aa_max_abs": 0.6614495068788528
+          }
+        },
+        "prebuilt": {
+          "device_ms": {
+            "slow_rank_medians": {
+              "stock": 0.411080002784729,
+              "stock_repeat": 0.41223999857902527,
+              "reuse": 0.4082400053739548
+            },
+            "paired_delta_median": -0.002839997410774231,
+            "aa_max_abs": 0.030660003423690796
+          },
+          "wall_ms": {
+            "slow_rank_medians": {
+              "stock": 0.5056452937424183,
+              "stock_repeat": 0.5041998811066151,
+              "reuse": 0.5020154640078545
+            },
+            "paired_delta_median": -0.0036298297345638275,
+            "aa_max_abs": 0.029630959033966064
+          }
+        }
+      }
+    },
+    "representativeness": "profile wrapper noise is large; no profile-based P95 or formal speed claim; kernel task and wrapper are separate overlapping views",
+    "hardware_tasks_per_rank": [
+      63,
+      63
+    ],
+    "launch_configuration_note": "Block Num24 / Mix Block Num48 describe launch configuration; per-core active load not measured"
+  },
+  "conclusion": {
+    "adopted": false,
+    "reason": "no reproducible positive complete-task or complete-wrapper gain; stop this implementation",
+    "critical_path": "score tasks/allocation reduced; no observed whole-kernel critical-path shortening. Exact internal offsetting phase remains UNKNOWN.",
+    "production_wheel_reference": true,
+    "old_calibration_error_resolved": true,
+    "end_to_end_or_quality_claim": false,
+    "next_candidate": "not_started per latest user guidance"
+  },
+  "not_executed": [
+    "PMU/per-stage/per-core collection",
+    "varlen/long/fallback device guards (CPU guards passed)",
+    "service integration",
+    "formal S1/OD/ERQA/S2"
+  ],
+  "device_budget": {
+    "limit_s": 240,
+    "used_s": 76.87979675224051,
+    "remaining_s": 163.1202032477595,
+    "windows": 4,
+    "status": "closed",
+    "latest_increment_s": 15.58528933301568,
+    "basis": "capture/probe subprocess wall; load/stop/restore separately bounded; last offline export excluded"
+  },
+  "mlp_budget_s": 142.5626215597391,
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "identity": {
+      "pid": 1739609,
+      "ppid": 1,
+      "pgid": 1739609,
+      "sid": 1739609,
+      "starttime": "423402913",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
+    },
+    "workers": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1739770
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1739771
+      }
+    ],
+    "checks_passed": 22,
+    "checks_total": 22,
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-gdn-kkt-task-dtm2mucu/restore-s1/launch-manifest.json",
+      "sha256": "87c5f1b4943d5428264ef976e88e8528aa14fad54e205d327ac5e96ffc9d8cec",
+      "bytes": 24440
+    },
+    "argv_env_manifest_matched": true,
+    "both_pointers_matched": true,
+    "no_experiment_processes": true,
+    "fresh_at_cst": "2026-11-22T11:15:37.054607+08:00",
+    "full_record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/verification.json"
+  },
+  "raw_locations": {
+    "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy",
+    "remote": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy",
+    "base": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
+    "device_budget_s": 240,
+    "recheck": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41",
+      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-recheck-5zx25_41"
+    },
+    "calibration": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3",
+      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-cal-g6ur8jr3",
+      "source": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-fixed-source"
+    },
+    "task_trace": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu",
+      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-task-dtm2mucu"
+    }
+  },
+  "raw_records": {
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/profile-rank0.json": "f60b70a19240c94bdff03b197c4a5124ac02235d60c590127fde113579d8c9e7",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/profile-rank1.json": "651a0d392fc5ab228bf56c36175a6cb1cb11ae0c937791534d68ee76c40fe3af",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/task-analysis.json": "fd0ef941fac07f49724831303e392dcfa3c160a8328ef73e2803993f642747b7",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/fresh-service-check.json": "5eaac9e6ba7341acab3f0e6240c104ea2b253329b9fd8457431e81d7635a848b",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/window.json": "d30ac2ba63ce6ab245fa1a32621199ed788f57da50839128d1623d8c2484840e",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/decoded-runtime-tiling.json": "dc60c398c342b824164c7cd3d627d4d979a6b538e592910cf5bdaa9b6ccfc119",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/traces-r0/gdn-r0_1739458_20261122031037016_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv": "661fe5d0b5448a7858b588a44eca2643b2f0a0d75c090432ba8a1e4f97ada235",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/traces-r0/gdn-r0_1739458_20261122031037016_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json": "90d8a9993f7abc63a54c6e3251782754dd8fd6987eb797a2ef5182d62efb2f3c",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/traces-r1/gdn-r1_1739545_20261122031044816_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv": "86f3cf8d5d909e0c9d692dcba25dcf708253632d0d863c9e8e4e87d06fda97a7",
+    "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-task-dtm2mucu/traces-r1/gdn-r1_1739545_20261122031044816_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json": "67d40512f53d8eeae5df72b2d01f76583fd60f798cb62a6b195aca6776a2a489"
   }
 }
