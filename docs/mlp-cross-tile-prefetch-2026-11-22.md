@@ -38,3 +38,5 @@ CPU编译初两次分别报MakeCoord<int>不能转换MatrixCoord、MatrixCoord�
 原始材料本地 `/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u`，远端 `/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u`；编译包仅私有目录，不安装。build-metadata.json记录实际ELF/JSON的SHA及五个关键官方header核同。
 
 复现CPU：`python3 runtime/check_catlass_cross_prefetch.py --catlass-root FIXED_SOURCE_ROOT`；编译：在私有副本设置`CATLASS_ROOT=FIXED_SOURCE_ROOT`运行`bash build.sh`。仅调用编译，不启动NPU。
+
+局部入口`runtime/probe_mlp_cross_prefetch.py`默认只打印CPU plan；`--execute`后显式调用实际生成的int64 prefetch接口。数值按M967双rank→307/1595推进；5对vendor/stock A/A与ON及完整链，warm/三层streaming分列。每个probe子进程有timeout与内部deadline；远端独立supervisor finally恢复，使用户SSH断开后仍能优先恢复。执行字节SHA在tmp execution-sha.json，单一窗口预算由window.json累计。
