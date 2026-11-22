@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import time
+from contextlib import nullcontext
 
 
 def eligible(shape, dtype, cu, ci, *, state=False, final=False):
@@ -26,7 +27,8 @@ def eligible(shape, dtype, cu, ci, *, state=False, final=False):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--execute', action='store_true')
-    p.add_argument('--phase', choices=('numeric', 'timing'), default='numeric')
+    p.add_argument('--phase', choices=('calibration', 'numeric', 'timing', 'profile'), default='numeric')
+    p.add_argument('--logical-storage', action='store_true', help='dense storage descriptors, no data copy')
     p.add_argument('--vendor', type=Path)
     p.add_argument('--captures', type=Path)
     p.add_argument('--synthetic', action='store_true', help='screen only; cannot justify adoption')
@@ -35,7 +37,7 @@ def main():
     p.add_argument('--limit-s', type=float, default=90)
     a = p.parse_args()
     report = dict(schema='clef-gdn-kkt-screen/1', status='plan', rank=a.rank,
-                  phase=a.phase, lengths=[967, 127, 128, 129, 307, 1595] if a.phase == 'numeric' else [967], pairs=5,
+                  phase=a.phase, lengths=[967, 127, 128, 129, 307, 1595] if a.phase == 'numeric' else [967], pairs=3 if a.phase=='profile' else 5,
                   arms=['wheel', 'stock', 'stock_repeat', 'reuse'],
                   device_budget_s=a.limit_s, no_device_actions=not a.execute,
                   task_metric='prebuilt L0 launch event interval; task-only trace not implied',
@@ -67,14 +69,21 @@ def main():
         finite = bool(torch.isfinite(x).all() and torch.isfinite(y).all())
         return dict(finite=finite, equal=bool(torch.equal(x, y)),
                     max_abs=float((x.float()-y.float()).abs().max()) if finite else None)
-    def wheel(data):
-        return chunk_gated_delta_rule_fwd(*data, initial_state=None, output_final_state=False,
+    def wheel(data, exports=False):
+        result = chunk_gated_delta_rule_fwd(*data, initial_state=None, output_final_state=False,
             chunk_size=128, scale=128**-.5, layout='BSND', use_exp2=False,
-            use_qk_l2norm_in_kernel=False, allow_neg_eigval=False, disable_recompute=False,
+            use_qk_l2norm_in_kernel=False, allow_neg_eigval=False, disable_recompute=exports,
             cu_seqlens=(0, data[0].shape[1]),
             chunk_indices=tuple(x for j in range((data[0].shape[1]+127)//128) for x in (0, j)),
-            state_v_first=False)[0]
-    def prepare(data, arm, observe=False):
+            state_v_first=False)
+        return result if exports else result[0]
+    def layout(x, logical):
+        return dict(dtype=str(x.dtype), shape=list(x.shape), stride=list(x.stride()),
+                    format=int(torch_npu.get_npu_format(x)), storage_offset=int(x.storage_offset()),
+                    storage_numel=_runtime.storage_numel(x), contiguous=x.is_contiguous(),
+                    descriptor_storage_shape=list(x.shape) if logical else [_runtime.storage_numel(x)])
+    def prepare(data, arm, observe=False, exports=False, logical=None):
+        if logical is None: logical=a.logical_storage
         q, k, v, g, beta = data; t = q.shape[1]
         cu = (0, t); ci = tuple(x for j in range((t+127)//128) for x in (0, j))
         assert eligible(tuple(q.shape), str(q.dtype), cu, ci)
@@ -89,12 +98,14 @@ def main():
         A = torch.empty_like(storage)
         ctx = _runtime._CallContext(rt, q.device)
         tensors = [q, k, v, bt, storage, g, None, None]
-        args = [ctx.tensor(x) for x in tensors]
+        def descriptor(x):
+            return ctx.tensor(x, storage_shape_override=tuple(x.shape)) if x is not None and logical else ctx.tensor(x)
+        args = [descriptor(x) for x in tensors]
         # SDK ValueDepend inputs use the generated aclIntArray overload, exactly
         # as the production L2 call; avoid additional per-call H2D tensors.
         args += [ctx.int_array(cu), ctx.int_array(ci)]
-        args += [False, 128, 128**-.5, False, 1, 1, 1]
-        args += [ctx.tensor(x) for x in (out, final, gc, A)]
+        args += [False, 128, 128**-.5, exports, 1, 1, 1]
+        args += [descriptor(x) for x in (out, final, gc, A)]
         name = 'aclnnClefGdnKkt'+('Reuse' if arm == 'reuse' else 'Stock')
         get = rt.symbol(name+'GetWorkspaceSize'); launch = rt.symbol(name)
         get.restype = C.c_int
@@ -116,7 +127,10 @@ def main():
                 if r: raise RuntimeError(rt._aclnn_error(name, r))
             # ctx and all args stay alive through completion, outside timed launch.
             return dict(run=run, out=out, A=A, gc=gc, ws=backing, size=ws_size.value,
-                        ctx=ctx, tensors=tensors, storage=storage, final=final)
+                        ctx=ctx, tensors=tensors, storage=storage, final=final,
+                        descriptors={name:layout(x,logical) for name,x in zip(
+                            ('q','k','v','betaBHT','a_storage','raw_g','o','g_cumsum','solved_A'),
+                            [q,k,v,bt,storage,g,out,gc,A])} if observe else None)
         except BaseException:
             ctx.destroy(); raise
     def invoke(data, arm):
@@ -134,6 +148,20 @@ def main():
         off = base+int(meta['solveInputOffset'])
         gated = ws[off:off+24*t*128*4].cpu().view(torch.float32).reshape(24, t, 128)
         return raw, gated
+    def lower_comparison(x, y, t):
+        x,y=x.cpu().reshape(24,t,128),y.cpu().reshape(24,t,128)
+        checks=[]
+        for h in range(24):
+            for lo in range(0,t,128):
+                n=min(128,t-lo);mask=torch.ones((n,n),dtype=torch.bool).tril()
+                checks.append(comparison(x[h,lo:lo+n,:n][mask],y[h,lo:lo+n,:n][mask]))
+        return dict(finite=all(z['finite'] for z in checks),equal=all(z['equal'] for z in checks),
+                    max_abs=max(z['max_abs'] or 0 for z in checks),chunks=len(checks))
+    def output_stats(x, ref):
+        x,ref=x.cpu().float(),ref.cpu().float();diff=(x-ref).abs()
+        return dict(nonzero=int(torch.count_nonzero(x)),numel=x.numel(),rms=float(x.square().mean().sqrt()),
+                    max_abs=float(x.abs().max()),per_head_max_diff=diff.amax(dim=(0,1,3)).tolist(),
+                    tail_max_diff=float(diff[:,-(x.shape[1]%128 or 128):].max()))
     report.update(status='running', input_kind='synthetic_screen' if a.synthetic else 'production_capture',
                   numeric=[], warmup=[], samples=[], launch_samples=[])
     save()
@@ -145,6 +173,61 @@ def main():
             report['capture_sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
             source = [payload[x] for x in ('q', 'k', 'v', 'g', 'beta')]
             assert source[0].shape[1] >= 1595
+        if a.phase=='profile':
+            assert source is not None
+            os.environ.pop('CLEF_GDN_KKT_META',None)
+            data=[x[:,:967].contiguous().to(dev) for x in source]
+            ref=wheel(data);actual=invoke(data,'reuse');torch.npu.synchronize()
+            assert torch.equal(ref,actual) and bool(torch.isfinite(actual).all())
+            report['numeric_outside_samples']='M967 wheel/reuse exact and finite; full12-shape calibration reused'
+            profiled=False
+            def scope(name):
+                return torch.profiler.record_function('clef40/'+name) if profiled else nullcontext()
+            for arm in report['arms']:
+                before=time.perf_counter()
+                for _ in range(5):invoke(data,arm)
+                torch.npu.synchronize()
+                report['warmup'].append(dict(arm=arm,calls=5,wall_s=time.perf_counter()-before))
+            begin,end=torch.npu.Event(enable_timing=True),torch.npu.Event(enable_timing=True)
+            begin.record();end.record();torch.npu.synchronize();begin.elapsed_time(end)
+            def samples(phase,pairs):
+                for mode in ('wrapper','prebuilt'):
+                    arms=report['arms'] if mode=='wrapper' else ['stock','stock_repeat','reuse']
+                    for pair in range(pairs):
+                        for arm in (arms if pair%2==0 else list(reversed(arms))):
+                            check_time();obj=None
+                            if mode=='prebuilt':
+                                obj=prepare(data,arm);torch.npu.synchronize()
+                            with scope(f'sample/{phase}_{mode}/{pair}/{arm}'):
+                                wall=time.perf_counter();begin.record()
+                                with scope('submit'):
+                                    if obj:obj['run']()
+                                    else:out=invoke(data,arm)
+                                end.record()
+                                # Same single boundary sync as the original complete
+                                # wrapper/launch interval; none inside GDN stages.
+                                with scope('sync'):torch.npu.synchronize()
+                                elapsed=(time.perf_counter()-wall)*1000
+                            report['samples'].append(dict(phase=phase,mode=mode,pair=pair,arm=arm,
+                                device_ms=begin.elapsed_time(end),wall_ms=elapsed))
+                            if obj:obj['ctx'].destroy()
+                save()
+            samples('pre',2)
+            config=torch_npu.profiler._ExperimentalConfig(
+                profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,data_simplification=False,
+                record_op_args=False,export_type=[torch_npu.profiler.ExportType.Text])
+            with torch_npu.profiler.profile(activities=[torch_npu.profiler.ProfilerActivity.CPU,
+                    torch_npu.profiler.ProfilerActivity.NPU],record_shapes=False,profile_memory=False,
+                    with_stack=False,with_modules=False,experimental_config=config,
+                    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(
+                        str(a.output.parent/f'traces-r{a.rank}'),worker_name=f'gdn-r{a.rank}',analyse_flag=False)):
+                profiled=True;samples('profile',3);profiled=False
+            samples('post',2)
+            report.update(status='profile_complete',trace_directory=str(a.output.parent/f'traces-r{a.rank}'),
+                          profiler='CPU+NPU Level1/AiCoreNone; offline analyse after restoration',
+                          schedule='ranks serial, one complete-layer boundary sync; prebuilt prep sync outside sample')
+            save();return
         main_data = None
         for t in report['lengths']:
             check_time()
@@ -177,6 +260,36 @@ def main():
                        canary=bool((stock['ws'][stock['size']:] == 0xA5).all() and
                                    (reuse['ws'][reuse['size']:] == 0xA5).all()),
                        input_kind='explicit_prefix' if source else 'synthetic')
+            row['descriptors']=dict(stock=stock['descriptors'],reuse=reuse['descriptors'])
+            row['o_stats']=dict(stock=output_stats(stock['out'],ref),reuse=output_stats(reuse['out'],ref))
+            if a.phase=='calibration':
+                # The public export boundary is valid only if its o matches the
+                # original no-export production call on these frozen operands.
+                public=wheel(data,True);torch.npu.synchronize()
+                exported=dict(public_o_noexport=comparison(public[0],ref),
+                              production_x='UNKNOWN: no public pre-solve FP32 export',arms={})
+                snapshots=dict(production_o=ref.cpu(),production_export_o=public[0].cpu(),
+                               production_cumsum=public[2].cpu(),production_solved_A=public[3].cpu())
+                os.environ['CLEF_GDN_KKT_META']=str(metadata)
+                for label,arm,logical in [('stock_flat','stock',False),('stock_dense','stock',True),('reuse_dense','reuse',True)]:
+                    obj=prepare(data,arm,True,True,logical);obj['run']();torch.npu.synchronize()
+                    entry=dict(cumsum=comparison(obj['gc'],public[2]),
+                               solved_A=lower_comparison(obj['A'],public[3],t),
+                               o=comparison(obj['out'],ref),descriptors=obj['descriptors'],
+                               o_stats=output_stats(obj['out'],ref),
+                               canary=bool((obj['ws'][obj['size']:] == 0xA5).all()))
+                    exported['arms'][label]=entry
+                    for key in ('out','gc','A'):snapshots[label+'_'+key]=obj[key].cpu()
+                    obj['ctx'].destroy()
+                del os.environ['CLEF_GDN_KKT_META']
+                row['calibration']=exported
+                # Keep one tmp snapshot for CPU localisation if any boundary fails.
+                ok=exported['public_o_noexport']['equal'] and all(e['canary'] and all(
+                    e[k]['finite'] and e[k]['equal'] for k in ('cumsum','solved_A','o')) for e in exported['arms'].values())
+                row['calibration_passed']=ok
+                if not ok:
+                    snapshot=a.output.with_suffix('.failure.pt');torch.save(snapshots,snapshot)
+                    row['failure_snapshot']=dict(path=str(snapshot),sha256=hashlib.sha256(snapshot.read_bytes()).hexdigest())
             for hk in range(8):
                 for chunk in range((t+127)//128):
                     lo=chunk*128; n=min(128,t-lo)
@@ -198,11 +311,13 @@ def main():
             report['numeric'].append(row); save()
             stock['ctx'].destroy(); reuse['ctx'].destroy()
             checks=[row['final'], row['stock_wheel'], *row['raw'], *row['gate'], *row['repeats']]
+            if a.phase=='calibration' and not row['calibration_passed']:
+                raise ValueError('public cumsum/solved-A/o or descriptor calibration failed')
             if not row['canary'] or not all(x.get('pass_check', x['equal']) and x['finite'] for x in checks):
                 raise ValueError('stage/production/finite/stability/canary check failed')
             if t == 967: main_data=data
-        if a.phase == 'numeric':
-            report['status']='numeric_passed'; save(); return
+        if a.phase != 'timing':
+            report['status']=a.phase+'_passed'; save(); return
         # Strict screen passed: warmups are separate, all five AA/AB pairs retained.
         data = main_data
         for arm in report['arms']:

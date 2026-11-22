@@ -145,6 +145,14 @@ def main():
             'chunk_gated_delta_rule_fwd_def.cpp', snake+'_def.cpp'))
         if mode == 'reuse':
             reuse_patch(target)
+        # Normal generated ACLNN follows OpDef Float: double API argument ->
+        # float tmp2. The public composite OP_ATTR supplies a double instead.
+        # O's stored scale is float in both cases. Adapt only this private host
+        # reader to the generated ABI; the device ELF and arithmetic stay fixed.
+        state_host = target/'op_host/op_tiling/arch22/chunk_gated_delta_rule_fwd_arch22_state_output_tiling.cpp'
+        change(state_host, lambda s: replace_once(s,
+            '    const double scale = *(attrs->GetAttrPointer<double>(ATTR_SCALE));',
+            '    const double scale = static_cast<double>(*(attrs->GetAttrPointer<float>(ATTR_SCALE)));'))
         host = target/'op_host/op_tiling/arch22/chunk_gated_delta_rule_fwd_arch22_tiling.cpp'
         enabled = 'trailer.kktReuse' if mode == 'reuse' else '0ULL'
         def observe(s):
@@ -153,10 +161,18 @@ def main():
                 '    context->SetScheduleMode(1);\n'
                 '    if (const char* path = std::getenv("CLEF_GDN_KKT_META")) {\n'
                 '        if (FILE* file = std::fopen(path, "a")) {\n'
-                '            std::fprintf(file, "'+name+' key=%lu reuse=%lu B=%lu Hk=%lu Hv=%lu T=%lu BT=%lu NT=%lu tasks=%lu scoreBytes=%lu scoreOffset=%lu solveInputOffset=%lu sysBytes=%lu\\n",\n'
+                '            const auto* observedO = reinterpret_cast<const GDN::GdnMegaArch22FwdOTilingData*>(static_cast<const uint8_t*>(rawTiling->GetData()) + oTilingOffset);\n'
+                '            std::fprintf(file, "'+name+' key=%lu reuse=%lu B=%lu Hk=%lu Hv=%lu T=%lu BT=%lu NT=%lu tasks=%lu scoreBytes=%lu scoreOffset=%lu solveInputOffset=%lu sysBytes=%lu oScale=%a rawSize=%lu rawCapacity=%lu oOffset=%lu trailerOffset=%lu trailerBytes=%lu export=%lu cores=%lu tilesPerCore=%lu gcOffset=%lu qkvLayout=%lu oLayout=%lu\\n",\n'
                 '                context->GetTilingKey(), static_cast<uint64_t>('+enabled+'), abc.B, abc.Hk, abc.Hv, abc.T, abc.BT, abc.NT, abc.taskNum,\n'
-                '                abc.scoreWorkspaceBytes, trailer.scoreWorkspaceOffset, trailer.solveFp32InputOffset, systemWorkspace);\n'
+                '                abc.scoreWorkspaceBytes, trailer.scoreWorkspaceOffset, trailer.solveFp32InputOffset, systemWorkspace,\n'
+                '                static_cast<double>(observedO->scale), rawTilingSize, rawTiling->GetCapacity(), oTilingOffset, phase6TrailerOffset, sizeof(trailer),\n'
+                '                trailer.outputGCumsum, abc.usedAicNum, abc.tilesPerCore, trailer.gCumsumBhtOffset, abc.qkvLayout, abc.oLayout);\n'
                 '            std::fclose(file);\n'
+                '            char binaryPath[4096];\n'
+                '            std::snprintf(binaryPath, sizeof(binaryPath), "%s.'+name+'.T%lu.export%lu.bin", path, abc.T, trailer.outputGCumsum);\n'
+                '            if (FILE* binary = std::fopen(binaryPath, "wb")) {\n'
+                '                std::fwrite(rawTiling->GetData(), 1, rawTilingSize, binary); std::fclose(binary);\n'
+                '            }\n'
                 '        }\n'
                 '    }')
         change(host, observe)

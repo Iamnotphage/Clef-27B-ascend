@@ -30,7 +30,8 @@ def overlap(xs, ys):
     return union((max(a,c),min(b,d)) for a,b in intervals(xs) for c,d in intervals(ys) if max(a,c)<min(b,d))
 
 
-def parse_trace(path):
+def parse_trace(path, divisor=3):
+    if divisor <= 0: raise ValueError("positive layer divisor required")
     doc=json.loads(Path(path).read_text());events=doc.get('traceEvents',[]) if isinstance(doc,dict) else doc
     processes={e['pid']:e['args']['name'] for e in events if e.get('name')=='process_name'}
     # Subtract the epoch with decimal arithmetic before using float durations.
@@ -96,34 +97,34 @@ def parse_trace(path):
         syncapis=[e for e in apis if 'synchroniz' in e['name'].lower()]
         otherapis=[e for e in apis if e not in syncapis]
         # A disjoint elapsed partition, kept separate from overlapping host/API views.
-        partition=dict(before_first_us=max(0,first-sample['start'])/3,kernel_union_us=union(k)/3,
-                       between_kernel_gaps_us=(last-first-union(k))/3,after_last_us=max(0,sample['end']-last)/3)
+        partition=dict(before_first_us=max(0,first-sample['start'])/divisor,kernel_union_us=union(k)/divisor,
+                       between_kernel_gaps_us=(last-first-union(k))/divisor,after_last_us=max(0,sample['end']-last)/divisor)
         markers=sorted(event_records.values(),key=lambda e:e['start'])
         event_partition=None
         if len(markers)==2:
-            event_partition=dict(before_first_us=(first-markers[0]['start'])/3,kernel_union_us=union(k)/3,
-                between_kernel_gaps_us=(last-first-union(k))/3,after_last_us=(markers[1]['start']-last)/3)
+            event_partition=dict(before_first_us=(first-markers[0]['start'])/divisor,kernel_union_us=union(k)/divisor,
+                between_kernel_gaps_us=(last-first-union(k))/divisor,after_last_us=(markers[1]['start']-last)/divisor)
         gap=[(markers[0]['start'],first)] if len(markers)==2 else []
         host_ranges=submit+bounds(otherapis)
-        gap_covered=overlap(gap,host_ranges)/3
-        named={name:union(bounds(scoped(name)))/3 for name in ['submit','sync','v3_alloc','v3_bridge','v3_get_workspace','v3_launch']}
+        gap_covered=overlap(gap,host_ranges)/divisor
+        named={name:union(bounds(scoped(name)))/divisor for name in ['submit','sync','v3_alloc','v3_bridge','v3_get_workspace','v3_launch']}
         # Self of coarse bridge excludes its nested named ranges and native CPU API spans on the main OS thread.
         submit_children=bounds([e for e in scopes if e['name']!='clef40/submit'])
-        submit_self=(union(submit)-overlap(submit,submit_children))/3
+        submit_self=(union(submit)-overlap(submit,submit_children))/divisor
         bridge=bounds(scoped('v3_bridge'))
         children=bounds(scoped('v3_get_workspace')+scoped('v3_launch'))+bounds([e for e in apis if e['tid']==sample['tid']])
-        rows.append(dict(phase=phase,pair=int(pair),arm=arm,elapsed_us=(sample['end']-sample['start'])/3,
+        rows.append(dict(phase=phase,pair=int(pair),arm=arm,elapsed_us=(sample['end']-sample['start'])/divisor,
             scope_inclusive_us=named,submit_self_us=submit_self,event_partition_us=event_partition,
             before_first_host_range_coverage_us=gap_covered,
-            before_first_uncovered_us=union(gap)/3-gap_covered,
-            event_marker_count=len(markers),event_span_us=(markers[1]['start']-markers[0]['start'])/3 if len(markers)==2 else None,bridge_self_us=(union(bridge)-overlap(bridge,children))/3,
-            native_non_sync_api_union_us=union(bounds(otherapis))/3,native_sync_api_union_us=union(bounds(syncapis))/3,
-            explicit_sync_overlap_kernel_us=overlap(sync,k)/3,
-            last_kernel_to_sync_return_us=max(0,max((b for a,b in sync),default=sample['end'])-last)/3,
+            before_first_uncovered_us=union(gap)/divisor-gap_covered,
+            event_marker_count=len(markers),event_span_us=(markers[1]['start']-markers[0]['start'])/divisor if len(markers)==2 else None,bridge_self_us=(union(bridge)-overlap(bridge,children))/divisor,
+            native_non_sync_api_union_us=union(bounds(otherapis))/divisor,native_sync_api_union_us=union(bounds(syncapis))/divisor,
+            explicit_sync_overlap_kernel_us=overlap(sync,k)/divisor,
+            last_kernel_to_sync_return_us=max(0,max((b for a,b in sync),default=sample['end'])-last)/divisor,
             partition_us=partition,task_count=len(kernels),task_names=dict(Counter(e['name'] for e in kernels)),
-            task_sum_us=sum(e['end']-e['start'] for e in kernels)/3,streams=sorted(set(str(e['tid']) for e in kernels)),
+            task_sum_us=sum(e['end']-e['start'] for e in kernels)/divisor,streams=sorted(set(str(e['tid']) for e in kernels)),
             linked_tasks=len(matched),links=links,worker_dequeues=len(worker),
-            task_keys=[dict(stream=str(e['tid']),task_id=str(e.get('args',{}).get('Task Id')),name=e['name'],start_us=e['start']) for e in kernels],
+            task_keys=[dict(stream=str(e['tid']),task_id=str(e.get('args',{}).get('Task Id')),name=e['name'],start_us=e['start'],end_us=e['end'],duration_us=e['end']-e['start'],task_type=e.get('args',{}).get('Task Type')) for e in kernels],
             native_api_names=dict(Counter(e['name'] for e in apis)),
             unknown='Task internal pipeline/per-core stalls unavailable; launch-to-start is elapsed latency, not automatically avoidable wait'))
     return dict(path=str(path),trace_origin_us=str(origin),time_unit='us relative to trace_origin_us',processes=processes,samples=rows,hardware_tasks_total=len(tasks),

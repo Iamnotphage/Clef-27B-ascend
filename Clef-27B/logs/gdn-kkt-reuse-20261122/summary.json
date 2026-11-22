@@ -2,7 +2,7 @@
   "schema": "clef-gdn-kkt-reuse/1",
   "base_commit": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
   "branch": "perf/gdn-kkt-reuse-20261122",
-  "status": "stopped_production_reference_not_equivalent; aa3e_restored_verified",
+  "status": "numeric_calibrated_pass; minimal_task_trace_prepared",
   "release_commit": "5cc699069c7f91a35aabd583032c8720a0b626fa",
   "wheel_archive_sha256": "0e0febfe0b524df54c02dead985b787cf51f276ef904e4c2f88c5d43707a370b",
   "active_libraries": {
@@ -34,9 +34,9 @@
   "guard": "BF16/BSND/raw-g key3, B1 Hk8/Hv24 K/V128 BT128, T1..1595, canonical one-sequence host metadata, no state; unknown/multifield/long/multisegment fall back wheel until separately verified",
   "device_window": {
     "limit_s": 240,
-    "used_s": 15.58537808433175,
-    "remaining_s": 224.41462191566825,
-    "windows": 2,
+    "used_s": 61.29450741922483,
+    "remaining_s": 178.70549258077517,
+    "windows": 3,
     "status": "closed",
     "counting": "capture request + probe subprocess wall; compilation/service loading/stop/restoration separately bounded"
   },
@@ -49,6 +49,11 @@
     "recheck": {
       "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41",
       "remote": "/workspace/yangchen/work/clef40-gdn-kkt-recheck-5zx25_41"
+    },
+    "calibration": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3",
+      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-cal-g6ur8jr3",
+      "source": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-fixed-source"
     }
   },
   "raw_sha256": {
@@ -177,7 +182,114 @@
     },
     "full_metadata": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/capture-metadata.json"
   },
-  "numeric_result": {
+  "not_executed": [
+    "independent task-duration trace",
+    "varlen/long/fallback device guards (CPU dispatcher guards passed)",
+    "service integration",
+    "formal S1/OD/ERQA/S2"
+  ],
+  "performance_claim": "no stable local performance gain; no end-to-end gain or quality claim",
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "identity": {
+      "pid": 1737460,
+      "ppid": 1,
+      "pgid": 1737460,
+      "sid": 1737460,
+      "state": "S",
+      "starttime": "423304809",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+      "cmdline": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "1",
+        "--max-num-batched-tokens",
+        "4096",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ]
+    },
+    "workers": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1737601
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1737602
+      }
+    ],
+    "checks": {
+      "new_manifest": true,
+      "root_identity": true,
+      "argv": true,
+      "effective": true,
+      "rawargv": true,
+      "service_environment": true,
+      "OPP9_LD12": true,
+      "joint_env": true,
+      "encoder_default0": true,
+      "aa3e_noop": true,
+      "aa3e_source": true,
+      "tree_group": true,
+      "workers": true,
+      "health": true,
+      "info": true,
+      "text": true,
+      "image": true,
+      "final_workers": true,
+      "final_identity": true,
+      "health_final": true,
+      "no_runtime_errors": true,
+      "no_pending_clients": true
+    },
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-gdn-kkt-cal-g6ur8jr3/restore-s1/launch-manifest.json",
+      "sha256": "64765c52499ae9b25e7822277716436ef10730d667f0b43f67a8962ad69a753a",
+      "bytes": 24426
+    },
+    "argv_env_manifest_matched": true,
+    "both_pointers_matched": true,
+    "no_experiment_processes": true,
+    "fresh_at_cst": "2026-11-22T10:59:22.907298+08:00",
+    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/verification.json"
+  },
+  "resume_condition": "Only revisit this implementation with a concrete change that can overcome measured AA and production-wrapper cost; numerical calibration has passed. No automatic further device collection or tuning.",
+  "next_queue": "Deferred by latest user guidance: remain on KKT; MLP/down/head queue not started in this stage.",
+  "previous_reference_mismatch": {
     "rank": 0,
     "tokens": 967,
     "input_kind": "explicit_prefix_of_actual_1595_post_normalization_capture",
@@ -244,114 +356,480 @@
     "first_failed_check": "same-source private L0 stock final o vs production wheel final o",
     "root_cause": "UNKNOWN: private-wrapper/compiled-stock equivalence to production is unestablished; shared-score change is not implicated by observed stock/reuse equality"
   },
-  "not_executed": [
-    "rank1 numeric",
-    "127/128/129/307/1595 numeric",
-    "varlen/long/fallback device guards",
-    "performance AA/AB",
-    "task profile",
-    "service integration",
-    "formal S1/OD/ERQA/S2"
-  ],
-  "performance_claim": null,
-  "restoration": {
-    "state": "RUNNING_VERIFIED",
-    "identity": {
-      "pid": 1734792,
-      "ppid": 1,
-      "pgid": 1734792,
-      "sid": 1734792,
-      "state": "S",
-      "starttime": "423193402",
-      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
-      "cmdline": [
-        "/workspace/yangchen/venvs/clef-py312/bin/python",
-        "-m",
-        "vllm.entrypoints.cli.main",
-        "serve",
-        "/workspace/yangchen/models/Clef-27B",
-        "--served-model-name",
-        "clef",
-        "--runner",
-        "pooling",
-        "--dtype",
-        "bfloat16",
-        "--tensor-parallel-size",
-        "2",
-        "--enforce-eager",
-        "--max-model-len",
-        "4096",
-        "--max-num-seqs",
-        "1",
-        "--max-num-batched-tokens",
-        "4096",
-        "--gpu-memory-utilization",
-        "0.9",
-        "--no-enable-prefix-caching",
-        "--no-enable-chunked-prefill",
-        "--skip-mm-profiling",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "18143",
-        "--limit-mm-per-prompt",
-        "{\"image\":1,\"video\":1}",
-        "--distributed-executor-backend",
-        "mp",
-        "--mm-processor-kwargs",
-        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
-      ]
-    },
-    "workers": [
+  "calibration": {
+    "root_cause": "private generated normal ACLNN converts Float scale to float4B; original composite host expects OP_ATTR double8B. Read float only in private generated-API host, preserving final O float value.",
+    "production_composite_unchanged": true,
+    "kernel_elf_unchanged": 8,
+    "host_sha256": "e425558155993c5ccc43acc92267c68bfaadd29adab3ee39b3ab1657f32506d2",
+    "actual_o_scale": 0.0883883461356163,
+    "old_actual_o_scale": "UNKNOWN: not recorded before fix; no zero-padding assumption used as runtime evidence",
+    "input_contract": "unchanged frozen q/k/v/g/beta; QK normalisation already applied by aa3e",
+    "production_solve_input_x": "UNKNOWN: public interface does not export pre-solve FP32 x",
+    "ranks": [
       {
-        "card": 7,
-        "chip": 0,
-        "name": "VLLMWorker_TP",
-        "pid": 1734963
+        "rank": 0,
+        "status": "calibration_passed",
+        "private_stock_wheel_noexport": {
+          "finite": true,
+          "equal": true,
+          "max_abs": 0.0
+        },
+        "public_export_noexport_o": {
+          "finite": true,
+          "equal": true,
+          "max_abs": 0.0
+        },
+        "arms": {
+          "stock_flat": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          },
+          "stock_dense": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          },
+          "reuse_dense": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          }
+        },
+        "actual_tiling": {
+          "stock": {
+            "key": "3",
+            "reuse": "0",
+            "B": "1",
+            "Hk": "8",
+            "Hv": "24",
+            "T": "967",
+            "BT": "128",
+            "NT": "8",
+            "tasks": "192",
+            "scoreBytes": "12582912",
+            "scoreOffset": "75163648",
+            "solveInputOffset": "107936768",
+            "sysBytes": "16777216",
+            "oScale": "0x1.6a09e6p-4",
+            "rawSize": "1032",
+            "rawCapacity": "2048",
+            "oOffset": "168",
+            "trailerOffset": "456",
+            "trailerBytes": "576",
+            "export": "0",
+            "cores": "24",
+            "tilesPerCore": "8",
+            "gcOffset": "107843584",
+            "qkvLayout": "1",
+            "oLayout": "1"
+          },
+          "reuse": {
+            "key": "3",
+            "reuse": "1",
+            "B": "1",
+            "Hk": "8",
+            "Hv": "24",
+            "T": "967",
+            "BT": "128",
+            "NT": "8",
+            "tasks": "192",
+            "scoreBytes": "4194304",
+            "scoreOffset": "75163648",
+            "solveInputOffset": "99548160",
+            "sysBytes": "16777216",
+            "oScale": "0x1.6a09e6p-4",
+            "rawSize": "1040",
+            "rawCapacity": "2048",
+            "oOffset": "168",
+            "trailerOffset": "456",
+            "trailerBytes": "584",
+            "export": "0",
+            "cores": "24",
+            "tilesPerCore": "8",
+            "gcOffset": "99454976",
+            "qkvLayout": "1",
+            "oLayout": "1"
+          }
+        },
+        "descriptor_evidence": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank0.json"
       },
       {
-        "card": 7,
-        "chip": 1,
-        "name": "VLLMWorker_TP",
-        "pid": 1734964
+        "rank": 1,
+        "status": "calibration_passed",
+        "private_stock_wheel_noexport": {
+          "finite": true,
+          "equal": true,
+          "max_abs": 0.0
+        },
+        "public_export_noexport_o": {
+          "finite": true,
+          "equal": true,
+          "max_abs": 0.0
+        },
+        "arms": {
+          "stock_flat": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          },
+          "stock_dense": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          },
+          "reuse_dense": {
+            "cumsum": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "solved_A": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0,
+              "chunks": 192
+            },
+            "o": {
+              "finite": true,
+              "equal": true,
+              "max_abs": 0.0
+            },
+            "canary": true
+          }
+        },
+        "actual_tiling": {
+          "stock": {
+            "key": "3",
+            "reuse": "0",
+            "B": "1",
+            "Hk": "8",
+            "Hv": "24",
+            "T": "967",
+            "BT": "128",
+            "NT": "8",
+            "tasks": "192",
+            "scoreBytes": "12582912",
+            "scoreOffset": "75163648",
+            "solveInputOffset": "107936768",
+            "sysBytes": "16777216",
+            "oScale": "0x1.6a09e6p-4",
+            "rawSize": "1032",
+            "rawCapacity": "2048",
+            "oOffset": "168",
+            "trailerOffset": "456",
+            "trailerBytes": "576",
+            "export": "0",
+            "cores": "24",
+            "tilesPerCore": "8",
+            "gcOffset": "107843584",
+            "qkvLayout": "1",
+            "oLayout": "1"
+          },
+          "reuse": {
+            "key": "3",
+            "reuse": "1",
+            "B": "1",
+            "Hk": "8",
+            "Hv": "24",
+            "T": "967",
+            "BT": "128",
+            "NT": "8",
+            "tasks": "192",
+            "scoreBytes": "4194304",
+            "scoreOffset": "75163648",
+            "solveInputOffset": "99548160",
+            "sysBytes": "16777216",
+            "oScale": "0x1.6a09e6p-4",
+            "rawSize": "1040",
+            "rawCapacity": "2048",
+            "oOffset": "168",
+            "trailerOffset": "456",
+            "trailerBytes": "584",
+            "export": "0",
+            "cores": "24",
+            "tilesPerCore": "8",
+            "gcOffset": "99454976",
+            "qkvLayout": "1",
+            "oLayout": "1"
+          }
+        },
+        "descriptor_evidence": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/calibration-rank1.json"
       }
-    ],
-    "checks": {
-      "new_manifest": true,
-      "root_identity": true,
-      "argv": true,
-      "effective": true,
-      "rawargv": true,
-      "service_environment": true,
-      "OPP9_LD12": true,
-      "joint_env": true,
-      "encoder_default0": true,
-      "aa3e_noop": true,
-      "aa3e_source": true,
-      "tree_group": true,
-      "workers": true,
-      "health": true,
-      "info": true,
-      "text": true,
-      "image": true,
-      "final_workers": true,
-      "final_identity": true,
-      "health_final": true,
-      "no_runtime_errors": true,
-      "no_pending_clients": true
-    },
-    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
-    "manifest": {
-      "path": "/workspace/yangchen/logs/clef40-gdn-kkt-recheck-5zx25_41/restore-s1/launch-manifest.json",
-      "sha256": "06fc04fbae5370d5f9a60257c8a29618c54b08a8267722e0817b56efc1c6283e",
-      "bytes": 24482
-    },
-    "argv_env_manifest_matched": true,
-    "both_pointers_matched": true,
-    "no_experiment_processes": true,
-    "fresh_at_cst": "2026-11-22T10:43:01.024788+08:00",
-    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41/verification.json"
+    ]
   },
-  "resume_condition": "First align private stock with production output on captured inputs; no performance/adoption claim before that. Avoid repeated device retries without a concrete CPU-supported fix.",
-  "next_queue": "MLP: CPU C-address/stride/tail manifest and fixed-geometry single-variable preload or legal base-phase control; retain actual212B/vendor/per-core UNKNOWN. Packed head K/V follows serially. No next-candidate device work in this stage."
+  "numeric_result": {
+    "status": "numeric_passed",
+    "cases": 12,
+    "ranks": [
+      0,
+      1
+    ],
+    "tokens": [
+      967,
+      127,
+      128,
+      129,
+      307,
+      1595
+    ],
+    "input_kind": "explicit prefixes of each rank frozen actual1595 GDN capture",
+    "raw_stock_reuse_equal": true,
+    "gated_FP32_x_stock_reuse_equal": true,
+    "final_o_stock_reuse_wheel_bit_equal": true,
+    "all_finite": true,
+    "repeats": 24,
+    "repeats_equal": true,
+    "workspace_end_canary_pass": true
+  },
+  "performance": {
+    "metric_definition": "five interleaved pairs, rank raw retained; per pair take slower rank then median paired gain=(1-reuse/stock)*100; AA=abs(stock_repeat/stock-1)*100",
+    "summary": {
+      "device_ms": {
+        "rank_medians": {
+          "wheel": [
+            0.4675599932670593,
+            0.47077998518943787
+          ],
+          "stock": [
+            0.8285800218582153,
+            0.8427600264549255
+          ],
+          "stock_repeat": [
+            0.8090199828147888,
+            0.8052200078964233
+          ],
+          "reuse": [
+            0.8097400069236755,
+            0.8058800101280212
+          ]
+        },
+        "slow_rank_medians": {
+          "wheel": 0.47773998975753784,
+          "stock": 0.8464599847793579,
+          "stock_repeat": 0.8090199828147888,
+          "reuse": 0.8097400069236755
+        },
+        "paired_gain_pct": [
+          11.848721856128797,
+          -5.084236687578891,
+          5.566257453908396,
+          -1.528803409585322,
+          6.34878977486617
+        ],
+        "paired_gain_median_pct": 5.566257453908396,
+        "aa_pct": [
+          16.897817595822275,
+          28.75300952048505,
+          5.8906489693742685,
+          0.41605128758214205,
+          6.204661535941714
+        ],
+        "aa_max_pct": 28.75300952048505
+      },
+      "wall_ms": {
+        "rank_medians": {
+          "wheel": [
+            0.6183600053191185,
+            0.605190172791481
+          ],
+          "stock": [
+            0.9289700537919998,
+            0.9472006931900978
+          ],
+          "stock_repeat": [
+            0.9086402133107185,
+            0.9084995836019516
+          ],
+          "reuse": [
+            0.9229304268956184,
+            0.901930034160614
+          ]
+        },
+        "slow_rank_medians": {
+          "wheel": 0.6183600053191185,
+          "stock": 0.9472006931900978,
+          "stock_repeat": 0.9086402133107185,
+          "reuse": 0.9229304268956184
+        },
+        "paired_gain_pct": [
+          12.957426886921864,
+          -6.774875710407802,
+          3.654650100138057,
+          -6.324644208084962,
+          4.933587270623141
+        ],
+        "paired_gain_median_pct": 3.654650100138057,
+        "aa_pct": [
+          12.36749554409795,
+          23.387692026149097,
+          5.146415446537944,
+          0.2449153227002232,
+          5.535328189693911
+        ],
+        "aa_max_pct": 23.387692026149097
+      },
+      "prebuilt_launch_event": {
+        "rank_medians": {
+          "stock": [
+            0.40215998888015747,
+            0.40630000829696655
+          ],
+          "stock_repeat": [
+            0.392300009727478,
+            0.4023999869823456
+          ],
+          "reuse": [
+            0.4082399904727936,
+            0.41405999660491943
+          ]
+        },
+        "slow_rank_medians": {
+          "stock": 0.40630000829696655,
+          "stock_repeat": 0.4046199917793274,
+          "reuse": 0.42006000876426697
+        },
+        "gain_pct": [
+          -3.223046829359011,
+          -0.18123455835510338,
+          -1.5118365229634945,
+          1.2088374682772018,
+          -4.336696259694928
+        ],
+        "aa_pct": [
+          4.8597507077807744,
+          3.472126080861837,
+          1.0841432461974554,
+          4.840073947891077,
+          0.9598870871226794
+        ]
+      }
+    },
+    "conclusion": "measured complete-wrapper gain does not exceed AA; prebuilt launch Event has no stable positive gain; no integration",
+    "kernel_task_duration": "UNKNOWN: no independent task trace was collected; prebuilt interval includes host launch/queue gaps",
+    "production_reference": "stable wheel full wrapper remains final reference; slower private Python/generated stock gain cannot substitute for production benefit"
+  },
+  "runtime_tiling_observation": {
+    "stock_bytes": 1032,
+    "reuse_bytes": 1040,
+    "stock_trailer_bytes": 576,
+    "reuse_trailer_bytes": 584,
+    "scalar_prefix_fields": 33,
+    "cube_storage_bytes": 200,
+    "decoded_record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-cal-g6ur8jr3/decoded-runtime-tiling.json",
+    "binary_dumps": 36,
+    "producer_tasks": 64,
+    "abc_tasks": 192,
+    "score_bytes": [
+      12582912,
+      4194304
+    ],
+    "production_wheel_actual_tiling_key": "UNKNOWN: functional public-boundary calibration succeeded; no direct production host key dump"
+  },
+  "latest_raw_sha256": {
+    "calibration-rank0.json": "072232fa5dc45a84758be5983595cb3552cf496239aa84663f50e7e4008ab977",
+    "calibration-rank1.json": "2f479cbbe99d62165a2515676a9dfd165ba3f8bb609e249a880b59cff8f82622",
+    "numeric-rank0.json": "1b8262197c37fbe970b08e25d449b9b908a8521935456c4cda22ec6d692d6ac1",
+    "numeric-rank1.json": "7158fd54c7da057fb76d20bf599f7a717eeaeaa1902054b5361edc84ce6edf82",
+    "timing-rank0.json": "f97e0331768771cbfd9b8f92b6e90a3c80b387c6058a28abc7e5fbc77df464b1",
+    "timing-rank1.json": "ebb19cf5da70683ae471969910dadd2107d88d8759d59c6d6be203b6426fcb57",
+    "paired-summary.json": "96ea0a5a92f223baa10b8e151f6bed1e63744a7224041bfeb2fa802d1e149133",
+    "decoded-runtime-tiling.json": "dc60c398c342b824164c7cd3d627d4d979a6b538e592910cf5bdaa9b6ccfc119",
+    "fresh-service-check.json": "509503ad21c02f86b3ce92532769f9d2849e6320e8891399e12cbb01fd3bffdf",
+    "window.json": "2da5a4019e638cfdd2acf87a6b33b43347159c6147a36415e219c0d75f35a61d"
+  },
+  "executed_probe_sha256": "857c3280c441db45a0b37169791792e1ea9980c37f465e4670452b06a2775202",
+  "compiled_source_match_after_scale_fix": {
+    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/scale-host-build.json",
+    "all_arch22_host_files_equal_generated_source": true,
+    "kernel_elf_unchanged": true
+  },
+  "task_trace_plan": {
+    "path": "torch_npu CPU+NPU Level1/AiCoreNone",
+    "rank_schedule": "serial0then1",
+    "profile_pairs": 3,
+    "pre_post_pairs": 2,
+    "metrics": [
+      "complete wrapper wall/Event",
+      "prebuilt L0 wall/Event",
+      "explicitly correlated complete GDN task duration"
+    ],
+    "no_kernel_or_tiling_changes": true,
+    "pmu": false,
+    "replay": false,
+    "mstx": false,
+    "export_after_restore": true,
+    "per_rank_hard_limit_s": 55,
+    "initial_budget_used_s": 61.29450741922483
+  }
 }
