@@ -86,3 +86,30 @@ ON−OFF三对task差 **+22.668/+17.868/+35.109µs**，中位 **+22.668µs**；v
 原数本地tmp `clef40-cross-prefetch-at10fi3u`，远端`/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u`。`window.json`为预算/实际命令/返回码；`numeric967.json`、`numeric_guards.json`、`timing967.json`、`profile.json`为完整原数；`task-analysis.json`保存36任务关联，原生trace/CSV路径与SHA见summary。大raw仅留tmp。
 
 CPU复现：`python3 runtime/check_catlass_cross_prefetch.py --catlass-root FIXED_SOURCE_ROOT`；私有编译设置`CATLASS_ROOT=FIXED_SOURCE_ROOT`后运行工程`build.sh`。默认`python3 runtime/probe_mlp_cross_prefetch.py`只打印plan；实际`--execute --phase numeric/timing/profile`的tokens/ranks/vendor/output/timeout见tmp window记录。离线解析复用`runtime/analyze_mlp_gate_profile.py --sample-prefix crosspref/ --divisor 3 --trace ... --kernel-csv ... --output ...`。CPU语法、固定source SHA、3M逐slot模型与实际36任务映射均通过。精简原数在`Clef-27B/logs/mlp-cross-tile-prefetch-20261122/summary.json`。
+
+
+## CPU补记：OFF调用层拆分（仅既有trace）
+
+同pair、同层31/0/63、同trace时钟；先逐pair差再取中位，单位µs/层。range self是扣除同主线程可见子范围/API后的残差，包含未标记Python/FFI/调度，含义不同于CPU占用。所有host/API与kernel均可重叠。
+
+| 字段 | OFF−vendor配对中位 | vendor A/A最大绝对差 |
+|---|---:|---:|
+| kernel union | −32.802 | 0.913 |
+| Event起点→首kernel | +23.101 | 76.612 |
+| kernel之间空档 | ≈0 | 0.007 |
+| 首kernel前可见范围未覆盖段 | +43.257 | 1.838 |
+| 末kernel→末Event | ≈0 | 0.007 |
+| 末kernel→同步返回 | +1.058 | 1.523 |
+| 主线程range inclusive / self残差 | +16.397 / +127.360 | 170.480 / 87.940 |
+
+“未覆盖段”扣除主线程可见CPU范围、关联worker dequeue和native API的union；余量含未标记Python/FFI/调度，不等于可省空闲。
+
+可见API（各arm中位incl/self）：OFF输出aten::empty 9.723/2.620，vendor empty_tensor 3.827/3.827（范围层级不同）；OFF GetWorkspace 9.030/8.127、外层launch 23.423/8.493，vendor合并aclnnMatmulWeightNz 9.570/3.127（内部GetWorkspace未拆出，记UNKNOWN）。两臂相同native aclrtLaunchKernelWithHostArgs分别为OFF10.477/10.477、vendor5.317/5.317。以上嵌套/重叠字段不相加拟合33µs。
+
+首层Node@launch的原生HostToDevice源→kernel延迟为vendor18.361/8.946/9.840、OFF21.132/17.197/20.570µs；vendor另有Torch enqueue→首kernel35.701/26.226/24.460µs，OFF为主线程直接launch，没有同类Torch enqueue字段。它们包含API/排队，不能视为可省等待。逐层API与flow关联原数留tmp off-host-breakdown.json。
+
+代表性限制：profile三对OFF−vendor Event为−64.547/−8.633/+13.180µs、wall为−66.530/+10.823/+18.783µs。首对vendor Event::record测量壳146.947µs/层，后两对35.097/36.620；range与Event统计受明显扰动。12个range的trace Event跨度与记录Event.elapsed_time最大差0.04435µs/层。原无prof streaming OFF−vendor Event配对中位rank0/rank1为+4.707/+13.320µs；rank1无task短采。代表rank0短trace不能量化解释双rank慢者的全部缺口。
+
+成本核查：完整链两臂均包含gate输出分配/canonical BF16 ND、同一SwiGLU及其输出分配、同一原NZ down。输入/权重搬运与NZ转换、数值cast/D2H、JSON dump均在样本外；完整链未留逐task trace，GPU内部等价只保留源码/格式层证据。OFF只见3次输出empty，未见额外workspace empty；返回workspace字节数未记录。
+
+结论：定位到OFF主线程适配路径及首kernel前区间，**尚无已证实可安全消除并回收关键预算的单点**。descriptor创建/销毁、重复ctypes签名绑定、device guard等未标独立范围；保存的发布版_runtime.py亦缺已部署单文件SHA核同。GetWorkspace executor可能绑定当前地址，现有记录未覆盖地址、shape/dtype/stride、stream、buffer生命期/并发及executor重用约定，不能直接缓存或挪出必要成本。保持UNKNOWN，无新实现/采集；预算仍40.16165188048035s，服务未操作。

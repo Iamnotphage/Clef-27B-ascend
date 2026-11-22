@@ -566,5 +566,125 @@
     "raw": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/sync-audit.json",
     "sha256": "a7769fa480683ac0f34935088e353a612e2504e6570b53ae5fd3a1ae89ba6489",
     "status": "retained; CPU finite-state model does not resolve hardware ordering"
+  },
+  "off_host_cpu_followup": {
+    "status": "NO_VERIFIED_REMOVABLE_SINGLE_POINT",
+    "scope": "existing rank0 profile only; pairs0..2/layers31,0,63; us/three-layer mean except first-layer Node flow latency",
+    "method": "Differences paired before median; CPU/API/self/device intervals overlap and are not additive. Range partitions checked per pair.",
+    "ranges": {
+      "range_inclusive": {
+        "vendor": [836.1733333333347,654.1966666666655,662.3666666666686],
+        "off": [689.5933333333329,670.5933333333329,683.5800000000017],
+        "paired_delta": [-146.58000000000175,16.396666666667443,21.21333333333314],
+        "paired_median_delta": 16.396666666667443,
+        "vendor_aa_max_abs": 170.4800000000007
+      },
+      "range_self_residual": {
+        "vendor": [113.59666666666938,21.183333333334303,31.78666666666686],
+        "off": [161.73666666666395,153.5633333333341,159.14666666667713],
+        "paired_delta": [48.13999999999457,132.3799999999998,127.36000000001027],
+        "paired_median_delta": 127.36000000001027,
+        "vendor_aa_max_abs": 87.94000000000717
+      },
+      "kernel_union": {
+        "vendor": [596.6623333333313,596.9158333333326,596.3423333333291],
+        "off": [562.7603333333294,565.1738333333342,563.5404999999979],
+        "paired_delta": [-33.90200000000186,-31.74199999999837,-32.80183333333116],
+        "paired_median_delta": -32.80183333333116,
+        "vendor_aa_max_abs": 0.9133333333302289
+      },
+      "event_to_first_kernel": {
+        "vendor": [96.75933333333523,16.04100000000229,15.61433333333116],
+        "off": [66.11733333333298,39.14233333333201,61.59699999999915],
+        "paired_delta": [-30.642000000002255,23.101333333329723,45.98266666666799],
+        "paired_median_delta": 23.101333333329723,
+        "vendor_aa_max_abs": 76.6116666666688
+      },
+      "between_kernel_gaps": {
+        "vendor": [0.01316666666631742,0.013166666671168059,0.013166666671168059],
+        "off": [0.01333333333604969,0.01316666666631742,0.013500000000931323],
+        "paired_delta": [0.00016666666973227072,-4.850638987696776e-12,0.00033333332976326346],
+        "paired_median_delta": 0.00016666666973227072,
+        "vendor_aa_max_abs": 0.006999999997788109
+      },
+      "last_kernel_to_event": {
+        "vendor": [0.006833333332906477,0.013333333326348415,0.006833333332906477],
+        "off": [0.006666666668024845,0.006666666668024845,0.006666666668024845],
+        "paired_delta": [-0.00016666666488163173,-0.006666666658323569,-0.00016666666488163173],
+        "paired_median_delta": -0.00016666666488163173,
+        "vendor_aa_max_abs": 0.006666666658323569
+      },
+      "last_kernel_to_sync_return": {
+        "vendor": [12.014166666665309,13.055666666662242,12.537833333335584],
+        "off": [13.129000000005666,11.530666666668063,13.596000000000155],
+        "paired_delta": [1.114833333340357,-1.5249999999941792,1.0581666666645706],
+        "paired_median_delta": 1.0581666666645706,
+        "vendor_aa_max_abs": 1.522666666661582
+      },
+      "native_first_launch_to_kernel": {
+        "vendor": [18.361000000004424,8.945999999996275,9.839999999996508],
+        "off": [21.131999999997788,17.197000000000116,20.569999999992433],
+        "paired_delta": [2.7709999999933643,8.251000000003842,10.729999999995925],
+        "paired_median_delta": 8.251000000003842,
+        "vendor_aa_max_abs": 7.674000000013621
+      },
+      "first_gap_visible_uncovered": {
+        "vendor": [4.2333333333323635,0.6866666666658906,0.8833333333313931],
+        "off": [47.786666666671714,26.779999999998836,44.140333333334034],
+        "paired_delta": [43.55333333333935,26.093333333332946,43.25700000000264],
+        "paired_median_delta": 43.25700000000264,
+        "vendor_aa_max_abs": 1.8379999999985257
+      }
+    },
+    "visible_api_inclusive_self_us": {
+      "vendor_gate": {
+        "output_allocation": [3.8266666666653086,3.8266666666653086],
+        "native_launch": [5.3166666666656965,5.3166666666656965],
+        "get_workspace": null,
+        "custom_launch": null,
+        "vendor_combined_api": [9.569999999997284,3.126666666668219]
+      },
+      "stock_gate": {
+        "output_allocation": [9.723333333332752,2.620000000000194],
+        "native_launch": [10.476666666669189,10.476666666669189],
+        "get_workspace": [9.029999999998836,8.126666666663368],
+        "custom_launch": [23.423333333334693,8.493333333336826],
+        "vendor_combined_api": null
+      }
+    },
+    "api_missing": "Absent separate vendor GetWorkspace/custom-launch spans mean UNKNOWN, not zero; vendor combined API includes its own implementation. Output scope levels differ.",
+    "raw_breakdown": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/off-host-breakdown.json",
+    "cpu_reproducer": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/analyze_off_host.py",
+    "cpu_reproducer_sha256": "71cc634c0aebcf6f8882a803132dd2be4e10b27bacc2ef4d4940f31470f36a2f",
+    "clock_check_event_vs_trace_max_us": 0.044345591226942815,
+    "profile_event_off_minus_vendor_us": [-64.54666455586755,-8.633335431416755,13.180017471313477],
+    "profile_wall_off_minus_vendor_us": [-66.52995944023132,10.823210080464607,18.78291368484497],
+    "main_unprofiled_rank_off_minus_vendor_event_median_us": {
+      "rank0": 4.706660906473759,
+      "rank1": 13.320008913676018
+    },
+    "cost_contract": "Both full chains include output allocation/canonical BF16 ND, SwiGLU allocation and original NZ down. Weight/input transfers, NZ conversion, numerical casts/D2H and JSON dump outside samples. No full-chain task trace.",
+    "unknown": ["per-layer total OFF Python bridge inclusive/self absent (no coarse child ranges)","descriptor create/destroy, ctypes binding/device guard/GC CPU costs unlabelled","workspace return bytes not recorded","public executor rebinding/reuse contract not saved","non-profile kernel task durations unavailable","installed _runtime.py byte SHA absent from saved inventory; saved release source is supporting evidence only","input/output addresses and external workspace bytes not recorded","per-layer complete OFF Python bridge inclusive/self not annotated","executor repeatability/rebind and concurrent buffer lifetime contract not established"],
+    "candidate_disposition": "No implementation change. Required allocation/GetWorkspace/launch not hoisted. Repeated ctypes signature bindings/descriptor work visible in release code but time/production linkage unquantified.",
+    "ssh_device_actions": 0,
+    "device_budget_unchanged_s": 40.16165188048035,
+    "uncovered_definition": "Event-start to first kernel minus union of visible same-main-thread CPU ranges, owned native APIs and explicitly linked worker dequeues. Residue includes unlabelled Python/FFI/scheduling; not avoidable idle.",
+    "profile_pair_disjoint_delta_us": [
+      {
+        "pair": 0,
+        "range": -146.58,
+        "event_trace": -64.544
+      },
+      {
+        "pair": 1,
+        "range": 16.396666666667443,
+        "event_trace": -8.647333333331744
+      },
+      {
+        "pair": 2,
+        "range": 21.21333333333314,
+        "event_trace": 13.181000000001745
+      }
+    ]
   }
 }
