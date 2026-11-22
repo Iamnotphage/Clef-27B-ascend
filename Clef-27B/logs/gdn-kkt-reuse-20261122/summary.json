@@ -2,7 +2,7 @@
   "schema": "clef-gdn-kkt-reuse/1",
   "base_commit": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
   "branch": "perf/gdn-kkt-reuse-20261122",
-  "status": "private_stock_kernels_compiled; reuse_remaining_incremental_build; no_device_validation",
+  "status": "stopped_production_reference_not_equivalent; aa3e_restored_verified",
   "release_commit": "5cc699069c7f91a35aabd583032c8720a0b626fa",
   "wheel_archive_sha256": "0e0febfe0b524df54c02dead985b787cf51f276ef904e4c2f88c5d43707a370b",
   "active_libraries": {
@@ -19,8 +19,9 @@
   "binary_provenance_limit": "release wheel bundles these sources and active binaries; reproducible byte-identical compilation not established; same-source stock must calibrate against production wheel",
   "deployed_contract": "BSND/BF16, Hk/Hv8/24, K/V128, chunk128, raw-g BTH with prepared-cumsum; no initial/final state; single-sequence metadata",
   "tiling_key": {
-    "source_expected": 3,
-    "actual_observation": "pending"
+    "actual_private_stock": 3,
+    "actual_private_reuse": 3,
+    "production_wheel_direct_observation": "UNKNOWN"
   },
   "scope": "Stage P raw FP32 score tasks only B*Hv*NT -> B*Hk*NT; consumer shared read-only slots; original ABC taskNum/g/beta/mask/FP32 solve/WU unchanged",
   "synchronization": "KktCube drains FIX_M before SCORE_READY; every AIC and AIV joins existing prepared-cumsum SyncAll<false>; all physical groups retain one local notification including zero producer groups",
@@ -33,20 +34,33 @@
   "guard": "BF16/BSND/raw-g key3, B1 Hk8/Hv24 K/V128 BT128, T1..1595, canonical one-sequence host metadata, no state; unknown/multifield/long/multisegment fall back wheel until separately verified",
   "device_window": {
     "limit_s": 240,
-    "used_s": 0,
-    "started": false
+    "used_s": 15.58537808433175,
+    "remaining_s": 224.41462191566825,
+    "windows": 2,
+    "status": "closed",
+    "counting": "capture request + probe subprocess wall; compilation/service loading/stop/restoration separately bounded"
   },
   "mlp_budget_s": 142.5626215597391,
   "raw_locations": {
     "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy",
     "remote": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy",
     "base": "b14cd0a8a0608ce10ef6d0ef3ab28511e59d46d3",
-    "device_budget_s": 240
+    "device_budget_s": 240,
+    "recheck": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41",
+      "remote": "/workspace/yangchen/work/clef40-gdn-kkt-recheck-5zx25_41"
+    }
   },
   "raw_sha256": {
     "installed-inventory.json": "59157526dc515d3c9f3f54b7b98d09a3ae6b470afd44ff467b2f52622aba3172",
     "source-comparison.json": "b02295611de9024784eb2db376b0f599c699c55f399f603f917d93211dd52129",
-    "release-source.tar": "59a17aaa70dea41622366db4e9efe1b5eac83f5912a5357cfdd61c0e063b395a"
+    "release-source.tar": "59a17aaa70dea41622366db4e9efe1b5eac83f5912a5357cfdd61c0e063b395a",
+    "numeric-rank0.json": "989c17f00dad2004548e320a8a2d7236f9b9aef78f447dfa8f8423b740566f0c",
+    "numeric-rank0.tiling.log": "249f6add6b8ae22e8dc7f25b6f8197fc42057d222fa315ec44deacc6b35066d5",
+    "capture-metadata.json": "62242264f85589752d89239e8c686d0028b7764c8b2a5a3223bd9ed1a0833051",
+    "package-capacity.json": "c7c063f2b8b9a1fea95417a4c5c60fe74e91ba9f32a71b880e89799e3b07b747",
+    "compiled-source-match.json": "2f0f0141a84d596751e3675bcb0ab7912de51c7a2d9069ce66c8f4baa34f1b53",
+    "fresh-service-check.json": "9e223cbfbf9995f327631450c9f3479a958f240972afd05632c597f605ed6261"
   },
   "cpu_screen": {
     "index_lengths": [
@@ -66,5 +80,278 @@
       "flow_findings": 0,
       "boundary": "regex frontend; macro/template/cross-file coverage incomplete; static candidates retained and not disproved"
     }
-  }
+  },
+  "compiled_source_match": {
+    "files": 10,
+    "exact": 10,
+    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/compiled-source-match.json"
+  },
+  "build": {
+    "status": "compiled_private_package",
+    "vendor": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy/source/build/_CPack_Packages/Linux/External/fla_npu_linux-aarch64.run/packages/vendors/clef40_kkt_transformer",
+    "installation": false,
+    "generated_api": "SDK normal ACLNN / aclIntArray metadata overload",
+    "capacity_fix": {
+      "metadata_files": 8,
+      "original_bytes": [
+        584,
+        592
+      ],
+      "corrected_bytes": 2048,
+      "kernel_elf_changed": false,
+      "basis": "CANN9.2.1 OpImplRegisterV2::Tiling default max2048; NNOPBASE initializes RawTilingData from binInfo.opParaSize; appended Phase6 exceeds compiler first-struct size",
+      "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/package-capacity.json"
+    }
+  },
+  "first_runtime_failure": {
+    "stage": "stock GetWorkspace before custom kernel launch",
+    "message": "Phase6 combined tiling exceeds raw tiling capacity",
+    "restored_checks": 22
+  },
+  "capture": {
+    "source": "one armed original OD-0677 request SHA e5132ea63a84a823e4fd9056322366b61488f95cd1e36528b5b8855ddc0abff6 in private capture instance",
+    "tokens": 1595,
+    "ranks": [
+      {
+        "rank": 0,
+        "path": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy/captures/rank0.pt",
+        "sha256": "b86fa0ceef1f03d404a09c0d95d65de8608f583b5536c765aefa225f6489fac1",
+        "g_beta_vary_by_value_head": {
+          "g": true,
+          "beta": true
+        }
+      },
+      {
+        "rank": 1,
+        "path": "/workspace/yangchen/work/clef40-gdn-kkt-dgkgrdjy/captures/rank1.pt",
+        "sha256": "e4bdd714dd1643b5b8b65f2c958f1310cc9cf81b850ca39449773afaa4a45e7b",
+        "g_beta_vary_by_value_head": {
+          "g": true,
+          "beta": true
+        }
+      }
+    ],
+    "contract": {
+      "initial_state": null,
+      "output_final_state": false,
+      "chunk_size": 128,
+      "cu_seqlens": [
+        0,
+        1595
+      ],
+      "chunk_indices": [
+        0,
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        3,
+        0,
+        4,
+        0,
+        5,
+        0,
+        6,
+        0,
+        7,
+        0,
+        8,
+        0,
+        9,
+        0,
+        10,
+        0,
+        11,
+        0,
+        12
+      ],
+      "scale": 0.08838834764831845,
+      "layout": "BSND",
+      "use_exp2": false,
+      "use_qk_l2norm_in_kernel": false,
+      "allow_neg_eigval": false,
+      "disable_recompute": false,
+      "state_v_first": false
+    },
+    "full_metadata": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-dgkgrdjy/capture-metadata.json"
+  },
+  "numeric_result": {
+    "rank": 0,
+    "tokens": 967,
+    "input_kind": "explicit_prefix_of_actual_1595_post_normalization_capture",
+    "raw_shared_tiles": 64,
+    "raw_stock_mapping_exact_checks": 192,
+    "independent_cpu_fp32_checks": 64,
+    "independent_cpu_max_abs": 6.556510925292969e-07,
+    "gated_fp32_A_exact_checks": 192,
+    "candidate_stock_final": {
+      "finite": true,
+      "equal": true,
+      "max_abs": 0.0
+    },
+    "candidate_repeats": [
+      {
+        "finite": true,
+        "equal": true,
+        "max_abs": 0.0
+      },
+      {
+        "finite": true,
+        "equal": true,
+        "max_abs": 0.0
+      }
+    ],
+    "end_canary": true,
+    "stock_wheel_final": {
+      "finite": true,
+      "equal": false,
+      "max_abs": 5.6875
+    },
+    "actual_tiling": {
+      "stock": {
+        "key": "3",
+        "reuse": "0",
+        "B": "1",
+        "Hk": "8",
+        "Hv": "24",
+        "T": "967",
+        "BT": "128",
+        "NT": "8",
+        "tasks": "192",
+        "scoreBytes": "12582912",
+        "scoreOffset": "75163648",
+        "solveInputOffset": "107936768",
+        "sysBytes": "16777216"
+      },
+      "reuse": {
+        "key": "3",
+        "reuse": "1",
+        "B": "1",
+        "Hk": "8",
+        "Hv": "24",
+        "T": "967",
+        "BT": "128",
+        "NT": "8",
+        "tasks": "192",
+        "scoreBytes": "4194304",
+        "scoreOffset": "75163648",
+        "solveInputOffset": "99548160",
+        "sysBytes": "16777216"
+      }
+    },
+    "first_failed_check": "same-source private L0 stock final o vs production wheel final o",
+    "root_cause": "UNKNOWN: private-wrapper/compiled-stock equivalence to production is unestablished; shared-score change is not implicated by observed stock/reuse equality"
+  },
+  "not_executed": [
+    "rank1 numeric",
+    "127/128/129/307/1595 numeric",
+    "varlen/long/fallback device guards",
+    "performance AA/AB",
+    "task profile",
+    "service integration",
+    "formal S1/OD/ERQA/S2"
+  ],
+  "performance_claim": null,
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "identity": {
+      "pid": 1734792,
+      "ppid": 1,
+      "pgid": 1734792,
+      "sid": 1734792,
+      "state": "S",
+      "starttime": "423193402",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+      "cmdline": [
+        "/workspace/yangchen/venvs/clef-py312/bin/python",
+        "-m",
+        "vllm.entrypoints.cli.main",
+        "serve",
+        "/workspace/yangchen/models/Clef-27B",
+        "--served-model-name",
+        "clef",
+        "--runner",
+        "pooling",
+        "--dtype",
+        "bfloat16",
+        "--tensor-parallel-size",
+        "2",
+        "--enforce-eager",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "1",
+        "--max-num-batched-tokens",
+        "4096",
+        "--gpu-memory-utilization",
+        "0.9",
+        "--no-enable-prefix-caching",
+        "--no-enable-chunked-prefill",
+        "--skip-mm-profiling",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "18143",
+        "--limit-mm-per-prompt",
+        "{\"image\":1,\"video\":1}",
+        "--distributed-executor-backend",
+        "mp",
+        "--mm-processor-kwargs",
+        "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":65536}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}"
+      ]
+    },
+    "workers": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1734963
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1734964
+      }
+    ],
+    "checks": {
+      "new_manifest": true,
+      "root_identity": true,
+      "argv": true,
+      "effective": true,
+      "rawargv": true,
+      "service_environment": true,
+      "OPP9_LD12": true,
+      "joint_env": true,
+      "encoder_default0": true,
+      "aa3e_noop": true,
+      "aa3e_source": true,
+      "tree_group": true,
+      "workers": true,
+      "health": true,
+      "info": true,
+      "text": true,
+      "image": true,
+      "final_workers": true,
+      "final_identity": true,
+      "health_final": true,
+      "no_runtime_errors": true,
+      "no_pending_clients": true
+    },
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-gdn-kkt-recheck-5zx25_41/restore-s1/launch-manifest.json",
+      "sha256": "06fc04fbae5370d5f9a60257c8a29618c54b08a8267722e0817b56efc1c6283e",
+      "bytes": 24482
+    },
+    "argv_env_manifest_matched": true,
+    "both_pointers_matched": true,
+    "no_experiment_processes": true,
+    "fresh_at_cst": "2026-11-22T10:43:01.024788+08:00",
+    "record": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-gdn-kkt-recheck-5zx25_41/verification.json"
+  },
+  "resume_condition": "First align private stock with production output on captured inputs; no performance/adoption claim before that. Avoid repeated device retries without a concrete CPU-supported fix.",
+  "next_queue": "MLP: CPU C-address/stride/tail manifest and fixed-geometry single-variable preload or legal base-phase control; retain actual212B/vendor/per-core UNKNOWN. Packed head K/V follows serially. No next-candidate device work in this stage."
 }

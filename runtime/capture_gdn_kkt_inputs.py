@@ -29,7 +29,8 @@ def install():
         def wrapped(*args, **kwargs):
             q = args[0] if args else kwargs['q']
             target = directory/f'rank{q.device.index}.pt'
-            if tuple(q.shape) == (1, 1595, 8, 128) and not target.exists():
+            if ((directory/'ARMED').exists() and tuple(q.shape) == (1, 1595, 8, 128)
+                    and not target.exists()):
                 # Exclusive marker prevents duplicate capture across layers/processes.
                 marker = target.with_suffix('.issued')
                 try:

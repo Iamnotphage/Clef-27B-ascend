@@ -26,6 +26,7 @@ def eligible(shape, dtype, cu, ci, *, state=False, final=False):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--execute', action='store_true')
+    p.add_argument('--phase', choices=('numeric', 'timing'), default='numeric')
     p.add_argument('--vendor', type=Path)
     p.add_argument('--captures', type=Path)
     p.add_argument('--synthetic', action='store_true', help='screen only; cannot justify adoption')
@@ -34,7 +35,7 @@ def main():
     p.add_argument('--limit-s', type=float, default=90)
     a = p.parse_args()
     report = dict(schema='clef-gdn-kkt-screen/1', status='plan', rank=a.rank,
-                  lengths=[967, 127, 128, 129, 307, 1595], pairs=5,
+                  phase=a.phase, lengths=[967, 127, 128, 129, 307, 1595] if a.phase == 'numeric' else [967], pairs=5,
                   arms=['wheel', 'stock', 'stock_repeat', 'reuse'],
                   device_budget_s=a.limit_s, no_device_actions=not a.execute,
                   task_metric='prebuilt L0 launch event interval; task-only trace not implied',
@@ -89,7 +90,9 @@ def main():
         ctx = _runtime._CallContext(rt, q.device)
         tensors = [q, k, v, bt, storage, g, None, None]
         args = [ctx.tensor(x) for x in tensors]
-        args += [ctx.int_tensor(cu, q.device), ctx.int_tensor(ci, q.device)]
+        # SDK ValueDepend inputs use the generated aclIntArray overload, exactly
+        # as the production L2 call; avoid additional per-call H2D tensors.
+        args += [ctx.int_array(cu), ctx.int_array(ci)]
         args += [False, 128, 128**-.5, False, 1, 1, 1]
         args += [ctx.tensor(x) for x in (out, final, gc, A)]
         name = 'aclnnClefGdnKkt'+('Reuse' if arm == 'reuse' else 'Stock')
@@ -198,6 +201,8 @@ def main():
             if not row['canary'] or not all(x.get('pass_check', x['equal']) and x['finite'] for x in checks):
                 raise ValueError('stage/production/finite/stability/canary check failed')
             if t == 967: main_data=data
+        if a.phase == 'numeric':
+            report['status']='numeric_passed'; save(); return
         # Strict screen passed: warmups are separate, all five AA/AB pairs retained.
         data = main_data
         for arm in report['arms']:
