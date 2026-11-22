@@ -31,3 +31,5 @@ CPU准备验证：三个脚本 py_compile、默认plan（不初始化设备）�
 执行状态和关键原数原位更新至 `Clef-27B/logs/head-packed-kv-20261122/summary.json`。
 
 阶段阻点：私有stock捕获服务加载期间，用户master socket消失。启动等待与finally清理均返回SSH 255；无head请求/数值/配对结果，局部计算账0s。共享aa3e源码未改。当前远端服务状态UNKNOWN、恢复待通道；已准备fresh绑定私有实例的恢复入口，用户通道恢复后优先执行22项恢复。
+
+通道恢复后已fresh定向清理私有实例，原aa3e/S1恢复API1747158/start423941016，22项通过、双端指针已更新。原授权续跑目录改为tmp `clef40-head-kv-7spn0kdz`；head预算仍0s。可选Level1/AiCoreNone短trace只用于被host噪声掩盖的单decoder差距/copy核对，串行代表rank另列无prof前后对照，raw恢复后导出。

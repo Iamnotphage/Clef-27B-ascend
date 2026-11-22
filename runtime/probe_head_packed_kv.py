@@ -187,7 +187,40 @@ def main():
                         assert c['max_abs']<=.02
                     paired(label,lambda: probabilities(head(h,l,s),s),None,4)
             else:
-                raise RuntimeError('trace preparation required only if paired result needs it')
+                config = torch_npu.profiler._ExperimentalConfig(
+                    profiler_level=torch_npu.profiler.ProfilerLevel.Level1,
+                    aic_metrics=torch_npu.profiler.AiCMetrics.AiCoreNone,
+                    data_simplification=False, record_op_args=False,
+                    export_type=[torch_npu.profiler.ExportType.Text])
+                def samples(phase, pairs):
+                    for pair in range(pairs):
+                        arms = ['stock', 'view', 'stock_repeat', 'contiguous']
+                        if pair % 2: arms.reverse()
+                        for arm in arms:
+                            selection.set('stock' if arm == 'stock_repeat' else arm, {id(attn)})
+                            with torch.profiler.record_function(f'headkv/{phase}/{pair}/{arm}'):
+                                row = timed(decoder, 1)
+                            result['measurements'].append(dict(scope='decoder0_trace_'+phase,
+                                pair=pair, arm=arm, calls=1, **row))
+                    save()
+                for mode in ('stock', 'view', 'contiguous'):
+                    selection.set(mode, {id(attn)})
+                    result['warmup'].append(dict(scope='decoder0_trace', arm=mode,
+                                                  calls=8, **timed(decoder, 8)))
+                samples('pre', 2)
+                traces = args.output.parent/f'traces-r{args.rank}'
+                with torch_npu.profiler.profile(
+                    activities=[torch_npu.profiler.ProfilerActivity.CPU,
+                                torch_npu.profiler.ProfilerActivity.NPU],
+                    record_shapes=False, profile_memory=False, with_stack=False,
+                    with_modules=False, experimental_config=config,
+                    on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(
+                        str(traces), worker_name=f'headkv-r{args.rank}', analyse_flag=False)):
+                    samples('profile', 3)
+                samples('post', 2)
+                result.update(trace_directory=str(traces),
+                    trace_scope='representative rank serial; 1 call/sample vs paired batch16',
+                    profiler='CPU+NPU Level1/AiCoreNone, offline export after restore')
             result['status']='completed'
     except BaseException as exc:
         result.update(status='failed',error=type(exc).__name__+': '+str(exc))
