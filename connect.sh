@@ -9,6 +9,7 @@ usage() {
   ./connect.sh          复用主连接，或输入最新平台凭据建立后台主连接
   ./connect.sh status   检查本机主连接进程
   ./connect.sh stop     关闭主连接及所有复用会话
+  ./connect.sh new      隐藏输入新 A3 的平台 SSH 命令，建立独立前台连接
 
 连接凭据可交互输入，也可通过 CLEF_JUMP_AUTH 提供。
 输入格式：jt_跳板账号:临时令牌，或平台提供的完整 ssh -J 命令。
@@ -21,6 +22,66 @@ fail() {
   exit 1
 }
 
+auth_pattern='jt_[[:xdigit:]]+:[[:xdigit:]]+'
+legacy_target_host=199.88.54.221
+
+new_a3_login() (
+  [[ -t 0 ]] || fail '请在终端运行 ./connect.sh new。'
+  local input ipv4 pattern jump_auth jump_host target_host private_dir ssh_config
+  ipv4='[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}'
+  pattern="^[[:space:]]*ssh[[:space:]]+-J[[:space:]]+['\"]?(${auth_pattern})@(${ipv4}):2234['\"]?[[:space:]]+root@(${ipv4})[[:space:]]*$"
+  if ! IFS= read -r -s -p '粘贴新 A3 的平台完整 SSH 命令（输入隐藏）：' input; then
+    printf '\n' >&2
+    fail '未读取到新 A3 的平台 SSH 命令。'
+  fi
+  printf '\n' >&2
+  [[ "$input" =~ $pattern ]] || fail '请提供新 A3 的完整 ssh -J 命令。'
+  jump_auth="${BASH_REMATCH[1]}"
+  jump_host="${BASH_REMATCH[2]}"
+  target_host="${BASH_REMATCH[3]}"
+  unset input
+  [[ "$target_host" != "$legacy_target_host" && "$target_host" != "$jump_host" ]] ||
+    fail '请核对新 A3 的目标地址。'
+
+  umask 077
+  private_dir="$(mktemp -d /tmp/clef-a3-new.XXXXXXXX)" || fail '无法创建临时 SSH 配置目录。'
+  ssh_config="$private_dir/config"
+  trap 'rm -f -- "$ssh_config"; rmdir -- "$private_dir"' EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  cat > "$ssh_config" <<EOF
+Host clef-a3-new
+    HostName $target_host
+    User root
+    Port 22
+    ProxyJump clef-a3-new-gateway
+    HostKeyAlias clef-a3-new
+    UserKnownHostsFile ~/.ssh/known_hosts_clef_a3_new
+    StrictHostKeyChecking ask
+    PreferredAuthentications password,keyboard-interactive
+    PubkeyAuthentication no
+    NumberOfPasswordPrompts 1
+Host clef-a3-new-gateway
+    HostName $jump_host
+    User $jump_auth
+    Port 2234
+    StrictHostKeyChecking yes
+    BatchMode yes
+Host *
+    ControlMaster no
+    ControlPath none
+    ControlPersist no
+    ForwardAgent no
+    ForwardX11 no
+    ConnectTimeout 10
+    ConnectionAttempts 1
+EOF
+  unset jump_auth
+  SSH_ASKPASS_REQUIRE=never ssh -F "$ssh_config" clef-a3-new \
+    2> >(sed -E 's/jt_[[:xdigit:]]+(:[[:xdigit:]]+)?/jt_REDACTED/g' >&2)
+)
+
 master_running() {
   ssh -O check clef >/dev/null 2>&1
 }
@@ -32,6 +93,7 @@ if [[ $# -gt 1 ]]; then
 fi
 case "$action" in
   -h|--help|help) usage; exit 0 ;;
+  new) new_a3_login; exit $? ;;
   start|status|stop) ;;
   *) usage >&2; exit 2 ;;
 esac
@@ -65,8 +127,8 @@ while IFS=' ' read -r key value; do
     port) target_port="$value" ;;
   esac
 done <<< "$effective_config"
-[[ "$target_host" == 199.88.54.221 && "$target_user" == root && "$target_port" == 22 ]] ||
-  fail '请先按 README 配置 Host clef，目标为 root@199.88.54.221:22。'
+[[ "$target_host" == "$legacy_target_host" && "$target_user" == root && "$target_port" == 22 ]] ||
+  fail "请先按 README 配置 Host clef，目标为 root@$legacy_target_host:22。"
 [[ "$socket_path" == /* && -d "${socket_path%/*}" ]] ||
   fail 'clef 的 ControlPath 需要指向已有本机目录下的绝对路径。'
 
@@ -104,7 +166,6 @@ if [[ -z "$jump_input" ]]; then
 fi
 
 # Parse only the known credential format; pasted commands are never executed.
-auth_pattern='jt_[[:xdigit:]]+:[[:xdigit:]]+'
 raw_pattern="^[[:space:]]*(${auth_pattern})[[:space:]]*$"
 command_pattern="^[[:space:]]*ssh[[:space:]]+-J[[:space:]]+['\"]?(${auth_pattern})@113[.]47[.]8[.]48:2234['\"]?[[:space:]]+root@199[.]88[.]54[.]221[[:space:]]*$"
 if [[ "$jump_input" =~ $raw_pattern || "$jump_input" =~ $command_pattern ]]; then
