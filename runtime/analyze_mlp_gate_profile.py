@@ -30,7 +30,7 @@ def overlap(xs, ys):
     return union((max(a,c),min(b,d)) for a,b in intervals(xs) for c,d in intervals(ys) if max(a,c)<min(b,d))
 
 
-def parse_trace(path, divisor=3):
+def parse_trace(path, divisor=3, sample_prefix='clef40/sample/'):
     if divisor <= 0: raise ValueError("positive layer divisor required")
     doc=json.loads(Path(path).read_text());events=doc.get('traceEvents',[]) if isinstance(doc,dict) else doc
     processes={e['pid']:e['args']['name'] for e in events if e.get('name')=='process_name'}
@@ -46,14 +46,15 @@ def parse_trace(path, divisor=3):
             flows[(e.get('cat'),str(e.get('id')))][e['ph']]=dict(e,ts=stamp(e))
     def contains(e, t): return e['start']<=float(t)<=e['end']
     def bounds(es): return [(e['start'],e['end']) for e in es]
-    samples=[e for e in spans if e['name'].startswith('clef40/sample/')]
+    samples=[e for e in spans if e['name'].startswith(sample_prefix)]
     tasks=[e for e in spans if processes.get(e['pid'])=='Ascend Hardware' and
-           e.get('args',{}).get('Task Type') not in ('PROFILING_ENABLE','PROFILING_DISABLE','EVENT RECORD') and e['end']>e['start']]
+           e.get('args',{}).get('Task Type') not in ('PROFILING_ENABLE','PROFILING_DISABLE','EVENT RECORD','EVENT WAIT') and e['end']>e['start']]
     controls=[e for e in spans if processes.get(e['pid'])=='Ascend Hardware' and e.get('args',{}).get('Task Type')=='EVENT RECORD']
+    waits=[e for e in spans if processes.get(e['pid'])=='Ascend Hardware' and e.get('args',{}).get('Task Type')=='EVENT WAIT']
     native=[e for e in spans if processes.get(e['pid'])=='CANN']
     rows=[]
     for sample in samples:
-        _,_,phase,pair,arm=sample['name'].split('/')
+        phase,pair,arm=sample['name'][len(sample_prefix):].split('/')
         scopes=[e for e in spans if e['pid']==sample['pid'] and e['tid']==sample['tid'] and
                 sample['start']<=e['start'] and e['end']<=sample['end'] and e is not sample]
         def scoped(name): return [e for e in scopes if e['name']=='clef40/'+name]
@@ -128,7 +129,8 @@ def parse_trace(path, divisor=3):
             native_api_names=dict(Counter(e['name'] for e in apis)),
             unknown='Task internal pipeline/per-core stalls unavailable; launch-to-start is elapsed latency, not automatically avoidable wait'))
     return dict(path=str(path),trace_origin_us=str(origin),time_unit='us relative to trace_origin_us',processes=processes,samples=rows,hardware_tasks_total=len(tasks),
-                all_task_names=dict(Counter(e['name'] for e in tasks)),flow_categories=dict(Counter(k[0] for k in flows)))
+                all_task_names=dict(Counter(e['name'] for e in tasks)),device_wait_control_count=len(waits),
+                flow_categories=dict(Counter(k[0] for k in flows)))
 
 
 def join_kernel_details(trace, path):
@@ -179,7 +181,9 @@ def summarize_samples(rows):
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--trace',type=Path,action='append',default=[])
     p.add_argument('--samples',type=Path,action='append',default=[]);p.add_argument('--kernel-csv',type=Path,action='append',default=[]);p.add_argument('--output',type=Path,required=True)
-    a=p.parse_args();out=dict(traces=[parse_trace(x) for x in a.trace])
+    p.add_argument('--sample-prefix',default='clef40/sample/')
+    p.add_argument('--divisor',type=float,default=3)
+    a=p.parse_args();out=dict(traces=[parse_trace(x,a.divisor,a.sample_prefix) for x in a.trace])
     if a.kernel_csv:
         assert len(a.kernel_csv)==len(out['traces'])
         for trace,path in zip(out['traces'],a.kernel_csv):join_kernel_details(trace,path)

@@ -1,17 +1,610 @@
 {
-  "status": "PREPARED_RESUMED_AFTER_RECOVERY",
+  "status": "STOP_SINGLE_NO_DISTINGUISHABLE_GAIN",
+  "adopted": false,
   "base": "b9580788f0729c74d38d0f8119f5a4011aa132b4",
+  "execution_code_commit": "52a8161",
   "head_budget_s": 240,
-  "head_device_used_s": 0,
+  "head_device_used_s": 22.48895183391869,
   "gdn_budget_frozen_s": 76.87979675224051,
   "raw_local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-head-kv-7spn0kdz",
   "raw_remote": "/workspace/yangchen/work/clef40-head-kv-7spn0kdz",
-  "production_source_unchanged": true,
-  "restoration_verified": true,
   "transport_attempt": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-head-kv-hi3k0qpk",
-  "transport_recovery_identity": {
-    "pid": 1747158,
-    "starttime": "423941016",
-    "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
-  }
+  "transport_attempt_head_device_used_s": 0,
+  "weight_sha256": "a010ac04f078e699988e4049cbea5e62c962393f59fec366640b64e8d69a4953",
+  "aa3e_sha256": "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503",
+  "numeric": {
+    "scope": "M967/O4 decoder0 plus one-place head logits/probabilities; actual per-rank frozen captures",
+    "checks": 40,
+    "all_bit_equal": true,
+    "all_finite": true,
+    "max_abs": 0,
+    "parameter_keys_sha_matched_per_rank": 122,
+    "stage_names": [
+      "stock_vs_actual_aa3e_logits",
+      "stock_repeat_logits",
+      "decoder_stock_vs_actual",
+      "cross_stock_vs_actual",
+      "view_q",
+      "view_k",
+      "view_v",
+      "view_cross",
+      "view_decoder",
+      "view_one_place_logits",
+      "view_one_place_prob",
+      "view_one_place_repeat",
+      "contiguous_q",
+      "contiguous_k",
+      "contiguous_v",
+      "contiguous_cross",
+      "contiguous_decoder",
+      "contiguous_one_place_logits",
+      "contiguous_one_place_prob",
+      "contiguous_one_place_repeat"
+    ]
+  },
+  "slow_per_pair": {
+    "event_ms": {
+      "arm_median_ms": {
+        "stock": 0.4761662483215332,
+        "stock_repeat": 0.47758498787879944,
+        "view": 0.4802887439727783,
+        "contiguous": 0.5063549876213074
+      },
+      "aa_max_pct": 7.162491742461241,
+      "paired": {
+        "view": {
+          "median_delta_ms": -0.011890023946762085,
+          "median_delta_pct": -2.3673221335359984,
+          "win_pairs": 3
+        },
+        "contiguous": {
+          "median_delta_ms": 0.03020000457763672,
+          "median_delta_pct": 6.012867559362389,
+          "win_pairs": 0
+        }
+      }
+    },
+    "wall_ms": {
+      "arm_median_ms": {
+        "stock": 0.48426311695948243,
+        "stock_repeat": 0.4857437452301383,
+        "view": 0.4891487769782543,
+        "contiguous": 0.5140362773090601
+      },
+      "aa_max_pct": 6.563711111754844,
+      "paired": {
+        "view": {
+          "median_delta_ms": -0.01398130552843213,
+          "median_delta_pct": -2.7327919561619174,
+          "win_pairs": 3
+        },
+        "contiguous": {
+          "median_delta_ms": 0.029445625841617584,
+          "median_delta_pct": 5.755454616200639,
+          "win_pairs": 0
+        }
+      }
+    }
+  },
+  "trace": {
+    "arms": {
+      "stock": {
+        "samples": 3,
+        "kernel_count": 24,
+        "kernel_union_us": 138.51050000000396,
+        "kernel_sum_us": 138.51050000000396,
+        "matmul_cast_slice_counts": [
+          8,
+          8,
+          0
+        ],
+        "slice_sum_us": 0
+      },
+      "stock_repeat": {
+        "samples": 3,
+        "kernel_count": 24,
+        "kernel_union_us": 138.10899999999674,
+        "kernel_sum_us": 138.10899999999674,
+        "matmul_cast_slice_counts": [
+          8,
+          8,
+          0
+        ],
+        "slice_sum_us": 0
+      },
+      "view": {
+        "samples": 3,
+        "kernel_count": 24,
+        "kernel_union_us": 138.9684999999954,
+        "kernel_sum_us": 138.9684999999954,
+        "matmul_cast_slice_counts": [
+          7,
+          7,
+          2
+        ],
+        "slice_sum_us": 8.560499999999593
+      },
+      "contiguous": {
+        "samples": 3,
+        "kernel_count": 24,
+        "kernel_union_us": 139.06850000000122,
+        "kernel_sum_us": 139.06850000000122,
+        "matmul_cast_slice_counts": [
+          7,
+          7,
+          2
+        ],
+        "slice_sum_us": 8.50050000000192
+      }
+    },
+    "mapped_samples": 12,
+    "matched_kernel_tasks": 288,
+    "device_wait_controls": 12,
+    "paired_kernel_union_delta_us": {
+      "stock_repeat": [
+        0.841999999989639,
+        -0.40150000000721775,
+        -1.400000000016007
+      ],
+      "view": [
+        1.359500000035041,
+        0.4579999999914435,
+        0.6789999999964493
+      ],
+      "contiguous": [
+        -0.6794999999838183,
+        0.5579999999972642,
+        1.7399999999834108
+      ]
+    },
+    "representative_rank": 0,
+    "scope": "complete decoder0; 1 call/sample, serial rank0; warm resident frozen head data",
+    "controls": {
+      "pre": {
+        "event_ms": [
+          [
+            0.6512799859046936,
+            0.5891000032424927,
+            0.6090999841690063,
+            0.6166800260543823
+          ],
+          [
+            0.5976799726486206,
+            0.5926200151443481,
+            0.6057199835777283,
+            0.6510400176048279
+          ]
+        ],
+        "wall_ms": [
+          [
+            0.7490301504731178,
+            0.7002595812082291,
+            0.7278993725776672,
+            0.7223803550004959
+          ],
+          [
+            0.7106196135282516,
+            0.6808498874306679,
+            0.722009688615799,
+            0.7739802822470665
+          ]
+        ]
+      },
+      "profile": {
+        "event_ms": [
+          [
+            2.2258799076080322,
+            0.8888599872589111,
+            0.9794999957084656,
+            1.0855200290679932
+          ],
+          [
+            0.8914399743080139,
+            0.8523399829864502,
+            0.7924399971961975,
+            0.9336199760437012
+          ],
+          [
+            0.821619987487793,
+            0.7969599962234497,
+            0.8201199769973755,
+            0.9570599794387817
+          ]
+        ],
+        "wall_ms": [
+          [
+            2.6221591979265213,
+            1.0596606880426407,
+            1.2271301820874214,
+            1.3191094622015953
+          ],
+          [
+            1.0874802246689796,
+            1.0690707713365555,
+            1.0146796703338623,
+            1.1312002316117287
+          ],
+          [
+            1.0808398947119713,
+            1.0008597746491432,
+            0.9860200807452202,
+            1.0967599228024483
+          ]
+        ]
+      },
+      "post": {
+        "event_ms": [
+          [
+            0.7943199872970581,
+            0.6269999742507935,
+            0.6718000173568726,
+            0.6964600086212158
+          ],
+          [
+            0.6019799709320068,
+            0.622979998588562,
+            0.6109600067138672,
+            0.6781600117683411
+          ]
+        ],
+        "wall_ms": [
+          [
+            0.9971801191568375,
+            0.7441602647304535,
+            0.7981900125741959,
+            0.8197100833058357
+          ],
+          [
+            0.7230900228023529,
+            0.74808020144701,
+            0.7332004606723785,
+            0.7651997730135918
+          ]
+        ]
+      }
+    },
+    "native_trace": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-head-kv-7spn0kdz/traces-r0/headkv-r0_1749818_20261122044508114_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+    "native_trace_sha256": "0c2b47495d74b8ccfce4576ee358d0f2e695496fa1d203bf5de58f5cb8345146",
+    "kernel_csv": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-head-kv-7spn0kdz/traces-r0/headkv-r0_1749818_20261122044508114_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+    "kernel_csv_sha256": "571113dbae297ac5f12ccd65e69a418078ccc59a8252dd5fbdbcc443dd092a4c",
+    "kernel_union_us_columns": [
+      "stock",
+      "stock_repeat",
+      "view",
+      "contiguous"
+    ],
+    "kernel_union_us_pairs": [
+      [
+        138.8079999999827,
+        139.64999999997235,
+        140.16750000001775,
+        138.1284999999989
+      ],
+      [
+        138.51050000000396,
+        138.10899999999674,
+        138.9684999999954,
+        139.06850000000122
+      ],
+      [
+        137.90950000000157,
+        136.50949999998556,
+        138.58849999999802,
+        139.64949999998498
+      ]
+    ],
+    "controls_columns": [
+      "stock",
+      "stock_repeat",
+      "view",
+      "contiguous"
+    ]
+  },
+  "remaining_stages": "Six-place/full-head coverage and S1/OD/ERQA not entered: single decoder gate failed.",
+  "restoration": {
+    "state": "RUNNING_VERIFIED",
+    "identity": {
+      "pid": 1749892,
+      "starttime": "423969384",
+      "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b",
+      "ppid": 1,
+      "pgid": 1749892,
+      "sid": 1749892
+    },
+    "health": {
+      "status": "ready",
+      "model": "clef",
+      "revision": "local-65e5a3c5ffb6"
+    },
+    "checks22": true,
+    "argv_env_match": true,
+    "env_sha256": "c18d38bd10b4d8d1696cccb3f307f9dd72b28ea44ea4a816cd69852e229c2ba9",
+    "manifest": {
+      "path": "/workspace/yangchen/logs/clef40-head-kv-7spn0kdz/restore-s1/launch-manifest.json",
+      "sha256": "9c4c78dc612fc443454ae716dd1bf0e0c1c227369f66a84b00b6a93310e6888c",
+      "bytes": 24370
+    },
+    "devices": [
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "VLLMWorker_TP",
+        "pid": 1750048
+      },
+      {
+        "card": 7,
+        "chip": 0,
+        "name": "python",
+        "pid": 1749892
+      },
+      {
+        "card": 7,
+        "chip": 1,
+        "name": "VLLMWorker_TP",
+        "pid": 1750049
+      }
+    ],
+    "both_pointers_match": true,
+    "private_probe_tree_cleared": true,
+    "fresh_final_check": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-head-kv-7spn0kdz/fresh-final-check.json"
+  },
+  "validation": [
+    "AST/py_compile and default CPU-only plan",
+    "5 real request SHA matched",
+    "122 checkpoint parameters BF16/SHA/ND format matched each actual rank",
+    "40 numerical checks exact, finite, repeated stable",
+    "12 native trace ranges / 288 exact stream/task/name/time CSV joins",
+    "EVENT WAIT retained as controls, excluded from pure kernel unions",
+    "Legacy 21-range parser regression exactly matched prior version",
+    "Head parser CLI matches direct API output exactly"
+  ],
+  "rank_raw_columns": [
+    "stock",
+    "stock_repeat",
+    "view",
+    "contiguous"
+  ],
+  "rank_raw": [
+    {
+      "rank": 0,
+      "capture": {
+        "label": "od-1534",
+        "source_rank": 0,
+        "path": "/workspace/yangchen/work/clef40-head-kv-7spn0kdz/captures/od-1534.rank0.pt",
+        "sha256": "6f74b1daaf176087df262ceee41e962f05ae343451abbf23d63dbf62bb3a2755"
+      },
+      "warmup_columns": [
+        "arm",
+        "calls",
+        "event_ms",
+        "wall_ms"
+      ],
+      "warmup": [
+        [
+          "stock",
+          8,
+          0.5239949822425842,
+          0.5588725907728076
+        ],
+        [
+          "view",
+          8,
+          0.5198349952697754,
+          0.5368675338104367
+        ],
+        [
+          "contiguous",
+          8,
+          0.5452575087547302,
+          0.561645021662116
+        ]
+      ],
+      "calls_per_sample": 16,
+      "pairs": {
+        "event_ms": [
+          [
+            0.5022562742233276,
+            0.4991762638092041,
+            0.49036625027656555,
+            0.5324562788009644
+          ],
+          [
+            0.47154250741004944,
+            0.5092187523841858,
+            0.4802887439727783,
+            0.536908745765686
+          ],
+          [
+            0.47916126251220703,
+            0.4725475013256073,
+            0.46236124634742737,
+            0.503686249256134
+          ],
+          [
+            0.4716775119304657,
+            0.47758498787879944,
+            0.4809750020503998,
+            0.5063549876213074
+          ],
+          [
+            0.4761662483215332,
+            0.45863375067710876,
+            0.45834124088287354,
+            0.48677998781204224
+          ]
+        ],
+        "wall_ms": [
+          [
+            0.5116125103086233,
+            0.5066743469797075,
+            0.4976312047801912,
+            0.5410581361502409
+          ],
+          [
+            0.4802499897778034,
+            0.5160487489774823,
+            0.4893156001344323,
+            0.5550518981181085
+          ],
+          [
+            0.48612436512485147,
+            0.48156746197491884,
+            0.46930875396355987,
+            0.5117993569001555
+          ],
+          [
+            0.4835043800994754,
+            0.4857437452301383,
+            0.4891487769782543,
+            0.5140362773090601
+          ],
+          [
+            0.48366625560447574,
+            0.46722940169274807,
+            0.4664243897423148,
+            0.49409683560952544
+          ]
+        ]
+      },
+      "script_sha256": "17b2db5aa7a92da50591e3d504379da81207d80b19654ba376d449d12b9a6c70"
+    },
+    {
+      "rank": 1,
+      "capture": {
+        "label": "od-1534",
+        "source_rank": 1,
+        "path": "/workspace/yangchen/work/clef40-head-kv-7spn0kdz/captures/od-1534.rank1.pt",
+        "sha256": "399b1790212b04b302cbdbeaed25b827e35bc006ba51ef6e8f4243e445fb3c5c"
+      },
+      "warmup_columns": [
+        "arm",
+        "calls",
+        "event_ms",
+        "wall_ms"
+      ],
+      "warmup": [
+        [
+          "stock",
+          8,
+          0.5031949877738953,
+          0.5363362142816186
+        ],
+        [
+          "view",
+          8,
+          0.49926748871803284,
+          0.5151437362655997
+        ],
+        [
+          "contiguous",
+          8,
+          0.5447574853897095,
+          0.5609500221908092
+        ]
+      ],
+      "calls_per_sample": 16,
+      "pairs": {
+        "event_ms": [
+          [
+            0.49813374876976013,
+            0.49439874291419983,
+            0.4878237545490265,
+            0.5251412391662598
+          ],
+          [
+            0.47518375515937805,
+            0.4909974932670593,
+            0.47075125575065613,
+            0.5322449803352356
+          ],
+          [
+            0.47013500332832336,
+            0.4690062403678894,
+            0.4637162387371063,
+            0.5019937753677368
+          ],
+          [
+            0.40986499190330505,
+            0.41362375020980835,
+            0.412143737077713,
+            0.4580875039100647
+          ],
+          [
+            0.41887998580932617,
+            0.411204993724823,
+            0.4109725058078766,
+            0.4375300109386444
+          ]
+        ],
+        "wall_ms": [
+          [
+            0.507085642311722,
+            0.5026237340644002,
+            0.4935275064781308,
+            0.5345811950974166
+          ],
+          [
+            0.48426311695948243,
+            0.4982268437743187,
+            0.47970813466235995,
+            0.5420487141236663
+          ],
+          [
+            0.4782106261700392,
+            0.47760060988366604,
+            0.4711325163953006,
+            0.5104119190946221
+          ],
+          [
+            0.4147568834014237,
+            0.41863747173920274,
+            0.41857059113681316,
+            0.46488502994179726
+          ],
+          [
+            0.4248331533744931,
+            0.4184881108812988,
+            0.4164693527854979,
+            0.4424906219355762
+          ]
+        ]
+      },
+      "script_sha256": "17b2db5aa7a92da50591e3d504379da81207d80b19654ba376d449d12b9a6c70"
+    }
+  ],
+  "layout": {
+    "shape": [
+      1,
+      967,
+      1024
+    ],
+    "view_stride": [
+      1980416,
+      2048,
+      1
+    ],
+    "view_offsets": [
+      0,
+      1024
+    ],
+    "format": 2,
+    "dtype": "torch.bfloat16"
+  },
+  "budget_phases": [
+    {
+      "name": "capture_requests",
+      "wall_s": 3.072480416856706,
+      "returncode": 0
+    },
+    {
+      "name": "single_both",
+      "wall_s": 9.362643292173743,
+      "returncode": 0
+    },
+    {
+      "name": "profile_representative",
+      "wall_s": 10.053828124888241,
+      "returncode": 0
+    }
+  ]
 }
