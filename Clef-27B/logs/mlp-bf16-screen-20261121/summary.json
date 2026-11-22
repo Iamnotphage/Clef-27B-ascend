@@ -4330,29 +4330,104 @@
     "CPU_validation": "py_compile; default solo/pipe and owner plan; all5 executed sources exact; join positive plus duplicate/name/clock/missing-ID negative cases; actual18 task/PMU exact match and18 raw cycle formula checks"
   },
   "v3_runtime_host_tiling": {
-    "status": "BLOCKED_BEFORE_REMOTE_OBSERVATION",
-    "at_cst": "2026-11-22T04:11:33.837777+08:00",
-    "scope": "private host observer after N alignment/field finalization; M967/BF16/NZ/ND; descriptors/GetWorkspace only; no Execute/kernel submission",
-    "connection": {
-      "master_socket": "/Users/chenclay/.ssh/clef-master.sock",
-      "master_check_exit": 255,
-      "master_check_error": "Control socket connect: No such file or directory",
-      "read_only_ssh_exit": 255,
-      "read_only_ssh_error": "Connection closed by UNKNOWN port65535",
-      "master_rebuilt_or_configuration_changed": false
+    "status": "HOST_ONLY_GETWORKSPACE_FAILED_BEFORE_TILING",
+    "prior_connection_blocker_commit": "5b7bc00; existing user master restored, pid8359, one read-only channel confirmation",
+    "scope": "M967/BF16 input ND and original NZ weight descriptor; output canonical ND; descriptor-only first stage, service kept running",
+    "private_observer": {
+      "path": "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/vendors/clef_mlp_gate_gemm",
+      "placement": "after all singleCoreN alignment, tokens/mTasks/nTasks, blockDim and workspace assignments",
+      "ABI": "CANN9.2.1 native little-endian TCubeTiling200B + tokens/mTasks/nTasks12B; sizeof212 static_assert compiled",
+      "math_changed": false,
+      "kernel_and_opapi_unchanged": true,
+      "host_source_difference_from_repo": "first comment only; measured source40077d5d... used without mathematical changes"
     },
-    "actual_host_tiling_call": false,
-    "runtime_payload": null,
-    "runtime_vs_static_50_fields": "UNKNOWN; no actual bytes obtained",
-    "host_only_boundary_verified": false,
-    "device_compute_collection_s": 0,
-    "cumulative_device_compute_collection_s": 142.5626215597391,
-    "service_action": "none; latest verified service reference remains v3_pipe_profile.restoration, no fresh remote health claim",
-    "limitations": [
-      "actual v3 tiling pending",
-      "vendor opaque not covered",
-      "per-core and exclusive wait attribution UNKNOWN"
-    ],
-    "resume_condition": "existing user SSH master available; inspect generated GetWorkspace path before any call; no automatic reconnect/rebuild"
+    "entry_proof": {
+      "getworkspace_generated_source_sha256": "e57951fd76ee752a8ba237d034235b7d4f1949364a5407214cc65dc5d5b698c4",
+      "first_stage": "NnopbaseRunForWorkspace",
+      "execute_stage": "NnopbaseRunWithWorkspace; not resolved/called by entry",
+      "restrictions": "fresh child before loading CANN: seccomp denies ioctl/shared mmap/io_uring; no ACL init/setDevice/device allocation/stream creation; PROT_NONE private CPU mappings only for descriptor addresses",
+      "guard_self_checks": "invalid-fd ioctl and shared anonymous mmap both returned EPERM before CANN load"
+    },
+    "actual_call": {
+      "argv": [
+        "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/host_workspace_only",
+        "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/vendors/clef_mlp_gate_gemm/op_api/lib/libcust_opapi.so"
+      ],
+      "started_cst": "2026-11-22T09:13:38.288462+08:00",
+      "attempts": 1,
+      "timeout": false,
+      "process_returncode": 2,
+      "get_workspace_return": 361001,
+      "workspace_bytes": 0,
+      "executor_nonnull": false,
+      "execute_called": false,
+      "device_init_called": false,
+      "guard_active_before_cann_load": true
+    },
+    "runtime_payload_bytes": 0,
+    "runtime_payload_sha256": null,
+    "runtime_vs_static_50_fields": "UNKNOWN; TilingFunc not reached, no actual212B available",
+    "failure_boundary": "Generated GetWorkspace assigns executor only after NnopbaseCreateExecutorSpace/GetExecutor. Return361001 with null executor precedes tiling. Restricted entry failed executor creation; exact platform initialization vs denied-syscall dependency not separated. No retry with guard disabled or device initialization.",
+    "budget": {
+      "new_device_compute_collection_s": 0,
+      "cumulative_s": 142.5626215597391
+    },
+    "raw_locations": {
+      "local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-host-observe-z4p5wl16",
+      "remote_work": "/workspace/yangchen/work/clef40-host-observe-z4p5wl16"
+    },
+    "source_sha256": {
+      "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/op_host/clef_mlp_gate_gemm.cpp": "40077d5d4fd0260d36646204996d0bc328bafd0705e87bb6e37670797e9658ca",
+      "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/autogen/aclnn_clef_mlp_gate_gemm.cpp": "e57951fd76ee752a8ba237d034235b7d4f1949364a5407214cc65dc5d5b698c4",
+      "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/op_host/clef_mlp_gate_gemm.cpp": "63333ee76c2a6267a32ec41a071ec078641596b9823f0f7467c8f06ee70ffa01",
+      "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/op_kernel/clef_mlp_gate_gemm_tiling.h": "c35f953af2e188662a189b65cbd4f462337cf725ddf3784469b33089fa3f7054",
+      "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/host_workspace_only.cpp": "f9df81364e62be8885ebe15a31bb27884d778aada0fa52608664abd586ceee94",
+      "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/host_workspace_only": "2226be39e5af364fa6cdb68e1d809da7fafae884eca293581c17a80a3567e9ae",
+      "/workspace/yangchen/work/clef40-host-observe-z4p5wl16/vendors/clef_mlp_gate_gemm/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so": "2acf01d195d75313fd1d7ab33f99f5cd88a58e311b455dcc9f5db70aae8e7bba",
+      "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_api/lib/libcust_opapi.so": "a9786660a05b7121f6e7c7c955e9d9b732f5f7fe85e0fd3ca54eddc10e56b510",
+      "/workspace/yangchen/work/clef40-v3-aligned-3e_elijo/candidate/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_gate_gemm/op_impl/ai_core/tbe/kernel/ascend910_93/clef_mlp_gate_gemm/ClefMlpGateGemm_ced6a5d2fdcecf78f464746334471991.o": "1a9f4d231b22a62892850cd8d35664137cc3bee7cf87f264a7670309a7d62a10"
+    },
+    "raw_sha256": {
+      "host_workspace_only.cpp": "f9df81364e62be8885ebe15a31bb27884d778aada0fa52608664abd586ceee94",
+      "prepare.py": "443ae25888579eae1c27d23eaeadb8cfed1c0170805d501092a9341b57e1ca9f",
+      "preparation.json": "50a4d4accb0f5b273a052572c2353b2899751dff9f7eed549d5aebc6864d699e",
+      "runtime.json": "95521783485258ff3a6b9408325f29fe57416ddae8c48af4e1787a8532869852",
+      "runtime.stdout": "c759c548530c2596a3658dfea7bead8cd3f68d4902b9dc088d748c7ce8f77c2b",
+      "runtime.stderr": "d3af7bd15ec929dbe52f68c7bac15305d424fa1adc7fd3aaa0f19f617f5ef544",
+      "service-before.json": "ced7b00bcd39878f90dc9157ed6c9153877bc7dcf890f4be4e0f50b81d15b2cb",
+      "service-after.json": "e12279e44fba2549513dffd47b7b994a331778d767b27312d9350924f7a1f579",
+      "build.log": "63a29cde6a754ecaee23edbad0fdd06615765efd9b7c646ea80aa86c8ba21989"
+    },
+    "service_after": {
+      "checked_at_cst": "2026-11-22T09:13:38.461103+08:00",
+      "identity": {
+        "pid": 1695411,
+        "ppid": 1,
+        "pgid": 1695411,
+        "sid": 1695411,
+        "state": "S",
+        "starttime": "420588963",
+        "boot_id": "393ecc15-721f-46f7-b119-21fa327a2b3b"
+      },
+      "health": {
+        "status": "ready",
+        "model": "clef",
+        "revision": "local-65e5a3c5ffb6"
+      },
+      "pointer_unchanged": true,
+      "aa3e_source_matched": true,
+      "no_service_mutation": true,
+      "text_image_posts": 0
+    },
+    "layered_conclusion": {
+      "measured_pipe_delta_us": {
+        "MAC": 25.068,
+        "MTE2": 287.116,
+        "Fixpipe": 115.566
+      },
+      "tiling": "v3 runtime comparison pending; static50 fields remain a model",
+      "code": "ND stride17408 and N partition mapping established; extra burst and actual CopyIn reuse not established",
+      "remaining": "vendor actual tiling/per-core/exclusive wait UNKNOWN; overlapping activity times cannot be summed as causal latency"
+    }
   }
 }

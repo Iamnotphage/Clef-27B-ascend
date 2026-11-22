@@ -330,3 +330,10 @@ python3 "$task_raw/analyze-pmu.py"
 CPU检查覆盖plan/语法、精确task join正例及重复ID/错误核名/错时基/缺ID负例，实际18任务与原始计数/归一公式核同通过。无新artifact/PR，无kernel修改或全量测试。
 
 实际host tiling观测续接：既有 `/Users/chenclay/.ssh/clef-master.sock` 缺失，master检查与只读SSH均以255退出；未建立远端观测，未调用GetWorkspace/Execute，未取得实际212B，50字段runtime比较仍UNKNOWN。遵守仅复用用户master，未重建连接或修改配置/部署/服务；纯host执行边界待连接恢复后先核。设备预算保持142.562622/240s，最新服务验证仍引用上述03:47记录。精简状态见summary `v3_runtime_host_tiling`。
+
+
+host观测续接（2026-11-22 09:13，上海）：用户master恢复，通道确认成功，aa3e/S1保持运行。私有host副本仅在所有N/字段修正后增加212B写盘；原host与仓库仅首行注释不同，已核同数学代码，kernel/opapi SHA保持原值。CANN9.2.1的200+12B结构静态断言及host-only入口编译通过。生成GetWorkspace仅走`NnopbaseRunForWorkspace`，Execute另走`NnopbaseRunWithWorkspace`；入口只解析前者，构造同M967/BF16/NZ/ND描述符。CANN加载前安装进程级seccomp限制ioctl/共享mmap/io_uring，不调用ACL init、setDevice、设备分配、stream或Execute，描述符地址来自PROT_NONE的CPU私有映射。
+
+唯一一次受限GetWorkspace返回 **361001**、executor为空，**实际212B未生成**。按生成代码，失败发生在executor创建阶段，尚未进入TilingFunc；当前日志未分离平台初始化与被限制系统调用的具体依赖。此入口未证实可以在严格host-only限制下取得runtime tiling，按范围收口，不放开限制、不初始化设备重试。v3 runtime与静态50字段比较继续UNKNOWN；MAC/MTE2/Fixpipe活动增量25.068/287.116/115.566µs保留，额外burst、实际搬入重读、vendor opaque、逐core及独占wait仍缺证据，活动时间不相加。
+
+09:13:38末次只读确认API **1695411/start420588963/boot393ecc15-721f-46f7-b119-21fa327a2b3b**、原argv与指针保持一致、health ready、aa3e源码匹配；无重启或text/image POST。新增设备计算/采集0s，累计 **142.562622/240s**。私有源码/入口/二进制SHA、实际命令/错误与服务前后身份写回原summary `v3_runtime_host_tiling`；raw留系统tmp及远端work同名 `clef40-host-observe-z4p5wl16`，无新artifact/PR。
