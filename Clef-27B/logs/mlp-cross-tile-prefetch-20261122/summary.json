@@ -1,0 +1,198 @@
+{
+  "status": "CPU_COMPILED_READY_FOR_NUMERIC",
+  "base": "5086ad4b7385971821caeba5a4a5b210179bd1f1",
+  "catlass": "eec373fbe601446c72cac422cf63142221d85bf9",
+  "device_used_s": 0,
+  "budget_s": 240,
+  "gdn_frozen_s": 76.87979675224051,
+  "head_frozen_s": 22.48895183391869,
+  "raw_local": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u",
+  "raw_remote": "/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u",
+  "build": {
+    "vendor": "/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/_CPack_Packages/Linux/External/custom_opp_ubuntu_aarch64.run/packages/vendors/clef_mlp_cross_prefetch",
+    "files": {
+      "/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/op_kernel/ascendc_kernels/binary/ascend910_93/clef_mlp_cross_prefetch/ClefMlpCrossPrefetch_e9412e64f2413b974e7921b4a901a403.json": {
+        "bytes": 2264,
+        "sha256": "c7486ac4c903d10b9a020ddbc861e21ea63f3ef0910d03ca07208ad4a46f2ace"
+      },
+      "/workspace/yangchen/work/clef40-cross-prefetch-at10fi3u/source/build_out/op_kernel/ascendc_kernels/binary/ascend910_93/clef_mlp_cross_prefetch/ClefMlpCrossPrefetch_e9412e64f2413b974e7921b4a901a403.o": {
+        "bytes": 13976,
+        "sha256": "6495d8b43d273efab560424bd5d39ddf54b9131462c57e557680f1474ae250bd"
+      }
+    },
+    "catlass_headers_match": true
+  },
+  "cpu_contract": {
+    "status": "CPU_CONTRACT_PASS",
+    "catlass_commit": "eec373fbe601446c72cac422cf63142221d85bf9",
+    "nz_transposed_offset_points": 174080,
+    "l1_bytes": 393216,
+    "l0a_double_bytes": 32768,
+    "l0b_double_bytes": 65536,
+    "l0c_bytes": 131072,
+    "schedule": [
+      {
+        "off": {
+          "m": 967,
+          "tiles": 544,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 10880,
+          "first_at_entry": 544,
+          "cross_first_k_preloads": 0,
+          "all_slots_released": true
+        },
+        "on": {
+          "m": 967,
+          "tiles": 544,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 10880,
+          "first_at_entry": 24,
+          "cross_first_k_preloads": 520,
+          "all_slots_released": true
+        }
+      },
+      {
+        "off": {
+          "m": 307,
+          "tiles": 204,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 4080,
+          "first_at_entry": 204,
+          "cross_first_k_preloads": 0,
+          "all_slots_released": true
+        },
+        "on": {
+          "m": 307,
+          "tiles": 204,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 4080,
+          "first_at_entry": 24,
+          "cross_first_k_preloads": 180,
+          "all_slots_released": true
+        }
+      },
+      {
+        "off": {
+          "m": 1595,
+          "tiles": 884,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 17680,
+          "first_at_entry": 884,
+          "cross_first_k_preloads": 0,
+          "all_slots_released": true
+        },
+        "on": {
+          "m": 1595,
+          "tiles": 884,
+          "k_slices": 20,
+          "gm_ab_tile_loads": 17680,
+          "first_at_entry": 24,
+          "cross_first_k_preloads": 860,
+          "all_slots_released": true
+        }
+      }
+    ],
+    "device_numeric": "NOT_RUN",
+    "boundary": "finite-state contract only; regex sync candidates not resolved by this model"
+  },
+  "sync_static_candidates": [
+    {
+      "code": "SYNC-04",
+      "severity": "红线",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 222,
+      "message": "Set/Wait 个数不一致: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext] Set=0 Wait=2",
+      "detail": "Set: []; Wait: ['block_mmad_preload.hpp:222', 'block_mmad_preload.hpp:245'] | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-04",
+      "severity": "红线",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 222,
+      "message": "Wait 无对应 Set（死等风险）: 方向=MTE1_MTE2 flag=l1AEventList[l1ListIdNext]",
+      "detail": "Wait@222 in void operator，未见同组 SetFlag | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-04",
+      "severity": "红线",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 228,
+      "message": "Set/Wait 个数不一致: 方向=MTE1_MTE2 flag=l1BEventList[l1ListIdNext] Set=0 Wait=2",
+      "detail": "Set: []; Wait: ['block_mmad_preload.hpp:228', 'block_mmad_preload.hpp:251'] | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-04",
+      "severity": "红线",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 228,
+      "message": "Wait 无对应 Set（死等风险）: 方向=MTE1_MTE2 flag=l1BEventList[l1ListIdNext]",
+      "detail": "Wait@228 in void operator，未见同组 SetFlag | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-01",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 167,
+      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=FIX_M flag=EVENT_ID0",
+      "detail": "Wait@167 早于 Set@365，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-01",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 192,
+      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=MTE1_MTE2 flag=l1AEventList[l1ListId]",
+      "detail": "Wait@192 早于 Set@290，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-01",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 198,
+      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=MTE1_MTE2 flag=l1BEventList[l1ListId]",
+      "detail": "Wait@198 早于 Set@316，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-02",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 225,
+      "message": "循环内 Set 多于 Wait（疑似 buffer 复用缺循环顶部 Wait）: 方向=MTE2_MTE1 flag=l1AEventList[l1ListIdNext]",
+      "detail": "循环内 Set=2 Wait=0，多出 2 个 Set 无 Wait 消费；若涉及 L0C/buffer 复用（如 FIX_M/MTE1_M），循环顶部应补 Wait 等上一轮搬完 | 历史 case: cann/ops-nn PR#4190 (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -434,8 +434,13 @@ __aicore__ inline void InitTque(Intf *self)\n         uint32_t baseMN = self->ct..."
+    },
+    {
+      "code": "SYNC-02",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 231,
+      "message": "循环内 Set 多于 Wait（疑似 buffer 复用缺循环顶部 Wait）: 方向=MTE2_MTE1 flag=l1BEventList[l1ListIdNext]",
+      "detail": "循环内 Set=2 Wait=0，多出 2 个 Set 无 Wait 消费；若涉及 L0C/buffer 复用（如 FIX_M/MTE1_M），循环顶部应补 Wait 等上一轮搬完 | 历史 case: cann/ops-nn PR#4190 (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -434,8 +434,13 @@ __aicore__ inline void InitTque(Intf *self)\n         uint32_t baseMN = self->ct..."
+    },
+    {
+      "code": "SYNC-01",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 282,
+      "message": "Wait 先于 Set（跨循环，可能为双 buffer 合法序）: 方向=M_MTE1 flag=l0AEventList[l0ABufId]",
+      "detail": "Wait@282 早于 Set@349，同函数 void operator，中间跨循环边界 → 常为合法跨迭代序；若非循环场景则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-01",
+      "severity": "高",
+      "file": "/var/folders/s7/qw8pytxx2h947bbrpkrml20h0000gn/T/clef40-cross-prefetch-at10fi3u/catlass/include/catlass/gemm/block/block_mmad_preload.hpp",
+      "line": 305,
+      "message": "Wait 先于 Set（同函数消费+生产，可能为 ping-pong 合法序）: 方向=M_MTE1 flag=l0BEventList[l0BBufId]",
+      "detail": "Wait@305 早于 Set@345，同函数 void operator 既 Wait 又 Set；若该函数被循环调用则为合法跨迭代序；若单次调用则为死等 | 历史 case: cann/ops-nn PR#N/A (buffer_index_mismatch) | 修复提示: 将 buffer 索引统一为 flag 索引变量（如 biasBufId_ = scaleL1BufId） | diff证据: @@ -811,7 +811,7 @@\n-        biasBufId_ = abL1LoopCnt_ & 1;\n+        biasBufId_ = scaleL1BufId;..."
+    },
+    {
+      "code": "SYNC-09",
+      "severity": "性能",
+      "file": "runtime/ascendc/clef_mlp_cross_prefetch/op_kernel/clef_mlp_cross_prefetch.cpp",
+      "line": 54,
+      "message": "PipeBarrier<PIPE_ALL> 粒度过粗",
+      "detail": "若仅需 V 排序可用 PipeBarrier<PIPE_V>；确认无跨 PIPE 依赖后再收窄"
+    }
+  ],
+  "sync_flow_candidates": 0,
+  "production": "aa3e/S1 running unchanged; no device computation yet"
+}
