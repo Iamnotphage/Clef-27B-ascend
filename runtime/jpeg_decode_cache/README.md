@@ -12,7 +12,8 @@
 ```bash
 bash scripts/start_dataset_profile.sh od-s1 --model-dir "$MODEL" --output-dir "$NEW"
 bash scripts/start_dataset_profile.sh od-s2 --model-dir "$MODEL" --output-dir "$NEW"
-bash scripts/start_dataset_profile.sh erqa-c1 --model-dir "$MODEL" --output-dir "$NEW"
+CLEF_PRIVATE_JPEG_CACHE_GIB=0 bash scripts/start_dataset_profile.sh erqa-c1 \
+    --model-dir "$MODEL" --output-dir "$NEW" -- --mm-processor-cache-gb 4
 CLEF_PRIVATE_JPEG_CACHE_GIB=2 bash scripts/start_dataset_profile.sh erqa-c1 \
     --model-dir "$MODEL" --output-dir "$NEW" -- --mm-processor-cache-gb 4
 ```
@@ -42,7 +43,7 @@ JPEG 缓存默认关闭。显式设置 `CLEF_PRIVATE_JPEG_CACHE_GIB=2`，为相�
 
 暖遍相对 A 中位快 4.652 ms（1.86%），超过 A/A 的 0.160 ms 范围，整轮净省 1.507 s。冷遍 P95 在 A/A 内，整轮比 A 中位多 0.574 s。八遍共 3,200/3,200，零失败、每遍均为 216/400，逐题原始概率和选择一致。B 两遍合计 JPEG 725/1,260 命中，最高计费权重 1,173,257,380 字节。B 暖遍端点 cgroup 76.017 GiB、同期 cgroup 累计高水 76.037 GiB、四进程合计 PSS 13.726 GiB。A 暖遍端点 cgroup 范围 74.881–75.497 GiB，合计 PSS 范围 12.971–13.099 GiB。累计高水跨阶段保留，PSS 为端点读数。
 
-这组成绩验证了可选暖态缓存。正式 `results.csv` 和 `metrics.csv` 继续指向既有验收。
+这组成绩支持可选暖态缓存。JPEG-on 的 **246.053547 ms** 对应 B 臂自然第二遍。选入性能汇总的 JPEG-off C1 来自 aa3e 融合正式验收，冷首遍 **300.537708 ms**、自然第二遍 **252.024530 ms**，两遍各 216/400。[测量索引](../../Clef-27B/logs/dataset-profiles-20261123/manifest.json)
 
 验收冻结输入 SHA-256 为 `35bd36560dcc228c02a8e336cc57b7b8bb0f1c6752521dc63fc482f48a4168af`。私有八遍原数与执行索引的压缩归档 SHA-256 为 `fdee1841796d2d220e3ae39efed03b91fb84e0c185a91c4ae81ad36f76a1e318`。
 
@@ -58,9 +59,11 @@ JPEG 缓存默认关闭。显式设置 `CLEF_PRIVATE_JPEG_CACHE_GIB=2`，为相�
 | B8 C16 | 7.166461 | 3606.181 | 217/400 | 8.378042 | 3074.490 | 217/400 |
 | B16 C16 | 7.138460 | 3436.466 | 218/400 | 8.416542 | 2899.933 | 216/400 |
 
-冷遍最高实测点为 B8 C16，暖遍最高实测点为 B16 C16。B16 暖遍相对 B8 C16 多 0.46%，冷遍少 0.39%，同状态每点一遍。B8 C8 两态 P95 均最低。全部六遍共 2,400/2,400，零失败、每题一次客户端 attempt，均通过相对 219/400 的绝对 2pp。图文 S2 开关及数字保留在可选入口记录，正式 CSV 仍保留原采用口径。
+冷遍最高实测点为 B8 C16，纳入 [`results.csv`](../../Clef-27B/results.csv)。暖遍最高实测点为 B16 C16。B16 暖遍相对 B8 C16 多 0.46%，冷遍少 0.39%，同状态每点一遍。B8 C8 两态 P95 均最低。独立复核核实六遍共 2,400/2,400，零失败、每题一次 HTTP 200，均通过相对 219/400 的绝对 2pp。
 
-实际最大 HTTP 在途数各自达到 C。引擎原生指标表明，C8 每遍 101 个迭代，C16 两档每遍均 51 个。各遍实际累计 372,671 tokens，与客户端输入数吻合。平均请求/迭代分别为 3.96 和 7.84，属于聚合值。51 个迭代的平均 token 数约 7,307，源直方图保留 token 分布；逐 step guard 或 batch 关联未采集。两 rank 采样 HBM 峰值和主机峰值从独立 stock metrics 与 OS 读数取得，服务无 profiler 或私有观测 hook。
+实际最大 HTTP 在途数各自达到 C。整窗 checkpoint 的 `vllm:iteration_tokens_total_count` 增量显示 C8 每遍 101 个迭代，C16 两档每遍 51 个。各遍 `_sum` 为 372,671 tokens，与原 HTTP 输入 token 总和吻合。每迭代请求数 3.96 和 7.84 由聚合值计算。逐 step batch、预算 guard 和融合路由未采。服务计时关闭 profiler 和私有观测 hook，独立进程读取原生指标和 OS/HBM。
+
+下表 HBM 峰值来自 checkpoint 合并边界读数与轮询后的取峰。归档的 OS 序列在整窗结束前停止，冷态三点的 HBM 峰值均低于 checkpoint，C16 序列覆盖 50 个迭代。暖态三点 HBM 峰值及六遍主机、等待队列峰值均与 checkpoint 一致。现有归档保留整窗差值和取峰，终点 HBM 读数与精确 Prometheus 两端绝对值未单独留存。
 
 | 配置 | 冷 host GiB | 冷 HBM MiB rank 0/1 | 暖 host GiB | 暖 HBM MiB rank 0/1 |
 | --- | ---: | ---: | ---: | ---: |
@@ -70,9 +73,24 @@ JPEG 缓存默认关闭。显式设置 `CLEF_PRIVATE_JPEG_CACHE_GIB=2`，为相�
 
 复用归档评测器 `cc7f32842a78786a8f0e5da373f66597752ea9ab` 的 `erqa_baseline.py`、`erqa_protocol.py` 和原评分器。并发层锁定单题 runner SHA-256 `8d0632825ca5bf58e33427510f5d297b3080b00cce84959f736c72e974b2755a`，调用原 `run_one` 和原 wire 逻辑。墙钟从并发提交开始到最后一条 journal 落盘，计入读图、请求准备、HTTP 和原件写入。每题保留 `request.meta.json`、`attempts.jsonl`、原始 HTTP 响应和请求结构及 wire SHA。按 `record_index` 输出预测，journal 另保留完成顺序及单调时钟 HTTP 起止。
 
+`ERQA_DATA` 指向冻结的 400 题素材。准备固定版评测器后，S1 在独立 `erqa-c1` 进程运行单题入口，S2 使用以下并发入口。两者均先 GET 就绪，再以新输出目录依次运行冷首遍和同进程自然第二遍。
+
+```bash
+ERQA_RUNNER_REF=cc7f32842a78786a8f0e5da373f66597752ea9ab
+ERQA_RUNNER_DIR="$(mktemp -d)"
+for file in erqa_baseline.py erqa_protocol.py erqa_score.py; do
+    git show "$ERQA_RUNNER_REF:scripts/official_eval/$file" > "$ERQA_RUNNER_DIR/$file"
+done
+python -B "$ERQA_RUNNER_DIR/erqa_baseline.py" --data-dir "$ERQA_DATA" \
+    --output-dir "$C1_RUN" --api-url "$BASE/v1" --model clef --scope full \
+    --retries 1 --retry-interval 5 --timeout 600
+python -B "$ERQA_RUNNER_DIR/erqa_score.py" --data-dir "$ERQA_DATA" \
+    --run-dir "$C1_RUN" --verify-requests --output "$C1_SCORE"
+```
+
 ```bash
 CLEF_PRIVATE_JPEG_CACHE_GIB=0 bash scripts/start_dataset_profile.sh erqa-s2 \
-    --model-dir "$MODEL" --output-dir "$SERVICE"
+    --model-dir "$MODEL" --output-dir "$SERVICE" -- --mm-processor-cache-gb 4
 PYTHONPATH="$ERQA_RUNNER_DIR${PYTHONPATH:+:$PYTHONPATH}" \
     python -B runtime/erqa_s2_concurrent.py --data-dir "$ERQA_DATA" \
     --output-dir "$RUN" --api-url "$BASE/v1" --concurrency 16 --timeout 600
