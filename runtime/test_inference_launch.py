@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -39,6 +40,62 @@ class LaunchTests(unittest.TestCase):
             launcher.main()
         self.assertFalse((self.root / "output").exists())
         return json.loads(output.getvalue())
+
+    def test_conv_qkv_installs_the_imported_preimage_once(self):
+        target = self.root / launcher.CONV_QKV_TARGET
+        target.parent.mkdir(parents=True)
+        original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+        target.write_bytes(original)
+        package = SimpleNamespace(origin=str(target.parent.parent / "__init__.py"))
+        output = self.root / "output"
+        with mock.patch.object(launcher.importlib.util, "find_spec", return_value=package):
+            first = launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            before = target.stat()
+            second = launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            after = target.stat()
+        self.assertTrue(first["ready"] and first["installed"])
+        self.assertEqual(first["source_sha256_before"], launcher.CONV_QKV_PREIMAGE)
+        self.assertEqual(first["source_sha256"], launcher.CONV_QKV_POSTIMAGE)
+        self.assertEqual((Path(first["backup_dir"]) / "gdn.py.preimage").read_bytes(), original)
+        self.assertTrue(second["ready"])
+        self.assertFalse(second["installed"])
+        self.assertEqual((after.st_ino, after.st_mtime_ns), (before.st_ino, before.st_mtime_ns))
+
+    def test_conv_qkv_unknown_source_and_backup_conflict_fail_closed(self):
+        target = self.root / launcher.CONV_QKV_TARGET
+        target.parent.mkdir(parents=True)
+        output = self.root / "output"
+        backup = output / "conv-qkv-source-backup" / "gdn.py.preimage"
+        package = SimpleNamespace(origin=str(target.parent.parent / "__init__.py"))
+        with mock.patch.object(launcher.importlib.util, "find_spec", return_value=package):
+            with self.assertRaisesRegex(SystemExit, "source state could not be verified"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            target.write_bytes(b"unknown source")
+            with self.assertRaisesRegex(SystemExit, "source state could not be verified"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            self.assertEqual(target.read_bytes(), b"unknown source")
+            self.assertFalse(output.exists())
+            original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+            target.write_bytes(original)
+            backup.parent.mkdir(parents=True)
+            backup.write_bytes(b"unknown backup")
+            with self.assertRaisesRegex(SystemExit, "backup SHA mismatch"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+        self.assertEqual(target.read_bytes(), original)
+        self.assertEqual(backup.read_bytes(), b"unknown backup")
+
+    def test_conv_qkv_dry_run_and_off_do_not_resolve_or_edit_the_tree(self):
+        decision = {"enabled": True, "requested": True}
+        with mock.patch.object(launcher, "gdn_decision_prefill", return_value=decision), \
+                mock.patch.object(launcher, "installer_call") as installer:
+            on = self.launch("--config", "s1")
+            self.assertTrue(on["gdn_decision_prefill"]["conv_qkv_patch"]["pending_install"])
+            self.assertEqual(on["service_environment"]["CLEF_GDN_CONV_QKV"], "0")
+            with mock.patch.dict(os.environ, {"CLEF_GDN_CONV_QKV": "off"}):
+                off = self.launch("--config", "s1")
+            self.assertFalse(off["gdn_decision_prefill"]["conv_qkv_patch"]["requested"])
+            self.assertEqual(off["service_environment"]["CLEF_GDN_CONV_QKV"], "0")
+            installer.assert_not_called()
 
     def assert_mm(self, launch, value, source):
         command = launch["argv"]
@@ -126,6 +183,48 @@ class LaunchTests(unittest.TestCase):
             launch = self.launch("--config", config)
             self.assert_mm(launch, launcher.MM_PROCESSOR_KWARGS, f"config:{config}")
 
+    def test_encoder_cache_default_preserves_original_launch(self):
+        initial_environment = dict(os.environ)
+        with mock.patch.dict(os.environ, initial_environment, clear=True):
+            default = self.launch("--config", "s1")
+        with mock.patch.dict(os.environ, initial_environment, clear=True):
+            explicit_off = self.launch("--config", "s1", "--encoder-cache-tokens", "0")
+        self.assertEqual(default, explicit_off)
+        self.assertNotIn("--scheduler-cls", default["argv"])
+        self.assertNotIn("PYTHONPATH", default["service_environment"])
+        self.assertNotIn("CLEF_ENCODER_CACHE_TOKENS", default["service_environment"])
+
+    def test_encoder_cache_changes_only_retention_and_module_loading(self):
+        baseline = self.launch("--config", "s1")
+        with mock.patch.dict(os.environ, {"PYTHONPATH": "/existing/path"}):
+            enabled = self.launch("--config", "s1", "--encoder-cache-tokens", "327680")
+        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
+        self.assertEqual(enabled["argv"][-2:], ["--scheduler-cls",
+                         "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
+        self.assertEqual(enabled["service_environment"]["CLEF_ENCODER_CACHE_TOKENS"], "327680")
+        self.assertEqual(enabled["service_environment"]["PYTHONPATH"],
+                         str(ENTRY.parent) + os.pathsep + "/existing/path")
+        self.assertEqual(enabled["effective"]["max_num_batched_tokens"], 4096)
+        self.assertEqual(len(enabled["effective"]["encoder_cache_scheduler_sha256"]), 64)
+
+    def test_encoder_cache_keeps_erqa_phase_parameters(self):
+        args = ("--max-model-len", "16384", "--max-num-batched-tokens", "16384",
+                "--limit-mm-per-prompt", '{"image":16,"video":0}',
+                "--mm-processor-kwargs", '{"min_pixels":65536,"max_pixels":1048576}')
+        baseline = self.launch(*args)
+        enabled = self.launch(*args, "--encoder-cache-tokens", "131072")
+        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
+        for key in ("max_model_len", "max_num_batched_tokens", "limit_mm_per_prompt", "mm_processor_kwargs"):
+            self.assertEqual(enabled["effective"][key], baseline["effective"][key])
+
+    def test_encoder_cache_rejects_shrink_and_scheduler_conflicts(self):
+        for args in (("--encoder-cache-tokens", "-1"),
+                     ("--encoder-cache-tokens", "4095"),
+                     ("--encoder-cache-tokens", "327680", "--", "--scheduler-cls", "other.Class"),
+                     ("--encoder-cache-tokens", "327680", "--", "--async-scheduling")):
+            with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
+                self.launch(*args)
+
     def test_executor_cache_default_and_explicit_override_are_recorded(self):
         self.assertEqual(self.launch("--config", "s1")["service_environment"]
                          ["ACLNN_CACHE_LIMIT"], "1000000")
@@ -147,12 +246,17 @@ class LaunchTests(unittest.TestCase):
     def test_chunk128_is_opt_in_and_dry_run_has_no_side_effect(self):
         self.assertFalse(self.launch("--config", "s1")["gdn_decision_prefill"]
                          ["gdn_chunk128_patch"]["requested"])
-        os.environ["CLEF_GDN_CHUNK128"] = "1"
-        with mock.patch.object(launcher.subprocess, "run") as run:
-            record = self.launch("--config", "s1")["gdn_decision_prefill"]
-            self.assertTrue(record["gdn_chunk128_patch"]["pending_install"])
-            run.assert_not_called()
-        self.assertFalse(launcher.gdn_chunk128_patch("custom")["requested"])
+        with mock.patch.object(launcher, "gdn_decision_prefill",
+                               return_value={"enabled": True}):
+            os.environ["CLEF_GDN_CHUNK128"] = "0"
+            self.assertFalse(self.launch("--config", "s1")["gdn_decision_prefill"]
+                             ["gdn_chunk128_patch"]["requested"])
+            os.environ["CLEF_GDN_CHUNK128"] = "1"
+            with mock.patch.object(launcher.subprocess, "run") as run:
+                record = self.launch("--config", "s1")["gdn_decision_prefill"]
+                self.assertTrue(record["gdn_chunk128_patch"]["pending_install"])
+                run.assert_not_called()
+        self.assertFalse(launcher.gdn_chunk128_patch("s1")["requested"])
 
     def test_chunk128_rejects_incomplete_ready_report(self):
         os.environ["CLEF_GDN_CHUNK128"] = "1"
@@ -160,7 +264,7 @@ class LaunchTests(unittest.TestCase):
             "ready": True, "files": {}}))
         with mock.patch.object(launcher.subprocess, "run", return_value=incomplete):
             with self.assertRaisesRegex(SystemExit, "incomplete"):
-                launcher.gdn_chunk128_patch("s1")
+                launcher.gdn_chunk128_patch("s1", decision_enabled=True)
 
     def test_custom_default_omits_mm_option(self):
         launch = self.launch("--config", "custom")

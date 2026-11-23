@@ -25,8 +25,23 @@ PROTOCOL_VERSION = "2026-11-13"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
+CONV_QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_conv_qkv_patch.py"
+CONV_QKV_TARGET = Path("vllm_ascend/ops/gdn.py")
+CONV_QKV_PREIMAGE = "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e"
+CONV_QKV_POSTIMAGE = "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
 JOINT_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_single_field_patch.py"
+JOINT_FUSED_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_fused_attention.py"
+JOINT_FUSED_GUARD = REPO_ROOT / "runtime" / "apply_joint_single_field_patch_fused.py"
+JOINT_SERVICE_CHECK_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_service_check.py"
 CHUNK128_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_chunk128_patch.py"
+DEFAULT_CONFIG = "s1"
+JOINT_ORIGINAL_SHA = "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be"
+JOINT_SINGLE_FIELD_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
+JOINT_FUSED_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+JOINT_GUARD_PRE_SHA = "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
+JOINT_GUARD_POST_SHA = "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
+JOINT_FLAG_ENV = "CLEF_JOINT_FUSED_ATTN"
+JOINT_ALLOW_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 MM_PROCESSOR_KWARGS = (
     '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
@@ -43,6 +58,7 @@ CONFIGS = {
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "off",
         "joint_single_field": True,
+        "joint_fused_attention": True,
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
         "gdn_data_path": {
             "bsnd": True,
@@ -110,6 +126,61 @@ ENV_WHITELIST_KEYS = (
 
 def sha256_bytes(blob):
     return hashlib.sha256(blob).hexdigest()
+
+
+def sha256_file(path):
+    return sha256_bytes(Path(path).read_bytes())
+
+
+def write_json_atomic(path, value):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=1) + "\n")
+    os.replace(temporary, path)
+
+
+def installer_call(argv, env=None):
+    """Run one audited installer and keep its report even on a nonzero rc."""
+    result = subprocess.run(argv, capture_output=True, text=True, env=env)
+    try:
+        report = json.loads(result.stdout)
+    except (TypeError, ValueError):
+        report = {"raw_stdout": result.stdout[-2000:], "raw_stderr": result.stderr[-2000:]}
+    return {"rc": result.returncode, "report": report,
+            "stdout": result.stdout[-2000:], "stderr": result.stderr[-2000:]}
+
+
+def resolve_vllm_tree(timeout=60):
+    """Resolve the writable vllm source tree in an isolated subprocess.
+
+    The launcher process must not import vllm/torch before ``execv``; the probe
+    uses the same interpreter and environment, has a short timeout, writes
+    nothing, and fails closed on any unusable layout (editable, zip, namespace,
+    missing target or non-writable target).
+    """
+    probe = [sys.executable, "-c",
+             "import vllm, pathlib; print(pathlib.Path(vllm.__file__).resolve())"]
+    try:
+        result = subprocess.run(probe, capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError(f"vllm tree probe failed: {type(exc).__name__}: {exc}")
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if result.returncode != 0 or not lines:
+        raise ValueError(
+            f"vllm tree probe rc={result.returncode} "
+            f"stdout={result.stdout[-500:]!r} stderr={result.stderr[-500:]!r}")
+    init = Path(lines[-1]).expanduser()
+    if init.name != "__init__.py" or init.parent.name != "vllm":
+        raise ValueError(f"vllm probe did not name the package __init__: {init}")
+    tree = init.parent.parent.resolve()
+    target = tree / "vllm/model_executor/models/clef_joint_schema.py"
+    if not target.is_file():
+        raise ValueError(f"vllm joint schema target missing: {target}")
+    if not os.access(target, os.W_OK) or not os.access(target.parent, os.W_OK):
+        raise ValueError(f"vllm joint schema target is not writable: {target}")
+    return {"tree": str(tree), "target": str(target), "probe_rc": result.returncode,
+            "probe_stdout": result.stdout[-500:], "probe_stderr": result.stderr[-500:]}
 
 
 def model_files(model_dir):
@@ -360,6 +431,59 @@ def qkv_norm_patch(config, apply=True):
     return record
 
 
+def conv_qkv_patch(requested, vendor, output_dir, *, apply):
+    """Install and verify the Conv+QKV source on the worker's import tree."""
+    record = {"requested": requested, "ready": False, "installed": False,
+              "installer": str(CONV_QKV_INSTALLER), "vendor": vendor}
+    if not requested:
+        return record
+    if not apply:
+        record["pending_install"] = True
+        return record
+    if vendor is None:
+        raise SystemExit("Conv+QKV requested but the bundled op_api vendor is unavailable")
+    if not CONV_QKV_INSTALLER.is_file():
+        raise SystemExit(f"Conv+QKV installer missing: {CONV_QKV_INSTALLER}")
+
+    spec = importlib.util.find_spec("vllm_ascend")
+    init = Path(spec.origin).resolve() if spec and spec.origin else None
+    if init is None or init.name != "__init__.py" or init.parent.name != "vllm_ascend":
+        raise SystemExit("Could not resolve the vLLM-Ascend worker import tree for Conv+QKV")
+    tree = init.parent.parent
+    target = tree / CONV_QKV_TARGET
+    backup = output_dir / "conv-qkv-source-backup"
+    command = [sys.executable, str(CONV_QKV_INSTALLER), "--tree", str(tree),
+               "--backup-dir", str(backup)]
+
+    def check():
+        result = installer_call([*command, "--check"])
+        report = result["report"]
+        sha = report.get("sha256")
+        known = {CONV_QKV_PREIMAGE: "preimage", CONV_QKV_POSTIMAGE: "patched"}
+        if (result["rc"] or report.get("tree") != str(tree)
+                or report.get("target") != str(CONV_QKV_TARGET)
+                or sha not in known or report.get("status_after") != known[sha]
+                or report.get("ready") is not (sha == CONV_QKV_POSTIMAGE)
+                or not target.is_file() or sha256_file(target) != sha):
+            raise SystemExit(f"Conv+QKV source state could not be verified at {target}")
+        return sha
+
+    before = check()
+    if before == CONV_QKV_PREIMAGE:
+        result = installer_call([*command, "--apply"])
+        if result["rc"]:
+            raise SystemExit(f"Conv+QKV installation failed at {target}: "
+                             f"{result['report'].get('error', 'installer failed')}")
+        record["installed"] = True
+    after = check() if record["installed"] else before
+    if after != CONV_QKV_POSTIMAGE:
+        raise SystemExit(f"Conv+QKV postimage SHA-256 mismatch at {target}")
+    record.update(ready=True, tree=str(tree), target=str(target), backup_dir=str(backup),
+                  source_sha256_before=before, source_sha256=after,
+                  installer_sha256=sha256_file(CONV_QKV_INSTALLER))
+    return record
+
+
 def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
     """Install/verify the GDN chunk-128 decision-path patch.
 
@@ -464,6 +588,148 @@ def joint_single_field_patch(config, apply=True):
         verify(report)
     record.update(enabled=True, patch_state=report.get("status_after"))
     return record
+
+
+def fused_joint_patch(config, output_dir, apply=True):
+    """Install/verify the aa3e fused-attention joint head for the default config.
+
+    The guard (36) and fused (b09) installers are check-first.  The guard's
+    ALLOW exemption exists only in ``--check``, so apply is called only when its
+    own report says ``status_before=preimage``; f810 vs aa3e is distinguished
+    solely by the fused report's ``state_before``.  Every start writes an atomic
+    ``joint-patch-record.json`` (including no-op) before any service launch; any
+    failure raises SystemExit so vLLM is never started in a mixed state.
+    """
+    requested = bool(CONFIGS[config].get("joint_fused_attention", False))
+    record = {
+        "schema": "joint-fused-entry/1",
+        "enabled": False,
+        "requested": requested,
+        "mode": "joint-fused-attention",
+        "default_config": DEFAULT_CONFIG,
+        "config": config,
+        "installer": str(JOINT_FUSED_INSTALLER),
+        "installer_sha256": (sha256_file(JOINT_FUSED_INSTALLER)
+                             if JOINT_FUSED_INSTALLER.is_file() else None),
+        "guard_installer": str(JOINT_FUSED_GUARD),
+        "guard_installer_sha256": (sha256_file(JOINT_FUSED_GUARD)
+                                   if JOINT_FUSED_GUARD.is_file() else None),
+        "schema_sha256": JOINT_FUSED_SHA,
+        "flag_env": JOINT_FLAG_ENV,
+        "allow_env": JOINT_ALLOW_ENV,
+    }
+    if not requested:
+        os.environ.pop(JOINT_FLAG_ENV, None)
+        os.environ.pop(JOINT_ALLOW_ENV, None)
+        return record
+    # The guard's check exemption reads this env from its own process; setting
+    # it before the guard check also keeps the launched service consistent.
+    os.environ[JOINT_FLAG_ENV] = "1"
+    os.environ[JOINT_ALLOW_ENV] = JOINT_FUSED_SHA
+    record.update(enabled=True, pending_install=not apply,
+                  flag_value=os.environ[JOINT_FLAG_ENV],
+                  allow_value=os.environ[JOINT_ALLOW_ENV])
+    if not apply:
+        return record
+
+    output = Path(output_dir).expanduser().resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    record_path = output / "joint-patch-record.json"
+    guard_backup = output / "patch-backup" / "joint-single-field"
+    fused_backup = output / "patch-backup" / "joint-fused"
+    guard_manifest = output / "patch-manifest-joint-single-field.json"
+    fused_manifest = output / "patch-manifest-joint-fused.json"
+    record.update(
+        at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        output_dir=str(output), record=str(record_path),
+        guard_backup=str(guard_backup), fused_backup=str(fused_backup),
+        guard_manifest=str(guard_manifest), fused_manifest=str(fused_manifest),
+        env_present={JOINT_FLAG_ENV: os.environ.get(JOINT_FLAG_ENV),
+                     JOINT_ALLOW_ENV: os.environ.get(JOINT_ALLOW_ENV)},
+    )
+    try:
+        guard_backup.mkdir(parents=True, exist_ok=True)
+        fused_backup.mkdir(parents=True, exist_ok=True)
+        probe = resolve_vllm_tree()
+        record.update(tree=probe["tree"], target=probe["target"], probe=probe)
+        target = Path(probe["target"])
+        before = sha256_file(target)
+        record["target_sha256_before"] = before
+        if before not in (JOINT_ORIGINAL_SHA, JOINT_SINGLE_FIELD_SHA, JOINT_FUSED_SHA):
+            raise ValueError(f"unknown joint schema SHA-256: {before}")
+
+        check_env = dict(os.environ)
+        guard_check = installer_call(
+            [sys.executable, str(JOINT_FUSED_GUARD), "--tree", probe["tree"],
+             "--backup-dir", str(guard_backup), "--check"], env=check_env)
+        record["guard_check"] = guard_check
+        guard_before = guard_check["report"].get("status_before")
+        if guard_before == "preimage":
+            guard_apply = installer_call(
+                [sys.executable, str(JOINT_FUSED_GUARD), "--tree", probe["tree"],
+                 "--backup-dir", str(guard_backup), "--apply",
+                 "--manifest", str(guard_manifest)], env=check_env)
+            record["guard_apply"] = guard_apply
+            report = guard_apply["report"]
+            if (guard_apply["rc"] != 0 or report.get("status_after") != "single-field"
+                    or report.get("ready") is not True):
+                raise ValueError(f"joint guard apply did not reach single-field: {report}")
+            guard_action = "apply"
+        elif guard_before == "single-field":
+            if guard_check["report"].get("ready") is not True:
+                raise ValueError(f"joint guard check is not ready: {guard_check['report']}")
+            guard_action = "noop"
+        else:
+            raise ValueError(
+                f"joint guard check returned status_before={guard_before!r}: "
+                f"{guard_check['report']}")
+
+        fused_check = installer_call(
+            [sys.executable, str(JOINT_FUSED_INSTALLER), "--tree", probe["tree"],
+             "--backup-dir", str(fused_backup), "--check"])
+        record["fused_check"] = fused_check
+        fused_before = fused_check["report"].get("state_before")
+        if fused_before == "preimage":
+            fused_apply = installer_call(
+                [sys.executable, str(JOINT_FUSED_INSTALLER), "--tree", probe["tree"],
+                 "--backup-dir", str(fused_backup), "--apply",
+                 "--manifest", str(fused_manifest)])
+            record["fused_apply"] = fused_apply
+            report = fused_apply["report"]
+            if (fused_apply["rc"] != 0 or report.get("state_after") != "postimage"
+                    or report.get("ready") is not True):
+                raise ValueError(f"joint fused apply did not reach postimage: {report}")
+            fused_action = "apply"
+        elif fused_before == "postimage":
+            if fused_check["report"].get("ready") is not True:
+                raise ValueError(f"joint fused check is not ready: {fused_check['report']}")
+            fused_action = "noop"
+        else:
+            raise ValueError(
+                f"joint fused check returned state_before={fused_before!r}: "
+                f"{fused_check['report']}")
+
+        after = sha256_file(target)
+        record["target_sha256_after"] = after
+        if after != JOINT_FUSED_SHA:
+            raise ValueError(f"joint fused target is {after}, expected {JOINT_FUSED_SHA}")
+        guard_after = sha256_file(JOINT_FUSED_GUARD)
+        record["guard_sha256_after"] = guard_after
+        if guard_after != JOINT_GUARD_POST_SHA:
+            raise ValueError(f"joint guard file is {guard_after}, expected {JOINT_GUARD_POST_SHA}")
+        record.update(ok=True, guard_action=guard_action, fused_action=fused_action,
+                      branch=("original->f810->fused"
+                              if guard_action == "apply" and fused_action == "apply"
+                              else "f810->fused" if fused_action == "apply" else "aa3e-noop"))
+        write_json_atomic(record_path, record)
+        return record
+    except BaseException as exc:
+        record.update(ok=False, error=f"{type(exc).__name__}: {exc}")
+        try:
+            write_json_atomic(record_path, record)
+        except OSError:
+            pass
+        raise SystemExit(f"joint fused attention setup failed: {exc}") from exc
 
 
 def gdn_data_path(config, enabled):
@@ -770,6 +1036,20 @@ def build_launch(args):
             f"单请求最多 {effective['max_model_len']} tokens）")
     effective["max_num_batched_tokens"] = batched
 
+    # Experimental retention budget. Keep the default launch path unchanged.
+    encoder_cache_tokens = getattr(args, "encoder_cache_tokens", 0)
+    if encoder_cache_tokens < 0:
+        raise ValueError("--encoder-cache-tokens 应为 0（关闭）或正整数")
+    if encoder_cache_tokens and encoder_cache_tokens < batched:
+        raise ValueError("--encoder-cache-tokens 应至少等于 --max-num-batched-tokens")
+    if encoder_cache_tokens:
+        for flag, value, _ in parsed:
+            if flag in ("--scheduler-cls", "--async-scheduling", "--scheduler-config"):
+                raise ValueError(f"encoder cache 候选与 {flag} 透传冲突")
+        encoder_scheduler = Path(__file__).resolve().with_name("clef_encoder_cache_scheduler.py")
+        if not encoder_scheduler.is_file():
+            raise ValueError(f"encoder cache 候选模块缺失：{encoder_scheduler}")
+
     command = [
         sys.executable, "-m", "vllm.entrypoints.cli.main", "serve", str(model_dir),
         "--served-model-name", SERVED_MODEL_NAME,
@@ -793,6 +1073,9 @@ def build_launch(args):
     if effective["mm_processor_kwargs"] is not None:
         command += ["--mm-processor-kwargs", effective["mm_processor_kwargs"]]
     command += passthrough
+    if encoder_cache_tokens:
+        command += ["--scheduler-cls",
+                    "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"]
 
     gdn_decision = gdn_decision_prefill(config, apply=not getattr(args, "dry_run", False))
 
@@ -812,6 +1095,15 @@ def build_launch(args):
         # path.  A large cache keeps every measured length on the fast path.
         "ACLNN_CACHE_LIMIT": os.environ.get("ACLNN_CACHE_LIMIT", "1000000"),
     }
+    if encoder_cache_tokens:
+        environment["CLEF_ENCODER_CACHE_TOKENS"] = str(encoder_cache_tokens)
+        module_dir = str(encoder_scheduler.parent)
+        existing_path = os.environ.get("PYTHONPATH")
+        environment["PYTHONPATH"] = (
+            module_dir + os.pathsep + existing_path if existing_path else module_dir)
+        effective["encoder_cache_tokens"] = encoder_cache_tokens
+        effective["encoder_cache_scheduler_sha256"] = sha256_file(encoder_scheduler)
+        sources["encoder_cache_tokens"] = "explicit"
     if gdn_decision["enabled"]:
         environment["CLEF_GDN_DECISION_PREFILL"] = "1"
         environment["CLEF_GDN_NO_RECOMPUTE"] = os.environ.get(
@@ -827,19 +1119,37 @@ def build_launch(args):
         config, apply=not getattr(args, "dry_run", False),
         decision_enabled=gdn_decision["enabled"])
     gdn_decision["gdn_chunk128_patch"] = chunk128_patch
-    joint_patch = joint_single_field_patch(
-        config, apply=not getattr(args, "dry_run", False))
-    gdn_decision["joint_single_field_patch"] = joint_patch
+    if CONFIGS[config].get("joint_fused_attention"):
+        joint_patch = fused_joint_patch(
+            config, output_dir, apply=not getattr(args, "dry_run", False))
+    else:
+        joint_patch = joint_single_field_patch(
+            config, apply=not getattr(args, "dry_run", False))
+    gdn_decision["joint_patch"] = joint_patch
     if joint_patch["enabled"]:
         environment["CLEF_JOINT_SINGLE_FIELD"] = "1"
+    if CONFIGS[config].get("joint_fused_attention"):
+        environment[JOINT_FLAG_ENV] = "1"
+        environment[JOINT_ALLOW_ENV] = JOINT_FUSED_SHA
+    else:
+        # Never inherit a candidate flag into the frozen f810 arm.
+        os.environ.pop(JOINT_FLAG_ENV, None)
+        os.environ.pop(JOINT_ALLOW_ENV, None)
     # The fused conv + QKV normalization kernel is the measured default on the
     # decision prefill path; CLEF_GDN_CONV_QKV=0 reproduces the unfused arm.
+    dry_run = getattr(args, "dry_run", False)
     conv_qkv_requested = (
-        gdn_decision["enabled"]
+        (gdn_decision["enabled"] or dry_run and gdn_decision["requested"])
         and os.environ.get("CLEF_GDN_CONV_QKV", "").strip().lower()
         not in ("0", "false", "no", "off")
     )
-    qkv_env = qkv_norm_environment(conv_qkv=conv_qkv_requested)
+    qkv_env = qkv_norm_environment(conv_qkv=conv_qkv_requested and not dry_run)
+    conv_patch = conv_qkv_patch(conv_qkv_requested, qkv_env.get("CLEF_CONV_QKV_VENDOR"),
+                                output_dir, apply=not dry_run)
+    gdn_decision["conv_qkv_patch"] = conv_patch
+    if conv_patch["ready"]:
+        gdn_decision["files"][str(CONV_QKV_TARGET)] = conv_patch["source_sha256"]
+        gdn_decision["patch_state"][str(CONV_QKV_TARGET)] = "conv"
     if qkv_env:
         environment.update(qkv_env)
         os.environ.update(qkv_env)
@@ -848,6 +1158,7 @@ def build_launch(args):
     else:
         gdn_decision["qkv_norm_vendor"] = None
         gdn_decision["conv_qkv_vendor"] = None
+    environment["CLEF_GDN_CONV_QKV"] = "1" if conv_patch["ready"] else "0"
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
         # Experiment-only override, recorded so the manifest shows it.
         gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]
@@ -864,6 +1175,7 @@ def build_launch(args):
         "environment": effective_environment(),
         "service_environment": environment,
         "gdn_decision_prefill": gdn_decision,
+        "joint_patch": joint_patch,
         "software": software_provenance(),
         "schema_cache": {
             "enabled": schema_enabled,
@@ -894,13 +1206,15 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=18143,
                         help="默认监听 127.0.0.1:18143（比赛接口约定）。")
-    parser.add_argument("--config", choices=sorted(CONFIGS), default="s1",
-                        help="s1（默认，最终采用）：TP2/4096/seqs1/缓存关；"
+    parser.add_argument("--config", choices=sorted(CONFIGS), default=DEFAULT_CONFIG,
+                        help="s1（默认，最终采用 aa3e）：TP2/4096/seqs1/缓存关；"
                              "s2：TP2/4096/seqs4/缓存 v2 开；custom：TP1/1024 保守默认。")
     parser.add_argument("--tensor-parallel-size", type=int, default=None)
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
     parser.add_argument("--max-num-batched-tokens", type=int, default=None)
+    parser.add_argument("--encoder-cache-tokens", type=int, default=0,
+                        help="实验：encoder 输出缓存 embedding 容量；0 保持默认，compute 预算不变。")
     parser.add_argument("--gpu-memory-utilization", type=float, default=None)
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')
