@@ -6,6 +6,15 @@
 
 [正式协议、完整点位、逐题证据与冷启动验证](logs/aa3e-conv-qkv-20261123/README.md)记录本窗冻结来源和证据边界。最终在线状态随发布执行记录更新。
 
+## 数据集性能汇总
+
+| 数据集 | S1 P95（ms） | S2 吞吐（decisions/s） | S2 客户端并发 | 计量口径 |
+| --- | ---: | ---: | ---: | --- |
+| OpenDecisions | 156.181845 | 17.689352 | 64 | S1 C1 三轮中位，S2 B16 C64，各轮全量 2352 题 |
+| ERQA | 300.537708 | 7.166461 | 16 | S1 B1 C1，S2 B8 C16，各 400 题冷首遍，JPEG 解码缓存关闭 |
+
+[`results.csv`](results.csv) 的批量与 batched tokens 两列描述选定的 S2 点。S1 和 S2 各自的预算、并发、状态和原数由各自测量 ID 关联。ERQA 自然第二遍和可选 JPEG 暖态成绩随图文明细提供。[测量索引](logs/dataset-profiles-20261123/manifest.json) · [独立入口与图文复现](../runtime/jpeg_decode_cache/README.md) · [历史性能表](logs/dataset-profiles-20261123/results-historical.csv)
+
 ## 历史提交指标（2026-11-17 至 2026-11-18）
 
 ### 精度指标
@@ -118,4 +127,4 @@ python scripts/verify_systemone.py \
 
 `metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5400（216/400），其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
-`results.csv` 当前 S1 为 seqs1、缓存关、GDN 决策优化、BIC、conv+QKV 融合与 chunk128 后、2026-11-18 五轮复核中位的 P95 **155.86 ms**（历史 157.745、上一版 166.002、cache-only 168.633、修复前 190.405 ms）。S2 当前记录为 B16 C64 的 **17.462 decisions/s**（同日两次 17.462/17.475；B8 C16 16.738 保留在文档表格中），`gdn_decision_prefill`、`gdn_data_path` 与 `measurement_id` 列标明运行身份；主办方对 S2 有效性阈值的最终规则仍待确认。seqs4 的 13.764 dec/s 行保留第四轮工程门槛判定；ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
+历史性能表保留 2026-11-18 五轮 S1 P95 中位 **155.86 ms**、B16 C64 S2 **17.462 decisions/s**，以及第四轮未过工程质量门的 seqs4 候选 **13.764 decisions/s**。ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[历史性能表](logs/dataset-profiles-20261123/results-historical.csv) · [优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)

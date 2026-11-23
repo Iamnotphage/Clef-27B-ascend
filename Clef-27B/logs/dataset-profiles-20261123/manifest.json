@@ -1,0 +1,342 @@
+{
+  "date": "2026-11-23",
+  "summary_csv": "../../results.csv",
+  "historical_csv": "results-historical.csv",
+  "csv_budget_columns": "max_num_seqs and max_num_batched_tokens describe the selected S2 point; the S1 and S2 measurement IDs resolve their separate launch budgets.",
+  "frozen_acceptance": {
+    "path": "../aa3e-conv-qkv-20261123/manifest.json",
+    "sha256": "2384d0f3e449e57cd7dbbce5a9bdf1014c518b157ac21ea687ea55e6ef272487"
+  },
+  "launch_wrapper": "../../../scripts/start_dataset_profile.sh",
+  "common": {
+    "precision": "bfloat16",
+    "tp": 2,
+    "eager": true,
+    "runner": "pooling",
+    "schema_cache": false,
+    "prefix_cache": false,
+    "chunked_prefill": false
+  },
+  "profiles": {
+    "od-s1": {
+      "max_num_seqs": 1,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 4096,
+      "gpu_memory_utilization": 0.9,
+      "encoder_cache_tokens": 0
+    },
+    "od-s2": {
+      "max_num_seqs": 16,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 16384,
+      "gpu_memory_utilization": 0.9,
+      "encoder_cache_tokens": 0
+    },
+    "erqa-c1": {
+      "max_num_seqs": 1,
+      "shared_budget": "erqa"
+    },
+    "erqa-s2": {
+      "max_num_seqs": 8,
+      "shared_budget": "erqa"
+    }
+  },
+  "shared_budgets": {
+    "erqa": {
+      "max_model_len": 16384,
+      "max_num_batched_tokens": 16384,
+      "gpu_memory_utilization": 0.85,
+      "encoder_cache_tokens": 262144,
+      "encoder_compute_tokens": 16384,
+      "encoder_scheduler_sha256": "f9ec1f99761d81ecb76cb0b75651cf7f65af46a15b22e43c32ef6381ba9d9bde",
+      "mm_processor_cache_gib": 4,
+      "mm_processor_cache_type": "lru",
+      "image_limit": 16,
+      "video_limit": 0,
+      "image_pixel_bounds": [
+        65536,
+        1048576
+      ]
+    }
+  },
+  "selection": {
+    "OpenDecisions": {
+      "s1": "od-s1-aa3e-conv-qkv-20261123-on-c1-3round-median",
+      "s2": "od-s2-aa3e-conv-qkv-20261123-on-b16-c64"
+    },
+    "ERQA": {
+      "s1": "erqa-s1-aa3e-20261123-on-b1-c1-cold-first-400-jpeg-off",
+      "s2": "erqa-s2-20261123-b8-c16-cold-first-400-jpeg-off"
+    }
+  },
+  "evidence_archives": {
+    "erqa-s2-b8-evidence.tar.gz": {
+      "bytes": 1271157,
+      "sha256": "0127d45a4f7bbc7c11b59e8904514364d08f2f793488f73138fb0832afd18f28"
+    },
+    "erqa-s2-b16-evidence.tar.gz": {
+      "bytes": 636287,
+      "sha256": "6984f962a1daa75cf500f703e654eb8723df3d676e279330a52edeeb290bb066"
+    },
+    "jpeg-aba-evidence.tar.gz": {
+      "bytes": 811568,
+      "sha256": "fdee1841796d2d220e3ae39efed03b91fb84e0c185a91c4ae81ad36f76a1e318"
+    }
+  },
+  "erqa_s2_protocol": {
+    "data_and_scorer": "frozen_acceptance:data.erqa_sha256",
+    "single_request_runner_ref": "cc7f32842a78786a8f0e5da373f66597752ea9ab",
+    "reference_predictions": "jpeg-aba-evidence.tar.gz:A1/ERQA-A-cold/predictions.jsonl.gz (decompressed bytes)",
+    "reference_predictions_raw_sha256": "f143da68c08c4c62d543a838af55759d6b2fae9d866ca3f02a18a2c99752b883",
+    "measured_concurrent_runner_sha256": "c65225538eaba71959fc91ebdbf1fb3fdbdc91d13d2e670ca459a7acb57b1dcc",
+    "branch_concurrent_runner_sha256": "c668429c464af5a6e0eab5be7e70a74239e2339510ce2457fe61ed6b8a0bfcc0",
+    "runner_difference": "The measured runner ends with one extra blank line.",
+    "sequence_per_fresh_process": [
+      "GET-only readiness",
+      "cold-first",
+      "natural-second"
+    ],
+    "requests_per_pass": 400,
+    "attempts_per_request": 1,
+    "timeout_seconds": 600,
+    "extra_warmup_requests": 0,
+    "service_profiler": false,
+    "throughput_wall": "First worker submission to last flushed journal entry; includes preparation, HTTP and original per-item writes.",
+    "p95": "Linear interpolation at (n-1)*0.95 over HTTP request latencies.",
+    "quality_gate": "Absolute difference <= 2 percentage points against 219/400; every pass independently checked.",
+    "coverage": "Independent CPU audit verified 2400 single-attempt HTTP 200 responses, frozen wire/structure/image hashes, full probabilities and scoring.",
+    "resource_provenance": "Use s2-checkpoint.json for HBM maxima across the supervisor boundary and periodic samples, and for native iteration histogram deltas. Separate absolute endpoint HBM/Prometheus snapshots are unavailable. The periodic OS series ends before the complete window; it has lower cold HBM maxima and gives 50 iterations at C16. It agrees on all host and waiting peaks and all natural-second HBM peaks.",
+    "iteration_tokens": "vllm:iteration_tokens_total_count increments once per engine iteration; _sum counts scheduled prompt and generation tokens. The per-pass sum also matches HTTP prompt tokens. Per-step batch composition and GDN dispatch were not captured."
+  },
+  "measurements": {
+    "od-s1-aa3e-conv-qkv-20261123-on-c1-3round-median": {
+      "profile": "od-s1",
+      "client_concurrency": 1,
+      "requests_per_round": 2352,
+      "state": "Same-process rounds B-r1 through B-r3, no client warmup; A block precedes B block.",
+      "p95_ms": 156.18184469640255,
+      "decisions_per_second_median": 8.948975248411802,
+      "records": [
+        "s1.S1-B-r1",
+        "s1.S1-B-r2",
+        "s1.S1-B-r3",
+        "s1_summary.B"
+      ]
+    },
+    "od-s2-aa3e-conv-qkv-20261123-on-b16-c64": {
+      "profile": "od-s2",
+      "client_concurrency": 64,
+      "successful": 2352,
+      "state": "B16 C64 follows B16 C32 on the same process, no client warmup.",
+      "p95_ms": 5918.830418586731,
+      "decisions_per_second": 17.689351593224593,
+      "records": [
+        "s2.S2-B16-C64-B"
+      ]
+    },
+    "erqa-s1-aa3e-20261123-on-b1-c1-cold-first-400-jpeg-off": {
+      "profile": "erqa-c1",
+      "client_concurrency": 1,
+      "state": "cold-first",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "correct": 216,
+      "wall_seconds": 85.86899830959737,
+      "p95_ms": 300.537707703188,
+      "records": [
+        "erqa.ERQA-B-cold"
+      ],
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/followup/ERQA-B-cold"
+    },
+    "erqa-s1-aa3e-20261123-on-b1-c1-natural-second-400-jpeg-off": {
+      "profile": "erqa-c1",
+      "client_concurrency": 1,
+      "state": "natural-second",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "correct": 216,
+      "wall_seconds": 69.16459163930267,
+      "p95_ms": 252.02452992089087,
+      "records": [
+        "erqa.ERQA-B-natural-second"
+      ],
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/followup/ERQA-B-natural-second"
+    },
+    "erqa-s2-20261123-b8-c8-cold-first-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "client_concurrency": 8,
+      "state": "cold-first",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 218,
+      "wall_seconds": 59.06940761,
+      "decisions_per_second": 6.771694794045692,
+      "p95_ms": 2025.4460481461138,
+      "engine_iterations": 101,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 81302478848,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 59695,
+        "1": 59351
+      },
+      "sampled_waiting_requests_max": 1,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b8-v1/C8/ERQA-A-cold",
+      "archive": "erqa-s2-b8-evidence.tar.gz",
+      "member_dir": "C8/ERQA-A-cold",
+      "journal_sha256": "019cda9e1f1a45978985a714beb2a8574132182072266695e7be04b3d2bef077",
+      "predictions_gzip_sha256": "29a9d83bd2bda821b56299b5ad48c95a7b0fdf2f24d52e5af923d4509690d6bb",
+      "predictions_raw_sha256": "ea7675e406a3896ca4b3964c5ca8325f8578adc077ca26470c66115958b5b2bb"
+    },
+    "erqa-s2-20261123-b8-c8-natural-second-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "client_concurrency": 8,
+      "state": "natural-second",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 218,
+      "wall_seconds": 49.84990909,
+      "decisions_per_second": 8.024086849944545,
+      "p95_ms": 1694.1744389943779,
+      "engine_iterations": 101,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 81575157760,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 60136,
+        "1": 59787
+      },
+      "sampled_waiting_requests_max": 1,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b8-v1/C8/ERQA-A-natural-second",
+      "archive": "erqa-s2-b8-evidence.tar.gz",
+      "member_dir": "C8/ERQA-A-natural-second",
+      "journal_sha256": "22fa3eaf3b3c85deff66cda02282641ef6b30e98ed09a6f0b14b7c39b4db1d32",
+      "predictions_gzip_sha256": "6b7c7cb876d1a2a14fe22c99b48329af3735371ad5a0021e05fe778d14c7aff4",
+      "predictions_raw_sha256": "ccf2a34dd16bc52539eb1b0895119d3f55f644598375609b2801d0d40f8ec300"
+    },
+    "erqa-s2-20261123-b8-c16-cold-first-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "client_concurrency": 16,
+      "state": "cold-first",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 217,
+      "wall_seconds": 55.81555728,
+      "decisions_per_second": 7.16646074128385,
+      "p95_ms": 3606.180767621845,
+      "engine_iterations": 51,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 81567789056,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 60180,
+        "1": 59831
+      },
+      "sampled_waiting_requests_max": 7,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b8-v1/C16/ERQA-A-cold",
+      "archive": "erqa-s2-b8-evidence.tar.gz",
+      "member_dir": "C16/ERQA-A-cold",
+      "journal_sha256": "a3c53a1488eb100e43cd9270d33379a3a8eeff26c64ae3ee7f51584abf2009a1",
+      "predictions_gzip_sha256": "3d6bb46a7809fe9b5ad62de56db7e7b48b16fc46821e7742b208cb1c11efca94",
+      "predictions_raw_sha256": "d35f7b020db4ea1c09aa6caa6b29a3184fa3962045b7df3429a20db706d2c2eb"
+    },
+    "erqa-s2-20261123-b8-c16-natural-second-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "client_concurrency": 16,
+      "state": "natural-second",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 217,
+      "wall_seconds": 47.7438535,
+      "decisions_per_second": 8.378041793379749,
+      "p95_ms": 3074.489618698135,
+      "engine_iterations": 51,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 81854042112,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 61220,
+        "1": 60871
+      },
+      "sampled_waiting_requests_max": 1,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b8-v1/C16/ERQA-A-natural-second",
+      "archive": "erqa-s2-b8-evidence.tar.gz",
+      "member_dir": "C16/ERQA-A-natural-second",
+      "journal_sha256": "941a99e419d16c4012a8f86ef56357eeccae6aa8c0b9f68d2c82a6a377aa8f13",
+      "predictions_gzip_sha256": "f1f819b1d361c3c838037ca4125a407d09177ecebb7e41dd3c716e56ae657a46",
+      "predictions_raw_sha256": "2fa9834397acfbac593b7b147166eed4c8cc47a3dfd1254e88608cc6485c408e"
+    },
+    "erqa-s2-20261123-b16-c16-cold-first-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "profile_overrides": {
+        "max_num_seqs": 16
+      },
+      "client_concurrency": 16,
+      "state": "cold-first",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 218,
+      "wall_seconds": 56.03449838,
+      "decisions_per_second": 7.138459548390803,
+      "p95_ms": 3436.4661251660436,
+      "engine_iterations": 51,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 81947824128,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 59910,
+        "1": 59564
+      },
+      "sampled_waiting_requests_max": 1,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b16-v1/C16/ERQA-A-cold",
+      "archive": "erqa-s2-b16-evidence.tar.gz",
+      "member_dir": "C16/ERQA-A-cold",
+      "journal_sha256": "97e7b923bddc1b7dd386fac92579cd534ae9dbfbcc1d25f1f5002ea6612ac629",
+      "predictions_gzip_sha256": "a36ef6a76209345c36e3b356b76beff5fd630cb8387e566844409adc1c288a2a",
+      "predictions_raw_sha256": "b0c87fbd8fdeb952b964f5f115cdbf5c0c9c663b51333f4aecf4dc0bdebd0a57"
+    },
+    "erqa-s2-20261123-b16-c16-natural-second-400-jpeg-off": {
+      "profile": "erqa-s2",
+      "profile_overrides": {
+        "max_num_seqs": 16
+      },
+      "client_concurrency": 16,
+      "state": "natural-second",
+      "jpeg_cache": "off",
+      "successful": 400,
+      "failed": 0,
+      "correct": 216,
+      "wall_seconds": 47.5254591,
+      "decisions_per_second": 8.416541524792972,
+      "p95_ms": 2899.933390878141,
+      "engine_iterations": 51,
+      "engine_iteration_tokens": 372671,
+      "host_cgroup_sampled_peak_bytes": 82170068992,
+      "hbm_sampled_peak_mib_by_rank": {
+        "0": 61371,
+        "1": 61024
+      },
+      "sampled_waiting_requests_max": 1,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-s2-b16-v1/C16/ERQA-A-natural-second",
+      "archive": "erqa-s2-b16-evidence.tar.gz",
+      "member_dir": "C16/ERQA-A-natural-second",
+      "journal_sha256": "4ae03e57ea96f7f7518e4eec94c1bc93a070140bed450348daee7705783d9753",
+      "predictions_gzip_sha256": "324c30c476f17669466cc2bc7670bc97ab50bf1615ae937f773b372796b7452c",
+      "predictions_raw_sha256": "92b1be36f3a800a67c70e0a0f8e19944d3689e22e4a28c72a3852f478a083049"
+    },
+    "erqa-c1-jpeg-aba-b-natural-second-400-jpeg-on": {
+      "profile": "erqa-c1",
+      "client_concurrency": 1,
+      "state": "natural-second",
+      "jpeg_cache": "on",
+      "jpeg_requested_budget_gib": 2,
+      "successful": 400,
+      "correct": 216,
+      "wall_seconds": 67.18581067956984,
+      "p95_ms": 246.05354717932633,
+      "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/ram-jpeg-cache-v1/B/ERQA-A-natural-second",
+      "archive": "jpeg-aba-evidence.tar.gz",
+      "member_dir": "B/ERQA-A-natural-second"
+    }
+  }
+}
