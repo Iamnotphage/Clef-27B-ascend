@@ -60,6 +60,8 @@ class _Entry:
     charge: int
     leases: int = 0
     resident: bool = True
+    pending: Reservation | None = None
+    next_published: int | None = None
 
 
 class ActivationCache:
@@ -119,6 +121,36 @@ class ActivationCache:
             if ticket in self._inflight:
                 self._inflight.remove(ticket)
                 self._live_bytes -= ticket.charge
+            entry = self._table.get(ticket.key)
+            if entry is not None and entry.pending is ticket:
+                self._detach(self._table.pop(ticket.key))
+
+    def prepare(self, ticket, value, payload_bytes):
+        """Store a hidden value and finalize its accounting before the vote."""
+        with self._lock:
+            if ticket not in self._inflight:
+                return False
+            limit = self._limit()
+            self._trim(limit)
+            if (ticket.epoch != self._epoch or ticket.key in self._table
+                    or self._live_bytes > limit or value is None
+                    or payload_bytes != ticket.payload_bytes):
+                return False
+            self._table[ticket.key] = _Entry(value, ticket.charge, pending=ticket,
+                                             next_published=self.published + 1)
+            self._inflight.remove(ticket)
+            return True
+
+    def reveal(self, ticket):
+        """Commit by changing visibility, with no insertion or budget read."""
+        with self._lock:
+            entry = self._table.get(ticket.key)
+            if entry is None or entry.pending is not ticket or ticket.epoch != self._epoch:
+                return False
+            # Asynchronous fills are serialized by the rank's request thread.
+            self.published = entry.next_published
+            entry.pending = None
+            return True
 
     def publish(self, ticket, value, payload_bytes):
         """Publish only after a complete synchronous copy and positive TP vote."""
@@ -143,6 +175,8 @@ class ActivationCache:
             limit = self._limit()
             self._trim(limit)
             entry = self._table.get(key)
+            if entry is not None and entry.pending is not None:
+                entry = None
             if entry is not None:
                 entry.leases += 1
                 self._table.move_to_end(key)
@@ -169,7 +203,8 @@ class ActivationCache:
 
     def snapshot(self):
         with self._lock:
-            return len(self._table), len(self._inflight), self._live_bytes
+            pending = sum(entry.pending is not None for entry in self._table.values())
+            return len(self._table) - pending, len(self._inflight) + pending, self._live_bytes
 
 
 def run_layers(layers, positions, pair, capture=None, *, start=0, observed=None):

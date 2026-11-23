@@ -73,3 +73,9 @@ bash scripts/start_dataset_profile.sh od-s1 \
 K56 三轮 P95 中位 **32.574693 ms**、吞吐中位 **35.697736 decisions/s**。同机 K32 的三轮 P95 中位为 86.236415 ms，两条记录来自独立窗口。冷首轮单列，前后原服务无投票锚点见正式证据。三题诊断窗关闭审计后的 K56 完整调用中位为 31.923150 ms，探针 stock A/A 含 TP 投票。已测命中各 rank 实际调用后 8 层与一次 final norm，完整 typed answers 与原 ON 逐位一致。
 
 正式三轮共 7,056 条，原始答案与融合 ON 相同。作者分数仍为 Calibration 82.411344、Intelligence 66.084076、Capability 74.247710，逐轮通过 2pp；每轮 1904/2352、MAE 0.402612。两 rank 保留共 39.041 GiB 逻辑字节，均零逐出。内存端点和生命周期高水见正式索引。[K56 测量索引](../../Clef-27B/logs/dataset-profiles-20261123/k56-s1-evidence.json)
+
+## K56 异步冷填探针
+
+隔离分支的私有开关为 `CLEF_PRIVATE_K56_ASYNC_FILL=1`，配合 `od-s1-k56` 使用。每 rank 最多一项在途和一个 64 MiB pinned 槽，另从上限扣除 40 MiB 设备快照额度。支持最多 2,048 行的边界张量，超过时按完整前向返回。两次 D2H 等待独立 BF16 快照就绪。尾栈和 norm 提交后，主线程等待拷贝完成并生成独立 pageable 缓存值。两 rank 均确认容量和条目后才开放可见性。
+
+双 rank 小窗完成 45 个请求。三形状同步和异步边界、末层 hidden 与完整 typed answers 逐位一致。单 rank 否决后的重试可以重新填充并命中。两代表形状的 PCIe DMA 与尾栈实际任务重叠 0.380–0.681 ms。已建槽、每阶段冷键的五形状无审计中位，稳定同步 161.636–161.985 ms，异步 159.642 ms。端点 cgroup usage 为 74.304–75.480 GiB，failcnt 为零。正式冷首轮目标仍待验证。

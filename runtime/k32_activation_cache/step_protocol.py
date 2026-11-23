@@ -1,6 +1,7 @@
 """A single, complete text pooling step and a bounded synchronous TP decision."""
 
 from dataclasses import dataclass
+import logging
 import struct
 
 from activation_cache import BOUNDARY, LAYERS, run_layers
@@ -64,15 +65,15 @@ def vote_result(local, summed):
 
 def run_candidate(layers, positions, input_pair, norm, *,
                   key, cache, restore, capture, exchange, stock, enabled=True,
-                  observe_boundary=None, observed_layers=None):
+                  observe_boundary=None, observed_layers=None, deferred=None):
     """Exchange readiness after the local copy, before the layer loop diverges.
 
-    All tensor I/O is synchronous here. Restore must return private device
-    tensors, or None on its recoverable failure path. Capture returns a
-    reserved staged host value only when both copies completed.
+    Restore returns private device tensors. Synchronous capture votes at the
+    boundary. A deferred fill keeps both ranks on the full model path and
+    votes only after their suffix and norm have been submitted.
     """
     if len(layers) != LAYERS:
-        raise ValueError("K32 requires the audited 64-layer partition")
+        raise ValueError("activation cache requires the audited 64-layer partition")
     loaded = None
     if enabled and key is not None:
         with cache.lease(key) as value:
@@ -96,23 +97,31 @@ def run_candidate(layers, positions, input_pair, norm, *,
     loaded = None
     cache.discard(key)
 
-    # Every rank reaches the fill vote at the cached boundary. Publish after the
-    # remaining layers and final norm finish successfully on this rank.
     staged = None
     accepted = False
 
     def tap(hidden, residual):
         nonlocal staged, accepted
-        if key is not None:
+        if deferred is not None:
+            staged = deferred.begin(key, hidden, residual)
+        else:
             staged = capture(key, hidden, residual)
-        _, accepted = exchange(key, staged is not None)
+            _, accepted = exchange(key, staged is not None)
 
     try:
         hidden, residual = run_layers(layers, positions, input_pair(), tap, observed=observed_layers)
         output = norm(hidden, residual)[0]
-        if accepted and staged is not None:
+        if deferred is not None:
+            ready = staged is not None and deferred.prepare(staged)
+            _, accepted = exchange(key, ready)
+            if accepted and ready and not cache.reveal(staged):
+                logging.error("K56 async entry no longer staged after the publication vote")
+        elif accepted and staged is not None:
             cache.publish(*staged)
         return output, False
     finally:
         if staged is not None:
-            cache.cancel(staged[0])
+            if deferred is not None:
+                deferred.discard(staged)
+            else:
+                cache.cancel(staged[0])

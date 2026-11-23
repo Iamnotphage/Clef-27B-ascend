@@ -1,7 +1,7 @@
 """Opt-in Clef K32 adapter. Load only in the isolated deployment."""
 
 from collections import Counter
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from functools import wraps
@@ -320,6 +320,7 @@ def install(runner_class):
     import torch
     import torch_npu
     from memory_budget import MemoryBudget
+    from deferred_fill import DeferredFill, MAX_ROWS, PINNED_BYTES, SNAPSHOT_BYTES
     from vllm.distributed.parallel_state import get_pp_group, get_tp_group
     from vllm.forward_context import get_forward_context
     from vllm.model_executor.models.clef_flash import ClefFlashForJointSchema
@@ -349,6 +350,9 @@ def install(runner_class):
     assert len(namespace) == 32 and mode in {"split", "cache"}
     cap = int(os.environ.get("CLEF_PRIVATE_K32_RANK_BYTES", 256 << 20))
     formal = os.environ.get("CLEF_PRIVATE_K32_FORMAL") == "1"
+    async_fill = os.environ.get("CLEF_PRIVATE_K56_ASYNC_FILL") == "1"
+    if async_fill and (BOUNDARY != 56 or mode != "cache"):
+        raise RuntimeError("deferred fill requires the optional K56 cache")
     approved_cap = (41 << 29) if formal else (256 << 20)
     assert 0 < cap <= approved_cap
     audit = os.environ.get("CLEF_PRIVATE_K32_AUDIT") == "1"
@@ -364,6 +368,9 @@ def install(runner_class):
 
     @wraps(load)
     def load_model(runner, *args, **kwargs):
+        previous_fill = getattr(runner, "_clef_private_k56_fill", None)
+        if previous_fill is not None and previous_fill.flight is not None:
+            raise RuntimeError("K56 async flight must retire before model reload")
         previous = getattr(runner, "_clef_private_k32_cache", None)
         if previous is not None:
             previous.invalidate()
@@ -426,8 +433,12 @@ def install(runner_class):
             raise RuntimeError(f"K32 model identity or partition rejected: {failures!r}")
         stock = core.forward
         budget = (MemoryBudget(cap, shared_reserve=10 << 30, partners=2)
-                  if formal else MemoryBudget(cap))
-        cache = ActivationCache(budget)
+                  if formal or async_fill else MemoryBudget(cap))
+        deferred = DeferredFill(torch, torch_npu.get_npu_format, budget) if async_fill else None
+        cache = ActivationCache(deferred.entry_limit if deferred else budget)
+        if deferred is not None:
+            deferred.cache = cache
+            runner._clef_private_k56_fill = deferred
         cache.scheduler_bypasses = 0
         runner._clef_private_k32_cache = cache
         gdn_layers = [x.linear_attn for x in core.layers if x.layer_type == "linear_attention"]
@@ -446,6 +457,12 @@ def install(runner_class):
                        "counters": dict(counters), "published": cache.published,
                        "evicted": cache.evictions, "cache": cache.snapshot(),
                        "scheduler_bypasses": cache.scheduler_bypasses, "activation_boundary": BOUNDARY}
+                if deferred is not None:
+                    row["fill_workspace"] = {
+                        "pinned_bytes": PINNED_BYTES if deferred.pinned is not None else 0,
+                        "snapshot_allowance_bytes": SNAPSHOT_BYTES, "max_rows": MAX_ROWS,
+                        "active": deferred.flight is not None,
+                    }
                 with (diagnostics / f"endpoint-{snapshots:02d}-{tp.rank_in_group}.json").open("x") as out:
                     json.dump(row, out)
             if signal.getsignal(signal.SIGUSR2) != signal.SIG_DFL:
@@ -845,15 +862,21 @@ def install(runner_class):
             step = ACTIVE.get()
             if step is None or step.runner is not runner:
                 return stock(input_ids, positions, intermediate_tensors, inputs_embeds)
-            chosen, record = mode, audit
+            chosen, record = "async" if async_fill else mode, audit
+            phase, trace, reject = 0, False, False
             if control is not None:
                 try:
                     row = json.loads(Path(control).read_bytes())
                     chosen, record = row["mode"], row["audit"]
-                    if chosen not in ("tap", "stock", "split", "cache") or type(record) is not bool:
-                        chosen, record = "stock", False
+                    phase = row.get("phase", 0)
+                    trace = row.get("trace", False) is True
+                    reject = row.get("reject_rank") == tp.rank_in_group and record
+                    if (chosen not in ("tap", "stock", "split", "cache", "async")
+                            or type(record) is not bool or (chosen == "async" and deferred is None)
+                            or type(phase) is not int or not 0 <= phase <= 255):
+                        chosen, record, phase, trace, reject = "stock", False, 0, False, False
                 except (OSError, ValueError, KeyError, TypeError):
-                    chosen, record = "stock", False
+                    chosen, record, phase, trace, reject = "stock", False, 0, False, False
             def original():
                 return stock(input_ids, positions, intermediate_tensors, inputs_embeds)
 
@@ -865,7 +888,9 @@ def install(runner_class):
             ctx = get_forward_context()
             key = None
             if intermediate_tensors is None and chosen != "stock":
-                domain = sha256(namespace + chosen.encode()).digest()
+                # Sync and deferred misses vote at different execution points.
+                # Their digests must never agree on the shared entry vote.
+                domain = sha256(namespace + chosen.encode() + (bytes((phase,)) if phase else b"")).digest()
                 try:
                     key = timing(step, "key_ns", lambda: contract(
                         step, ctx, inputs_embeds, input_ids, positions, domain, record
@@ -933,20 +958,63 @@ def install(runner_class):
                 step.boundary = [layout(x) for x in (hidden, residual) if x is not None]
 
             layers = [] if record else None
-            result, hit = run_candidate(
-                self.layers, positions, input_pair, self.norm, key=key,
-                cache=cache, restore=restore, capture=capture, exchange=exchange,
-                stock=original,
-                enabled=chosen == "cache", observe_boundary=observe_boundary, observed_layers=layers,
-            )
+            vote_count = 0
+
+            def vote(digest, ready):
+                nonlocal vote_count
+                vote_count += 1
+                if record:
+                    step.times.setdefault("tp_local_readiness", []).append(ready and not (reject and vote_count == 2))
+                eligible, accepted = exchange(digest, ready and not (reject and vote_count == 2))
+                if record:
+                    step.times.setdefault("tp_votes", []).append([eligible, accepted])
+                return eligible, accepted
+
+            def record_host(flight, pair):
+                step.boundary = [layout(x) for x in flight.source]
+                if record:
+                    step.times["boundary_sha256"] = [tensor_digest(x) for x in pair]
+                step.times["async_fill"] = {
+                    "snapshot": [layout(x) for x in flight.snapshot],
+                    "snapshot_formats": [torch_npu.get_npu_format(x) for x in flight.snapshot],
+                    "destination_pinned": [x.is_pinned() for x in flight.destinations],
+                    "destination_offsets": [x.storage_offset() for x in flight.destinations],
+                    "retained_pinned": [x.is_pinned() for x in pair],
+                    "producer": str(flight.producer), "copy_stream": str(deferred.copy_stream),
+                    "per_tensor_bytes": flight.ticket.payload_bytes // 2,
+                }
+
+            def norm(hidden, residual):
+                with span("k56_final_norm"):
+                    return self.norm(hidden, residual)
+
+            span = torch.profiler.record_function if trace else nullcontext
+            active_fill = deferred if chosen == "async" else None
+            if active_fill is not None:
+                active_fill.span = span
+                active_fill.inspect = record_host if record or trace else None
+            try:
+                with span("k56_candidate_" + chosen):
+                    result, hit = run_candidate(
+                        self.layers, positions, input_pair, norm if trace else self.norm, key=key,
+                        cache=cache, restore=restore, capture=capture, exchange=vote if record or reject else exchange,
+                        stock=original,
+                        enabled=chosen in ("cache", "async"), observe_boundary=observe_boundary,
+                        observed_layers=layers, deferred=active_fill,
+                    )
+            finally:
+                if active_fill is not None:
+                    active_fill.span = nullcontext
+                    active_fill.inspect = None
             if formal:
                 counters["calls"] += 1
                 counters["hit" if hit else "miss" if key is not None else "guard_fallback"] += 1
                 for name in ("d2h_ns", "h2d_ns", "vote_ns", "key_ns"):
                     counters[name] += step.times.get(name, 0)
-            if record:
-                digest = sha256(memoryview(result.to("cpu", non_blocking=False)
-                                           .contiguous().view(torch.uint8).numpy())).hexdigest()
+            if record or trace:
+                digest = (sha256(memoryview(result.to("cpu", non_blocking=False)
+                                            .contiguous().view(torch.uint8).numpy())).hexdigest()
+                          if record else None)
                 receipt = {
                     "rank": tp.rank_in_group, "pid": os.getpid(), "tokens": n, "mode": chosen,
                     "request_id": step.request.request_id, "guard_facts": step.guard_facts,
