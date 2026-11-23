@@ -14,11 +14,15 @@ case "$profile" in
     od-s2)
         options=(--config s1 --max-num-seqs 16 --max-num-batched-tokens 16384)
         ;;
-    erqa-c1)
+    erqa-c1|erqa-s2)
+        batch=1
+        if [[ "$profile" == "erqa-s2" ]]; then
+            batch=8
+        fi
         options=(
             --config s1
             --max-model-len 16384
-            --max-num-seqs 1
+            --max-num-seqs "$batch"
             --max-num-batched-tokens 16384
             --gpu-memory-utilization 0.85
             --encoder-cache-tokens 262144
@@ -27,7 +31,7 @@ case "$profile" in
         )
         ;;
     *)
-        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s2|erqa-c1} [start.sh arguments]' >&2
+        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s2|erqa-c1|erqa-s2} [start.sh arguments]' >&2
         exit 2
         ;;
 esac
