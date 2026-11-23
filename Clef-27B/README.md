@@ -1,6 +1,12 @@
 # Clef-27B 调优目录
 
-## 当前提交指标（2026-11-17）
+## 新机正式验收（2026-11-23）
+
+恢复 aa3e 启动链的独立 Conv+QKV 安装校验后，新机 S1 P95 三轮中位为 **156.182 ms**，C1 吞吐中位 **8.949 decisions/s**。同窗拆分对照为 **160.447 ms / 8.418 decisions/s**。S2 最大有效点 B16 C64 为 **17.689 decisions/s**（同窗拆分 **17.694**，每臂一轮）。OD 融合 S1 为 Calibration **82.4113**、Intelligence **66.0841**、Capability **74.2477**，ERQA 冷遍和自然第二遍均为 **216/400**，四项均通过适配基准 2pp 门。质量保持 BF16 原始概率口径。
+
+[正式协议、完整点位、逐题证据与冷启动验证](logs/aa3e-conv-qkv-20261123/README.md)记录本窗冻结来源和证据边界。最终在线状态随发布执行记录更新。
+
+## 历史提交指标（2026-11-17 至 2026-11-18）
 
 ### 精度指标
 
@@ -53,7 +59,7 @@
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照；
 - **BF16 S2 候选（未替换当前 S2）**：B8 C16 v2+head **16.398 dec/s**、p95 1803 ms、Capability 74.2510/accuracy 1909（2PP）；B10 C20 16.670/2249；B12 C24 16.841/2598；B16 C64 17.110/6088。
 
-## 当前状态
+## 历史状态与实现沿革
 
 完整 Clef-27B 已接入固定提交的 vLLM-Ascend，提供 `POST /v1/systemone`，服务模型名为 `clef`。主干 12 个分片、视觉塔和独立联合头已实际加载，联合头 122/122 个参数张量齐全。TP1、TP2 的三类决策、多字段、候选概率与 token/span 自检均通过。[首轮工程 baseline 记录](../docs/baseline-2026-11-12.md)
 
@@ -102,7 +108,7 @@ python scripts/verify_systemone.py \
 
 比赛入口已对接 vLLM-Ascend 的原生决策协议，`joint` 使用默认值。[赛事说明](https://competition.gitcode.com/competition/2119684851993116674/intro)
 
-## 结果记录
+## 历史结果记录
 
 2026-11-17 完成 **aclnn executor cache 修复**：默认缓存只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 固定多约 55 ms；`ACLNN_CACHE_LIMIT=1000000` 后官方入口全量 S1 **168.633 ms / 7.960 dec/s**（mean 125.552、p50 118.170），2,352 条响应逐位一致，ERQA 217/400、S2 16.398 不变。[报告](../docs/aclnn-cache-shape-fix-2026-11-17.md) · [最终汇总](../docs/final-summary-2026-11-17.md)
 

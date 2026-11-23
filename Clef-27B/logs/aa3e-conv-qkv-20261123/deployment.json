@@ -1,0 +1,78 @@
+{
+  "scope": "One cold ordinary request and a single representative request after 10 complete warmups. Final serving identity and adoption are tracked separately.",
+  "hardware": "A3 card 6, logical 0/1, physical 12/13, BF16 TP2 eager",
+  "cold_request": {
+    "rid": "clef-release-regular-cold-od-2041",
+    "http_status": 200,
+    "input_tokens": 982,
+    "body_sha256": "d35d9960d3c73e5972fe0a552a635858c7a6211b250bd2d883a63c9ef2182292",
+    "max_probability_delta_vs_formal_ON": 0.0
+  },
+  "level1_rank_evidence": {
+    "rank0": {
+      "counts": {
+        "ClefGdnConvQkv": 48,
+        "CausalConv1d": 0,
+        "ClefGdnQkvNorm": 0,
+        "ChunkGatedDeltaRuleFwd": 48,
+        "SwiGlu": 64,
+        "FusedInferAttentionScore": 16,
+        "FlashAttentionScore": 6,
+        "hcom_allReduce_": 130
+      },
+      "kernel_table_sha256": "f88760e3928a5791765d664f89775bf5e8b52c88b8e2db1d288e4dccd73f2236",
+      "filename": "rank0-kernel-details.csv.gz",
+      "gzip_sha256": "e3c8762fa152bdf3359f197cc7a1d050802aeeaa4d13363c632d4ace9bd489ba"
+    },
+    "rank1": {
+      "counts": {
+        "ClefGdnConvQkv": 48,
+        "CausalConv1d": 0,
+        "ClefGdnQkvNorm": 0,
+        "ChunkGatedDeltaRuleFwd": 48,
+        "SwiGlu": 64,
+        "FusedInferAttentionScore": 16,
+        "FlashAttentionScore": 6,
+        "hcom_allReduce_": 130
+      },
+      "kernel_table_sha256": "44e7b13bf211595357fef8bb18163bc0004842eaca09f18ac407bc3b25c7da3c",
+      "filename": "rank1-kernel-details.csv.gz",
+      "gzip_sha256": "b1e149cf4682c8014766def6823a9ccb171ef2b486868f5e43b46406339094eb"
+    }
+  },
+  "level1": {
+    "aic_metrics": "AiCoreNone",
+    "warmup_requests": 10,
+    "profiled_requests": 1,
+    "device_and_collection_seconds": 2.86370328720659
+  },
+  "verified_normal_target_startup": {
+    "conv_ready": true,
+    "conv_apply_noop": true,
+    "gdn_sha256": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
+  },
+  "source_and_vendor_sha256": {
+    "gdn_split": "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e",
+    "gdn_fused": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
+    "device_op": "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226",
+    "gdn_attn_builder": "f81eeefa957790398adbbde35fd3e7b2c5aaf3eeac9273400c7412f753ba4a8a",
+    "patch_qwen3_5": "a4de9b4ecc576b83074b50f8c500b8f9419354081b8ce50193240522129155a4",
+    "conv_installer": "f2c564c27069398447d85a27c7c8789fa65b8014f76ae87e2ba1d8ed8d7ba617",
+    "kernel_o": "19c89bc15eb3c10ba7fb843e97a03ae9f6eba29783729e5262d07a4c3ec2aee7",
+    "kernel_json": "43d3c1f5fd1b1fcb27bc1a16c584e56fe1e66e2b3eb0a908be23a6da83e0fa4f",
+    "cust_op_api": "2185231c7f78b0a14fdfdd2cbca8cb8482b91655453eea15ce7fdde7ead71321"
+  },
+  "vendor": "ascend910_93, CANN 9.2.1, kernel v3 + host patch v2",
+  "accounting": {
+    "prior_local_seconds": 193.6711497399956,
+    "s2_short_seconds": 9.016624,
+    "first_attempt_start_profile_to_shutdown_seconds_approx": 14.0,
+    "successful_proof_startup_seconds": 83.09123605955392,
+    "normal_target_startup_seconds": 83.09777540061623,
+    "followup_rollback_seconds": 85.1765465606004
+  },
+  "attempt_history": [
+    "First Level1 collection started before the first request. The request and profiler stop timed out, and the trace held no usable device task data.",
+    "The warmed collection completed. The subsequent normal startup passed the ead25 independent no-op check, then the supervisor rejected an extra empty PYTHONPATH component and restored the prior split service."
+  ]
+}
