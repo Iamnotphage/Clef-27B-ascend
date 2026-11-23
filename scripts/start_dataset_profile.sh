@@ -8,7 +8,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 case "$profile" in
-    od-s1)
+    od-s1|od-s1-k32|od-s1-k56)
         options=(--config s1)
         ;;
     od-s2)
@@ -31,7 +31,7 @@ case "$profile" in
         )
         ;;
     *)
-        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s2|erqa-c1|erqa-s2} [start.sh arguments]' >&2
+        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s1-k32|od-s1-k56|od-s2|erqa-c1|erqa-s2} [start.sh arguments]' >&2
         exit 2
         ;;
 esac
@@ -51,5 +51,24 @@ case "${CLEF_PRIVATE_JPEG_CACHE_GIB:-0}" in
         exit 2
         ;;
 esac
+
+if [[ "$profile" == "od-s1-k32" || "$profile" == "od-s1-k56" ]]; then
+    export CLEF_PRIVATE_ACTIVATION_BOUNDARY="${profile##*-k}"
+    python_bin="${PYTHON_BIN:-python3}"
+    rank_bytes="${CLEF_PRIVATE_K32_RANK_BYTES:-22011707392}"
+    if [[ ! "$rank_bytes" =~ ^[1-9][0-9]{0,10}$ ]] || (( rank_bytes > 22011707392 )); then
+        printf '%s\n' 'Activation cache rank capacity must be 1–22011707392 bytes.' >&2
+        exit 2
+    fi
+    namespace="$("$python_bin" -I -S -B -c 'import secrets; print(secrets.token_hex(32))')"
+    receipts="$(mktemp -d "${TMPDIR:-/tmp}/clef-k32-receipts.XXXXXXXX")"
+    export CLEF_PRIVATE_K32_DIAG_DIR="$receipts"
+    export CLEF_PRIVATE_K32_NAMESPACE="$namespace"
+    export CLEF_PRIVATE_K32_RANK_BYTES="$rank_bytes"
+    export CLEF_PRIVATE_K32_FORMAL=1 CLEF_PRIVATE_K32_AUDIT=0 CLEF_PRIVATE_K32=cache
+    unset CLEF_PRIVATE_K32_CONTROL
+    export PYTHONPATH="$repo/runtime/k32_activation_cache${PYTHONPATH:+:$PYTHONPATH}"
+    printf 'Activation cache receipts: %s\n' "$receipts" >&2
+fi
 
 exec bash "$repo/Clef-27B/start.sh" "${options[@]}" "$@"

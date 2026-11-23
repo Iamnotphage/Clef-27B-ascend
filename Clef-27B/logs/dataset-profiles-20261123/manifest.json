@@ -39,6 +39,26 @@
     "erqa-s2": {
       "max_num_seqs": 8,
       "shared_budget": "erqa"
+    },
+    "od-s1-k32": {
+      "max_num_seqs": 1,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 4096,
+      "gpu_memory_utilization": 0.9,
+      "encoder_cache_tokens": 0,
+      "activation_cache_boundary_layers": 32,
+      "host_cache_bytes_per_rank": 22011707392,
+      "requires_explicit_profile": true
+    },
+    "od-s1-k56": {
+      "max_num_seqs": 1,
+      "max_model_len": 4096,
+      "max_num_batched_tokens": 4096,
+      "gpu_memory_utilization": 0.9,
+      "encoder_cache_tokens": 0,
+      "activation_cache_boundary_layers": 56,
+      "host_cache_bytes_per_rank": 22011707392,
+      "requires_explicit_profile": true
     }
   },
   "shared_budgets": {
@@ -61,7 +81,7 @@
   },
   "selection": {
     "OpenDecisions": {
-      "s1": "od-s1-aa3e-conv-qkv-20261123-on-c1-3round-median",
+      "s1": "od-s1-k56-20261123-c1-3round-median",
       "s2": "od-s2-aa3e-conv-qkv-20261123-on-b16-c64"
     },
     "ERQA": {
@@ -81,6 +101,18 @@
     "jpeg-aba-evidence.tar.gz": {
       "bytes": 811568,
       "sha256": "fdee1841796d2d220e3ae39efed03b91fb84e0c185a91c4ae81ad36f76a1e318"
+    },
+    "k32-v10-v11-evidence.tar.gz": {
+      "files": 69,
+      "index_sha256": "43b1325ca001dcab8b46a68a4728df127fc960e9449963dab3ebb3f7ca1141c5",
+      "sha256": "3725dc873b7f0cee60848314b1df4427842d548e4e06d983eed88205225d93f2",
+      "size": 10910576
+    },
+    "k56-formal-evidence.tar.gz": {
+      "files": 47,
+      "index_sha256": "67e55487b73f4a9b68de7121ecaea26786ab521cf39a5ff3bdae65fd57ed56ff",
+      "sha256": "3254e747d67217068e63c6efc255dc6aac9ec7ab5953c67ca4378433d3ff1123",
+      "size": 8167749
     }
   },
   "erqa_s2_protocol": {
@@ -337,6 +369,32 @@
       "original_run": "/workspace/yangchen/logs/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/ram-jpeg-cache-v1/B/ERQA-A-natural-second",
       "archive": "jpeg-aba-evidence.tar.gz",
       "member_dir": "B/ERQA-A-natural-second"
+    },
+    "od-s1-k32-20261123-c1-3round-median": {
+      "profile": "od-s1-k32",
+      "state": "One empty-cache pass followed by two same-process natural repeats, warmup 0.",
+      "requests_per_round": 2352,
+      "client_concurrency": 1,
+      "p95_ms": 86.23641473241149,
+      "decisions_per_second_median": 14.910475571377297,
+      "stock_profile_reference_measurement_id": "od-s1-aa3e-conv-qkv-20261123-on-c1-3round-median",
+      "evidence": {
+        "path": "k32-s1-evidence.json",
+        "sha256": "3dd84146073e2c651edc8dc37836835c9735e47191006b3d8058e8ec3030bec9"
+      }
+    },
+    "od-s1-k56-20261123-c1-3round-median": {
+      "profile": "od-s1-k56",
+      "state": "Same process empty-cache r1 followed by natural repeats r2 and r3.",
+      "requests_per_round": 2352,
+      "client_concurrency": 1,
+      "p95_ms": 32.57469316013157,
+      "decisions_per_second_median": 35.69773588695886,
+      "k32_reference_measurement_id": "od-s1-k32-20261123-c1-3round-median",
+      "evidence": {
+        "path": "k56-s1-evidence.json",
+        "sha256": "30b5834aebd503bae7aa5ed00a39335490122f9fce44585e8104dc6863990bcd"
+      }
     }
   }
 }
