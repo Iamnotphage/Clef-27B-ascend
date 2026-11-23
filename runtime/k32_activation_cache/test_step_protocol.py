@@ -4,7 +4,7 @@ from threading import Barrier
 from types import SimpleNamespace as NS
 import unittest
 
-from activation_cache import ActivationCache, run_layers
+from activation_cache import ActivationCache, BOUNDARY, run_layers
 from step_protocol import fresh_text_step, run_candidate, vote_integers, vote_result
 
 
@@ -128,7 +128,7 @@ class ConvergenceTest(unittest.TestCase):
         (replay, hit), ranges, stocks, _ = self.exchange_run()
         self.assertEqual(replay, reference)
         self.assertTrue(hit)
-        self.assertEqual(ranges, [list(range(32, 64))] * 2)
+        self.assertEqual(ranges, [list(range(BOUNDARY, 64))] * 2)
 
     def test_asymmetric_guard_or_key_mismatch_reroutes_both_to_stock(self):
         self.exchange_run()

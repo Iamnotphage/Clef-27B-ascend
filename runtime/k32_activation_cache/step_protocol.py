@@ -96,7 +96,7 @@ def run_candidate(layers, positions, input_pair, norm, *,
     loaded = None
     cache.discard(key)
 
-    # Every rank reaches the fill vote after layer 31. Publish after the
+    # Every rank reaches the fill vote at the cached boundary. Publish after the
     # remaining layers and final norm finish successfully on this rank.
     staged = None
     accepted = False

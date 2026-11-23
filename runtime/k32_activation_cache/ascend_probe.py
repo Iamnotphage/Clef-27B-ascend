@@ -15,7 +15,7 @@ from pathlib import Path
 from time import perf_counter_ns
 from types import MethodType
 
-from activation_cache import ActivationCache, text_key
+from activation_cache import ActivationCache, BOUNDARY, text_key
 from step_protocol import fresh_text_step, run_candidate, vote_integers, vote_result
 
 
@@ -133,9 +133,9 @@ def identity_failures(outer, core, tp, outer_class, pooler_class, core_class, fo
         "core_type": (type(core) is core_class, kind(core)),
         "forward_identity": (method is forward, getattr(method, "__qualname__", None)),
         "layer_count": (len(core.layers) == 64, len(core.layers)),
-        "boundary_types": (list(core.config.layer_types)[31:33] ==
+        "boundary_types": (list(core.config.layer_types)[BOUNDARY - 1:BOUNDARY + 1] ==
                            ["full_attention", "linear_attention"],
-                           list(core.config.layer_types)[31:33]),
+                           list(core.config.layer_types)[BOUNDARY - 1:BOUNDARY + 1]),
         "tp_size": (tp.world_size == 2, tp.world_size),
     }
     return {field: value for field, (valid, value) in checks.items() if not valid}
@@ -398,6 +398,7 @@ def install(runner_class):
             failures.update({key: False for key, ok in predicates.items() if not ok})
         facts = {
             "rank": tp.rank_in_group, "pid": os.getpid(), "failures": failures,
+            "activation_boundary": BOUNDARY, "activation_generation_sha256": namespace.hex(),
             "old_base_exact": type(outer) is ClefFlashForJointSchema,
             "expected_outer": symbol_info(AscendClefFlashForJointSchema),
             "actual_outer": symbol_info(type(outer)),
@@ -444,7 +445,7 @@ def install(runner_class):
                 row = {"pid": os.getpid(), "rank": tp.rank_in_group, "sequence": snapshots,
                        "counters": dict(counters), "published": cache.published,
                        "evicted": cache.evictions, "cache": cache.snapshot(),
-                       "scheduler_bypasses": cache.scheduler_bypasses}
+                       "scheduler_bypasses": cache.scheduler_bypasses, "activation_boundary": BOUNDARY}
                 with (diagnostics / f"endpoint-{snapshots:02d}-{tp.rank_in_group}.json").open("x") as out:
                     json.dump(row, out)
             if signal.getsignal(signal.SIGUSR2) != signal.SIG_DFL:
@@ -774,7 +775,7 @@ def install(runner_class):
             def hook(index):
                 def observe(_module, _args, result):
                     layers.append(index)
-                    if index != 31:
+                    if index != BOUNDARY - 1:
                         return None
                     if (type(result) is not tuple or len(result) != 2
                             or any(not isinstance(x, torch.Tensor) or x.ndim != 2 or x.shape[0] != n

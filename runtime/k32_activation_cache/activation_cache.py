@@ -6,11 +6,15 @@ from dataclasses import dataclass
 from hashlib import sha256
 from itertools import islice
 import json
+import os
 from struct import pack
 from threading import Lock
 
 
-BOUNDARY = 32
+_boundary = os.environ.get("CLEF_PRIVATE_ACTIVATION_BOUNDARY", "32")
+if _boundary not in {"32", "56"}:
+    raise ValueError("Activation cache boundary must be 32 or 56")
+BOUNDARY = int(_boundary)
 LAYERS = 64
 ENTRY_OVERHEAD = 1024
 

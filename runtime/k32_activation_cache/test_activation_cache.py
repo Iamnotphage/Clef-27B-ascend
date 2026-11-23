@@ -160,7 +160,7 @@ class FullPromptBoundaryTest(unittest.TestCase):
         self.assertEqual(tuple(map(len, state[0])), (5, 5))
         calls.clear()
         hit = run_layers(layers, positions, state[0], start=BOUNDARY)
-        self.assertEqual(calls, list(range(32, 64)))
+        self.assertEqual(calls, list(range(BOUNDARY, 64)))
         self.assertEqual(hit, off)
         final_hidden = lambda pair: tuple(h - r for h,r in zip(*pair))
         self.assertEqual(final_hidden(hit), final_hidden(off))
