@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -39,6 +40,62 @@ class LaunchTests(unittest.TestCase):
             launcher.main()
         self.assertFalse((self.root / "output").exists())
         return json.loads(output.getvalue())
+
+    def test_conv_qkv_installs_the_imported_preimage_once(self):
+        target = self.root / launcher.CONV_QKV_TARGET
+        target.parent.mkdir(parents=True)
+        original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+        target.write_bytes(original)
+        package = SimpleNamespace(origin=str(target.parent.parent / "__init__.py"))
+        output = self.root / "output"
+        with mock.patch.object(launcher.importlib.util, "find_spec", return_value=package):
+            first = launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            before = target.stat()
+            second = launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            after = target.stat()
+        self.assertTrue(first["ready"] and first["installed"])
+        self.assertEqual(first["source_sha256_before"], launcher.CONV_QKV_PREIMAGE)
+        self.assertEqual(first["source_sha256"], launcher.CONV_QKV_POSTIMAGE)
+        self.assertEqual((Path(first["backup_dir"]) / "gdn.py.preimage").read_bytes(), original)
+        self.assertTrue(second["ready"])
+        self.assertFalse(second["installed"])
+        self.assertEqual((after.st_ino, after.st_mtime_ns), (before.st_ino, before.st_mtime_ns))
+
+    def test_conv_qkv_unknown_source_and_backup_conflict_fail_closed(self):
+        target = self.root / launcher.CONV_QKV_TARGET
+        target.parent.mkdir(parents=True)
+        output = self.root / "output"
+        backup = output / "conv-qkv-source-backup" / "gdn.py.preimage"
+        package = SimpleNamespace(origin=str(target.parent.parent / "__init__.py"))
+        with mock.patch.object(launcher.importlib.util, "find_spec", return_value=package):
+            with self.assertRaisesRegex(SystemExit, "source state could not be verified"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            target.write_bytes(b"unknown source")
+            with self.assertRaisesRegex(SystemExit, "source state could not be verified"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+            self.assertEqual(target.read_bytes(), b"unknown source")
+            self.assertFalse(output.exists())
+            original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+            target.write_bytes(original)
+            backup.parent.mkdir(parents=True)
+            backup.write_bytes(b"unknown backup")
+            with self.assertRaisesRegex(SystemExit, "backup SHA mismatch"):
+                launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
+        self.assertEqual(target.read_bytes(), original)
+        self.assertEqual(backup.read_bytes(), b"unknown backup")
+
+    def test_conv_qkv_dry_run_and_off_do_not_resolve_or_edit_the_tree(self):
+        decision = {"enabled": True, "requested": True}
+        with mock.patch.object(launcher, "gdn_decision_prefill", return_value=decision), \
+                mock.patch.object(launcher, "installer_call") as installer:
+            on = self.launch("--config", "s1")
+            self.assertTrue(on["gdn_decision_prefill"]["conv_qkv_patch"]["pending_install"])
+            self.assertEqual(on["service_environment"]["CLEF_GDN_CONV_QKV"], "0")
+            with mock.patch.dict(os.environ, {"CLEF_GDN_CONV_QKV": "off"}):
+                off = self.launch("--config", "s1")
+            self.assertFalse(off["gdn_decision_prefill"]["conv_qkv_patch"]["requested"])
+            self.assertEqual(off["service_environment"]["CLEF_GDN_CONV_QKV"], "0")
+            installer.assert_not_called()
 
     def assert_mm(self, launch, value, source):
         command = launch["argv"]
