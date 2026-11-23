@@ -1,4 +1,4 @@
-# Clef K32 文本 S1 主机激活缓存
+# Clef 文本 S1 主机激活缓存
 
 `od-s1-k32` 是显式配置，沿用 `od-s1` 的 TP2、BF16、eager、B1、4096 上下文与 4096 batched tokens。默认 `od-s1` 使用已采用的 aa3e/ead25 服务。启用前按项目固定软件栈加载运行环境。
 
@@ -36,7 +36,7 @@ done
 
 CPU 回归可从该目录运行 `python3 -B -m unittest`，包括惰性填充、失效、逐出、压力、父层额度和两 rank 一致回退。
 
-## 新机正式结果
+## K32 新机正式结果
 
 | 轮次 | 起始状态 | HTTP 成功 | P95 ms | decisions/s | 每 rank 命中 |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -49,3 +49,27 @@ CPU 回归可从该目录运行 `python3 -B -m unittest`，包括惰性填充、
 三轮作者评分均为 Calibration 82.411344、Intelligence 66.084076、Capability 74.247710，相对适配固定基准为 −0.382771、+0.027233、−0.177769 pp。每轮 1904/2352 正确，Score MAE 0.402612。三轮完整 typed answers 均与原融合 ON 一致。
 
 每 rank 首轮发布 2,291 个实际 token 和 position 键，保留 20,960,185,344 字节。两个 rank 的逻辑计费合计 39.041 GiB。三轮逐出和真实调度 bypass 均为零。共享 cgroup 限制 128 GiB，生命周期高水约 117.790 GiB，含进程与页缓存及更早阶段，高水期间 failcnt 维持 0。各轮端点独立记录 file/cache、RSS 和 SHM。 [测量索引](../../Clef-27B/logs/dataset-profiles-20261123/manifest.json)
+
+## 可选 K56 配置
+
+```bash
+bash scripts/start_dataset_profile.sh od-s1-k56 \
+    --model-dir "$MODEL" --output-dir "$NEW"
+```
+
+K56 复用同一 full-prompt 协议和内存预算，边界移动到 layer 55 输出。实际 BF16 hidden/residual 的形状和计费同 K32。命中依次执行 56–63、final norm、ALL pooling 和 aa3e 联合头。边界参与启动世代和完整内容键。`od-s1-k32` 可显式选择。回到默认服务时使用原入口。
+
+```bash
+bash scripts/start_dataset_profile.sh od-s1 \
+    --model-dir "$MODEL" --output-dir "$RESTORE"
+```
+
+| 轮次 | 起始状态 | HTTP 成功 | P95 ms | decisions/s | 每 rank 命中 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1 | 空缓存，自然填充 | 2,352 | 169.297990 | 8.244777 | 61 |
+| 2 | 同进程自然复用 | 2,352 | 32.574693 | 35.697736 | 2,352 |
+| 3 | 同进程自然复用 | 2,352 | 32.161995 | 36.196760 | 2,352 |
+
+K56 三轮 P95 中位 **32.574693 ms**、吞吐中位 **35.697736 decisions/s**。同机 K32 的三轮 P95 中位为 86.236415 ms，两条记录来自独立窗口。冷首轮单列，前后原服务无投票锚点见正式证据。三题诊断窗关闭审计后的 K56 完整调用中位为 31.923150 ms，探针 stock A/A 含 TP 投票。已测命中各 rank 实际调用后 8 层与一次 final norm，完整 typed answers 与原 ON 逐位一致。
+
+正式三轮共 7,056 条，原始答案与融合 ON 相同。作者分数仍为 Calibration 82.411344、Intelligence 66.084076、Capability 74.247710，逐轮通过 2pp；每轮 1904/2352、MAE 0.402612。两 rank 保留共 39.041 GiB 逻辑字节，均零逐出。内存端点和生命周期高水见正式索引。[K56 测量索引](../../Clef-27B/logs/dataset-profiles-20261123/k56-s1-evidence.json)

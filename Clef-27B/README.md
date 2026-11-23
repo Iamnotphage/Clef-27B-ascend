@@ -10,11 +10,15 @@
 
 同一进程按冻结的 OpenDecisions 2,352 题顺序跑三轮 C1，`warmup=0`。P95 为 **169.062 / 86.236 / 85.986 ms**，三轮中位 **86.236 ms**，较默认服务历史三轮中位 **156.182 ms** 下降 **44.78%**。首轮自然填充计入耗时，随后两轮各全量命中。三轮共 7,056 次成功，原始完整答案与已验融合 ON 一致。 [启动方式与状态口径](../runtime/k32_activation_cache/README.md)
 
+## 可选 K56 文本 S1
+
+同一进程按相同冻结协议执行 2,352 题三轮，P95 为 **169.298 / 32.575 / 32.162 ms**，三轮中位 **32.575 ms**，同协议 K32 记录为 **86.236 ms**。首轮自然填充计入耗时，后两轮各全量命中。7,056 条完整答案与原融合 ON 一致。[K56 启动方式与复现](../runtime/k32_activation_cache/README.md#可选-k56-配置)
+
 ## 数据集性能汇总
 
 | 数据集 | S1 P95（ms） | S2 吞吐（decisions/s） | S2 客户端并发 | 计量口径 |
 | --- | ---: | ---: | ---: | --- |
-| OpenDecisions | 86.236415 | 17.689352 | 64 | 可选 K32 S1 C1 三轮中位，S2 B16 C64，各轮全量 2352 题 |
+| OpenDecisions | 32.574693 | 17.689352 | 64 | 可选 K56 S1 C1 三轮中位，S2 B16 C64，各轮全量 2352 题 |
 | ERQA | 300.537708 | 7.166461 | 16 | S1 B1 C1，S2 B8 C16，各 400 题冷首遍，JPEG 解码缓存关闭 |
 
 [`results.csv`](results.csv) 的批量与 batched tokens 两列描述选定的 S2 点。S1 和 S2 各自的预算、并发、状态和原数由各自测量 ID 关联。ERQA 自然第二遍和可选 JPEG 暖态成绩随图文明细提供。[测量索引](logs/dataset-profiles-20261123/manifest.json) · [独立入口与图文复现](../runtime/jpeg_decode_cache/README.md) · [历史性能表](logs/dataset-profiles-20261123/results-historical.csv)
