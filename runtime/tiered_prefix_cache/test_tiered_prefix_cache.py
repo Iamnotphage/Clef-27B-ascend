@@ -11,6 +11,7 @@ plain bytes so every invariant is exercised on a laptop or the A3 CPU side.
 from __future__ import annotations
 
 import importlib.util
+from pathlib import Path
 import random
 import threading
 import time
@@ -106,17 +107,36 @@ class PrefixSplitTests(unittest.TestCase):
         assert split is not None
         self.assertEqual(split.l_prefix, 400)
 
-    def test_multimodal_item_must_be_in_prefix(self):
+    def test_multimodal_items_are_classified_by_expansion(self):
         prompt = make_prompt(813, 967)
         inside = synthetic_mm(offset=100, expanded=256)
-        self.assertIsNotNone(locate_state_prefix(
-            prompt, DELIMITER, mm_items=[inside]))
+        split = locate_state_prefix(prompt, DELIMITER, mm_items=[inside])
+        assert split is not None
+        self.assertEqual(split.mm_items, (inside,))
         after = synthetic_mm(offset=900, expanded=10)
-        self.assertIsNone(locate_state_prefix(
-            prompt, DELIMITER, mm_items=[after]))
+        split = locate_state_prefix(prompt, DELIMITER, mm_items=[after])
+        assert split is not None
+        self.assertEqual(split.mm_items, ())
         too_long = synthetic_mm(offset=100, expanded=2000)
         self.assertIsNone(locate_state_prefix(
             prompt, DELIMITER, mm_items=[too_long]))
+
+    def test_image_expansion_is_never_split(self):
+        # delimiter_at=260 -> raw 256 sits inside the [100, 300) expansion;
+        # the boundary must roll back to 0 and become ineligible.
+        prompt = make_prompt(260, 400)
+        crossing = synthetic_mm(offset=100, expanded=200)
+        self.assertIsNone(locate_state_prefix(
+            prompt, DELIMITER, mm_items=[crossing]))
+        # A boundary beyond the expansion keeps the item whole.
+        prompt = make_prompt(400, 600)
+        item = synthetic_mm(offset=100, expanded=200)
+        split = locate_state_prefix(prompt, DELIMITER, mm_items=[item])
+        assert split is not None
+        self.assertEqual(split.l_aligned, 384)
+        self.assertEqual(split.mm_items, (item,))
+        self.assertLessEqual(
+            item.expanded_offset + item.expanded_length, split.l_aligned)
 
 
 class PrefixKeyTests(unittest.TestCase):
@@ -131,9 +151,13 @@ class PrefixKeyTests(unittest.TestCase):
         two = compute_prefix_key("clef", split)
         other = compute_prefix_key("other", split)
         revision = compute_prefix_key("clef", split, model_revision="rev-1")
+        tp1 = compute_prefix_key("clef", split, tp_size=1)
+        align64 = compute_prefix_key("clef", split, align=64)
         self.assertEqual(one, two)
         self.assertNotEqual(one, other)
         self.assertNotEqual(one, revision)
+        self.assertNotEqual(one, tp1)
+        self.assertNotEqual(one, align64)
         self.assertEqual(len(one), 32)
 
     def test_same_placeholder_different_image_never_collides(self):
@@ -311,13 +335,88 @@ class SharedMemoryTests(unittest.TestCase):
         entry = store.get(key)
         assert entry is not None
         self.assertIsNotNone(entry.prefix_memory_shm)
-        attached = store.attach_shm(entry.prefix_memory_shm,
-                                    entry.prefix_memory_nbytes)
-        self.assertEqual(bytes(attached[: len(payload)]), payload)
+        with store.attach_shm(entry.prefix_memory_shm,
+                              entry.prefix_memory_nbytes) as attached:
+            self.assertEqual(attached.read(), payload)
         name = entry.prefix_memory_shm
         store.close()
         with self.assertRaises(FileNotFoundError):
             shared_memory.SharedMemory(name=name, create=False)
+
+    @unittest.skipUnless(shm_available(), "POSIX /dev/shm is unavailable")
+    def test_shm_non_owner_close_preserves_owner_segment(self):
+        from multiprocessing import shared_memory
+
+        owner = HostStore(budget_bytes=1_000_000, use_shm=True)
+        key = b"k" * 32
+        payload = bytes(range(64)) * 4
+        self.assertTrue(owner.publish(key, {0: {"kv": b"x" * 64}},
+                                      prefix_memory=payload))
+        entry = owner.get(key)
+        assert entry is not None
+        follower = HostStore(budget_bytes=1_000_000, use_shm=True)
+        attached = follower.attach_shm(
+            entry.prefix_memory_shm, entry.prefix_memory_nbytes)
+        self.assertEqual(attached.read(), payload)
+        attached.release()
+        follower.close()  # non-owner: close only, never unlink
+        probe = shared_memory.SharedMemory(
+            name=entry.prefix_memory_shm, create=False)
+        try:
+            self.assertEqual(bytes(probe.buf[: len(payload)]), payload)
+        finally:
+            probe.close()
+        self.assertEqual(owner.read_shm_bytes(
+            entry.prefix_memory_shm, entry.prefix_memory_nbytes), payload)
+        owner.close()
+        with self.assertRaises(FileNotFoundError):
+            shared_memory.SharedMemory(
+                name=entry.prefix_memory_shm, create=False)
+
+    @unittest.skipUnless(shm_available(), "POSIX /dev/shm is unavailable")
+    def test_shm_reattach_preserves_exact_size(self):
+        store = HostStore(budget_bytes=1_000_000, use_shm=True)
+        payload = b"\x01" * 17
+        self.assertTrue(store.publish(b"k" * 32, {0: {"kv": b"x"}},
+                                      prefix_memory=payload))
+        entry = store.get(b"k" * 32)
+        assert entry is not None
+        first = store.attach_shm(entry.prefix_memory_shm, 17)
+        second = store.attach_shm(entry.prefix_memory_shm, 17)
+        self.assertEqual(len(first.read()), 17)
+        self.assertEqual(len(second.read()), 17)
+        first.release()
+        second.release()
+        store.close()
+
+    @unittest.skipUnless(shm_available(), "POSIX /dev/shm is unavailable")
+    def test_concurrent_shm_publish_same_and_distinct_keys(self):
+        store = HostStore(budget_bytes=64 << 20, use_shm=True)
+        errors: list[BaseException] = []
+
+        def worker(worker_id: int) -> None:
+            try:
+                for index in range(200):
+                    key = bytes([(worker_id + index) % 32]) * 32
+                    store.publish(
+                        key, {0: {"kv": b"x" * 1024}},
+                        prefix_memory=bytes([worker_id]) * 300)
+            except BaseException as error:  # noqa: BLE001
+                errors.append(error)
+
+        threads = [threading.Thread(target=worker, args=(index,))
+                   for index in range(16)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+            self.assertFalse(thread.is_alive())
+        self.assertFalse(errors, errors)
+        names = list(store.shm_names())
+        store.close()
+        residual = list(Path("/dev/shm").glob(f"clef_pfx_{store.session}_*"))
+        self.assertEqual(residual, [])
+        self.assertTrue(all(name.startswith("clef_pfx_") for name in names))
 
 
 @unittest.skipUnless(importlib.util.find_spec("torch"), "torch is unavailable")
@@ -349,16 +448,79 @@ class AsyncTransferTests(unittest.TestCase):
         capture.close()
 
     def test_ring_release_reuses_slots(self):
-        import torch  # noqa: PLC0415
-
         from runtime.tiered_prefix_cache.async_transfer import PinnedRing
 
         ring = PinnedRing(slots=1, slot_bytes=1024)
-        buffer = ring.acquire(0)
+        buffer = ring.acquire()
         self.assertEqual(buffer.numel(), 1024)
         ring.release(buffer)
-        self.assertIs(ring.acquire(0), buffer)
+        self.assertIs(ring.acquire(), buffer)
         self.assertTrue(buffer.is_pinned() or buffer.device.type == "cpu")
+        ring.release(buffer)
+
+    def test_pinned_ring_exhaustion_no_deadlock(self):
+        from runtime.tiered_prefix_cache.async_transfer import PinnedRing
+
+        ring = PinnedRing(slots=1, slot_bytes=1024)
+        held = ring.acquire()
+        self.assertIsNotNone(held)
+        outcome = {}
+
+        def waiter() -> None:
+            outcome["value"] = ring.acquire(timeout=0.01)
+
+        thread = threading.Thread(target=waiter)
+        started = time.monotonic()
+        thread.start()
+        thread.join(timeout=1.0)
+        elapsed = time.monotonic() - started
+        self.assertFalse(thread.is_alive(), "acquire deadlocked")
+        self.assertLess(elapsed, 1.0)
+        self.assertIsNone(outcome["value"])
+        ring.release(held)
+        self.assertIsNotNone(ring.acquire(timeout=0.05))
+
+    def test_sync_capture_does_not_alias_ring_buffer(self):
+        import torch  # noqa: PLC0415
+
+        from runtime.tiered_prefix_cache.async_transfer import (
+            AsyncCapture,
+            PinnedRing,
+        )
+
+        ring = PinnedRing(slots=1, slot_bytes=1 << 20)
+        capture = AsyncCapture(ring, synchronous=True)
+        published = []
+        first = torch.arange(16, dtype=torch.float32)
+        second = torch.arange(16, dtype=torch.float32) + 100
+        capture.submit({"kv": first}, lambda host: published.append(host["kv"]))
+        capture.submit({"kv": second}, lambda host: published.append(host["kv"]))
+        self.assertTrue(torch.equal(published[0], first))
+        self.assertTrue(torch.equal(published[1], second))
+
+    def test_sync_capture_surfaces_callback_errors(self):
+        import torch  # noqa: PLC0415
+
+        from runtime.tiered_prefix_cache.async_transfer import AsyncCapture
+
+        capture = AsyncCapture(synchronous=True)
+
+        def explode(_host):
+            raise RuntimeError("boom")
+
+        capture.submit({"kv": torch.zeros(4)}, explode)
+        self.assertEqual(len(capture.errors), 1)
+        self.assertIn("boom", str(capture.errors[0]))
+
+    def test_prefetcher_sync_pageable_round_trip(self):
+        import torch  # noqa: PLC0415
+
+        from runtime.tiered_prefix_cache.async_transfer import Prefetcher
+
+        value = torch.arange(32, dtype=torch.float32)
+        restored = Prefetcher(synchronous=True).load({"kv": value})
+        self.assertTrue(torch.equal(restored.tensors["kv"], value))
+        restored.close()
 
 
 class VoteTests(unittest.TestCase):

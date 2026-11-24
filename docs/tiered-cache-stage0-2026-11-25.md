@@ -149,6 +149,32 @@
 - 4 GiB 压测：`ok=true`、1,945 条常驻、bytes 4,079,022,080 ≤ 4 GiB、**10,765 次淘汰、17 次拒绝、lease 0、SHM 关闭后残留 0**、2.97 s 完成。
 - 证据：`Clef-27B/logs/tiered-cache-20261124/stage2-stress-host-store.json`。
 
+## 4.1 阶段 2 代码审查修复与 A3 真 NPU 异步验证（2026-11-25 补记）
+
+按 `stage2_bugfix_plan.md` 修复了 5 类问题，并新增 NPU 验证脚本：
+
+| 问题 | 修复 |
+| --- | --- |
+| `PinnedRing.acquire` 持锁 sleep 死锁 | 改为 `threading.Condition`；`acquire(timeout=0.05)` 超时返回 `None`，调用方记 `dropped_ring_full`，绝不阻塞在线响应 |
+| `AsyncCapture` 流竞争/脏读/源显存复用/同步别名 | 双事件协议：主计算流记 `ready` → Copy 流 `wait_event` → 逐张量 `record_stream` → **设备内 snapshot** → Copy 流记 `snapshot_done`；主计算流 `wait_event(snapshot_done)` 后才允许后续覆写；单后台消费线程 `queue.Queue` 有序发布，`drain()`/`close()` 可等待并暴露异常；同步模式深拷贝持久化 pinned 张量 |
+| `Prefetcher` 退化 pageable（慢 ~15×）与 `wait` 阻塞 CPU | H2D Pinned Staging Pool（2 槽 × 384 MiB，超尺寸按需分配）；`RestoredState.wait()` 默认 `current_stream().wait_event()`（纯流间等待），仅 `sync_host=True`/`close()` 才 `event.synchronize()`，并对目标 `record_stream` |
+| `HostStore` SHM 非 owner 误删 / 锁外创建 / 重复 attach 切片 / `BufferError` | `_shm_objects` 记录 `(shm, owned)`，仅 owner `unlink`；`publish` 的重复键、预算与 `_sequence` 全部在锁内；`attach_shm` 加锁、校验 `size<=shm.size`，返回 `AttachedShm` 上下文并统一释放 `memoryview`；新增 `read_shm_bytes`；session 使用 pid+ns+uuid 避免同名 |
+| `prefix_key` 图片展开被切穿 / 逐 token hash | `L_aligned` 若落在某图片展开块内，向下回退到该图片对齐起点（循环直到不切穿，低于 `min_prefix` 返回 `None`）；只把完全位于 `[0,L_aligned)` 的多模态项纳入 `split.mm_items`；`compute_prefix_key` 一次性 `struct.pack`，并把 `align`/`tp_size` 编入哈希域 |
+
+验证（远端 A3，NPU 6，单进程 ~1–2 GiB HBM，未启动 vLLM）：
+
+| 项目 | 结果 |
+| --- | --- |
+| 单测 | **35 tests, OK, 0 failures, 0 skipped**（含 SHM 并发/非 owner/重复 attach、ring 死锁、同步别名、异步 drain） |
+| 覆写对抗（70 MiB） | **20/20 `torch.equal=True`**；submit 均值 0.43 ms / p50 0.41 / p95 0.57 |
+| 覆写对抗（360 MiB） | **20/20 `torch.equal=True`**；submit 均值 0.67 ms / p50 0.56 / p95 1.06（热身后；submit 仍远小于 9 ms 的 D2H，主线程未被传输阻塞） |
+| 端到端恢复（70 MiB） | `equal=True`；enqueue 0.66 ms、`wait` CPU **0.053 ms**、有效 H2D **32.7 GiB/s** |
+| 端到端恢复（360 MiB） | `equal=True`；enqueue 0.59 ms、`wait` CPU **0.041 ms**、有效 H2D **46.8 GiB/s** |
+| 4 GiB 压测（SHM 开） | `ok=true`，10,699 次淘汰、23 次拒绝、0 lease 泄漏、关闭后 `/dev/shm` 0 残留 |
+
+- 360 MiB 的 `submit` 均值 0.67 ms 略高于计划 0.5 ms 目标（p50 0.56 ms）；差异来自每次提交的 Event/Stream 书签与设备内 snapshot 排序，属于非阻塞入队，且相对 OD 967 的 154 ms、ERQA 10,294 的 1,291 ms 可忽略。有效 H2D 32.7–46.8 GiB/s 已证明未退化到 pageable 3.6 GiB/s。
+- 证据：`Clef-27B/logs/tiered-cache-20261124/stage2-async-npu-verify.json`、`stage2-stress-host-store.json`。
+
 ## 5. 阶段 3 的前置结论与风险（尚未开工）
 
 阶段 3 需要同时改动 `gdn.py`、`clef_joint_schema.py`、Full-Attention 的 paged KV 与调度器，严格按安装器 `--check/--apply/--revert` 叠层；本节列出已确认的接口与仍需在阶段 3 实测的差异：

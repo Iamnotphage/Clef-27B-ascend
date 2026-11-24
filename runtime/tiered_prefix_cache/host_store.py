@@ -27,6 +27,7 @@ import struct
 import threading
 import time
 from typing import Any, Iterable, Mapping
+import uuid
 
 DEFAULT_BUDGET_GIB = 32
 DEFAULT_SAFETY_GIB = 12
@@ -101,6 +102,45 @@ class Lease:
         self.release()
 
 
+class AttachedShm:
+    """A bounded read-only view of one shared-memory object.
+
+    The view must be released before the owner closes the segment; the store
+    releases any outstanding views itself on eviction/close, so a caller that
+    forgets ``release()`` cannot trigger ``BufferError``.
+    """
+
+    def __init__(self, store: "HostStore", name: str, size: int):
+        self._store = store
+        self.name = name
+        self.size = int(size)
+        shm = store._shm_objects[name][0]
+        if not 0 <= self.size <= shm.size:
+            raise ValueError("SHM slice exceeds the mapped segment")
+        self._view = shm.buf[: self.size]
+
+    @property
+    def view(self) -> memoryview:
+        if self._view is None:
+            raise RuntimeError("shared-memory view already released")
+        return self._view
+
+    def read(self) -> bytes:
+        return bytes(self.view)
+
+    def release(self) -> None:
+        if self._view is not None:
+            self._view.release()
+            self._view = None
+        self._store._detach(self)
+
+    def __enter__(self) -> "AttachedShm":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.release()
+
+
 class HostStore:
     """Thread-safe, budget-bounded LRU of prefix state packages."""
 
@@ -123,13 +163,15 @@ class HostStore:
         self.ghost_capacity = int(ghost_capacity)
         self.eviction_watermark = float(eviction_watermark)
         self.use_shm = shm_available() if use_shm is None else bool(use_shm)
-        self.session = session or f"{os.getpid()}-{int(time.time() * 1000)}"
+        self.session = session or (
+            f"{os.getpid()}-{time.time_ns()}-{uuid.uuid4().hex[:8]}")
         self._lock = threading.RLock()
         self._entries: "OrderedDict[bytes, HostEntry]" = OrderedDict()
         self._ghost: "OrderedDict[bytes, None]" = OrderedDict()
         self._bytes = 0
         self._sequence = 0
-        self._shm_objects: dict[str, Any] = {}
+        self._shm_objects: dict[str, tuple[Any, bool]] = {}
+        self._attachments: dict[str, list[AttachedShm]] = {}
         self._closed = False
         self._install_cleanup()
         self.counters = {
@@ -217,27 +259,26 @@ class HostStore:
         """
         if not isinstance(key, bytes) or len(key) != 32:
             raise ValueError("prefix key must be 32 bytes")
-        entry = HostEntry(key=key)
-        entry.shards = {
-            int(rank): {str(name): value for name, value in shard.items()}
-            for rank, shard in shards.items()
-        }
-        if prefix_memory is not None:
-            if self.use_shm:
-                entry.prefix_memory_shm, entry.prefix_memory_nbytes = (
-                    self._create_shm(prefix_memory))
-                entry.owner = True
-            else:
-                entry.prefix_memory = prefix_memory
-                entry.prefix_memory_nbytes = buffer_nbytes(prefix_memory)
-                entry.owner = True
-        size = entry.nbytes()
-        if size > self.budget_bytes:
-            self.counters["rejections"] += 1
-            self._discard_entry(entry)
-            return False
         with self._lock:
-            if key in self._entries:
+            if self._closed or key in self._entries:
+                self.counters["rejections"] += 1
+                return False
+            entry = HostEntry(key=key)
+            entry.shards = {
+                int(rank): {str(name): value for name, value in shard.items()}
+                for rank, shard in shards.items()
+            }
+            if prefix_memory is not None:
+                if self.use_shm:
+                    entry.prefix_memory_shm, entry.prefix_memory_nbytes = (
+                        self._create_shm(prefix_memory))
+                    entry.owner = True
+                else:
+                    entry.prefix_memory = prefix_memory
+                    entry.prefix_memory_nbytes = buffer_nbytes(prefix_memory)
+                    entry.owner = True
+            size = entry.nbytes()
+            if size > self.budget_bytes:
                 self.counters["rejections"] += 1
                 self._discard_entry(entry)
                 return False
@@ -294,28 +335,57 @@ class HostStore:
         self._sequence += 1
         shm = shared_memory.SharedMemory(name=name, create=True, size=len(payload))
         shm.buf[: len(payload)] = payload
-        self._shm_objects[name] = shm
+        self._shm_objects[name] = (shm, True)
         self.counters["shm_created"] += 1
         return name, len(payload)
 
-    def attach_shm(self, name: str, size: int) -> memoryview:
+    def attach_shm(self, name: str, size: int) -> AttachedShm:
+        """Map an existing segment read-only; the caller must release it."""
         from multiprocessing import shared_memory  # noqa: PLC0415
 
-        if name in self._shm_objects:
-            return self._shm_objects[name].buf
-        shm = shared_memory.SharedMemory(name=name, create=False)
-        self._shm_objects[name] = shm
-        self.counters["shm_attached"] += 1
-        return shm.buf[:size]
+        with self._lock:
+            record = self._shm_objects.get(name)
+            if record is None:
+                shm = shared_memory.SharedMemory(name=name, create=False)
+                self._shm_objects[name] = (shm, False)
+                self.counters["shm_attached"] += 1
+                record = (shm, False)
+            shm, _owned = record
+            if not 0 <= int(size) <= shm.size:
+                raise ValueError("SHM slice exceeds the mapped segment")
+            attached = AttachedShm(self, name, int(size))
+            self._attachments.setdefault(name, []).append(attached)
+            return attached
+
+    def read_shm_bytes(self, name: str, size: int) -> bytes:
+        attached = self.attach_shm(name, size)
+        try:
+            return attached.read()
+        finally:
+            attached.release()
+
+    def _detach(self, attached: AttachedShm) -> None:
+        with self._lock:
+            current = self._attachments.get(attached.name)
+            if current and attached in current:
+                current.remove(attached)
+                if not current:
+                    self._attachments.pop(attached.name, None)
 
     def _close_shm(self, name: str) -> None:
-        shm = self._shm_objects.pop(name, None)
-        if shm is None:
+        record = self._shm_objects.pop(name, None)
+        if record is None:
             return
+        for attached in list(self._attachments.pop(name, [])):
+            if attached._view is not None:
+                attached._view.release()
+                attached._view = None
+        shm, owned = record
         try:
             shm.close()
-            shm.unlink()
-            self.counters["shm_unlinked"] += 1
+            if owned:
+                shm.unlink()
+                self.counters["shm_unlinked"] += 1
         except FileNotFoundError:
             pass
 

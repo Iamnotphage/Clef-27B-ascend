@@ -102,11 +102,26 @@ def locate_state_prefix(
     if delimiter_at < 0:
         return None
     l_aligned = (delimiter_at // align) * align
+    # Never split one image/video expansion: the suffix cannot re-embed only
+    # part of an item.  Roll the boundary back to the item's aligned start
+    # until no expansion straddles it.
+    changed = True
+    while changed:
+        changed = False
+        for item in mm_items:
+            end = item.expanded_offset + item.expanded_length
+            if item.expanded_offset < l_aligned < end:
+                l_aligned = (item.expanded_offset // align) * align
+                changed = True
     if l_aligned < min_prefix:
         return None
     for span in schema_spans:
         if not (l_aligned <= span.start < span.end <= len(token_ids)):
             return None
+    prefix_items = tuple(sorted(
+        (item for item in mm_items
+         if item.expanded_offset + item.expanded_length <= l_aligned),
+        key=lambda item: item.expanded_offset))
     split = PrefixSplit(
         total_tokens=len(token_ids),
         l_prefix=delimiter_at,
@@ -114,9 +129,9 @@ def locate_state_prefix(
         l_suffix=len(token_ids) - l_aligned,
         prefix_token_ids=token_ids[:l_aligned],
         suffix_token_ids=token_ids[l_aligned:],
-        mm_items=tuple(sorted(mm_items, key=lambda item: item.expanded_offset)),
+        mm_items=prefix_items,
     )
-    if not prefix_mm_matches(split, mm_items):
+    if not prefix_mm_matches(split, prefix_items):
         return None
     return split
 
@@ -144,13 +159,15 @@ def compute_prefix_key(
     split: PrefixSplit,
     *,
     model_revision: str | None = None,
+    align: int = ALIGN,
+    tp_size: int = 2,
 ) -> bytes:
     """A 32-byte SHA-256 identity of the aligned prefix.
 
-    The key covers the namespace, the optional model revision, every prefix
-    token id, and every prefix multimodal item's content hash and both span
-    descriptions.  Image bytes never enter the key directly; the connector's
-    content hash does.
+    The key covers the namespace, the optional model revision, the alignment
+    and TP partition, every prefix token id, and every prefix multimodal
+    item's content hash and both span descriptions.  Image bytes never enter
+    the key directly; the connector's content hash does.
     """
     if not isinstance(namespace, str) or not namespace:
         raise ValueError("prefix key requires a non-empty namespace")
@@ -158,9 +175,12 @@ def compute_prefix_key(
     digest.update(KEY_SCHEMA)
     _update_text(digest, namespace)
     _update_text(digest, model_revision or "")
-    digest.update(len(split.prefix_token_ids).to_bytes(8, "little"))
-    for token in split.prefix_token_ids:
-        digest.update(struct.pack("<i", int(token)))
+    digest.update(struct.pack("<II", int(align), int(tp_size)))
+    token_count = len(split.prefix_token_ids)
+    digest.update(token_count.to_bytes(8, "little"))
+    if token_count:
+        digest.update(struct.pack(
+            f"<{token_count}i", *split.prefix_token_ids))
     digest.update(len(split.mm_items).to_bytes(4, "little"))
     for item in split.mm_items:
         digest.update(MM_SCHEMA)
