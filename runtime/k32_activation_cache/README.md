@@ -73,3 +73,7 @@ bash scripts/start_dataset_profile.sh od-s1 \
 K56 三轮 P95 中位 **32.574693 ms**、吞吐中位 **35.697736 decisions/s**。同机 K32 的三轮 P95 中位为 86.236415 ms，两条记录来自独立窗口。冷首轮单列，前后原服务无投票锚点见正式证据。三题诊断窗关闭审计后的 K56 完整调用中位为 31.923150 ms，探针 stock A/A 含 TP 投票。已测命中各 rank 实际调用后 8 层与一次 final norm，完整 typed answers 与原 ON 逐位一致。
 
 正式三轮共 7,056 条，原始答案与融合 ON 相同。作者分数仍为 Calibration 82.411344、Intelligence 66.084076、Capability 74.247710，逐轮通过 2pp；每轮 1904/2352、MAE 0.402612。两 rank 保留共 39.041 GiB 逻辑字节，均零逐出。内存端点和生命周期高水见正式索引。[K56 测量索引](../../Clef-27B/logs/dataset-profiles-20261123/k56-s1-evidence.json)
+
+## K64 末态缓存候选
+
+`od-s1-k64` 显式选择 post-norm full-T 隐藏态。在锁定的 TP2、BF16、eager、B1 文本 pooling 路径中，冷请求调用原主干并只留存末段 final norm 的一张隐藏张量。命中后，两 rank 在同步恢复各自私有张量并达成就绪共识后返回隐藏态，原 runner 仍执行 ALL pooling 和完整联合决策头。保留同一组 fresh prefill、位置、KV/GDN、模型和来源守卫，并增加有效 embedding 生产缓冲区、pooling runner 及 post-forward 状态消费者检查。需要实机验证的内容包括真实末态布局、完整输出等价与独立窗口吞吐。现有 K56 固定序和乱序结果沿用各自的测量索引。

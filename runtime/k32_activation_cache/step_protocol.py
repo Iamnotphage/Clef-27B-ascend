@@ -116,3 +116,42 @@ def run_candidate(layers, positions, input_pair, norm, *,
     finally:
         if staged is not None:
             cache.cancel(staged[0])
+
+
+def run_final_candidate(*, key, cache, restore, capture, exchange, stock, enabled=True):
+    """Return the exact stock language output or its private, post-norm restore."""
+    loaded = None
+    if enabled and key is not None:
+        with cache.lease(key) as value:
+            if value is not None:
+                loaded = restore(value)
+    eligible, resume = exchange(key, loaded is not None)
+    if resume:
+        if loaded is None:
+            raise RuntimeError("positive TP vote without a restored final hidden state")
+        return loaded[0], True
+
+    loaded = None
+    output = stock()
+    if not eligible or not enabled:
+        return output, False
+
+    cache.discard(key)
+    staged = None
+    try:
+        ready = False
+        try:
+            staged = capture(key, output)
+            if staged is not None:
+                ready = cache.prepare(*staged)
+        except (MemoryError, OSError, RuntimeError):
+            # A failed local preparation still participates in the shared vote.
+            ready = False
+        _, accepted = exchange(key, ready)
+        if accepted:
+            if not ready or staged is None or not cache.reveal(staged[0]):
+                raise RuntimeError("positive TP fill vote without a prepared final hidden state")
+        return output, False
+    finally:
+        if staged is not None:
+            cache.cancel(staged[0])

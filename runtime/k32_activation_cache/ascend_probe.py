@@ -15,8 +15,8 @@ from pathlib import Path
 from time import perf_counter_ns
 from types import MethodType
 
-from activation_cache import ActivationCache, BOUNDARY, text_key
-from step_protocol import fresh_text_step, run_candidate, vote_integers, vote_result
+from activation_cache import ActivationCache, BOUNDARY, POST_NORM, text_key
+from step_protocol import fresh_text_step, run_candidate, run_final_candidate, vote_integers, vote_result
 
 
 ACTIVE = ContextVar("clef_private_k32_step", default=None)
@@ -51,6 +51,13 @@ SOURCE_LOCK = {
     "attention_layer": "5ae48902abd82367138555b7393942cf4b5341942cec3a2a3817ebab00a36198",
     "gdn": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
 }
+if POST_NORM:
+    SOURCE_LOCK.update({
+        "all_pool": "d6970def31d87bd8ad2052487e91d2d6234bc79243dcc8e9a032f8bd1f830d3d",
+        "pooling_runner": "3a36931da3d807a8f7926ee5382a22de704247c74ccc28f3a3a40610a26c67e9",
+        "base_model_state": "453eb32c5efef9f4064c333c3e5e714aef3adc16645db1f4a311f8a397860f02",
+        "encoder_runner": "894ffc53e702e9bf9ca06bf21dcd4c7a169a36d7bd3de2387bbe43c972427006",
+    })
 
 
 @dataclass
@@ -279,7 +286,7 @@ def verify_runtime_sources(runner_class):
     slot_kernel_module = import_module("vllm_ascend.ops.triton.block_table.compute_slot_mappings")
     exported_kernel = slot_kernel_module._compute_slot_mappings_kernel
     bound_kernel = block_table_module._compute_slot_mappings_kernel
-    rows = check_sources({
+    targets = {
         "ascend_runner": ("class", runner_class),
         "base_runner": ("class", GPUModelRunner),
         "forward": ("function", Qwen3NextModel.forward),
@@ -304,7 +311,15 @@ def verify_runtime_sources(runner_class):
         "ascend_hybrid_model_state": ("class", AscendMambaHybridModelState),
         "storage_block_size": ("function", get_storage_block_size),
         "attention_layer": ("class", Attention),
-    })
+    }
+    if POST_NORM:
+        from vllm.v1.worker.gpu.mm.encoder_runner import EncoderRunner
+        from vllm.v1.worker.gpu.model_states.default import DefaultModelState
+        from vllm.v1.worker.gpu.pool.pooling_runner import PoolingRunner
+        targets.update(all_pool=("class", AllPool), pooling_runner=("class", PoolingRunner),
+                       base_model_state=("class", DefaultModelState),
+                       encoder_runner=("class", EncoderRunner))
+    rows = check_sources(targets)
     slot = next(row for row in rows if row["name"] == "slot_kernel")
     slot["exported_type"] = type(exported_kernel).__name__
     slot["table_uses_exported_kernel"] = bound_kernel is exported_kernel
@@ -342,6 +357,11 @@ def install(runner_class):
     from vllm_ascend.worker.v2.model_states.mamba_hybrid import AscendMambaHybridModelState
 
     verify_runtime_sources(runner_class)
+    if POST_NORM:
+        from vllm.distributed.kv_transfer import has_kv_transfer_group
+        from vllm.v1.worker.gpu.mm.encoder_runner import EncoderRunner
+        from vllm.v1.worker.gpu.pool.pooling_runner import PoolingRunner
+
     mode = os.environ["CLEF_PRIVATE_K32"]
     namespace = bytes.fromhex(os.environ["CLEF_PRIVATE_K32_NAMESPACE"])
     # The supervisor supplies one namespace through an environment inherited
@@ -399,6 +419,7 @@ def install(runner_class):
         facts = {
             "rank": tp.rank_in_group, "pid": os.getpid(), "failures": failures,
             "activation_boundary": BOUNDARY, "activation_generation_sha256": namespace.hex(),
+            "activation_representation": "post_norm" if POST_NORM else "hidden_residual",
             "old_base_exact": type(outer) is ClefFlashForJointSchema,
             "expected_outer": symbol_info(AscendClefFlashForJointSchema),
             "actual_outer": symbol_info(type(outer)),
@@ -436,6 +457,22 @@ def install(runner_class):
             raise RuntimeError("K32 attention inventory rejected")
         verified_bindings = None
         audit_sequence = 0
+        head_audit = None
+        if POST_NORM and (audit or control is not None):
+            def observe_head(_module, args, _output):
+                nonlocal head_audit
+                if head_audit is None:
+                    return
+                sequence, request_id, n = head_audit
+                head_audit = None
+                hidden, metadata = args
+                row = {"rank":tp.rank_in_group, "pid":os.getpid(), "request_id":request_id,
+                       "shape":tuple(hidden.shape), "expected_tokens":n,
+                       "scheduled":metadata.get_pooling_cursor().num_scheduled_tokens_cpu.tolist()}
+                with (diagnostics / f"head-{sequence:04d}-{tp.rank_in_group}.json").open("x") as out:
+                    json.dump(row,out)
+            outer.pooler.register_forward_hook(observe_head)
+
         counters = Counter()
         snapshots = 0
         if formal:
@@ -648,6 +685,24 @@ def install(runner_class):
                 "gdn_fla": _get_fla_gdn_prefill_op() is not None,
             }
             checks.update(metadata_checks(context, step.batch, n, AscendMetadata, GDNAttentionMetadata))
+            if POST_NORM:
+                state = runner.model_state
+                checks.update(
+                    final_pooler=(type(runner.pooling_runner) is PoolingRunner
+                                  and runner.pooling_runner.model is outer),
+                    no_postnorm_state_consumers=(not has_kv_transfer_group()
+                        and runner.speculator is None and runner.kvpp.scheduler is None
+                        and state._offload_req_ids is None and state._pending_bulk_copy is None
+                        and getattr(outer, "prepare_engram_inputs", None) is None
+                        and state.prompt_embeds_state is None),
+                )
+                if inputs_embeds is not None:
+                    encoder = state.encoder_runner
+                    checks["token_embedding_buffer"] = (
+                        type(encoder) is EncoderRunner and encoder.model is outer
+                        and inputs_embeds.data_ptr() == encoder.inputs_embeds.data_ptr()
+                        and inputs_embeds.shape == (n, 5120) and inputs_embeds.stride() == (5120, 1)
+                    )
             step.contract = checks
             if record:
                 batch = step.batch
@@ -841,17 +896,32 @@ def install(runner_class):
             write_receipt(receipt)
             return output
 
+        def final_hidden_layout(tensor, n, device):
+            if not (type(tensor) is torch.Tensor and tensor.device == device
+                    and tensor.dtype == torch.bfloat16 and tuple(tensor.shape) == (n, 5120)
+                    and tuple(tensor.stride()) == (5120, 1) and tensor.storage_offset() == 0
+                    and tensor.untyped_storage().nbytes() == n * 10240):
+                return False
+            # ATen's Ascend ND format id; reject unknown or transformed layouts.
+            try:
+                return device.type == "cpu" or torch_npu.get_npu_format(tensor) == 2
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                return False
+
         def forward(self, input_ids, positions, intermediate_tensors=None, inputs_embeds=None):
+            nonlocal head_audit
             step = ACTIVE.get()
             if step is None or step.runner is not runner:
                 return stock(input_ids, positions, intermediate_tensors, inputs_embeds)
             chosen, record = mode, audit
+            veto_restore = False
             if control is not None:
                 try:
                     row = json.loads(Path(control).read_bytes())
                     chosen, record = row["mode"], row["audit"]
                     if chosen not in ("tap", "stock", "split", "cache") or type(record) is not bool:
                         chosen, record = "stock", False
+                    veto_restore = POST_NORM and record and row.get("veto_restore_rank") == tp.rank_in_group
                 except (OSError, ValueError, KeyError, TypeError):
                     chosen, record = "stock", False
             def original():
@@ -881,12 +951,19 @@ def install(runner_class):
                 return vote_result(local, vector.tolist())
 
             def restore(pair):
+                if veto_restore:
+                    step.times["injected_restore_veto"] = True
+                    return None
+
                 def copy():
                     copied = tuple(x.to(positions.device, non_blocking=False, copy=True) for x in pair)
                     torch.npu.current_stream().synchronize()
                     return copied
                 try:
                     copied = timing(step, "h2d_ns", copy)
+                    if POST_NORM and (len(copied) != 1 or
+                                      not final_hidden_layout(copied[0], n, positions.device)):
+                        return None
                     if record:
                         step.boundary = [layout(x) for x in copied]
                         step.times["restored_boundary_sha256"] = [
@@ -897,10 +974,7 @@ def install(runner_class):
                 except (RuntimeError, MemoryError):
                     return None
 
-            def capture(digest, hidden, residual):
-                if residual is None:
-                    return None
-                pair = hidden, residual
+            def capture_tensors(digest, pair):
                 step.boundary = [layout(x) for x in pair]
                 if any(x.dtype != torch.bfloat16 or tuple(x.shape) != (n, 5120)
                        or tuple(x.stride()) != (5120, 1) for x in pair):
@@ -913,6 +987,9 @@ def install(runner_class):
                     host = timing(step, "d2h_ns", lambda: tuple(
                         x.to("cpu", non_blocking=False, copy=True) for x in pair
                     ))
+                    if POST_NORM and not final_hidden_layout(host[0], n, torch.device("cpu")):
+                        cache.cancel(ticket)
+                        return None
                     if record:
                         step.times["boundary_sha256"] = [
                             sha256(memoryview(x.view(torch.uint8).numpy())).hexdigest() for x in host
@@ -925,6 +1002,14 @@ def install(runner_class):
                     cache.cancel(ticket)
                     raise
 
+            def capture(digest, hidden, residual):
+                return None if residual is None else capture_tensors(digest, (hidden, residual))
+
+            def capture_final(digest, output):
+                if not final_hidden_layout(output, n, positions.device):
+                    return None
+                return capture_tensors(digest, (output,))
+
             def input_pair():
                 hidden = inputs_embeds if inputs_embeds is not None else self.embed_input_ids(input_ids)
                 return hidden, None
@@ -933,12 +1018,35 @@ def install(runner_class):
                 step.boundary = [layout(x) for x in (hidden, residual) if x is not None]
 
             layers = [] if record else None
-            result, hit = run_candidate(
-                self.layers, positions, input_pair, self.norm, key=key,
-                cache=cache, restore=restore, capture=capture, exchange=exchange,
-                stock=original,
-                enabled=chosen == "cache", observe_boundary=observe_boundary, observed_layers=layers,
-            )
+            if POST_NORM:
+                with ExitStack() as handles:
+                    if record:
+                        step.times["norm_calls"] = 0
+                        for index, decoder in enumerate(core.layers):
+                            def observe(_module, _args, _output, index=index):
+                                layers.append(index)
+                            handles.callback(decoder.register_forward_hook(observe).remove)
+
+                        def observe_norm(_module, _args, _output):
+                            step.times["norm_calls"] += 1
+                        handles.callback(core.norm.register_forward_hook(observe_norm).remove)
+
+                    result, hit = run_final_candidate(
+                        key=key, cache=cache, restore=restore, capture=capture_final,
+                        exchange=exchange, stock=original, enabled=chosen == "cache",
+                    )
+                if record and type(result) is torch.Tensor:
+                    step.times["final_return"] = {
+                        "layout": layout(result), "format": torch_npu.get_npu_format(result),
+                        "storage_bytes": result.untyped_storage().nbytes(),
+                    }
+            else:
+                result, hit = run_candidate(
+                    self.layers, positions, input_pair, self.norm, key=key,
+                    cache=cache, restore=restore, capture=capture, exchange=exchange,
+                    stock=original,
+                    enabled=chosen == "cache", observe_boundary=observe_boundary, observed_layers=layers,
+                )
             if formal:
                 counters["calls"] += 1
                 counters["hit" if hit else "miss" if key is not None else "guard_fallback"] += 1
@@ -956,6 +1064,8 @@ def install(runner_class):
                     "final_hidden_sha256": digest, "cache": cache.snapshot(), **step.times,
                 }
                 write_receipt(receipt)
+                if POST_NORM:
+                    head_audit = (audit_sequence, step.request.request_id, n)
             return result
 
         core.forward = MethodType(forward, core)
