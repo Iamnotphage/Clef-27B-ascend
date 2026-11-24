@@ -20,6 +20,7 @@ question, or its logit with ``use_activation=False``.
 """
 
 import math
+import os
 from collections.abc import Callable, Set
 from dataclasses import dataclass
 from typing import Any
@@ -39,6 +40,30 @@ from vllm.v1.pool.metadata import PoolingMetadata
 JOINT_HEAD_WEIGHTS = "joint_head.safetensors"
 NUM_QUESTION_TYPES = 3
 MAX_LOGIT_SCALE = math.log(100.0)
+
+# The executor returns only TP rank 0's ModelRunnerOutput (multiproc executor
+# ``_get_output_rank``), so the other ranks' pooler logits are discarded.  Keep
+# the lm_head all-reduce that ``embed_lexical`` issues on every rank, then skip
+# the head and its softmax on the discarded ranks.  Default 0 keeps the
+# historical behavior for every other model.
+_RANK0_ONLY: bool | None = None
+
+
+def _rank0_only() -> bool:
+    global _RANK0_ONLY
+    if _RANK0_ONLY is None:
+        _RANK0_ONLY = os.environ.get("CLEF_JOINT_RANK0_ONLY", "0").strip().lower() in (
+            "1", "true", "yes", "on")
+    return _RANK0_ONLY
+
+
+def _tensor_parallel_rank() -> int:
+    try:
+        from vllm.distributed.parallel_state import get_tensor_model_parallel_rank
+
+        return get_tensor_model_parallel_rank()
+    except Exception:  # noqa: BLE001 - single-rank or uninitialized fallback
+        return 0
 
 
 def segment_mean(
@@ -380,10 +405,18 @@ class JointSchemaPooler(Pooler):
             schema, lexical_ids, lexical_span_ids = self._indices(
                 *parsed, hidden.device
             )
+            lexical_embeddings = self.embed_lexical(
+                async_tensor_h2d(token_ids[lexical_ids], hidden.device)
+            )
+            if _rank0_only() and _tensor_parallel_rank() != 0:
+                # Every rank must run embed_lexical (its lm_head all-reduce is
+                # collective); the head itself is local, so only rank 0 needs
+                # it. Keep the output list aligned with ``num_reqs``.
+                outputs.append(
+                    hidden.new_zeros(sum(parsed[2]), dtype=torch.float32))
+                continue
             lexical = segment_mean(
-                self.embed_lexical(
-                    async_tensor_h2d(token_ids[lexical_ids], hidden.device)
-                ),
+                lexical_embeddings,
                 lexical_span_ids,
                 schema.span_lengths[len(parsed[0]) :],
             )

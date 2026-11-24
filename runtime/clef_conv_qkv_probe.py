@@ -46,6 +46,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--max-abs", type=float, default=0.03125,
                    help="Local screening threshold, independent of competition quality gates")
     p.add_argument("--cpu-reference", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--save-outputs", type=Path, default=None,
+                   help="Save each fused q/k/v (CPU tensors) for a cross-vendor bitwise diff")
     p.add_argument("--output", required=True, type=Path)
     return p
 
@@ -268,6 +270,11 @@ def main() -> int:
                         row["cpu_conv_reference"] = cpu_info
                         row["candidate_vs_cpu_fp32"] = {
                             name: diff(a.cpu(), b) for name, a, b in zip(("q", "k", "v"), outputs, cpu_outputs)}
+                    if args.save_outputs is not None:
+                        args.save_outputs.mkdir(parents=True, exist_ok=True)
+                        torch.save(
+                            {name: value.cpu() for name, value in zip(("q", "k", "v"), outputs)},
+                            args.save_outputs / f"{tokens}-{seed}-{tile}-{input_channels}.pt")
                     row["timing"] = benchmark(reference, fused, args.warmup, args.iters)
                     failures += int(not valid)
                     report["rows"].append(row)

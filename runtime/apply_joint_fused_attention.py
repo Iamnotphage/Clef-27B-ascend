@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Install/revert the joint-head fused cross-attention candidate.
 
-PREIMAGE is the installed single-field postimage (``f8101b98``).  The new
-postimage adds ``CLEF_JOINT_FUSED_ATTN``: when set to 1, the six single-field
-cross-attention calls use ``torch_npu.npu_fusion_attention`` while keeping the
-q/k/v and output projections.  The default is 0, so installing alone does not
-change behavior.
+PREIMAGE is the installed single-field postimage (``f8101b98``).  The
+postimage adds ``CLEF_JOINT_FUSED_ATTN`` (fused cross-attention) and
+``CLEF_JOINT_RANK0_ONLY`` (skip the joint head on non-zero TP ranks after the
+collective lexical embedding).  Both default to 0, so installing alone does not
+change behavior.  ``aa3e1758`` is accepted as a legacy fused postimage and is
+upgraded in place with a verified backup of its own.
 """
 
 from __future__ import annotations
@@ -24,8 +25,10 @@ HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "joint_fused_attention" / "clef_joint_schema.py"
 TARGET = "vllm/model_executor/models/clef_joint_schema.py"
 PREIMAGE_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
-POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+LEGACY_POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+POSTIMAGE_SHA = "26d3ad047c42f47a7fa22e00d6bac53a8a063ed010e753cb79a673660f60d7c4"
 ENV_VAR = "CLEF_JOINT_FUSED_ATTN"
+RANK0_ENV_VAR = "CLEF_JOINT_RANK0_ONLY"
 
 
 def sha256(path: Path) -> str:
@@ -52,16 +55,25 @@ def main(argv=None) -> int:
 
     tree = args.tree.expanduser().resolve()
     path = tree / TARGET
-    backup = args.backup_dir.expanduser().resolve() / "clef_joint_schema.py.preimage"
+    backup_dir = args.backup_dir.expanduser().resolve()
+    preimage_backup = backup_dir / "clef_joint_schema.py.preimage"
+    legacy_backup = backup_dir / "clef_joint_schema.py.aa3e"
+    restore_record = backup_dir / "install-state.json"
     report = {
-        "schema": "joint-fused-attention-installer/1",
+        "schema": "joint-fused-attention-installer/2",
         "tree": str(tree),
         "file": str(path),
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "action": "check" if args.check else "apply" if args.apply else "revert",
         "preimage_sha256": PREIMAGE_SHA,
+        "legacy_postimage_sha256": LEGACY_POSTIMAGE_SHA,
         "postimage_sha256": POSTIMAGE_SHA,
-        "env": {"name": ENV_VAR, "default": "0", "scope": "single-field cross-attention"},
+        "env": {
+            "fused_attn": {"name": ENV_VAR, "default": "0",
+                           "scope": "single-field cross-attention"},
+            "rank0_only": {"name": RANK0_ENV_VAR, "default": "0",
+                           "scope": "skip the joint head on TP ranks != 0"},
+        },
     }
     try:
         fd = os.open(tree, os.O_RDONLY)
@@ -76,7 +88,17 @@ def main(argv=None) -> int:
         if not path.is_file():
             raise ValueError("joint schema source missing")
         digest = sha256(path)
-        state = "preimage" if digest == PREIMAGE_SHA else "postimage" if digest == POSTIMAGE_SHA else "unknown"
+        if digest == PREIMAGE_SHA:
+            state, source_backup = "preimage", preimage_backup
+        elif digest == LEGACY_POSTIMAGE_SHA:
+            # Report the legacy fused file as the fused installer's preimage so
+            # the launcher's apply branch upgrades it in place.
+            state, source_backup = "preimage", legacy_backup
+            report["legacy_postimage"] = True
+        elif digest == POSTIMAGE_SHA:
+            state, source_backup = "postimage", None
+        else:
+            state, source_backup = "unknown", None
         report["state_before"] = state
         report["sha256_before"] = digest
         if state == "unknown":
@@ -86,26 +108,41 @@ def main(argv=None) -> int:
             report["ready"] = state == "postimage"
         elif args.revert:
             if state == "postimage":
-                if not backup.is_file() or sha256(backup) != PREIMAGE_SHA:
-                    raise ValueError("verified single-field preimage backup required")
-                write_atomic(path, backup.read_bytes())
-                state = "preimage"
+                restore_sha = None
+                if restore_record.is_file():
+                    record = json.loads(restore_record.read_text())
+                    restore_path = Path(record["backup"])
+                    restore_sha = record["sha256"]
+                else:
+                    restore_path = preimage_backup
+                    restore_sha = PREIMAGE_SHA
+                if not restore_path.is_file() or sha256(restore_path) != restore_sha:
+                    raise ValueError("verified pre-install backup required")
+                write_atomic(path, restore_path.read_bytes())
+                state = ("preimage" if restore_sha == PREIMAGE_SHA else "legacy")
+                report["restored_sha256"] = restore_sha
             report["state_after"] = state
-            report["ready"] = sha256(path) == PREIMAGE_SHA
+            report["ready"] = sha256(path) in (PREIMAGE_SHA, LEGACY_POSTIMAGE_SHA)
         else:
             if state == "postimage":
                 report["state_after"] = state
             else:
-                if not backup.exists():
-                    backup.parent.mkdir(parents=True, exist_ok=True)
-                    backup.write_bytes(path.read_bytes())
-                elif sha256(backup) != PREIMAGE_SHA:
-                    raise ValueError("preimage backup SHA-256 mismatch")
+                if not source_backup.exists():
+                    source_backup.parent.mkdir(parents=True, exist_ok=True)
+                    source_backup.write_bytes(path.read_bytes())
+                elif sha256(source_backup) != digest:
+                    raise ValueError("pre-install backup SHA-256 mismatch")
                 if not SOURCE.is_file() or sha256(SOURCE) != POSTIMAGE_SHA:
                     raise ValueError("bundled fused postimage SHA-256 mismatch")
                 write_atomic(path, SOURCE.read_bytes())
                 if sha256(path) != POSTIMAGE_SHA:
                     raise ValueError("fused postimage SHA-256 mismatch after write")
+                restore_record.parent.mkdir(parents=True, exist_ok=True)
+                restore_record.write_text(json.dumps(
+                    {"sha256": digest, "backup": str(source_backup),
+                     "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())},
+                    indent=1) + "\n")
+                report["backup"] = str(source_backup)
                 report["state_after"] = "postimage"
             report["ready"] = True
     except (OSError, ValueError) as exc:

@@ -39,4 +39,6 @@ export TRITON_CACHE_DIR="${TRITON_CACHE_DIR:-$XDG_CACHE_HOME/triton}"
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-$XDG_CACHE_HOME/pip}"
 export MAX_JOBS="${MAX_JOBS:-8}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
-export TASK_QUEUE_ENABLE="${TASK_QUEUE_ENABLE:-1}"
+# 2026-11-24 ABBA: mode 2 narrows S1 mean/p50 (~-7 ms) and keeps S2
+# neutral; 1 reproduces the earlier baseline.
+export TASK_QUEUE_ENABLE="${TASK_QUEUE_ENABLE:-2}"

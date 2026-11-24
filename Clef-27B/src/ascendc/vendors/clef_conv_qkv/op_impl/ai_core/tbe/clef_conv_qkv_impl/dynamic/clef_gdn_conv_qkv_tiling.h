@@ -9,6 +9,7 @@ struct ClefGdnConvQkvTilingData {
     uint32_t totalTiles;
     uint32_t tilesPerCore;
     uint32_t coreNum;
+    uint32_t inputChannels;
     float eps;
 };
 #endif

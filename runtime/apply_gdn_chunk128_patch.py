@@ -32,6 +32,14 @@ POSTIMAGE_SHA = {
     "vllm_ascend/ops/gdn_attn_builder.py":
         "f81eeefa957790398adbbde35fd3e7b2c5aaf3eeac9273400c7412f753ba4a8a",
 }
+#: The stacked adaptive-chunk postimage keeps the same default behavior
+#: (threshold 0 is all-128), so this installer treats it as patched.
+ADAPTIVE_POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
+        "2abb3389f8502f17f0f0f0f567d50aed035623dae0740355a66aaa5d5a035b59",
+    "vllm_ascend/ops/gdn_attn_builder.py":
+        "bf7ca3f93f8ed54957e0e012c14a932fd01d2c459e6dbce487c2909890d8de23",
+}
 TARGETS = {
     "vllm_ascend/device/device_op.py": "patch_device_op",
     "vllm_ascend/ops/gdn_attn_builder.py": "patch_gdn_attn_builder",
@@ -53,6 +61,10 @@ def status(path: Path, relative: str) -> str:
     if digest == PREIMAGE_SHA[relative]:
         return "preimage"
     if digest == POSTIMAGE_SHA[relative]:
+        return "patched"
+    if digest == ADAPTIVE_POSTIMAGE_SHA[relative]:
+        # The stacked adaptive-chunk patch preserves the chunk-128 default at
+        # threshold 0; do not overwrite it on every service start.
         return "patched"
     return "unknown"
 

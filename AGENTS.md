@@ -3,6 +3,7 @@
 ## 沟通与目标
 
 - 使用中文直接陈述结论、证据和下一步，遵循用户关于肯定表达的要求。
+- 2026-11-24 新 A3 单一常驻 TP2 优化（`docs/tp2-alwayson-2026-11-24.md`）：`TASK_QUEUE_ENABLE=2` ABBA 全量 S1 mean **118.53→110.85 ms**、p50 111.39→101.09、p95 156.56→156.21、吞吐 +6.9%，逐位一致（0.0 / 0 翻转），S2 中性；已设为默认。`ClefGdnConvQkv` v4 用满 **48 AIV**（v3 仅 24），kernel `.o` 不变，v3/v4 48 例 144 张量 `max_abs=0.0`，长序列单算子 1.8–1.9× 提速、对分解路径 3.2–3.7×；cap 由 1600 提升到 16384。服务级 OD S1 p95 三轮 **154.06/154.73/155.34 ms**（基线 156.37–156.51），OD 全量逐位一致；ERQA C1 p95 **278.08 vs 299.44**、C16 **2974.5 vs 3429.4 ms、8.197 vs 7.150 dec/s、218/400 vs 216/400**。CPU 绑核 mean −1.95 ms 但保留为 opt-in（`runtime/clef_bind_supervisor.py`）；ATB cache、关 access log、Rank1 跳过 joint head 均中性；GDN chunk64 仅 307 token 略快、多序列全面更慢，自适应阈值 384 未过采纳门，保留全 128 默认（`CLEF_GDN_CHUNK128_MIN_TOKENS=0`）。
 - 2026-11-17 最终两项非量化优化（已采用）：`ACLNN_CACHE_LIMIT=1000000` 修复 aclnn executor 缓存耗尽导致的 +55 ms 形状慢路径；MLP BF16 NZ（FRACTAL_NZ，GDN 安装器 v4，`CLEF_MLP_BF16_NZ=1`）再降 p95。官方 `start.sh --config s1` 全量 S1 **mean 121.705 / p50 113.656 / p95 166.002 ms、8.213 dec/s**；2,352 条响应逐位一致，OD Capability 74.3107、ERQA 217/400、S2 B8 C16 16.376。证据 `docs/final-summary-2026-11-17.md`、`docs/aclnn-cache-shape-fix-2026-11-17.md`、`Clef-27B/logs/tuning5-20261117/`。
 - 当前任务为在现有昇腾 A3 环境建立可复现的 Clef-27B 比赛提交版本，包含完整主干、联合决策头、文本与图文接口、质量及性能评测证据。
 - 2026-11-13 用户补充的比赛交付规则见 `docs/submission-rules-2026-11-13.md`。当前按该版本准备验收；后续以主办方最终协议与模板更新，规则来源和版本均需保留。

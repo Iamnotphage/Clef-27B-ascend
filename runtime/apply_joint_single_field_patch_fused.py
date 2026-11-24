@@ -24,7 +24,8 @@ SOURCE = HERE / "joint_single_field" / "clef_joint_schema.py"
 TARGET = "vllm/model_executor/models/clef_joint_schema.py"
 PREIMAGE_SHA = "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be"
 POSTIMAGE_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
-SERVICE_POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+SERVICE_POSTIMAGE_SHA = "26d3ad047c42f47a7fa22e00d6bac53a8a063ed010e753cb79a673660f60d7c4"
+LEGACY_SERVICE_POSTIMAGE_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 SERVICE_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 
 
@@ -69,12 +70,12 @@ def main(argv=None) -> int:
             if not path.is_file():
                 raise ValueError("joint schema source missing")
             digest = sha256(path)
-            allowed_postimage = POSTIMAGE_SHA
+            allowed_postimage = {POSTIMAGE_SHA}
             if args.check and os.environ.get(SERVICE_ENV) == SERVICE_POSTIMAGE_SHA:
-                allowed_postimage = SERVICE_POSTIMAGE_SHA
+                allowed_postimage |= {SERVICE_POSTIMAGE_SHA, LEGACY_SERVICE_POSTIMAGE_SHA}
             if digest == PREIMAGE_SHA:
                 state = "preimage"
-            elif digest in (POSTIMAGE_SHA, allowed_postimage):
+            elif digest in allowed_postimage:
                 state = "single-field"
             else:
                 raise ValueError(f"unknown joint schema source SHA-256: {digest}")

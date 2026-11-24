@@ -34,12 +34,14 @@ JOINT_FUSED_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_fused_attention.py"
 JOINT_FUSED_GUARD = REPO_ROOT / "runtime" / "apply_joint_single_field_patch_fused.py"
 JOINT_SERVICE_CHECK_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_service_check.py"
 CHUNK128_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_chunk128_patch.py"
+ADAPTIVE_CHUNK_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_adaptive_chunk_patch.py"
 DEFAULT_CONFIG = "s1"
 JOINT_ORIGINAL_SHA = "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be"
 JOINT_SINGLE_FIELD_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
-JOINT_FUSED_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
+JOINT_FUSED_SHA = "26d3ad047c42f47a7fa22e00d6bac53a8a063ed010e753cb79a673660f60d7c4"
+JOINT_LEGACY_FUSED_SHA = "aa3e17585f8bd60a4d05e342abc7e2773c79a0b2d49f0370d15e29bcc6b72503"
 JOINT_GUARD_PRE_SHA = "76595657d312699b4b1564d1bc054229808cd775c16702fb0e36fcdb1f9706d9"
-JOINT_GUARD_POST_SHA = "36eaff440fd58063a3311b2efabfd1604b4a284cd24f3b7ac3cc4e7fe177fcc7"
+JOINT_GUARD_POST_SHA = "fdc9dde620a7995faede928fd97edeb3a37cae5de55ca28eea5b17ef4fd6da05"
 JOINT_FLAG_ENV = "CLEF_JOINT_FUSED_ATTN"
 JOINT_ALLOW_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 MM_PROCESSOR_KWARGS = (
@@ -315,6 +317,8 @@ def gdn_decision_prefill(config, apply=True):
                 allowed["conv"] = contract.CONV_QKV_POSTIMAGE_SHA[path]
             if path in contract.CHUNK128_POSTIMAGE_SHA:
                 allowed["chunk128"] = contract.CHUNK128_POSTIMAGE_SHA[path]
+            if path in getattr(contract, "ADAPTIVE_POSTIMAGE_SHA", {}):
+                allowed["adaptive"] = contract.ADAPTIVE_POSTIMAGE_SHA[path]
             if path in contract.V2_POSTIMAGE_SHA:
                 allowed["v2"] = contract.V2_POSTIMAGE_SHA[path]
             if path in contract.LEGACY_POSTIMAGE_SHA:
@@ -342,7 +346,7 @@ def gdn_decision_prefill(config, apply=True):
                 or flag.get("present") != (flag_state != "missing")):
             raise SystemExit("GDN decision flag module is missing version metadata or has unknown content")
         complete = all(
-            state in ("patched", "qkv", "conv", "chunk128")
+            state in ("patched", "qkv", "conv", "chunk128", "adaptive")
             for state in statuses.values()
         ) and flag_state == "current"
         if report.get("ready") is not complete:
@@ -546,6 +550,69 @@ def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
     return record
 
 
+def gdn_adaptive_chunk_patch(config, output_dir, apply=True, decision_enabled=False):
+    """Install/verify the stacked GDN adaptive-chunk selector.
+
+    The default ``CLEF_GDN_CHUNK128_MIN_TOKENS=0`` keeps the measured all-128
+    path; a positive threshold routes short requests to chunk 64.
+    """
+    requested = decision_enabled and os.environ.get(
+        "CLEF_GDN_ADAPTIVE_CHUNK", "0").strip().lower() not in (
+            "0", "false", "no", "off")
+    record = {
+        "enabled": False,
+        "requested": requested,
+        "installer": str(ADAPTIVE_CHUNK_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(ADAPTIVE_CHUNK_INSTALLER.read_bytes())
+            if ADAPTIVE_CHUNK_INSTALLER.is_file() else None),
+    }
+    if not requested:
+        return record
+    if not ADAPTIVE_CHUNK_INSTALLER.is_file():
+        raise SystemExit(f"GDN adaptive-chunk installer missing: {ADAPTIVE_CHUNK_INSTALLER}")
+    if not apply:
+        record.update(pending_install=True)
+        return record
+    spec = importlib.util.find_spec("vllm_ascend")
+    init = Path(spec.origin).resolve() if spec and spec.origin else None
+    if init is None or init.name != "__init__.py" or init.parent.name != "vllm_ascend":
+        raise SystemExit("Could not resolve the vLLM-Ascend worker import tree")
+    tree = init.parent.parent
+    backup = Path(output_dir).expanduser().resolve() / "patch-backup" / "gdn-adaptive-chunk"
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(ADAPTIVE_CHUNK_INSTALLER), "--tree", str(tree),
+             "--backup-dir", str(backup), flag],
+            capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            raise SystemExit(
+                f"GDN adaptive-chunk patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return json.loads(result.stdout)
+
+    def verify(report):
+        statuses = {
+            path: item.get("status_after") for path, item in report.get("files", {}).items()
+        }
+        expected = {"vllm_ascend/device/device_op.py",
+                    "vllm_ascend/ops/gdn_attn_builder.py"}
+        if set(statuses) != expected or not all(
+                state == "adaptive" for state in statuses.values()):
+            raise SystemExit(f"GDN adaptive-chunk patch incomplete: {statuses}")
+        return statuses
+
+    report = run("--check")
+    complete = bool(report.get("ready"))
+    if not complete:
+        run("--apply")
+        report = run("--check")
+    statuses = verify(report)
+    record.update(enabled=True, tree=str(tree), patch_state=statuses)
+    return record
+
+
 def joint_single_field_patch(config, apply=True):
     """Install/verify the Q=1 joint-head postimage."""
     requested = bool(CONFIGS[config].get("joint_single_field", False))
@@ -655,7 +722,8 @@ def fused_joint_patch(config, output_dir, apply=True):
         target = Path(probe["target"])
         before = sha256_file(target)
         record["target_sha256_before"] = before
-        if before not in (JOINT_ORIGINAL_SHA, JOINT_SINGLE_FIELD_SHA, JOINT_FUSED_SHA):
+        if before not in (JOINT_ORIGINAL_SHA, JOINT_SINGLE_FIELD_SHA, JOINT_FUSED_SHA,
+                          JOINT_LEGACY_FUSED_SHA):
             raise ValueError(f"unknown joint schema SHA-256: {before}")
 
         check_env = dict(os.environ)
@@ -720,6 +788,9 @@ def fused_joint_patch(config, output_dir, apply=True):
         record.update(ok=True, guard_action=guard_action, fused_action=fused_action,
                       branch=("original->f810->fused"
                               if guard_action == "apply" and fused_action == "apply"
+                              else "legacy->fused"
+                              if fused_action == "apply"
+                              and fused_check["report"].get("legacy_postimage")
                               else "f810->fused" if fused_action == "apply" else "aa3e-noop"))
         write_json_atomic(record_path, record)
         return record
@@ -831,6 +902,10 @@ def qkv_norm_environment(conv_qkv=False):
     if not library.is_file():
         return {}
     conv_vendor = vendor.parent / "clef_conv_qkv"
+    explicit_conv = os.environ.get("CLEF_CONV_QKV_VENDOR")
+    if explicit_conv:
+        # Opt-in candidate vendor for A/B builds outside the bundled tree.
+        conv_vendor = Path(explicit_conv).expanduser().resolve()
     conv_library = conv_vendor / "op_api" / "lib" / "libcust_opapi.so"
     conv_active = bool(conv_qkv) and conv_library.is_file()
     parts = [vendor, vendor / "op_api" / "lib", vendor.parent.parent]
@@ -854,8 +929,10 @@ def qkv_norm_environment(conv_qkv=False):
         ld_parts.append(existing_ld)
     environment = {
         "CLEF_QKV_NORM_VENDOR": str(vendor),
+        # The 48-AIV kernel is bit-identical to v3 and stays faster than the
+        # decomposed path through 10,294 tokens; keep the fused path for ERQA.
         "CLEF_GDN_QKV_NORM_MAX_TOKENS": os.environ.get(
-            "CLEF_GDN_QKV_NORM_MAX_TOKENS", "1600"),
+            "CLEF_GDN_QKV_NORM_MAX_TOKENS", "16384"),
         "ASCEND_CUSTOM_OPP_PATH": os.pathsep.join(str(part) for part in parts),
         "LD_LIBRARY_PATH": os.pathsep.join(ld_parts),
     }
@@ -1119,6 +1196,14 @@ def build_launch(args):
         config, apply=not getattr(args, "dry_run", False),
         decision_enabled=gdn_decision["enabled"])
     gdn_decision["gdn_chunk128_patch"] = chunk128_patch
+    adaptive_patch = gdn_adaptive_chunk_patch(
+        config, output_dir, apply=not getattr(args, "dry_run", False),
+        decision_enabled=chunk128_patch["enabled"])
+    gdn_decision["gdn_adaptive_chunk_patch"] = adaptive_patch
+    if adaptive_patch["enabled"]:
+        environment["CLEF_GDN_CHUNK_RULE"] = os.environ.get("CLEF_GDN_CHUNK_RULE", "max_seq")
+        environment["CLEF_GDN_CHUNK128_MIN_TOKENS"] = os.environ.get(
+            "CLEF_GDN_CHUNK128_MIN_TOKENS", "0")
     if CONFIGS[config].get("joint_fused_attention"):
         joint_patch = fused_joint_patch(
             config, output_dir, apply=not getattr(args, "dry_run", False))
@@ -1255,7 +1340,7 @@ def main():
 
     os.environ.update(launch["service_environment"])
     os.environ.setdefault("OMP_NUM_THREADS", "1")
-    os.environ.setdefault("TASK_QUEUE_ENABLE", "1")
+    os.environ.setdefault("TASK_QUEUE_ENABLE", "2")
 
     log_fd = os.open(launch["log"], os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
     os.dup2(log_fd, 1)

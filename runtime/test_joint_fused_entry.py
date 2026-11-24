@@ -243,7 +243,7 @@ class JointFusedEntryTest(unittest.TestCase):
                      REPO / "runtime/joint_service_check/apply_joint_single_field_patch.py"):
             self.assertTrue(path.is_file(), path)
         self.assertEqual(launcher.sha256_file(REPO / "runtime/apply_joint_fused_attention.py"),
-                         "b09cd6025b0aa63ae0410781f3c611e9d512f7ef939cb78dab41b8413a19d406")
+                         "2a659d07154768a5e2a4a51001aff05aa966359bdf1deef3b6b1d2f115e7e7c5")
         self.assertEqual(launcher.sha256_file(REPO / "runtime/apply_joint_single_field_patch_fused.py"),
                          launcher.JOINT_GUARD_POST_SHA)
         self.assertEqual(launcher.sha256_file(REPO / "runtime/joint_fused_attention/clef_joint_schema.py"),

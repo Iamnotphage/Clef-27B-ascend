@@ -83,6 +83,10 @@ CHUNK128_POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
         "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226",
 }
+ADAPTIVE_POSTIMAGE_SHA = {
+    "vllm_ascend/device/device_op.py":
+        "2abb3389f8502f17f0f0f0f567d50aed035623dae0740355a66aaa5d5a035b59",
+}
 V3_POSTIMAGE_SHA = {
     "vllm_ascend/patch/worker/patch_qwen3_5.py":
         "1b82b52eabe24d8fcdcb55ff16c307a9b04358ba846a4d73ebb4f1443c0b0460",
@@ -269,6 +273,8 @@ def status(path: Path, relative: str) -> str:
         return "conv"
     if digest == CHUNK128_POSTIMAGE_SHA.get(relative):
         return "chunk128"
+    if digest == ADAPTIVE_POSTIMAGE_SHA.get(relative):
+        return "adaptive"
     if digest == V3_POSTIMAGE_SHA.get(relative):
         return "v3"
     if digest == V2_POSTIMAGE_SHA.get(relative):
@@ -732,6 +738,7 @@ def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
             "postimage_sha256": POSTIMAGE_SHA[relative],
             "v2_postimage_sha256": V2_POSTIMAGE_SHA.get(relative),
             "v1_postimage_sha256": V1_POSTIMAGE_SHA.get(relative),
+            "adaptive_postimage_sha256": ADAPTIVE_POSTIMAGE_SHA.get(relative),
         })
     flag_target = tree / FLAG_TARGET
     report.setdefault("flag_module", {}).update({
@@ -743,7 +750,7 @@ def refresh_report(report: dict, tree: Path, *, after: bool = False) -> None:
         "expected_sha256": FLAG_SHA256,
     })
     report["ready"] = (
-        all(item[state_key] in ("patched", "qkv", "conv", "chunk128")
+        all(item[state_key] in ("patched", "qkv", "conv", "chunk128", "adaptive")
             for item in report["files"].values())
         and report["flag_module"]["status"] == "current"
         and report["flag_module"]["source_sha256"] == FLAG_SHA256
@@ -767,7 +774,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
         path = tree / relative
         current = item["status_before"]
         if current not in ("preimage", "patched", "qkv", "conv", "chunk128",
-                           "v2", "v3", "legacy"):
+                           "adaptive", "v2", "v3", "legacy"):
             raise ValueError(f"{relative}: refused {current} source content")
         backup = backup_dir / f"{path.name}.preimage"
         backup_data = None
@@ -785,7 +792,7 @@ def plan_changes(report: dict, tree: Path, backup_dir: Path, *, revert: bool) ->
             writes[path] = backup_data
             item["action"] = "reverted"
         else:
-            if current in ("patched", "qkv", "conv", "chunk128"):
+            if current in ("patched", "qkv", "conv", "chunk128", "adaptive"):
                 item["action"] = "already-patched"
                 continue
             if current == "v3":

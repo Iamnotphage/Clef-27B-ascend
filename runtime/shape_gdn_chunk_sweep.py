@@ -50,6 +50,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--tokens", default="145,307,967,1084,1200,1258,1595,10294")
+    parser.add_argument("--seq-lens", default="",
+                        help="Semicolon-separated varlen layouts, e.g. "
+                             "'300x8;450x16;967,967,967,967' or "
+                             "'200,250,300,350,400,500,800,1100'. "
+                             "Empty keeps the single-sequence T sweep.")
     parser.add_argument("--chunks", default="64,128")
     parser.add_argument("--sequence-modes", default="varlen,dense",
                         help="Single-sequence metadata paths to compare")
@@ -65,8 +70,33 @@ def main() -> int:
     modes = args.sequence_modes.split(",")
     if not modes or any(mode not in ("varlen", "dense") for mode in modes):
         parser.error("sequence modes must be varlen and/or dense")
+    if args.seq_lens.strip() and "dense" in modes:
+        # Packed multi-sequence inputs only have the varlen metadata path.
+        modes = ["varlen"] if "varlen" in modes else parser.error(
+            "dense mode is not defined for --seq-lens")
     rows = []
-    for T in [int(value) for value in args.tokens.split(",")]:
+    if args.seq_lens.strip():
+        layouts = []
+        for group in args.seq_lens.split(";"):
+            group = group.strip()
+            if not group:
+                continue
+            if "x" in group:
+                count, length = group.split("x")
+                lens = [int(length)] * int(count)
+            else:
+                lens = [int(value) for value in group.split(",") if value.strip()]
+            label = f"{len(lens)}x{lens[0]}" if len(set(lens)) == 1 else "mixed"
+            layouts.append((label, lens))
+        if not layouts:
+            parser.error("--seq-lens did not contain a layout")
+    else:
+        layouts = [(str(T), [T]) for T in [int(value) for value in args.tokens.split(",")]]
+    for label, lens in layouts:
+        T = sum(lens)
+        cu_list = [0]
+        for length in lens:
+            cu_list.append(cu_list[-1] + length)
         generator = torch.Generator().manual_seed(T)
         # Match the service's L2-normalized Q/K contract. Unnormalized random
         # K destabilizes the triangular solve and makes chunk128 a false NaN.
@@ -76,9 +106,9 @@ def main() -> int:
         v = torch.randn(1, T, HV, D, generator=generator).to("npu", torch.bfloat16)
         g = (-0.5 * torch.rand(1, T, HV, generator=generator)).to("npu", torch.float32) - 1e-4
         beta = torch.rand(1, T, HV, generator=generator).to("npu", torch.bfloat16)
-        cu = tuple([0, T])
+        cu = tuple(cu_list)
         def make_call(chunk, mode="varlen"):
-            indices = prepare_chunk_indices(torch.tensor([0, T], dtype=torch.int32), chunk)
+            indices = prepare_chunk_indices(torch.tensor(cu_list, dtype=torch.int32), chunk)
             ci = tuple(indices.to(torch.int64).reshape(-1).tolist())
             def call():
                 return chunk_gated_delta_rule_fwd(
@@ -115,7 +145,8 @@ def main() -> int:
                     delta = (reference.float() - out.float()).abs()
                     equality.update(max_abs=float(delta.max()),
                                     rmse=float(delta.square().mean().sqrt()))
-                row = {"tokens": T, "chunk": chunk, "sequence_mode": mode,
+                row = {"tokens": T, "layout": label, "sequences": len(lens),
+                       "seq_lens": lens, "chunk": chunk, "sequence_mode": mode,
                        "equality": equality}
                 if finite:
                     row.update(bench(call, args.warmup, args.iters))
@@ -123,15 +154,17 @@ def main() -> int:
                 print(json.dumps({k: v for k, v in row.items()
                                   if not k.endswith("samples_ms")}, allow_nan=False), flush=True)
             except Exception as error:  # noqa: BLE001 - report unsupported chunk sizes
-                row = {"tokens": T, "chunk": chunk, "sequence_mode": mode,
+                row = {"tokens": T, "layout": label, "sequences": len(lens),
+                       "seq_lens": lens, "chunk": chunk, "sequence_mode": mode,
                        "error": f"{type(error).__name__}: {error}"}
                 rows.append(row)
                 print(json.dumps(row), flush=True)
     with open(args.output, "w") as handle:
-        json.dump({"schema_version": 2, "rows": rows,
+        json.dump({"schema_version": 3, "rows": rows,
                    "created_at": datetime.now(timezone.utc).isoformat(),
                    "device": args.device, "warmup": args.warmup, "iters": args.iters,
                    "qk_normalized": True, "reference_chunk": 64,
+                   "varlen_layouts": args.seq_lens or "single-sequence",
                    "disable_recompute": False,
                    "input_kind": "synthetic service-contract; validate full-model quality separately",
                    "host_load": os.getloadavg(),
