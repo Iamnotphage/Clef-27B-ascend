@@ -1,5 +1,7 @@
 # Clef 文本 S1 主机激活缓存
 
+2026-11-24 选定同步 K56，缓存为第 56 层边界 hidden/residual。命中仍执行第 56–63 层、原 final norm 和完整联合头。OpenDecisions 当前成绩使用 fresh 冷填和两轮自然热的等权算术平均。下文固定序 K32/K56 中位数保留其历史测量口径。[当前测量与交接](../../docs/handoff-2026-11-24.md)
+
 `od-s1-k32` 是显式配置，沿用 `od-s1` 的 TP2、BF16、eager、B1、4096 上下文与 4096 batched tokens。默认 `od-s1` 使用已采用的 aa3e/ead25 服务。启用前按项目固定软件栈加载运行环境。
 
 ```bash
@@ -17,7 +19,7 @@ bash scripts/start_dataset_profile.sh od-s1-k32 \
 
 固定调度器保留 512-token 管理页和 128-token kernel 页的原映射。准入保留 `PrefillCacheHit` 后端标签，核实际组、BF16 NBHD K/V 几何、无共享绑定和 fresh host metadata。在验收诊断窗，两 rank 实际写槽与已展开读表逐 token 验证，三条冻结任务的原始 64 层、K32 fill 和 32 层 hit 最终 hidden 与完整答案逐位相同。
 
-## 测量口径
+## 历史固定序 K32／K56 测量口径
 
 沿用冻结的 OpenDecisions 2,352 条文本请求、C1、`warmup=0`、一次尝试与 300 秒单请求超时。启动后只做 GET 就绪检查。同进程首轮从空缓存自然填充，随后两轮自然复用。所有真实缓存拷贝、键计算、TP 共识均计入客户端耗时。每轮独立计算 linear P95，并保留首轮及自然复用轮次。三轮主统计取三次 P95 的中位数。正式轮次关闭 tap、逐槽设备取证、张量比较与资源采样，缓存端点记账在空闲边界。
 

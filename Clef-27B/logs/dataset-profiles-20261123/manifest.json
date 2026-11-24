@@ -81,8 +81,8 @@
   },
   "selection": {
     "OpenDecisions": {
-      "s1": "od-s1-k56-20261123-c1-3round-median",
-      "s2": "od-s2-aa3e-conv-qkv-20261123-on-b16-c64"
+      "s1": "od-s1-k56-20261124-c1-shuffled-3round-mean",
+      "s2": "od-s2-k56-20261124-b1-c2-shuffled-3round-mean"
     },
     "ERQA": {
       "s1": "erqa-s1-aa3e-20261123-on-b1-c1-cold-first-400-jpeg-off",
@@ -92,7 +92,8 @@
   "evidence_archives": {
     "erqa-s2-b8-evidence.tar.gz": {
       "bytes": 1271157,
-      "sha256": "0127d45a4f7bbc7c11b59e8904514364d08f2f793488f73138fb0832afd18f28"
+      "sha256": "0127d45a4f7bbc7c11b59e8904514364d08f2f793488f73138fb0832afd18f28",
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/erqa-s2-b8-evidence.tar.gz"
     },
     "erqa-s2-b16-evidence.tar.gz": {
       "bytes": 636287,
@@ -112,7 +113,33 @@
       "files": 47,
       "index_sha256": "67e55487b73f4a9b68de7121ecaea26786ab521cf39a5ff3bdae65fd57ed56ff",
       "sha256": "3254e747d67217068e63c6efc255dc6aac9ec7ab5953c67ca4378433d3ff1123",
-      "size": 8167749
+      "size": 8167749,
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/k56-formal-evidence.tar.gz"
+    },
+    "k56-s2-b1-c1-full-evidence.tar.gz": {
+      "sha256": "fb51f0ccaf161080335e16046ae05268fedc327a5fdfe602b6ac0eb2fdaa2c6d",
+      "index_sha256": "d94d8f54d4944fc2ac95a9935ed4985f7763265e566e6d5b0fc9f8869a66a25d",
+      "bytes": 38148507,
+      "members": 140,
+      "raw_pairs": 12,
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/k56-s2-b1-c1-full-evidence.tar.gz"
+    },
+    "k56-s2-b1-c2-full-evidence.tar.gz": {
+      "sha256": "470d48f186c81fdcbe7bd387df03c3f1d2767923359ffd5f319637eeb781feca",
+      "index_sha256": "10db060b87e28bbe943df30280d4142f57e3a2e1b3eadbc2d54666e67c02f635",
+      "bytes": 38133669,
+      "members": 140,
+      "raw_pairs": 12,
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/k56-s2-b1-c2-full-evidence.tar.gz"
+    },
+    "erqa-s1-selected-cold-evidence.tar.gz": {
+      "sha256": "7e309dd2bd981622aa0eea43ddaef8ff401d47dcdd59e45a81fa49eb62749aae",
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/erqa-s1-selected-cold-evidence.tar.gz",
+      "bytes": 198980
+    },
+    "k56-s2-b1-c4-full-evidence.tar.gz": {
+      "sha256": "ec589aa025213e80239ce910a99de250668e2c0fa17f6e9c7d5a9772d77887d3",
+      "artifact": "ao://sessions/clef-27b-ascend/clef-27b-ascend-44/artifacts/k56-s2-b1-c4-full-evidence.tar.gz"
     }
   },
   "erqa_s2_protocol": {
@@ -395,6 +422,99 @@
         "path": "k56-s1-evidence.json",
         "sha256": "30b5834aebd503bae7aa5ed00a39335490122f9fce44585e8104dc6863990bcd"
       }
+    },
+    "od-s1-k56-20261124-c1-shuffled-3round-mean": {
+      "profile": "od-s1-k56",
+      "source_window_measurement_id": "od-k56-s2-b1-c1-full-v1",
+      "client_concurrency": 1,
+      "requests_per_round": 2352,
+      "rounds": 3,
+      "seeds": [
+        5601,
+        5602,
+        5603
+      ],
+      "warmup": 0,
+      "attempts_per_request": 1,
+      "state": "GET-only readiness with empty caches, one cold fill and two natural repeats on the same API",
+      "aggregation": "arithmetic_mean_of_three_complete_rounds",
+      "p95_ms": 80.99015325618286,
+      "decisions_per_second": 26.70627171264996,
+      "round_p95_ms": [
+        178.55016253888607,
+        32.592142745852456,
+        31.82815448381006
+      ],
+      "round_decisions_per_second": [
+        8.152719805779633,
+        35.62629754999025,
+        36.33979778218
+      ],
+      "evidence": {
+        "path": "k56-s2-b1-c1-evidence.json",
+        "sha256": "7175a2f49a0003a96e5c538b178b29ad70a61dc509778fa61a40efb37a88458f"
+      }
+    },
+    "od-s2-k56-20261124-b1-c2-shuffled-3round-mean": {
+      "profile": "od-s1-k56",
+      "source_window_measurement_id": "od-k56-s2-b1-c2-full-v1",
+      "client_concurrency": 2,
+      "requests_per_round": 2352,
+      "rounds": 3,
+      "seeds": [
+        5601,
+        5602,
+        5603
+      ],
+      "warmup": 0,
+      "attempts_per_request": 1,
+      "state": "GET-only readiness with empty caches, one cold fill and two natural repeats on the same API",
+      "aggregation": "arithmetic_mean_of_three_complete_rounds",
+      "p95_ms": 136.96814232195416,
+      "decisions_per_second": 28.559602099289666,
+      "round_p95_ms": [
+        298.39121447876096,
+        56.53838338330388,
+        55.97482910379767
+      ],
+      "round_decisions_per_second": [
+        8.43282671845065,
+        38.434537337966646,
+        38.81144224145171
+      ],
+      "evidence": {
+        "path": "k56-s2-b1-c2-evidence.json",
+        "sha256": "2cb5ed02e6dd6313d1ed6df81c3c16f3ec88e0fd53c78909038e994febee843d"
+      }
+    },
+    "od-s1-k56-20261123-c1-fixed-order-3round-mean": {
+      "profile": "od-s1-k56",
+      "source_window_measurement_id": "od-s1-k56-20261123-c1-3round-median",
+      "client_concurrency": 1,
+      "requests_per_round": 2352,
+      "rounds": 3,
+      "state": "Historical fixed order, cold fill and two natural repeats",
+      "aggregation": "arithmetic_mean_of_three_complete_rounds",
+      "round_p95_ms": [
+        169.2979904357342,
+        32.57469316013157,
+        32.16199516318738
+      ],
+      "p95_ms": 78.01155958635105,
+      "evidence": {
+        "path": "k56-s1-evidence.json",
+        "sha256": "30b5834aebd503bae7aa5ed00a39335490122f9fce44585e8104dc6863990bcd"
+      }
     }
-  }
+  },
+  "selection_date": "2026-11-24",
+  "previous_opendecisions_selection": {
+    "s1": "od-s1-k56-20261123-c1-3round-median",
+    "s2": "od-s2-aa3e-conv-qkv-20261123-on-b16-c64"
+  },
+  "selected_statistic": {
+    "OpenDecisions": "Cold fill and two natural repeats from one fresh API. Equal arithmetic weights over all three rounds. S1 averages each round's linear P95. S2 averages each round's successful decisions divided by original report wall.",
+    "ERQA": "Selected cold-first single 400-item pass per metric, JPEG cache off. No three-round mean is available."
+  },
+  "opendecisions_current_scan": "k56-s2-b1-concurrency-scan.json"
 }

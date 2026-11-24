@@ -2,6 +2,8 @@
 
 Clef-27B 在昇腾 910A3 上的适配与性能调优工程。
 
+2026-11-24 交接选定同步 K56。OpenDecisions 全量 S1 为 B1/C1 的三轮 linear P95 算术均值 **80.990153 ms**，S2 为已测最高点 B1/C2 的三轮吞吐算术均值 **28.559602 decisions/s**。ERQA 选定值沿用原 400 题单轮冷首遍。[当前结果表](Clef-27B/results.csv) · [交接与复现](docs/handoff-2026-11-24.md)
+
 2026-11-13 已完成端到端 profiling：同四补丁、固定307 tokens，各900次请求的 TP1/TP2 吞吐为 **7.144 / 7.917 requests/s**。14个窗口、24份rank trace、长输入/字段/候选/多模态/batching矩阵与恢复验收均已保存；当前服务为已恢复的 TP2/4096 多模态配置。[完整分析报告](docs/profiling-2026-11-12.md) · [性能矩阵](docs/evidence/profiling-20261112/all-performance-matrix.csv)
 
 2026-11-17 完成 **aclnn executor cache 修复**：默认缓存只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 固定多约 55 ms；`ACLNN_CACHE_LIMIT=1000000` 后全部快档且输出逐位不变。官方 `start.sh --config s1` 全量 S1 **168.633 ms**（原 190.405）、7.960 dec/s，ERQA 217/400、S2 16.398 不变。[报告](docs/aclnn-cache-shape-fix-2026-11-17.md) · [最终汇总](docs/final-summary-2026-11-17.md)
@@ -47,7 +49,7 @@ OpenDecisions 当前公开版本为 **1.0.1，2,352 条**。Clef 原始服务输
 | --- | ---: | ---: | ---: | ---: |
 | 适配后 baseline | 217.036 ms | 180.069 ms | 5.715 @ C16 | 325.84 ms |
 | 上一版（BIC+GDN v2+SF+aclnn cache+MLP NZ） | 166.002 ms | 121.705 ms | 16.376 @ C16 | 313.506 ms |
-| **当前优化（conv+QKV 融合 + chunk128，2026-11-18 五轮复核）** | **155.86 ms** | **112.98 ms** | **17.462 @ C64** | **309.926 ms** |
+| **历史优化（conv+QKV 融合 + chunk128，2026-11-18 五轮复核）** | **155.86 ms** | **112.98 ms** | **17.462 @ C64** | **309.926 ms** |
 | 变化 | −61.18 ms（−28.19%） | −67.09 ms（−37.26%） | **约 3.06×** | −15.91 ms（−4.88%） |
 
 - S1 为 seqs1 单并发全量 2,352 题：2026-11-18 默认入口五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50），mean 112.98、p50 102.87；历史链路为 2026-11-17 aclnn cache 168.633 ms、MLP NZ 166.002 ms、conv+QKV 融合 165.091→160.419、chunk128 →157.745 ms / 8.652 dec/s。S2 最大吞吐为 B16 C64 **17.462 dec/s**（同日两次 17.462/17.475；历史 17.446；Capability 74.1388、accuracy 1902），B8 C16 为 16.738 dec/s、p95 1772 ms。以上均在 host load 18–24 下测得。
