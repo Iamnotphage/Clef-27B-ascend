@@ -256,3 +256,16 @@ model,dataset,image,resources,precision,tensor_parallel_size,max_num_seqs,max_nu
 | `score.py` | 11,463 | `478d14ae7a779c72e0dcd6c3225a3462e24faa8d7e8092afb0d6422ff84e4377` |
 
 本轮核查的 [ModelScope 镜像](https://www.modelscope.cn/datasets/evalscope/OpenDecisions) 与原始仓库当前 README、JSONL 的 SHA-256 一致。下载与复现固定实际 revision、split 和文件哈希，保留来源及评分器，后续版本变更据实更新。[原始提交历史](https://huggingface.co/datasets/jgeuter/OpenDecisions/commits/main)
+
+## 11. 2026-11-24 `POST /v1/systemone` 图文 `state` 列表规则（已实现并验收）
+
+来源为用户于 2026-11-24 在本会话转述的主办方新增统一评测接口规则；本节保留规则日期与来源，主办方最终模板更新时继续核对。
+
+- `POST /v1/systemone` 同时承接 OpenDecisions 文本评测与 ERQA 图文评测；ERQA 以原题顺序的 `image_url` + `text` 内容块放入 `state` 数组，响应与文本选择题格式一致。
+- 识别条件：`state` 为非空列表，且每个元素都是带字符串 `type` 的对象，至少一个元素 `type == "image_url"`。其余 `state`（字符串、JSON 对象、`None`、空列表、纯字符串列表、无 `image_url` 的对象列表）全部原样透传，保证 OpenDecisions 文本路径逐位不变。
+- 命中图文列表后 Fail-Closed：缺失/空/非字符串 `image_url`、非字符串 `text`、混入 `audio_url` 等未声明类型、含图片但结构不完整的混合列表，均返回 HTTP 400，不得回退为文本分词。
+- 图片按原顺序进入 `media["image"]`；顶层 `images` 与 `state` 图片同时存在时按 `[*top_level_images, *state_images]` 合并，统一受 `--limit-mm-per-prompt` 约束。
+- 文本模式：A1 `extract_plain`（`"".join` 纯文本）与 A2 `extract_question_dict`（`{"question": <joined>}`）。2026-11-24 全量 400 题 A/B 为 **213/400 vs 216/400**，锁定 **A2**；响应仍为原始服务概率，不做温度校准。
+- 默认启动必须无需额外覆盖参数即可承接两类评测：`--config s1` 为单一常驻 TP2（16384/seqs16/image16/Tier 1 encoder cache 262144），启动时安装并校验 `serving.py` 补丁与 `_clef_mm_state.py`。
+
+实现、SHA 门控、离线单测与 2026-11-24 真机验收数据见 [systemone-mm-state-2026-11-24.md](systemone-mm-state-2026-11-24.md)。

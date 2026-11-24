@@ -159,3 +159,15 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **ERQA**：C1 冷首遍 **216/400**、p95 **293.893 ms**（基线 300.538）、4.633 dec/s；B8 C16 **219/400 = 0.5475**、7.006 dec/s（基线 216/400、7.166）。全部 400/400、0 失败、0 重试。
 - **质量**：OpenDecisions 与基线逐位一致（Cal 82.4113 / Int 66.0841 / Cap 74.2477、accuracy 1904/2352、MAE 0.402612）；ERQA 0.5400（C1）/0.5475（C16），均在 2PP 内。
 - **未采用**：ATB kernel cache（中性）、关闭 access log（中性）、Rank1 跳过 joint head（中性，开关默认 0）、GDN 自适应 chunk（64 仅在 307 token 附近占优、多序列全面更慢，默认全 128）、CPU 绑核（mean −1.95 ms，但 CPU 集与机器相关，保留 `CLEF_BIND_CPUS` opt-in）。
+
+## 2026-11-24 `/v1/systemone` 图文 `state` 列表 + 单一常驻 TP2 最终验收（已采用）
+
+完整记录见 [docs/systemone-mm-state-2026-11-24.md](../docs/systemone-mm-state-2026-11-24.md)。
+
+- **接口**：`serving.py` 在 `create_decision` 中归一化 `state` 内容块；文本/JSON 原样透传，命中 `image_url` 列表后 Fail-Closed（400）；图片与原顺序文本进入 `media["image"]` 与 `render_state`。安装器 `runtime/apply_systemone_mm_state_patch.py` 校验 `serving.py` preimage `5a700bb7…`、postimage `99a8e1b7…` 与模块 `a8b87841…`。
+- **模式**：A1 `extract_plain` ERQA **213/400**；A2 `extract_question_dict` **216/400**，锁定 A2（等价 2026-11-14 基线 state 包装），未改 `strategies.py`。
+- **单一常驻 TP2**：16384 / seqs16 / util .85 / encoder cache **262144** / TASK_QUEUE=2 / conv+QKV v4（48 AIV）/ joint fused `26d3ad04`。官方裸命令 75 s 就绪。
+- **ERQA**：C1 冷首遍 **216/400**、P95 **288.400 ms**、4.790 dec/s；自然第二遍 **216/400**、P95 **244.382 ms**、5.942 dec/s，冷/暖 **400/400 逐位一致（0 概率差、0 翻转）**；C16 **217/400**、8.240 dec/s、P95 2953.745 ms。全部 400/400、0 失败、0 重试。
+- **OpenDecisions**：S1 2,352/2,352、P95 **154.548 ms**、9.131 dec/s，与已验收 2026-11-24 运行 **max_prob_diff=0.0、0 翻转、2,352/2,352 token 相等**；质量 Cal 82.4113 / Int 66.0841 / Cap **74.2477**、accuracy 1904/2352、MAE 0.402612。S2 C16 **16.345 dec/s**（p95 1783.72 ms，Cap 74.1510）、C64 **17.193 dec/s**（p95 6087.10 ms，Cap 74.0514）。
+- **冒烟**：`erqa-0000` 366 tokens、`erqa-0167` 10,294 tokens、交错 200、恶意 400、旧 `/v1/decide` 与 A2 逐位一致、冻结 8 例逐位一致。
+- **阻塞**：EvalScope 未安装且无离线包/网络，原生客户端联调未执行；完整 2,352 题已由固定 `/v1/systemone` 客户端覆盖。

@@ -1,0 +1,664 @@
+{
+ "date": "2026-11-24",
+ "remote": "/workspace/yangchen/Clef-27B-ascend-systemone",
+ "branch": "feat/systemone-mm-state-20261124",
+ "service": {
+  "argv": [
+   "/workspace/yangchen/venvs/clef-mix-ws-py312/bin/python",
+   "-m",
+   "vllm.entrypoints.cli.main",
+   "serve",
+   "/workspace/yangchen/models/Clef-27B",
+   "--served-model-name",
+   "clef",
+   "--runner",
+   "pooling",
+   "--dtype",
+   "bfloat16",
+   "--tensor-parallel-size",
+   "2",
+   "--enforce-eager",
+   "--max-model-len",
+   "16384",
+   "--max-num-seqs",
+   "16",
+   "--max-num-batched-tokens",
+   "16384",
+   "--gpu-memory-utilization",
+   "0.85",
+   "--no-enable-prefix-caching",
+   "--no-enable-chunked-prefill",
+   "--skip-mm-profiling",
+   "--host",
+   "127.0.0.1",
+   "--port",
+   "18143",
+   "--limit-mm-per-prompt",
+   "{\"image\":16,\"video\":0}",
+   "--distributed-executor-backend",
+   "mp",
+   "--mm-processor-kwargs",
+   "{\"images_kwargs\":{\"size\":{\"shortest_edge\":65536,\"longest_edge\":1048576}},\"videos_kwargs\":{\"size\":{\"shortest_edge\":4096,\"longest_edge\":65536},\"do_sample_frames\":false}}",
+   "--scheduler-cls",
+   "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"
+  ],
+  "effective": {
+   "max_model_len": 16384,
+   "max_num_seqs": 16,
+   "max_num_batched_tokens": 16384,
+   "gpu_memory_utilization": 0.85,
+   "limit_mm_per_prompt": "{\"image\":16,\"video\":0}",
+   "encoder_cache_tokens": 262144
+  },
+  "systemone_mm_state": {
+   "requested": true,
+   "enabled": true,
+   "mode": "extract_question_dict",
+   "mode_env": "CLEF_STATE_MM_MODE",
+   "installer": "/workspace/yangchen/Clef-27B-ascend-systemone/runtime/apply_systemone_mm_state_patch.py",
+   "installer_sha256": "903dc0644338109035b2b82ecdf57a1edc61cb5709c100c4f6ea26a9a0f68e09",
+   "module": "/workspace/yangchen/Clef-27B-ascend-systemone/runtime/systemone_mm_state.py",
+   "module_sha256": "a8b87841cc777a73dd682fd165739dc047ce2925a80879dbb3bf5dd60753e7f5",
+   "patch_version": 1,
+   "patch_state": "postimage",
+   "installed_sha256": "99a8e1b73dd55800736de4c2b29cf300aa7f819e4e5495f59805733dbe62994a",
+   "installed_module_sha256": "a8b87841cc777a73dd682fd165739dc047ce2925a80879dbb3bf5dd60753e7f5"
+  },
+  "joint_patch": {
+   "enabled": true,
+   "ok": true,
+   "branch": "aa3e-noop",
+   "target_sha256_after": "26d3ad047c42f47a7fa22e00d6bac53a8a063ed010e753cb79a673660f60d7c4"
+  },
+  "gdn_patch_state": {
+   "vllm_ascend/device/device_op.py": "chunk128",
+   "vllm_ascend/ops/gdn.py": "conv",
+   "vllm_ascend/patch/worker/patch_qwen3_5.py": "patched"
+  },
+  "conv_qkv": {
+   "requested": true,
+   "ready": true,
+   "installed": false,
+   "installer": "/workspace/yangchen/Clef-27B-ascend-systemone/runtime/apply_conv_qkv_patch.py",
+   "vendor": "/workspace/yangchen/Clef-27B-ascend-systemone/Clef-27B/src/ascendc/vendors/clef_conv_qkv",
+   "tree": "/workspace/yangchen/work/mix-ws-20261123/src/vllm-ascend",
+   "target": "/workspace/yangchen/work/mix-ws-20261123/src/vllm-ascend/vllm_ascend/ops/gdn.py",
+   "backup_dir": "/workspace/yangchen/logs/systemone-mm-20261124/phase4-final-service/conv-qkv-source-backup",
+   "source_sha256_before": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
+   "source_sha256": "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
+   "installer_sha256": "f2c564c27069398447d85a27c7c8789fa65b8014f76ae87e2ba1d8ed8d7ba617"
+  },
+  "service_environment": {
+   "CLEF_STATE_MM_MODE": "extract_question_dict",
+   "CLEF_ENCODER_CACHE_TOKENS": "262144",
+   "CLEF_JOINT_FUSED_ATTN": "1",
+   "CLEF_GDN_CONV_QKV": "1",
+   "CLEF_MLP_BF16_NZ": "1"
+  },
+  "software": {
+   "vllm": {
+    "origin": "unavailable",
+    "package_dir": "/workspace/yangchen/work/mix-ws-20261123/src/vllm/vllm",
+    "git_head": "24420b7a341af37a9bc3186e6fc6062512e0aa58",
+    "worktree_dirty": true,
+    "dirty_files": 7,
+    "strategies_sha256": "d7e25f1d879cd0dc2d8e38629805a66018a9c63e364572d6cbfee6a9fedd97bb",
+    "schema_cache_version": 0
+   },
+   "vllm_ascend": {
+    "origin": "unavailable",
+    "package_dir": "/workspace/yangchen/work/mix-ws-20261123/src/vllm-ascend/vllm_ascend",
+    "git_head": "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d",
+    "worktree_dirty": true,
+    "dirty_files": 6
+   }
+  }
+ },
+ "phase0": {
+  "unit_tests": 59,
+  "failures": 0,
+  "skipped": 0,
+  "opendecisions_scan": "0/2352 multimodal misjudgments",
+  "erqa_join_audit": "400/400 text joins equal"
+ },
+ "smoke": {
+  "single_image": {
+   "status": 200,
+   "latency_ms": 114.28362037986517,
+   "input_tokens": 366,
+   "choice": "C",
+   "probabilities": {
+    "A": 0.281032919883728,
+    "B": 0.2843456566333771,
+    "C": 0.2888234555721283,
+    "D": 0.1457979679107666
+   },
+   "state_parts": [
+    "image_url",
+    "text"
+   ],
+   "image_count": 1
+  },
+  "sixteen_images": {
+   "status": 200,
+   "latency_ms": 1308.6879597976804,
+   "input_tokens": 10294,
+   "choice": "D",
+   "probabilities": {
+    "A": 0.05722411349415779,
+    "B": 0.09288390725851059,
+    "C": 0.12498895823955536,
+    "D": 0.7249030470848083
+   },
+   "state_parts": [
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "text"
+   ],
+   "image_count": 16
+  },
+  "interleaved": {
+   "sample": "erqa-0115",
+   "status": 200,
+   "latency_ms": 116.89377017319202,
+   "input_tokens": 552,
+   "choice": "D",
+   "probabilities": {
+    "A": 0.15514378249645233,
+    "B": 0.16775043308734894,
+    "C": 0.24029140174388885,
+    "D": 0.43681448698043823
+   },
+   "text_join_matches": true,
+   "state_parts": [
+    "image_url",
+    "text",
+    "image_url",
+    "image_url",
+    "image_url",
+    "text"
+   ]
+  },
+  "legacy_top_level_images": {
+   "status": 200,
+   "latency_ms": 97.84377925097942,
+   "input_tokens": 366,
+   "choice": "C",
+   "probabilities_equal_to_state_list": true
+  },
+  "malformed": {
+   "empty_url": {
+    "status": 400,
+    "latency_ms": 1.8773600459098816,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: image_url url must not be empty\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   },
+   "missing_url": {
+    "status": 400,
+    "latency_ms": 0.7284702733159065,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: image_url object is missing its \\\"url\\\" field\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   },
+   "unknown_type": {
+    "status": 400,
+    "latency_ms": 0.6872005760669708,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: unsupported state content type 'audio_url'; expected \\\"image_url\\\" or \\\"text\\\"\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   }
+  },
+  "health_after_malformed": [
+   200,
+   {
+    "status": "ready",
+    "model": "clef",
+    "revision": "local-65e5a3c5ffb6"
+   }
+  ],
+  "frozen8": {
+   "cases": {
+    "verify_choice": {
+     "status": 200,
+     "latency_ms": 95.38435004651546,
+     "equal": true
+    },
+    "verify_noul": {
+     "status": 200,
+     "latency_ms": 92.47722011059523,
+     "equal": true
+    },
+    "verify_score": {
+     "status": 200,
+     "latency_ms": 92.7407993003726,
+     "equal": true
+    },
+    "verify_mixed": {
+     "status": 200,
+     "latency_ms": 111.58175021409988,
+     "equal": true
+    },
+    "verify_choice_reordered": {
+     "status": 200,
+     "latency_ms": 92.2485701739788,
+     "equal": true
+    },
+    "od_od-0000": {
+     "status": 200,
+     "latency_ms": 93.66544988006353,
+     "equal": true
+    },
+    "od_od-0001": {
+     "status": 200,
+     "latency_ms": 102.41574980318546,
+     "equal": true
+    },
+    "od_od-1534": {
+     "status": 200,
+     "latency_ms": 153.30991055816412,
+     "equal": true
+    }
+   },
+   "passed": true,
+   "count": 8
+  }
+ },
+ "erqa": {
+  "A1_extract_plain": {
+   "accuracy": {
+    "correct": 213,
+    "total": 400,
+    "value": 0.5325,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 213,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5325
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "throughput": {
+    "decisions_per_second": 4.899864084440542,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 97.76668064296246,
+    "max": 1327.7251804247499,
+    "mean": 200.53862841567025,
+    "p50": 194.31744003668427,
+    "p95": 281.7002408672124,
+    "p99": 483.23890295810895
+   },
+   "breakdown": {
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 89,
+     "failed": 0,
+     "accuracy": 0.48633879781420764
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   }
+  },
+  "A2_extract_question_dict": {
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "throughput": {
+    "decisions_per_second": 4.794470590407646,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 102.11842972785234,
+    "max": 1671.5860506519675,
+    "mean": 205.08431220427155,
+    "p50": 194.73022036254406,
+    "p95": 284.9280678201463,
+    "p99": 609.4067863095546
+   },
+   "breakdown": {
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   }
+  },
+  "final_c1_cold": {
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "throughput": {
+    "decisions_per_second": 4.789733663603366,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 102.10973024368286,
+    "max": 1674.3189599364996,
+    "mean": 205.17441302072257,
+    "p50": 194.52416524291039,
+    "p95": 288.3999669924375,
+    "p99": 598.3705963380628
+   },
+   "breakdown": {
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   }
+  },
+  "final_c1_warm": {
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "throughput": {
+    "decisions_per_second": 5.941905918725226,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 98.23885001242161,
+    "max": 1326.2976193800569,
+    "mean": 164.71435295883566,
+    "p50": 153.4204902127385,
+    "p95": 244.38185733742966,
+    "p99": 465.71122894994863
+   },
+   "breakdown": {
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   }
+  },
+  "final_c16": {
+   "accuracy": {
+    "correct": 217,
+    "total": 400,
+    "value": 0.5425,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 217,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5425
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "throughput": {
+    "decisions_per_second": 8.24032773784165,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 121.04228045791388,
+    "max": 4226.389059796929,
+    "mean": 1881.5615531732328,
+    "p50": 2054.2321298271418,
+    "p95": 2953.7452491931617,
+    "p99": 3381.2340073101223
+   },
+   "breakdown": {
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 93,
+     "failed": 0,
+     "accuracy": 0.5081967213114754
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   }
+  },
+  "cold_vs_warm": {
+   "samples": 400,
+   "prob_diff_samples": 0,
+   "choice_flips": 0,
+   "max_prob_diff": 0.0
+  },
+  "structural_verification": {
+   "c1": {
+    "checked": true,
+    "mismatches": [],
+    "passed": true
+   },
+   "c16": {
+    "checked": true,
+    "mismatches": [],
+    "passed": true
+   }
+  }
+ },
+ "od": {
+  "s1": {
+   "summary": {
+    "requested": 2352,
+    "successful": 2352,
+    "failed": 0,
+    "wall_seconds": 257.57023060973734,
+    "requests_per_second": 9.131490057807493,
+    "decisions_per_second": 9.131490057807493,
+    "latency_ms": {
+     "sample_count": 2352,
+     "mean": 109.48819185917576,
+     "p50": 99.03609938919544,
+     "p95": 154.5483506284654,
+     "p99": 191.12097062170506,
+     "min": 91.6799008846283,
+     "max": 232.83692076802254
+    },
+    "client_inflight_max": 1,
+    "percentile_method": "linear interpolation at (n-1)*quantile"
+   },
+   "quality": {
+    "calibration": 82.41134399821297,
+    "intelligence": 66.08407560197932,
+    "capability": 74.24770980009615,
+    "accuracy": 0.8095238095238095,
+    "correct": 1904,
+    "accuracy_denominator": 2352,
+    "score_mae": 0.40261234039698923,
+    "score_mae_denominator": 588,
+    "protocol_failures": 0
+   }
+  },
+  "s2_c16": {
+   "summary": {
+    "requested": 2352,
+    "successful": 2352,
+    "failed": 0,
+    "wall_seconds": 143.89712709002197,
+    "requests_per_second": 16.34501013024805,
+    "decisions_per_second": 16.34501013024805,
+    "latency_ms": {
+     "sample_count": 2352,
+     "mean": 978.2896911591564,
+     "p50": 878.7057301960886,
+     "p95": 1783.7183841504157,
+     "p99": 1982.7753976359963,
+     "min": 112.40724008530378,
+     "max": 1991.6288405656815
+    },
+    "client_inflight_max": 16,
+    "percentile_method": "linear interpolation at (n-1)*quantile"
+   },
+   "quality": {
+    "calibration": 82.40895406079946,
+    "intelligence": 65.89294824244011,
+    "capability": 74.15095115161978,
+    "accuracy": 0.8095238095238095,
+    "correct": 1904,
+    "accuracy_denominator": 2352,
+    "score_mae": 0.4016721113622553,
+    "score_mae_denominator": 588,
+    "protocol_failures": 0
+   }
+  },
+  "s2_c64": {
+   "summary": {
+    "requested": 2352,
+    "successful": 2352,
+    "failed": 0,
+    "wall_seconds": 136.7962549701333,
+    "requests_per_second": 17.193453143242202,
+    "decisions_per_second": 17.193453143242202,
+    "latency_ms": {
+     "sample_count": 2352,
+     "mean": 3685.317386365828,
+     "p50": 3617.9859498515725,
+     "p95": 6087.099039927125,
+     "p99": 7362.682396629825,
+     "min": 108.93318988382816,
+     "max": 7456.644910387695
+    },
+    "client_inflight_max": 64,
+    "percentile_method": "linear interpolation at (n-1)*quantile"
+   },
+   "quality": {
+    "calibration": 82.11877181478107,
+    "intelligence": 65.9840055034379,
+    "capability": 74.05138865910948,
+    "accuracy": 0.8095238095238095,
+    "correct": 1904,
+    "accuracy_denominator": 2352,
+    "score_mae": 0.40258098417417093,
+    "score_mae_denominator": 588,
+    "protocol_failures": 0
+   }
+  },
+  "s1_vs_accepted_run": {
+   "reference": "/workspace/yangchen/logs/tp2-alwayson-20261124/phase4-official/official-s1-r1/report.json",
+   "requests": 2352,
+   "max_prob_diff": 0.0,
+   "choice_flips": 0,
+   "token_counts_equal": 2352
+  }
+ },
+ "evalscope": {
+  "status": "blocked",
+  "reason": "evalscope is not installed in /workspace/yangchen/venvs/clef-mix-ws-py312 and no offline wheel/source is present; the pinned raw /v1/systemone client covered the full 2,352 run."
+ }
+}

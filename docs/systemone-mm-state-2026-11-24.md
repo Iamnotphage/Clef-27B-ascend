@@ -1,6 +1,6 @@
-# `POST /v1/systemone` 图文 `state` 列表离线实现记录（2026-11-24）
+# `POST /v1/systemone` 图文 `state` 列表实现与验收记录（2026-11-24）
 
-> 状态：**阶段 1–3 离线完成；阶段 0 / 4 远端验证待执行**。性能优化 Worker 仍占用远端 A3 与 18143，本阶段未登录远端、未启动/停止服务、未修改 `/workspace/yangchen/work/src/vllm`。恢复远端验证前按 `p0_execution_plan.md` 与 `systemone_multimodal_state_plan.md` 的协作纪律执行。
+> 状态：**完成**。阶段 1–3 离线实现与阶段 0/4 远端验收均已完成；阶段 4 于 2026-11-24 12:09–12:52 UTC 在 A3 NPU 6 的单一常驻 TP2 服务上执行，服务已停止，18143 与两个逻辑 NPU 已释放。EvalScope 原生客户端因当前环境未安装且无离线包/网络，作为唯一环境阻塞项记录；完整 2,352 题已由固定 `/v1/systemone` 客户端覆盖。
 
 ## 1. 背景与目标
 
@@ -71,8 +71,9 @@
 | `runtime/systemone-mm-state.patch` | `f92cc769a1b5d6c0c951aaada1963d302f86de719af515f3aba36903dc7e16d0` | `serving.py` 统一 diff |
 | `runtime/apply_systemone_mm_state_patch.py` | `903dc0644338109035b2b82ecdf57a1edc61cb5709c100c4f6ea26a9a0f68e09` | `--check / --apply / --revert` 幂等安装器 |
 | `runtime/testdata/systemone_mm_state/serving.py` | `5a700bb79c5db36f46d096d9153bb000357644bc77938fbbf667c3b4ef4c400a` | 固定 preimage 测试夹具 |
-| `runtime/test_systemone_mm_state.py` | `042f4e29f18c253dee13983cf5edf21a323577c678726a89dd26fe8742d7c157` | 归一化与安装器离线测试 |
-| `scripts/official_eval/test_erqa_state_list.py` | `36884add96332dabf78159eed2ada2a2e4ad459c5e9a4f14d01d2e5a012ae8ee` | ERQA 官方交错与线格式测试 |
+| `runtime/test_systemone_mm_state.py` | `8ae2a2ad80b1eb41b449e872a5d50fa11eeb5d9ea179b9c5900f47657929d385` | 归一化与安装器离线测试 |
+| `scripts/official_eval/test_erqa_state_list.py` | `9dd7814c566e4460819e0a77503fbc54fb909b3857e6a1a9994a28be7c0943c1` | ERQA 官方交错与线格式测试 |
+| `Clef-27B/inference.py` | `d46aff0f745708eca9f6018c2d764ec6817ff295543388595febce3489a3c770` | 安装器调用、统一常驻配置与 A2 默认 |
 
 安装器把 `systemone_mm_state.py` 逐字节复制为 `vllm/entrypoints/generate/structured_decisions/_clef_mm_state.py`，并在 `serving.py` 中：
 
@@ -115,34 +116,68 @@ postimage SHA-256：`99a8e1b73dd55800736de4c2b29cf300aa7f819e4e5495f59805733dbe6
 - `request_summary` 对 `state-list` 增加 `wire_format` 字段；历史 `top-level-images` 的 structural hash 保持原算法，`--verify-requests` 兼容新旧运行；
 - predictions 记录 `wire_format` 与 `endpoint`；`erqa_s2_concurrent.py` 的 frozen SHA 已更新为 `erqa_baseline.py` 新 SHA `a3a7a961…`。
 
-## 7. 离线验证结果
+## 7. 阶段 0 与阶段 4 实测（2026-11-24，A3 NPU 6，单实例 TP2）
 
-执行：
+### 7.1 前置核验
+
+- 远端 `/workspace/yangchen/work/mix-ws-20261123/src/vllm` HEAD `24420b7a…`，`serving.py` `5a700bb7…`、`protocol.py` `c4ea3c8a…`、`strategies.py` `d7e25f1d…`、`api_router.py` `bdf11bee…`；`vllm-ascend` HEAD `89eb8a5e…`，GDN conv+QKV/chunk128 补丁就绪。
+- 启动前 18143 空闲、无 vLLM 进程、NPU 6 无进程。
+- 远端干净 checkout 全量单测：**59 tests, 0 failures, 0 skipped**；OpenDecisions 2,352 条多模态误判 **0/2,352**；ERQA 400 条 `"".join(text_parts) == question` **400/400**，`image_count >= 1` 全部成立。
+- 官方裸命令（无额外覆盖参数）冷启动 `http://127.0.0.1:18143`，75 s 就绪；manifest 记录 `systemone_mm_state.patch_state=postimage`、模块 `a8b87841…`、`CLEF_STATE_MM_MODE=extract_question_dict`、encoder `262144`、joint fused `26d3ad04…`、conv+QKV ready、`TASK_QUEUE_ENABLE=2`。
+
+### 7.2 新接口冒烟（静默锁定 A2 后）
+
+| 项目 | 结果 |
+| --- | --- |
+| `erqa-0000` 单图 `state=[image_url,text]` | HTTP 200；`input_tokens=366`；choice C；概率完整 |
+| `erqa-0167` 16 图 | HTTP 200；`input_tokens=10,294`；choice D；无 OOM/超长 |
+| `erqa-0115` 交错题 | HTTP 200；`text_join_matches=true`；6 个内容块顺序与官方一致 |
+| 旧 `/v1/decide` 顶层 `images` + `{"question":...}` | HTTP 200；与 state-list A2 概率逐位一致 |
+| 恶意报文 `url=""` / 缺 `url` / 混入 `audio_url` | 均 HTTP 400；进程存活，随后 `/health` 200 |
+| 冻结 8 例文本回归 | **8/8 逐位一致**（5 个验收 case + 3 条 OD 请求对已验收 2026-11-24 运行） |
+
+### 7.3 ERQA 全量 400 A/B（`--wire-format state-list --endpoint /systemone`）
+
+| 臂 | 正确/总数 | 准确率 | 成功/失败/重试 | S1 P95 | S1 mean | 吞吐 |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| A1 `extract_plain` | 213/400 | 0.5325 | 400/0/0 | 281.70 ms | 200.54 ms | 4.900 dec/s |
+| A2 `extract_question_dict` | 216/400 | 0.5400 | 400/0/0 | 284.93 ms | 205.08 ms | 4.794 dec/s |
+| **锁定 A2** | **216/400** | **0.5400** | **400/0/0** | — | — | — |
+
+A2 比 A1 高 3 题，接近 2026-11-14 基线 219/400，且达到计划决策门 216/400；交错题 16/30 与基线一致，未触发方案 B。锁定 A2 后启动器默认 `SYSTEMONE_MM_DEFAULT_MODE="extract_question_dict"`，`strategies.py` 零改动。
+
+### 7.4 锁定配置同一常驻进程零重启
+
+| 运行 | 正确/总数 | 准确率/质量 | 成功/失败/重试 | 吞吐 | mean | p50 | p95 | p99 |
+| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| ERQA C1 冷首遍 | 216/400 | 0.5400 | 400/0/0 | 4.790 dec/s | 205.17 ms | 194.52 ms | 288.40 ms | 598.37 ms |
+| ERQA C1 自然第二遍 | 216/400 | 0.5400 | 400/0/0 | 5.942 dec/s | 164.71 ms | 153.42 ms | 244.38 ms | 465.71 ms |
+| ERQA C16 | 217/400 | 0.5425 | 400/0/0 | 8.240 dec/s | 1881.56 ms | 2054.23 ms | 2953.75 ms | 3381.23 ms |
+| OD S1 C1 | 2,352/2,352 | Cap **74.2477**、Int 66.0841、Cal 82.4113、acc 1904/2352、MAE 0.402612 | 2352/0/0 | 9.131 dec/s | 109.49 ms | 99.04 ms | 154.55 ms | 191.12 ms |
+| OD S2 C16 | 2,352/2,352 | Cap 74.1510、Int 65.8929、Cal 82.4090、acc 1904、MAE 0.401672 | 2352/0/0 | 16.345 dec/s | 978.29 ms | 878.71 ms | 1783.72 ms | 1982.78 ms |
+| OD S2 C64 | 2,352/2,352 | Cap 74.0514、Int 65.9840、Cal 82.1188、acc 1904、MAE 0.402581 | 2352/0/0 | 17.193 dec/s | 3685.32 ms | 3617.99 ms | 6087.10 ms | 7362.68 ms |
+
+- ERQA 冷/暖两遍 **400/400 概率逐位一致、0 choice 翻转、max_prob_diff=0.0**；P95 **288.40 → 244.38 ms（−15.27%）**、mean **205.17 → 164.71 ms（−19.72%）**，证明 Tier 1 encoder cache 命中。
+- OD S1 与已验收 `official-s1-r1` 全量报告逐位一致：**max_prob_diff=0.0、0 choice 翻转、2,352/2,352 token 数相等**；质量与 Worker 1 验收值一致。
+- ERQA `erqa_score.py --verify-requests`：C1 与 C16 均 **400/400 通过、0 mismatch**。
+- 全部质量相对 baseline（OD Cap 74.4255、ERQA 0.5475）绝对波动 ≤2PP；所有运行 0 失败、0 重试。
+
+### 7.5 环境阻塞
+
+EvalScope 未安装于 `/workspace/yangchen/venvs/clef-mix-ws-py312`，且镜像内无离线 wheel/源码，`pip index` 不可达。`open_decisions_baseline.py` 在读取包版本时 `PackageNotFoundError` 退出。作为唯一遗留项，待提供 EvalScope 包后可直接执行：
 
 ```bash
-python3 -m unittest runtime/test_systemone_mm_state.py \
-  runtime/test_inference_launch.py scripts/official_eval/test_erqa_state_list.py
+source scripts/activate_env.sh
+python scripts/official_eval/open_decisions_baseline.py \
+  --output-dir <fresh-dir> --api-url http://127.0.0.1:18143/v1 \
+  --data-dir /workspace/yangchen/datasets/clef-fixed-20261123/opendecisions-1.0.1
 ```
 
-结果：**59 tests, 0 failures, 2 skipped**（跳过项为数据集缺失，非关键代码项）：
+完整 2,352 题已通过固定 `/v1/systemone` 客户端（`runtime/od_full_benchmark.py` + `od_raw_acceptance.py`）验证，含逐请求原始概率。
 
-- OpenDecisions 2,352 全量误判扫描：本机无 `/workspace/yangchen/.../open-decisions2352.jsonl`，测试自动 skip；测试存在数据时硬断言 0/2,352，需在远端阶段 0 补跑。
-- ERQA 400 交错切分审计：本机无 `samples.jsonl`，测试自动 skip；远端阶段 0 对全部 400 条断言 `image_count >= 1` 且 `"".join(text_parts) == question`。
+## 8. 验收结论与后续
 
-已离线覆盖：
-
-1. 标准单图/16 图/交错/纯图/多 MIME/detail/字符串简写；
-2. 旧协议 `state` dict + 顶层 `images` 原样透传；顶层与 state 图片确定性合并；
-3. 零误判：`str`、`dict`、`None`、`[]`、字符串列表、文本列表、普通对象列表、含 `image_url` 的 dict 全部不识别；200 组随机交错题 `"".join` 恒等；
-4. Fail-Closed：缺失/空/非字符串 URL、非法 scheme、非字符串 text、未知 type、含图片的畸形混合列表均 `ValueError`；
-5. 安装器生命周期：`--check(preimage)` → `--apply` → `--check(ready)` → 幂等 `--apply`（inode/mtime 不变）→ `--revert`（serving 恢复 preimage、模块删除）；未知 serving/模块内容拒绝修改；
-6. 启动器：s1 新默认、dry-run 零子进程、`CLEF_STATE_MM_MODE` 记录/校验、安装器报告 SHA 校验；
-7. ERQA：两种 wire format 的结构哈希可复算、endpoint 路由、官方交错切片、历史报文 key 不变。
-
-## 8. 待执行（远端，需性能 Worker 释放后）
-
-1. **阶段 0**：核对远端 4 文件 SHA（应全部匹配第 2 节）、运行 OpenDecisions 2,352 与 ERQA 400 的离线预审计；确认 18143 与双逻辑 NPU 空闲。
-2. **阶段 4**：官方命令裸启动；6 项冒烟（`/health`、`/v1/decide/info`、冻结 8 例文本、`erqa-0000` 单图 token≈366、`erqa-0167` 16 图 token≈10,294、非法报文 400、旧 `/v1/decide` 兼容）；ERQA 400 全量 A1/A2（必要时方案 B）与 S2 C16；同进程 OpenDecisions 2,352 逐位回归与 EvalScope 联调。
-3. **阶段 5**：按实测更新 `docs/submission-rules-2026-11-13.md`、`Clef-27B/README.md`、`optimization.md`、`metrics.csv`、`results.csv`，补全本记录并合并交付。
-
-在阶段 4 通过前，`s1` 的 16384/16/0.85/encoder 262144 等默认值仍以实测验收为准，不提前把未完成测量写入最终提交结论。
+1. **已验收**：单服务常驻 TP2（16K/seqs16/util .85/Tier 1 encoder 262144/TASK_QUEUE=2/conv+QKV v4/joint fused 26d3）同时承接 OpenDecisions 与 ERQA `state` 图文列表；A2 锁定；`strategies.py` 零改动；全部 2PP 质量门通过；0 失败/0 重试。
+2. **已归档**：`Clef-27B/logs/systemone-mm-20261124/` 保存 smoke、A/B、C1/C16、OD S1/S2 的轻量摘要、质量 JSON、ERQA 逐题预测与服务 manifest；服务已停止，18143 与 NPU 6 已释放。
+3. **剩余**：EvalScope 原生客户端（环境包缺失）；主办方最终模板与 910C/A3 认可映射仍按规则文档持续跟踪。
+4. 本记录中的默认参数已由官方裸命令实测确认，不再作为待验证候选。

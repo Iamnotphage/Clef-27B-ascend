@@ -1,0 +1,155 @@
+{
+ "manifest_tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+ "samples": 400,
+ "checks": {
+  "single_image": {
+   "status": 200,
+   "latency_ms": 114.28362037986517,
+   "input_tokens": 366,
+   "choice": "C",
+   "probabilities": {
+    "A": 0.281032919883728,
+    "B": 0.2843456566333771,
+    "C": 0.2888234555721283,
+    "D": 0.1457979679107666
+   },
+   "state_parts": [
+    "image_url",
+    "text"
+   ],
+   "image_count": 1
+  },
+  "sixteen_images": {
+   "status": 200,
+   "latency_ms": 1308.6879597976804,
+   "input_tokens": 10294,
+   "choice": "D",
+   "probabilities": {
+    "A": 0.05722411349415779,
+    "B": 0.09288390725851059,
+    "C": 0.12498895823955536,
+    "D": 0.7249030470848083
+   },
+   "state_parts": [
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "image_url",
+    "text"
+   ],
+   "image_count": 16
+  },
+  "interleaved": {
+   "sample": "erqa-0115",
+   "status": 200,
+   "latency_ms": 116.89377017319202,
+   "input_tokens": 552,
+   "choice": "D",
+   "probabilities": {
+    "A": 0.15514378249645233,
+    "B": 0.16775043308734894,
+    "C": 0.24029140174388885,
+    "D": 0.43681448698043823
+   },
+   "text_join_matches": true,
+   "state_parts": [
+    "image_url",
+    "text",
+    "image_url",
+    "image_url",
+    "image_url",
+    "text"
+   ]
+  },
+  "legacy_top_level_images": {
+   "status": 200,
+   "latency_ms": 97.84377925097942,
+   "input_tokens": 366,
+   "choice": "C",
+   "probabilities_equal_to_state_list": true
+  },
+  "malformed": {
+   "empty_url": {
+    "status": 400,
+    "latency_ms": 1.8773600459098816,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: image_url url must not be empty\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   },
+   "missing_url": {
+    "status": 400,
+    "latency_ms": 0.7284702733159065,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: image_url object is missing its \\\"url\\\" field\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   },
+   "unknown_type": {
+    "status": 400,
+    "latency_ms": 0.6872005760669708,
+    "body": "{\"error\":{\"message\":\"invalid multimodal state: unsupported state content type 'audio_url'; expected \\\"image_url\\\" or \\\"text\\\"\",\"type\":\"BadRequestError\",\"param\":null,\"code\":400}}"
+   }
+  },
+  "health_after_malformed": [
+   200,
+   {
+    "status": "ready",
+    "model": "clef",
+    "revision": "local-65e5a3c5ffb6"
+   }
+  ],
+  "frozen8": {
+   "cases": {
+    "verify_choice": {
+     "status": 200,
+     "latency_ms": 95.38435004651546,
+     "equal": true
+    },
+    "verify_noul": {
+     "status": 200,
+     "latency_ms": 92.47722011059523,
+     "equal": true
+    },
+    "verify_score": {
+     "status": 200,
+     "latency_ms": 92.7407993003726,
+     "equal": true
+    },
+    "verify_mixed": {
+     "status": 200,
+     "latency_ms": 111.58175021409988,
+     "equal": true
+    },
+    "verify_choice_reordered": {
+     "status": 200,
+     "latency_ms": 92.2485701739788,
+     "equal": true
+    },
+    "od_od-0000": {
+     "status": 200,
+     "latency_ms": 93.66544988006353,
+     "equal": true
+    },
+    "od_od-0001": {
+     "status": 200,
+     "latency_ms": 102.41574980318546,
+     "equal": true
+    },
+    "od_od-1534": {
+     "status": 200,
+     "latency_ms": 153.30991055816412,
+     "equal": true
+    }
+   },
+   "passed": true,
+   "count": 8
+  }
+ }
+}
