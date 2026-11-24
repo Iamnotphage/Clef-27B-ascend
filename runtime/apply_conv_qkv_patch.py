@@ -24,6 +24,8 @@ TARGET = "vllm_ascend/ops/gdn.py"
 PATCH_VERSION = 2
 PREIMAGE_SHA = "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e"
 POSTIMAGE_SHA = "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
+# The varlen installer stacks on POSTIMAGE; both count as an installed v4.
+VARLEN_POSTIMAGE_SHA = "afe6d4e87c0eb47bfb325fb630620e47f845fb5a893cb1dada78069ad4e3ca07"
 
 HELPER = '''
 _CONV_QKV_RUNTIME = None
@@ -180,7 +182,8 @@ def source_status(path: Path) -> str:
     if not path.is_file():
         return "missing"
     sha = digest(path.read_bytes())
-    return "preimage" if sha == PREIMAGE_SHA else "patched" if sha == POSTIMAGE_SHA else "unknown"
+    return "preimage" if sha == PREIMAGE_SHA else (
+        "patched" if sha in (POSTIMAGE_SHA, VARLEN_POSTIMAGE_SHA) else "unknown")
 
 
 def write_atomic(path: Path, data: bytes, mode: int = 0o644) -> None:

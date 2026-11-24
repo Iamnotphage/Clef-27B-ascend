@@ -171,3 +171,14 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **OpenDecisions**：S1 2,352/2,352、P95 **154.548 ms**、9.131 dec/s，与已验收 2026-11-24 运行 **max_prob_diff=0.0、0 翻转、2,352/2,352 token 相等**；质量 Cal 82.4113 / Int 66.0841 / Cap **74.2477**、accuracy 1904/2352、MAE 0.402612。S2 C16 **16.345 dec/s**（p95 1783.72 ms，Cap 74.1510）、C64 **17.193 dec/s**（p95 6087.10 ms，Cap 74.0514）。
 - **冒烟**：`erqa-0000` 366 tokens、`erqa-0167` 10,294 tokens、交错 200、恶意 400、旧 `/v1/decide` 与 A2 逐位一致、冻结 8 例逐位一致。
 - **阻塞**：EvalScope 未安装且无离线包/网络，原生客户端联调未执行；完整 2,352 题已由固定 `/v1/systemone` 客户端覆盖。
+
+## 2026-11-25 多序列 Varlen Conv+QKV（已采用）
+
+完整报告见 [docs/conv-qkv-varlen-2026-11-25.md](../docs/conv-qkv-varlen-2026-11-25.md)。
+
+- **算子**：新增独立 `ClefGdnConvQkvVarlen`（48 AIV，per-sequence tile，`cu_seqlens` 作为 int32 输入，`MTE2_S` 同步，`history = min(localT0,3)`），v4 vendor 与单序列路径零改动。
+- **离线 4 门**：B=1 78/78 与 v4 逐位一致；多序列 48/48 与逐条 v4 逐位一致（含 1/2/3/4 边界、64 序列、packed 8192 毒化尾）；144/144 零串扰（×100、±1e4、全 NaN）；单算子对分解路径 **3.53–4.54×**，锁定 tile 64。
+- **同窗 A/B**（OFF→ON→OFF）：OD S2 C16 **16.276→16.971 dec/s（+4.27%）、p95 1785.6→1704.4 ms（−4.55%）**；C64 **17.203→18.039（+4.86%）、p95 6081.2→5779.1（−4.97%）**；ERQA C16 冷 **6.962→7.281（+4.59%）、p95 3499.6→3334.7（−4.71%）**，暖 **8.142→8.627（+5.96%）、p95 3049.2→2815.6（−7.66%）**。
+- **S1 零回退**：ON1 OD S1 2,352/2,352 与 512317e `max_prob_diff=0.0`、0 flips；ERQA C1 冷/暖逐位一致，216/400，P95 289.26/244.66 ms。
+- **质量**：OD ON Cap 74.2477（S1）/74.0625（C16）/74.2322（C64），ERQA C16 **218/400**、C1 216/400，全部 2PP 内、0 失败、0 重试。
+- **入口**：`runtime/apply_conv_qkv_varlen_patch.py`（preimage `ead25cb2…` → postimage `afe6d4e8…`），`s1` 默认 `CLEF_GDN_CONV_QKV_VARLEN=1`、`CLEF_CONV_QKV_VARLEN_TILE=64`；显式 `=0` 回退。

@@ -51,6 +51,10 @@ CONV_QKV_POSTIMAGE_SHA = {
     "vllm_ascend/ops/gdn.py":
         "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
 }
+CONV_QKV_VARLEN_POSTIMAGE_SHA = {
+    "vllm_ascend/ops/gdn.py":
+        "afe6d4e87c0eb47bfb325fb630620e47f845fb5a893cb1dada78069ad4e3ca07",
+}
 SOURCE_FILES = {
     "vllm_ascend/device/device_op.py": SOURCE_DIR / "qkv_device_op.py",
     "vllm_ascend/ops/gdn.py": SOURCE_DIR / "qkv_gdn.py",
@@ -80,6 +84,8 @@ def status(path: Path, relative: str) -> str:
     if digest == ADAPTIVE_POSTIMAGE_SHA.get(relative):
         return "qkv"
     if digest == CONV_QKV_POSTIMAGE_SHA.get(relative):
+        return "qkv"
+    if digest == CONV_QKV_VARLEN_POSTIMAGE_SHA.get(relative):
         return "qkv"
     return "unknown"
 

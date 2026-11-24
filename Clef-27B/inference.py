@@ -27,9 +27,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
 CONV_QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_conv_qkv_patch.py"
+CONV_QKV_VARLEN_INSTALLER = REPO_ROOT / "runtime" / "apply_conv_qkv_varlen_patch.py"
 CONV_QKV_TARGET = Path("vllm_ascend/ops/gdn.py")
 CONV_QKV_PREIMAGE = "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e"
 CONV_QKV_POSTIMAGE = "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
+CONV_QKV_VARLEN_POSTIMAGE = "afe6d4e87c0eb47bfb325fb630620e47f845fb5a893cb1dada78069ad4e3ca07"
 JOINT_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_single_field_patch.py"
 JOINT_FUSED_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_fused_attention.py"
 JOINT_FUSED_GUARD = REPO_ROOT / "runtime" / "apply_joint_single_field_patch_fused.py"
@@ -346,6 +348,9 @@ def gdn_decision_prefill(config, apply=True):
                 allowed["qkv"] = contract.QKV_POSTIMAGE_SHA[path]
             if path in contract.CONV_QKV_POSTIMAGE_SHA:
                 allowed["conv"] = contract.CONV_QKV_POSTIMAGE_SHA[path]
+                if (path == str(CONV_QKV_TARGET)
+                        and item.get("sha256") == CONV_QKV_VARLEN_POSTIMAGE):
+                    allowed["conv"] = CONV_QKV_VARLEN_POSTIMAGE
             if path in contract.CHUNK128_POSTIMAGE_SHA:
                 allowed["chunk128"] = contract.CHUNK128_POSTIMAGE_SHA[path]
             if path in getattr(contract, "ADAPTIVE_POSTIMAGE_SHA", {}):
@@ -577,11 +582,13 @@ def conv_qkv_patch(requested, vendor, output_dir, *, apply):
         result = installer_call([*command, "--check"])
         report = result["report"]
         sha = report.get("sha256")
-        known = {CONV_QKV_PREIMAGE: "preimage", CONV_QKV_POSTIMAGE: "patched"}
+        known = {CONV_QKV_PREIMAGE: "preimage", CONV_QKV_POSTIMAGE: "patched",
+                 CONV_QKV_VARLEN_POSTIMAGE: "patched"}
         if (result["rc"] or report.get("tree") != str(tree)
                 or report.get("target") != str(CONV_QKV_TARGET)
                 or sha not in known or report.get("status_after") != known[sha]
-                or report.get("ready") is not (sha == CONV_QKV_POSTIMAGE)
+                or report.get("ready") is not (sha in (
+                    CONV_QKV_POSTIMAGE, CONV_QKV_VARLEN_POSTIMAGE))
                 or not target.is_file() or sha256_file(target) != sha):
             raise SystemExit(f"Conv+QKV source state could not be verified at {target}")
         return sha
@@ -594,11 +601,60 @@ def conv_qkv_patch(requested, vendor, output_dir, *, apply):
                              f"{result['report'].get('error', 'installer failed')}")
         record["installed"] = True
     after = check() if record["installed"] else before
-    if after != CONV_QKV_POSTIMAGE:
+    if after not in (CONV_QKV_POSTIMAGE, CONV_QKV_VARLEN_POSTIMAGE):
         raise SystemExit(f"Conv+QKV postimage SHA-256 mismatch at {target}")
     record.update(ready=True, tree=str(tree), target=str(target), backup_dir=str(backup),
                   source_sha256_before=before, source_sha256=after,
                   installer_sha256=sha256_file(CONV_QKV_INSTALLER))
+    return record
+
+
+def conv_qkv_varlen_patch(requested, tree, output_dir, *, apply):
+    """Install and verify the multi-sequence Conv+QKV varlen postimage."""
+    record = {"requested": requested, "ready": False, "installed": False,
+              "installer": str(CONV_QKV_VARLEN_INSTALLER)}
+    if not requested:
+        return record
+    if not CONV_QKV_VARLEN_INSTALLER.is_file():
+        raise SystemExit(f"Conv+QKV varlen installer missing: {CONV_QKV_VARLEN_INSTALLER}")
+    if not apply or tree is None:
+        record["pending_install"] = True
+        return record
+    tree = Path(tree)
+    target = tree / CONV_QKV_TARGET
+    backup = output_dir / "conv-qkv-varlen-source-backup"
+    command = [sys.executable, str(CONV_QKV_VARLEN_INSTALLER), "--tree", str(tree),
+               "--backup-dir", str(backup)]
+
+    def check():
+        result = installer_call([*command, "--check"])
+        report = result["report"]
+        sha = report.get("sha256")
+        known = {CONV_QKV_POSTIMAGE: "preimage", CONV_QKV_VARLEN_POSTIMAGE: "patched"}
+        if (result["rc"] or report.get("tree") != str(tree)
+                or report.get("target") != str(CONV_QKV_TARGET)
+                or sha not in known or report.get("status_after") != known[sha]
+                or report.get("ready") is not (sha == CONV_QKV_VARLEN_POSTIMAGE)
+                or not target.is_file() or sha256_file(target) != sha):
+            raise SystemExit(
+                f"Conv+QKV varlen source state could not be verified at {target}")
+        return sha
+
+    before = check()
+    if before == CONV_QKV_POSTIMAGE:
+        result = installer_call([*command, "--apply"])
+        if result["rc"]:
+            raise SystemExit(
+                f"Conv+QKV varlen installation failed at {target}: "
+                f"{result['report'].get('error', 'installer failed')}")
+        record["installed"] = True
+    after = check() if record["installed"] else before
+    if after != CONV_QKV_VARLEN_POSTIMAGE:
+        raise SystemExit(f"Conv+QKV varlen postimage SHA-256 mismatch at {target}")
+    record.update(ready=True, tree=str(tree), target=str(target),
+                  backup_dir=str(backup), source_sha256_before=before,
+                  source_sha256=after,
+                  installer_sha256=sha256_file(CONV_QKV_VARLEN_INSTALLER))
     return record
 
 
@@ -1003,13 +1059,15 @@ def resolve_schema_cache(config, explicit):
     return enabled, version, strategies
 
 
-def qkv_norm_environment(conv_qkv=False):
+def qkv_norm_environment(conv_qkv=False, conv_qkv_varlen=False):
     """Expose the bundled GDN preprocessing custom ops to the vLLM workers.
 
     The Ascend C vendors are optional: if one is missing, the data-path code
     falls back to the accepted BIC path.  ``conv_qkv`` opts into the fused
     convolution + QKV normalization kernel, which replaces both the conv and
     the ``ClefGdnQkvNorm`` launch on the decision prefill path.
+    ``conv_qkv_varlen`` additionally exposes the multi-sequence kernel; the
+    single-sequence v4 op stays loaded for every ``num_prefills == 1`` call.
     """
     vendor = Path(__file__).resolve().parent / "src" / "ascendc" / "vendors" / "customize"
     library = vendor / "op_api" / "lib" / "libcust_opapi.so"
@@ -1022,11 +1080,19 @@ def qkv_norm_environment(conv_qkv=False):
         conv_vendor = Path(explicit_conv).expanduser().resolve()
     conv_library = conv_vendor / "op_api" / "lib" / "libcust_opapi.so"
     conv_active = bool(conv_qkv) and conv_library.is_file()
+    varlen_vendor = vendor.parent / "clef_conv_qkv_varlen"
+    explicit_varlen = os.environ.get("CLEF_CONV_QKV_VARLEN_VENDOR")
+    if explicit_varlen:
+        varlen_vendor = Path(explicit_varlen).expanduser().resolve()
+    varlen_library = varlen_vendor / "op_api" / "lib" / "libcust_opapi.so"
+    varlen_active = bool(conv_qkv_varlen) and varlen_library.is_file()
     parts = [vendor, vendor / "op_api" / "lib", vendor.parent.parent]
     if conv_active:
         # Distinct op names, so ordering only decides which vendor wins if a
         # future build ever ships the same kernel name twice.
         parts = [conv_vendor, conv_vendor / "op_api" / "lib"] + parts
+    if varlen_active:
+        parts = [varlen_vendor, varlen_vendor / "op_api" / "lib"] + parts
     spec = importlib.util.find_spec("fla_npu")
     if spec and spec.submodule_search_locations:
         fla = Path(list(spec.submodule_search_locations)[0]) / "opp" / "vendors" / "fla_npu_transformer"
@@ -1039,6 +1105,8 @@ def qkv_norm_environment(conv_qkv=False):
     ld_parts = [str(vendor / "op_api" / "lib")]
     if conv_active:
         ld_parts.insert(0, str(conv_vendor / "op_api" / "lib"))
+    if varlen_active:
+        ld_parts.insert(0, str(varlen_vendor / "op_api" / "lib"))
     if existing_ld:
         ld_parts.append(existing_ld)
     environment = {
@@ -1054,6 +1122,11 @@ def qkv_norm_environment(conv_qkv=False):
         environment["CLEF_CONV_QKV_VENDOR"] = str(conv_vendor)
         environment["CLEF_CONV_QKV_TILE"] = os.environ.get("CLEF_CONV_QKV_TILE", "32")
         environment["CLEF_GDN_CONV_QKV"] = "1"
+    if varlen_active:
+        environment["CLEF_CONV_QKV_VARLEN_VENDOR"] = str(varlen_vendor)
+        environment["CLEF_CONV_QKV_VARLEN_TILE"] = os.environ.get(
+            "CLEF_CONV_QKV_VARLEN_TILE", "64")
+        environment["CLEF_GDN_CONV_QKV_VARLEN"] = "1"
     return environment
 
 
@@ -1349,22 +1422,41 @@ def build_launch(args):
         and os.environ.get("CLEF_GDN_CONV_QKV", "").strip().lower()
         not in ("0", "false", "no", "off")
     )
-    qkv_env = qkv_norm_environment(conv_qkv=conv_qkv_requested and not dry_run)
+    conv_qkv_varlen_requested = (
+        conv_qkv_requested
+        and os.environ.get("CLEF_GDN_CONV_QKV_VARLEN", "1").strip().lower()
+        not in ("0", "false", "no", "off")
+    )
+    qkv_env = qkv_norm_environment(
+        conv_qkv=conv_qkv_requested and not dry_run,
+        conv_qkv_varlen=conv_qkv_varlen_requested and not dry_run)
     conv_patch = conv_qkv_patch(conv_qkv_requested, qkv_env.get("CLEF_CONV_QKV_VENDOR"),
                                 output_dir, apply=not dry_run)
     gdn_decision["conv_qkv_patch"] = conv_patch
     if conv_patch["ready"]:
         gdn_decision["files"][str(CONV_QKV_TARGET)] = conv_patch["source_sha256"]
         gdn_decision["patch_state"][str(CONV_QKV_TARGET)] = "conv"
+    varlen_patch = conv_qkv_varlen_patch(
+        conv_qkv_varlen_requested and (dry_run or conv_patch["ready"]),
+        conv_patch.get("tree"), output_dir, apply=not dry_run)
+    gdn_decision["conv_qkv_varlen_patch"] = varlen_patch
+    if varlen_patch["ready"]:
+        gdn_decision["files"][str(CONV_QKV_TARGET)] = varlen_patch["source_sha256"]
+        gdn_decision["patch_state"][str(CONV_QKV_TARGET)] = "conv_varlen"
     if qkv_env:
         environment.update(qkv_env)
         os.environ.update(qkv_env)
         gdn_decision["qkv_norm_vendor"] = qkv_env["CLEF_QKV_NORM_VENDOR"]
         gdn_decision["conv_qkv_vendor"] = qkv_env.get("CLEF_CONV_QKV_VENDOR")
+        gdn_decision["conv_qkv_varlen_vendor"] = qkv_env.get(
+            "CLEF_CONV_QKV_VARLEN_VENDOR")
     else:
         gdn_decision["qkv_norm_vendor"] = None
         gdn_decision["conv_qkv_vendor"] = None
+        gdn_decision["conv_qkv_varlen_vendor"] = None
     environment["CLEF_GDN_CONV_QKV"] = "1" if conv_patch["ready"] else "0"
+    environment["CLEF_GDN_CONV_QKV_VARLEN"] = (
+        "1" if varlen_patch["ready"] else "0")
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
         # Experiment-only override, recorded so the manifest shows it.
         gdn_decision["flag_file"] = os.environ["CLEF_GDN_FLAG_FILE"]

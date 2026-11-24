@@ -144,3 +144,7 @@ python scripts/verify_systemone.py \
 `metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5400（216/400），其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
 历史性能表保留 2026-11-18 五轮 S1 P95 中位 **155.86 ms**、B16 C64 S2 **17.462 decisions/s**，以及第四轮未过工程质量门的 seqs4 候选 **13.764 decisions/s**。ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[历史性能表](logs/dataset-profiles-20261123/results-historical.csv) · [优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
+
+## 2026-11-25 多序列 Varlen Conv+QKV（默认开启）
+
+`--config s1` 现默认启用多序列 `ClefGdnConvQkvVarlen`（`CLEF_GDN_CONV_QKV_VARLEN=1`、tile 64），`num_prefills == 1` 仍走原 v4 `ClefGdnConvQkv`，因此 OD S1 / ERQA C1 与之逐位一致。离线 4 门（B=1 对齐 v4、多序列对齐逐条 v4、NaN 零串扰、单算子 3.53–4.54×）与同窗 A/B 均通过：OD S2 C16 16.971 dec/s / p95 1704 ms、C64 18.039 / 5779 ms；ERQA C16 冷 7.281 / 3335 ms、暖 8.627 / 2816 ms，较 OFF 提升 4.3–6.0%、P95 下降 4.6–7.7%。OD 全量 S1 2,352/2,352 与 512317e `max_prob_diff=0.0`；质量 OD Cap 74.06–74.25、ERQA C16 218/400、C1 216/400，全部 2PP 内、0 失败、0 重试。显式 `CLEF_GDN_CONV_QKV_VARLEN=0` 复现 OFF 臂。详见 [varlen 报告](../docs/conv-qkv-varlen-2026-11-25.md) 与 [轻量日志](logs/conv-qkv-varlen-20261125/)。

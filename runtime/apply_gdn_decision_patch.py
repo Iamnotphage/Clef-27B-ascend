@@ -79,6 +79,10 @@ CONV_QKV_POSTIMAGE_SHA = {
     "vllm_ascend/ops/gdn.py":
         "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78",
 }
+CONV_QKV_VARLEN_POSTIMAGE_SHA = {
+    "vllm_ascend/ops/gdn.py":
+        "afe6d4e87c0eb47bfb325fb630620e47f845fb5a893cb1dada78069ad4e3ca07",
+}
 CHUNK128_POSTIMAGE_SHA = {
     "vllm_ascend/device/device_op.py":
         "bf027ec99a3d069f913600ddfcb76283f73a4114febe46b151c113c62450c226",
@@ -270,6 +274,8 @@ def status(path: Path, relative: str) -> str:
     if digest == QKV_POSTIMAGE_SHA.get(relative):
         return "qkv"
     if digest == CONV_QKV_POSTIMAGE_SHA.get(relative):
+        return "conv"
+    if digest == CONV_QKV_VARLEN_POSTIMAGE_SHA.get(relative):
         return "conv"
     if digest == CHUNK128_POSTIMAGE_SHA.get(relative):
         return "chunk128"

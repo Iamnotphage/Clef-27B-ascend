@@ -1,0 +1,210 @@
+{
+  "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T18:02:04.574758+00:00",
+    "finished_at": "2026-11-24T18:03:01.825364+00:00",
+    "wall_seconds": 57.24223158,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4460304569045850,
+    "wall_end_ns": 4460361811277430,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+  },
+  "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+      "Action Reasoning": 72,
+      "Multi-view Reasoning": 37,
+      "Other": 14,
+      "Pointing": 34,
+      "Spatial Reasoning": 84,
+      "State Estimation": 55,
+      "Task Reasoning": 38,
+      "Trajectory Reasoning": 66
+    }
+  },
+  "service": {
+    "status_code": 200,
+    "body": {
+      "model": "clef",
+      "revision": "local-65e5a3c5ffb6",
+      "model_dir": "/workspace/yangchen/models/Clef-27B",
+      "protocol_version": "2026-11-13",
+      "config": "s1",
+      "tasks": [
+        "choice",
+        "noul",
+        "score"
+      ],
+      "modalities": [
+        "text",
+        "image",
+        "video"
+      ],
+      "joint": "default",
+      "max_model_len": 16384,
+      "tensor_parallel_size": 2,
+      "cache": {
+        "prefix_caching": false,
+        "chunked_prefill": false,
+        "schema_token_cache": false,
+        "schema_token_cache_version": 0
+      }
+    }
+  },
+  "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+  },
+  "accuracy": {
+    "correct": 219,
+    "total": 400,
+    "value": 0.5475,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 219,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5475
+  },
+  "breakdown": {
+    "images:multi": {
+      "total": 113,
+      "correct": 49,
+      "failed": 0,
+      "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+      "total": 287,
+      "correct": 170,
+      "failed": 0,
+      "accuracy": 0.5923344947735192
+    },
+    "options:2": {
+      "total": 14,
+      "correct": 11,
+      "failed": 0,
+      "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+      "total": 4,
+      "correct": 2,
+      "failed": 0,
+      "accuracy": 0.5
+    },
+    "options:4": {
+      "total": 382,
+      "correct": 206,
+      "failed": 0,
+      "accuracy": 0.5392670157068062
+    },
+    "type:Action Reasoning": {
+      "total": 72,
+      "correct": 43,
+      "failed": 0,
+      "accuracy": 0.5972222222222222
+    },
+    "type:Multi-view Reasoning": {
+      "total": 37,
+      "correct": 10,
+      "failed": 0,
+      "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+      "total": 14,
+      "correct": 3,
+      "failed": 0,
+      "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+      "total": 34,
+      "correct": 24,
+      "failed": 0,
+      "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+      "total": 84,
+      "correct": 50,
+      "failed": 0,
+      "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+      "total": 55,
+      "correct": 35,
+      "failed": 0,
+      "accuracy": 0.6363636363636364
+    },
+    "type:Task Reasoning": {
+      "total": 38,
+      "correct": 21,
+      "failed": 0,
+      "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+      "total": 66,
+      "correct": 33,
+      "failed": 0,
+      "accuracy": 0.5
+    },
+    "visual:all-zero": {
+      "total": 187,
+      "correct": 109,
+      "failed": 0,
+      "accuracy": 0.5828877005347594
+    },
+    "visual:empty": {
+      "total": 183,
+      "correct": 94,
+      "failed": 0,
+      "accuracy": 0.5136612021857924
+    },
+    "visual:interleaved": {
+      "total": 30,
+      "correct": 16,
+      "failed": 0,
+      "accuracy": 0.5333333333333333
+    }
+  },
+  "latency_ms": {
+    "count": 400,
+    "min": 753.6909794434905,
+    "max": 4577.15682964772,
+    "mean": 2229.342748732306,
+    "p50": 2402.843665331602,
+    "p95": 3511.106040002778,
+    "p99": 4317.690458325669
+  },
+  "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+  },
+  "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+  },
+  "throughput": {
+    "decisions_per_second": 6.987847764826781,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+  }
+}
