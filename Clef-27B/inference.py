@@ -18,6 +18,7 @@ import re
 import subprocess
 import sys
 import time
+import types
 
 DEFAULT_MODEL_DIR = "/workspace/yangchen/models/Clef-27B"
 SERVED_MODEL_NAME = "clef"
@@ -35,6 +36,11 @@ JOINT_FUSED_GUARD = REPO_ROOT / "runtime" / "apply_joint_single_field_patch_fuse
 JOINT_SERVICE_CHECK_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_service_check.py"
 CHUNK128_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_chunk128_patch.py"
 ADAPTIVE_CHUNK_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_adaptive_chunk_patch.py"
+SYSTEMONE_MM_INSTALLER = (
+    REPO_ROOT / "runtime" / "apply_systemone_mm_state_patch.py")
+SYSTEMONE_MM_MODULE = REPO_ROOT / "runtime" / "systemone_mm_state.py"
+SYSTEMONE_MM_MODE_ENV = "CLEF_STATE_MM_MODE"
+SYSTEMONE_MM_DEFAULT_MODE = "extract_plain"
 DEFAULT_CONFIG = "s1"
 JOINT_ORIGINAL_SHA = "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be"
 JOINT_SINGLE_FIELD_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"
@@ -45,7 +51,7 @@ JOINT_GUARD_POST_SHA = "fdc9dde620a7995faede928fd97edeb3a37cae5de55ca28eea5b17ef
 JOINT_FLAG_ENV = "CLEF_JOINT_FUSED_ATTN"
 JOINT_ALLOW_ENV = "CLEF_JOINT_ALLOWED_POSTIMAGE_SHA"
 MM_PROCESSOR_KWARGS = (
-    '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":65536}},'
+    '{"images_kwargs":{"size":{"shortest_edge":65536,"longest_edge":1048576}},'
     '"videos_kwargs":{"size":{"shortest_edge":4096,"longest_edge":65536},'
     '"do_sample_frames":false}}'
 )
@@ -54,10 +60,16 @@ CONFIGS = {
     "custom": {},
     "s1": {
         "tensor_parallel_size": 2,
-        "max_model_len": 4096,
-        "max_num_seqs": 1,
-        "max_num_batched_tokens": 4096,
-        "limit_mm_per_prompt": '{"image":1,"video":1}',
+        # One resident service serves OpenDecisions (1,595 tokens max) and
+        # ERQA (16 images / 10,294 tokens max): 16K context, an image bound of
+        # 16, and the reference image pixel range.  Tier 1 encoder retention
+        # (262,144 embeddings) is the Worker 1 phase-0 verified setting.
+        "max_model_len": 16384,
+        "max_num_seqs": 16,
+        "max_num_batched_tokens": 16384,
+        "gpu_memory_utilization": 0.85,
+        "limit_mm_per_prompt": '{"image":16,"video":0}',
+        "encoder_cache_tokens": 262144,
         "schema_token_cache": "off",
         "joint_single_field": True,
         "joint_fused_attention": True,
@@ -132,6 +144,23 @@ def sha256_bytes(blob):
 
 def sha256_file(path):
     return sha256_bytes(Path(path).read_bytes())
+
+
+def load_python_contract(path, name):
+    """Load a checked-in module's constants without writing __pycache__."""
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    sys.modules[name] = module
+    exec(compile(Path(path).read_bytes(), str(path), "exec"), module.__dict__)
+    return module
+
+
+def systemone_mm_mode():
+    """Validate and return the effective multimodal-state mode."""
+    module = load_python_contract(SYSTEMONE_MM_MODULE, "clef_systemone_mm_state")
+    raw = os.environ.get(SYSTEMONE_MM_MODE_ENV)
+    return module.resolve_mode(
+        raw if raw is not None and raw.strip() else SYSTEMONE_MM_DEFAULT_MODE)
 
 
 def write_json_atomic(path, value):
@@ -370,6 +399,89 @@ def gdn_decision_prefill(config, apply=True):
         patch_state=statuses,
         files={path: item.get("sha256") for path, item in report["files"].items()},
         flag_module_sha256=report.get("flag_module", {}).get("sha256"),
+    )
+    return record
+
+
+def systemone_mm_state_patch(apply=True):
+    """Install/verify the ``/v1/systemone`` multimodal ``state`` frontend.
+
+    The patch is inert for text requests: a ``state`` that is not a
+    well-formed content-part list reaches ``render_state`` unchanged, so the
+    OpenDecisions path stays byte-identical.  Dry-run is strictly read-only
+    and never probes the vLLM tree.
+    """
+    mode = systemone_mm_mode()
+    record = {
+        "requested": True,
+        "enabled": False,
+        "mode": mode,
+        "mode_env": SYSTEMONE_MM_MODE_ENV,
+        "installer": str(SYSTEMONE_MM_INSTALLER),
+        "installer_sha256": (
+            sha256_bytes(SYSTEMONE_MM_INSTALLER.read_bytes())
+            if SYSTEMONE_MM_INSTALLER.is_file() else None),
+        "module": str(SYSTEMONE_MM_MODULE),
+        "module_sha256": (
+            sha256_bytes(SYSTEMONE_MM_MODULE.read_bytes())
+            if SYSTEMONE_MM_MODULE.is_file() else None),
+    }
+    if not SYSTEMONE_MM_INSTALLER.is_file():
+        raise SystemExit(f"systemone multimodal installer missing: {SYSTEMONE_MM_INSTALLER}")
+    if not SYSTEMONE_MM_MODULE.is_file():
+        raise SystemExit(f"systemone multimodal module missing: {SYSTEMONE_MM_MODULE}")
+    if not apply:
+        # Dry-run has no side effects and no vLLM dependency.
+        record.update(pending_install=True)
+        return record
+    contract = load_python_contract(
+        SYSTEMONE_MM_INSTALLER, "clef_systemone_mm_installer")
+
+    def run(flag):
+        result = subprocess.run(
+            [sys.executable, str(SYSTEMONE_MM_INSTALLER), flag],
+            capture_output=True, text=True, check=False)
+        try:
+            report = json.loads(result.stdout)
+        except ValueError:
+            report = {}
+        if result.returncode != 0 and not (flag == "--check" and report):
+            raise SystemExit(
+                f"systemone multimodal patch {flag} failed:\n"
+                f"{result.stdout[-2000:]}{result.stderr[-2000:]}")
+        return report
+
+    def verify(report):
+        state = report.get("state")
+        module_state = report.get("module_state")
+        postimage = report.get("sha256") == contract.POSTIMAGE_SHA256
+        if (report.get("patch_version") != contract.PATCH_VERSION
+                or report.get("upstream_sha256") != contract.UPSTREAM_SHA256
+                or report.get("postimage_sha256") != contract.POSTIMAGE_SHA256
+                or report.get("module_expected_sha256") != contract.MODULE_SHA256
+                or state not in ("preimage", "postimage")
+                or module_state not in ("missing", "current")
+                or report.get("ready") is not (postimage and module_state == "current")):
+            raise SystemExit(
+                "systemone multimodal patch source SHA-256 mismatch: "
+                f"{report}; verify the pinned vLLM tree before retrying")
+        return state, module_state
+
+    report = run("--check")
+    status, module_status = verify(report)
+    if not report.get("ready"):
+        run("--apply")
+        report = run("--check")
+        status, module_status = verify(report)
+    if not report.get("ready"):
+        raise SystemExit(
+            f"systemone multimodal patch incomplete: {status}/{module_status}")
+    record.update(
+        enabled=True,
+        patch_version=report.get("patch_version"),
+        patch_state=status,
+        installed_sha256=report.get("sha256"),
+        installed_module_sha256=report.get("module_sha256"),
     )
     return record
 
@@ -1113,8 +1225,13 @@ def build_launch(args):
             f"单请求最多 {effective['max_model_len']} tokens）")
     effective["max_num_batched_tokens"] = batched
 
-    # Experimental retention budget. Keep the default launch path unchanged.
-    encoder_cache_tokens = getattr(args, "encoder_cache_tokens", 0)
+    # Encoder-output retention budget.  ``s1`` adopts the 262,144-embedding
+    # Tier 1 cache that Worker 1 phase 0 measured as OD S1 neutral (<= 0.7 ms);
+    # an explicit 0 disables it for ablation.
+    encoder_cache_tokens, encoder_cache_source = choose(
+        config, getattr(args, "encoder_cache_tokens", None),
+        "encoder_cache_tokens", int)
+    encoder_cache_tokens = encoder_cache_tokens or 0
     if encoder_cache_tokens < 0:
         raise ValueError("--encoder-cache-tokens 应为 0（关闭）或正整数")
     if encoder_cache_tokens and encoder_cache_tokens < batched:
@@ -1178,9 +1295,9 @@ def build_launch(args):
         existing_path = os.environ.get("PYTHONPATH")
         environment["PYTHONPATH"] = (
             module_dir + os.pathsep + existing_path if existing_path else module_dir)
-        effective["encoder_cache_tokens"] = encoder_cache_tokens
         effective["encoder_cache_scheduler_sha256"] = sha256_file(encoder_scheduler)
-        sources["encoder_cache_tokens"] = "explicit"
+        effective["encoder_cache_tokens"] = encoder_cache_tokens
+        sources["encoder_cache_tokens"] = encoder_cache_source
     if gdn_decision["enabled"]:
         environment["CLEF_GDN_DECISION_PREFILL"] = "1"
         environment["CLEF_GDN_NO_RECOMPUTE"] = os.environ.get(
@@ -1223,6 +1340,8 @@ def build_launch(args):
     # The fused conv + QKV normalization kernel is the measured default on the
     # decision prefill path; CLEF_GDN_CONV_QKV=0 reproduces the unfused arm.
     dry_run = getattr(args, "dry_run", False)
+    systemone_mm = systemone_mm_state_patch(apply=not dry_run)
+    environment["CLEF_STATE_MM_MODE"] = systemone_mm["mode"]
     conv_qkv_requested = (
         (gdn_decision["enabled"] or dry_run and gdn_decision["requested"])
         and os.environ.get("CLEF_GDN_CONV_QKV", "").strip().lower()
@@ -1261,6 +1380,7 @@ def build_launch(args):
         "service_environment": environment,
         "gdn_decision_prefill": gdn_decision,
         "joint_patch": joint_patch,
+        "systemone_mm_state": systemone_mm,
         "software": software_provenance(),
         "schema_cache": {
             "enabled": schema_enabled,
@@ -1292,14 +1412,15 @@ def main():
     parser.add_argument("--port", type=int, default=18143,
                         help="默认监听 127.0.0.1:18143（比赛接口约定）。")
     parser.add_argument("--config", choices=sorted(CONFIGS), default=DEFAULT_CONFIG,
-                        help="s1（默认，最终采用 aa3e）：TP2/4096/seqs1/缓存关；"
+                        help="s1（默认，单服务常驻）：TP2/16384/seqs16/image16/缓存关；"
                              "s2：TP2/4096/seqs4/缓存 v2 开；custom：TP1/1024 保守默认。")
     parser.add_argument("--tensor-parallel-size", type=int, default=None)
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
     parser.add_argument("--max-num-batched-tokens", type=int, default=None)
-    parser.add_argument("--encoder-cache-tokens", type=int, default=0,
-                        help="实验：encoder 输出缓存 embedding 容量；0 保持默认，compute 预算不变。")
+    parser.add_argument("--encoder-cache-tokens", type=int, default=None,
+                        help="encoder 输出缓存 embedding 容量；0 关闭（s1 默认），"
+                             "正整数按 clef_encoder_cache_scheduler 启用。")
     parser.add_argument("--gpu-memory-utilization", type=float, default=None)
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')

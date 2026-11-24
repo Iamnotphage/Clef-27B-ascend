@@ -104,6 +104,16 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(launch["effective"]["mm_processor_kwargs"], value)
         self.assertEqual(launch["sources"]["mm_processor_kwargs"], source)
 
+    def without_scheduler(self, launch):
+        """Drop the launcher-owned Tier 1 scheduler pair from argv."""
+        argv = list(launch["argv"])
+        if argv[-2:] == [
+            "--scheduler-cls",
+            "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler",
+        ]:
+            argv = argv[:-2]
+        return argv
+
     def test_s1_data_path_defaults_follow_the_decision_patch(self):
         disabled = self.launch("--config", "s1")
         for key in ("bsnd", "skip_initial_state", "skip_conv_state",
@@ -183,28 +193,121 @@ class LaunchTests(unittest.TestCase):
             launch = self.launch("--config", config)
             self.assert_mm(launch, launcher.MM_PROCESSOR_KWARGS, f"config:{config}")
 
-    def test_encoder_cache_default_preserves_original_launch(self):
-        initial_environment = dict(os.environ)
-        with mock.patch.dict(os.environ, initial_environment, clear=True):
-            default = self.launch("--config", "s1")
-        with mock.patch.dict(os.environ, initial_environment, clear=True):
-            explicit_off = self.launch("--config", "s1", "--encoder-cache-tokens", "0")
-        self.assertEqual(default, explicit_off)
-        self.assertNotIn("--scheduler-cls", default["argv"])
-        self.assertNotIn("PYTHONPATH", default["service_environment"])
-        self.assertNotIn("CLEF_ENCODER_CACHE_TOKENS", default["service_environment"])
+    def test_encoder_cache_default_is_tier1_and_explicit_off_disables(self):
+        baseline = self.launch("--config", "s1")
+        self.assertIn("--scheduler-cls", baseline["argv"])
+        self.assertEqual(baseline["argv"][-2:], [
+            "--scheduler-cls",
+            "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
+        self.assertEqual(baseline["service_environment"]
+                         ["CLEF_ENCODER_CACHE_TOKENS"], "262144")
+        self.assertEqual(baseline["effective"]["encoder_cache_tokens"], 262144)
+        self.assertEqual(baseline["sources"]["encoder_cache_tokens"], "config:s1")
+        self.assertEqual(len(baseline["effective"]
+                             ["encoder_cache_scheduler_sha256"]), 64)
+        disabled = self.launch("--config", "s1", "--encoder-cache-tokens", "0")
+        self.assertNotIn("--scheduler-cls", disabled["argv"])
+        self.assertNotIn("CLEF_ENCODER_CACHE_TOKENS",
+                         disabled["service_environment"])
+        self.assertNotIn("encoder_cache_tokens", disabled["effective"])
 
-    def test_encoder_cache_changes_only_retention_and_module_loading(self):
+    def test_s1_defaults_serve_erqa_without_overrides(self):
+        launch = self.launch("--config", "s1")
+        for key, value in (
+            ("max_model_len", 16384),
+            ("max_num_seqs", 16),
+            ("max_num_batched_tokens", 16384),
+            ("gpu_memory_utilization", 0.85),
+            ("limit_mm_per_prompt", '{"image":16,"video":0}'),
+        ):
+            self.assertEqual(launch["effective"][key], value)
+            self.assertEqual(launch["sources"][key], "config:s1")
+        self.assertIn('"longest_edge":1048576',
+                      launch["effective"]["mm_processor_kwargs"])
+        self.assertIn('"shortest_edge":65536',
+                      launch["effective"]["mm_processor_kwargs"])
+        self.assertEqual(launch["effective"]["encoder_cache_tokens"], 262144)
+        self.assertEqual(launch["sources"]["encoder_cache_tokens"], "config:s1")
+        self.assertEqual(launch["service_environment"]
+                         ["CLEF_ENCODER_CACHE_TOKENS"], "262144")
+        self.assertEqual(launch["argv"][-2:], [
+            "--scheduler-cls",
+            "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
+        record = launch["systemone_mm_state"]
+        self.assertEqual(record["mode"], "extract_plain")
+        self.assertTrue(record["pending_install"])
+        self.assertFalse(record["enabled"])
+        self.assertEqual(launch["service_environment"]["CLEF_STATE_MM_MODE"],
+                         "extract_plain")
+
+    def test_systemone_mm_mode_is_recorded_and_validated(self):
+        os.environ["CLEF_STATE_MM_MODE"] = "extract_question_dict"
+        self.addCleanup(os.environ.pop, "CLEF_STATE_MM_MODE", None)
+        launch = self.launch("--config", "s1")
+        self.assertEqual(launch["systemone_mm_state"]["mode"],
+                         "extract_question_dict")
+        self.assertEqual(launch["service_environment"]["CLEF_STATE_MM_MODE"],
+                         "extract_question_dict")
+        os.environ["CLEF_STATE_MM_MODE"] = "bogus"
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                self.launch("--config", "s1")
+
+    def test_systemone_mm_dry_run_never_probes_the_tree(self):
+        with mock.patch.object(launcher.subprocess, "run") as run:
+            launch = self.launch("--config", "s1")
+        run.assert_not_called()
+        self.assertTrue(launch["systemone_mm_state"]["pending_install"])
+        self.assertIsNotNone(launch["systemone_mm_state"]["installer_sha256"])
+        self.assertIsNotNone(launch["systemone_mm_state"]["module_sha256"])
+
+    def test_systemone_mm_apply_verifies_the_pinned_report(self):
+        contract = launcher.load_python_contract(
+            launcher.SYSTEMONE_MM_INSTALLER, "clef_systemone_mm_contract_test")
+        base = {
+            "patch_version": contract.PATCH_VERSION,
+            "upstream_sha256": contract.UPSTREAM_SHA256,
+            "postimage_sha256": contract.POSTIMAGE_SHA256,
+            "module_expected_sha256": contract.MODULE_SHA256,
+        }
+        preimage = {**base, "sha256": contract.UPSTREAM_SHA256,
+                    "state": "preimage", "module_state": "missing", "ready": False}
+        postimage = {**base, "sha256": contract.POSTIMAGE_SHA256,
+                     "state": "postimage", "module_state": "current",
+                     "module_sha256": contract.MODULE_SHA256, "ready": True}
+        results = [
+            SimpleNamespace(returncode=0, stdout=json.dumps(preimage), stderr=""),
+            SimpleNamespace(returncode=0,
+                            stdout=json.dumps({"result": "applied"}), stderr=""),
+            SimpleNamespace(returncode=0, stdout=json.dumps(postimage), stderr=""),
+        ]
+        with mock.patch.object(launcher.subprocess, "run", side_effect=results) as run:
+            record = launcher.systemone_mm_state_patch(apply=True)
+        self.assertTrue(record["enabled"])
+        self.assertEqual(record["patch_state"], "postimage")
+        self.assertEqual(record["installed_module_sha256"], contract.MODULE_SHA256)
+        self.assertEqual(run.call_count, 3)
+
+        unknown = {**base, "sha256": "0" * 64, "state": "unknown",
+                   "module_state": "missing", "ready": False}
+        with mock.patch.object(launcher.subprocess, "run",
+                               return_value=SimpleNamespace(
+                                   returncode=1, stdout=json.dumps(unknown),
+                                   stderr="")):
+            with self.assertRaisesRegex(SystemExit, "SHA-256 mismatch"):
+                launcher.systemone_mm_state_patch(apply=True)
+
+    def test_encoder_cache_default_and_override_only_change_retention(self):
         baseline = self.launch("--config", "s1")
         with mock.patch.dict(os.environ, {"PYTHONPATH": "/existing/path"}):
             enabled = self.launch("--config", "s1", "--encoder-cache-tokens", "327680")
-        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
-        self.assertEqual(enabled["argv"][-2:], ["--scheduler-cls",
-                         "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
+        self.assertEqual(enabled["argv"], baseline["argv"])
         self.assertEqual(enabled["service_environment"]["CLEF_ENCODER_CACHE_TOKENS"], "327680")
         self.assertEqual(enabled["service_environment"]["PYTHONPATH"],
                          str(ENTRY.parent) + os.pathsep + "/existing/path")
-        self.assertEqual(enabled["effective"]["max_num_batched_tokens"], 4096)
+        self.assertEqual(enabled["effective"]["max_num_batched_tokens"], 16384)
+        self.assertEqual(enabled["effective"]["encoder_cache_tokens"], 327680)
+        self.assertEqual(enabled["sources"]["encoder_cache_tokens"], "explicit")
         self.assertEqual(len(enabled["effective"]["encoder_cache_scheduler_sha256"]), 64)
 
     def test_encoder_cache_keeps_erqa_phase_parameters(self):
@@ -213,7 +316,7 @@ class LaunchTests(unittest.TestCase):
                 "--mm-processor-kwargs", '{"min_pixels":65536,"max_pixels":1048576}')
         baseline = self.launch(*args)
         enabled = self.launch(*args, "--encoder-cache-tokens", "131072")
-        self.assertEqual(enabled["argv"][:-2], baseline["argv"])
+        self.assertEqual(enabled["argv"], baseline["argv"])
         for key in ("max_model_len", "max_num_batched_tokens", "limit_mm_per_prompt", "mm_processor_kwargs"):
             self.assertEqual(enabled["effective"][key], baseline["effective"][key])
 
@@ -289,7 +392,7 @@ class LaunchTests(unittest.TestCase):
         loader = '{"enable_weights_track": true}'
         launch = self.launch("--", "--mm-processor-kwargs", mm,
                              "--quantization", "ascend", "--model-loader-extra-config", loader)
-        self.assertEqual(launch["argv"][-4:], ["--quantization", "ascend", "--model-loader-extra-config", loader])
+        self.assertEqual(self.without_scheduler(launch)[-4:], ["--quantization", "ascend", "--model-loader-extra-config", loader])
         self.assert_mm(launch, mm, "passthrough")
         parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument("--mm-processor-kwargs", type=json.loads)
@@ -302,11 +405,11 @@ class LaunchTests(unittest.TestCase):
 
     def test_unknown_equals_and_bare_flags_preserve_tokens(self):
         arguments = ["--quantization=ascend", '--model-loader-extra-config={"x": "a b=c"}', "--disable-log-requests"]
-        self.assertEqual(self.launch("--", *arguments)["argv"][-3:], arguments)
+        self.assertEqual(self.without_scheduler(self.launch("--", *arguments))[-3:], arguments)
 
     def test_unknown_separate_values_preserve_spaces_equals_and_empty(self):
         arguments = ["--download-dir", "/tmp/weights a=b", "--revision", ""]
-        self.assertEqual(self.launch("--", *arguments)["argv"][-4:], arguments)
+        self.assertEqual(self.without_scheduler(self.launch("--", *arguments))[-4:], arguments)
 
     def test_existing_owned_override_and_fixed_flags(self):
         launch = self.launch("--", "--port", "19001", "--runner=pooling", "--enforce-eager")
