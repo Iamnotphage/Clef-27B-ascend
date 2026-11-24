@@ -76,4 +76,6 @@ K56 三轮 P95 中位 **32.574693 ms**、吞吐中位 **35.697736 decisions/s**�
 
 ## K64 末态缓存候选
 
-`od-s1-k64` 显式选择 post-norm full-T 隐藏态。在锁定的 TP2、BF16、eager、B1 文本 pooling 路径中，冷请求调用原主干并只留存末段 final norm 的一张隐藏张量。命中后，两 rank 在同步恢复各自私有张量并达成就绪共识后返回隐藏态，原 runner 仍执行 ALL pooling 和完整联合决策头。保留同一组 fresh prefill、位置、KV/GDN、模型和来源守卫，并增加有效 embedding 生产缓冲区、pooling runner 及 post-forward 状态消费者检查。需要实机验证的内容包括真实末态布局、完整输出等价与独立窗口吞吐。现有 K56 固定序和乱序结果沿用各自的测量索引。
+`od-s1-k64` 显式选择 post-norm full-T 隐藏态。在锁定的 TP2、BF16、eager、B1 文本 pooling 路径中，冷请求调用原主干并只留存末段 final norm 的一张隐藏张量。命中后，两 rank 在同步恢复各自私有张量并达成就绪共识后返回隐藏态，原 runner 仍执行 ALL pooling 和完整联合决策头。保留同一组 fresh prefill、位置、KV/GDN、模型和来源守卫，并增加有效 embedding 生产缓冲区、pooling runner 及 post-forward 状态消费者检查。三题正确性窗口共 49 条 HTTP 200。982、977、990 token 三种输入的 stock、fill 和 hit 全 T 末态均为独立 ND BF16，分别占每 rank 10,055,680、10,004,480、10,137,600 字节。主干观测为 stock/fill 64 层和一次 final norm，hit 零层、零主干 final norm。两 rank 对应的 ALL pooling 输入与联合头调用均保留，完整概率与固定 ON 逐题相同。单 rank 恢复否决双方回原主干，后续另外一题复用每 rank 977 个槽位后仍通过逐位验证。
+
+关闭审计的三题 A0/A1/B/A2 完整调用中位分别为 157.063、157.095、16.669、156.909 ms。原包 SHA-256 为 `6178e0b9b7a13660788cc1a7fcbd6cc92ac070eadc739ff5fba29c758e1166b7`。吞吐与全量作者评分见后续独立窗口，现有 K56 固定序和乱序结果沿用各自的测量索引。
