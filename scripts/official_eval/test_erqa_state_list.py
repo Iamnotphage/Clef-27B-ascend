@@ -176,9 +176,14 @@ class ERQAProtocolTests(unittest.TestCase):
         candidates = [
             Path("/workspace/yangchen/datasets/erqa-official-20261114/"
                  "samples.jsonl"),
+            Path("/workspace/yangchen/work/"
+                 "aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-fixed/"
+                 "samples.jsonl"),
             Path(__file__).resolve().parents[2] / "datasets" /
             "erqa-official-20261114" / "samples.jsonl",
         ]
+        candidates.extend(sorted(Path("/workspace/yangchen/work").glob(
+            "*/erqa-fixed/samples.jsonl")))
         path = next((candidate for candidate in candidates if candidate.is_file()), None)
         if path is None:
             self.skipTest("ERQA samples.jsonl is not present on this host")

@@ -186,11 +186,15 @@ class ZeroMisjudgmentTests(unittest.TestCase):
         candidates = [
             Path("/workspace/yangchen/datasets/clef-full-20261112/full-data/"
                  "open-decisions2352.jsonl"),
+            Path("/workspace/yangchen/datasets/clef-fixed-20261123/"
+                 "opendecisions-1.0.1/open-decisions2352.jsonl"),
             Path(__file__).resolve().parent.parent / "datasets" /
             "open-decisions2352.jsonl",
             Path("/private/tmp/clef-systemone-mm-20261124/datasets/"
                  "open-decisions2352.jsonl"),
         ]
+        candidates.extend(sorted(Path("/workspace/yangchen/datasets").glob(
+            "clef-fixed-*/opendecisions-1.0.1/open-decisions2352.jsonl")))
         path = next((candidate for candidate in candidates if candidate.is_file()), None)
         if path is None:
             self.skipTest("OpenDecisions 2,352 snapshot is not present on this host")
