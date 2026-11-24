@@ -8,7 +8,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 case "$profile" in
-    od-s1|od-s1-k32|od-s1-k56)
+    od-s1|od-s1-k32|od-s1-k56|od-s1-k64)
         options=(--config s1)
         ;;
     od-s2)
@@ -31,7 +31,7 @@ case "$profile" in
         )
         ;;
     *)
-        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s1-k32|od-s1-k56|od-s2|erqa-c1|erqa-s2} [start.sh arguments]' >&2
+        printf '%s\n' 'Usage: scripts/start_dataset_profile.sh {od-s1|od-s1-k32|od-s1-k56|od-s1-k64|od-s2|erqa-c1|erqa-s2} [start.sh arguments]' >&2
         exit 2
         ;;
 esac
@@ -52,7 +52,7 @@ case "${CLEF_PRIVATE_JPEG_CACHE_GIB:-0}" in
         ;;
 esac
 
-if [[ "$profile" == "od-s1-k32" || "$profile" == "od-s1-k56" ]]; then
+if [[ "$profile" == "od-s1-k32" || "$profile" == "od-s1-k56" || "$profile" == "od-s1-k64" ]]; then
     export CLEF_PRIVATE_ACTIVATION_BOUNDARY="${profile##*-k}"
     python_bin="${PYTHON_BIN:-python3}"
     rank_bytes="${CLEF_PRIVATE_K32_RANK_BYTES:-22011707392}"
