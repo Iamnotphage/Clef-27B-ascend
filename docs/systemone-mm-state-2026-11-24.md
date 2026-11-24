@@ -49,8 +49,8 @@
 
 | 模式 | 行为 | 状态 |
 | --- | --- | --- |
-| `extract_plain`（默认） | 所有 `text` 段 `"".join` 为纯字符串 `state`；图片按原顺序进入 `media["image"]` | 本次默认 |
-| `extract_question_dict` | 同上，但 `state = {"question": <joined>}`，等价 2026-11-14 基线 | A/B 对照 |
+| `extract_plain`（A1） | 所有 `text` 段 `"".join` 为纯字符串 `state`；图片按原顺序进入 `media["image"]` | A/B 臂：ERQA 213/400 |
+| `extract_question_dict`（A2，默认） | 同上，但 `state = {"question": <joined>}`，等价 2026-11-14 基线 | **锁定默认**：ERQA 216/400 |
 | `interleave` | 保留 `[(kind, value), ...]` 段序列，供方案 B 原生交错渲染 | 解析器支持；前端在方案 B 落地前对图文请求明确 400 |
 
 官方 `eval_harness.py` 的字符下标切分经 `"".join(text_parts)` 可逐字符还原原题；解析器保留 `segments` 供后续原生交错方案使用。
@@ -95,9 +95,9 @@ postimage SHA-256：`99a8e1b73dd55800736de4c2b29cf300aa7f819e4e5495f59805733dbe6
 | `--gpu-memory-utilization` | 0.90 | **0.85** |
 | `--limit-mm-per-prompt` | `{"image":1,"video":1}` | **`{"image":16,"video":0}`** |
 | `--mm-processor-kwargs` `longest_edge` | 65536 | **1048576**（`shortest_edge` 65536） |
-| `--encoder-cache-tokens` | 0 | **0（待阶段 0 证据）** |
+| `--encoder-cache-tokens` | 0 | **262144**（Worker 1 阶段 0 实测 OD S1 零劣化 ≤0.7 ms，默认启用；显式 0 可回退） |
 
-`--encoder-cache-tokens` 已支持 `CONFIGS` 配置与 CLI/`sources` 记录；候选值 `262144` 必须等性能 Worker 阶段 0 的同窗口 A/B 证明无 S1 退化后再启用，因此本次保持 0。s1 的 TP2、joint fused、GDN BIC、conv+QKV、chunk128 等既有默认不变。
+`--encoder-cache-tokens` 已支持 `CONFIGS` 配置与 CLI/`sources` 记录；Worker 1 阶段 0 的同窗口 A/B 已证明 `262144` 对 OD S1 零劣化（≤0.7 ms），因此 `s1` 默认启用，显式 `--encoder-cache-tokens 0` 可复现关闭臂。s1 的 TP2、joint fused、GDN BIC、conv+QKV、chunk128/adaptive 等既有默认保持不变。
 
 启动时 `systemone_mm_state_patch()`：
 
@@ -145,4 +145,4 @@ python3 -m unittest runtime/test_systemone_mm_state.py \
 2. **阶段 4**：官方命令裸启动；6 项冒烟（`/health`、`/v1/decide/info`、冻结 8 例文本、`erqa-0000` 单图 token≈366、`erqa-0167` 16 图 token≈10,294、非法报文 400、旧 `/v1/decide` 兼容）；ERQA 400 全量 A1/A2（必要时方案 B）与 S2 C16；同进程 OpenDecisions 2,352 逐位回归与 EvalScope 联调。
 3. **阶段 5**：按实测更新 `docs/submission-rules-2026-11-13.md`、`Clef-27B/README.md`、`optimization.md`、`metrics.csv`、`results.csv`，补全本记录并合并交付。
 
-在阶段 4 通过前，`s1` 的 16384/16/0.85 等默认值与 `encoder_cache_tokens=0` 均视为待验证候选，不写入最终提交结论。
+在阶段 4 通过前，`s1` 的 16384/16/0.85/encoder 262144 等默认值仍以实测验收为准，不提前把未完成测量写入最终提交结论。

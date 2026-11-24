@@ -40,7 +40,9 @@ SYSTEMONE_MM_INSTALLER = (
     REPO_ROOT / "runtime" / "apply_systemone_mm_state_patch.py")
 SYSTEMONE_MM_MODULE = REPO_ROOT / "runtime" / "systemone_mm_state.py"
 SYSTEMONE_MM_MODE_ENV = "CLEF_STATE_MM_MODE"
-SYSTEMONE_MM_DEFAULT_MODE = "extract_plain"
+#: Phase-4 ERQA A/B locked arm: A1 (extract_plain) 213/400 vs
+#: A2 (extract_question_dict) 216/400, so the official entry defaults to A2.
+SYSTEMONE_MM_DEFAULT_MODE = "extract_question_dict"
 DEFAULT_CONFIG = "s1"
 JOINT_ORIGINAL_SHA = "197863d5019f8b5326421f7616fbda13b030c27023248bf130628af7722bf4be"
 JOINT_SINGLE_FIELD_SHA = "f8101b98228bbd472a63a1efe6827583e35c6cc9dede4379b925f2b016670863"

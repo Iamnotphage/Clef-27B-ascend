@@ -234,11 +234,11 @@ class LaunchTests(unittest.TestCase):
             "--scheduler-cls",
             "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"])
         record = launch["systemone_mm_state"]
-        self.assertEqual(record["mode"], "extract_plain")
+        self.assertEqual(record["mode"], "extract_question_dict")
         self.assertTrue(record["pending_install"])
         self.assertFalse(record["enabled"])
         self.assertEqual(launch["service_environment"]["CLEF_STATE_MM_MODE"],
-                         "extract_plain")
+                         "extract_question_dict")
 
     def test_systemone_mm_mode_is_recorded_and_validated(self):
         os.environ["CLEF_STATE_MM_MODE"] = "extract_question_dict"
