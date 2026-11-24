@@ -72,7 +72,7 @@
 - S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-18 五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50，mean 112.98、p50 102.87）；历史链路为 2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms、**MLP BF16 NZ** 166.002 ms、**conv+QKV 融合** 165.091→160.419、**GDN chunk128** 160.419→157.745 ms / 8.652 dec/s；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
 - S2 上报点 B16 C64（conv+QKV 融合 + chunk128）**17.462 dec/s**（2026-11-18 两次 17.462/17.475，历史 17.446）、p95 5946–5950 ms；B8 C16 为 16.738 dec/s、p95 1772 ms、Capability 73.8426/accuracy 1905；上一版 16.376 dec/s、p95 1803 ms；seqs4 14.652/14.689 作为历史行保留；主办方对 S2 有效性（p95 约束）的最终规则仍待确认；
 - GDN 融合 v2 对总 token ≤1600 的 prefill 生效，长 ERQA/长请求自动回退 BIC；
-- ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置，与 S1 的 4,096 / `image=1` 不是同一服务配置；
+- ERQA P95 使用 ERQA 服务的 16,384 上下文 / `image=16` 配置；2026-11-24 起 `--config s1` 默认统一为同一常驻配置（16384 / image=16），上表历史性能行仍来自 4,096 / seqs1 的分离服务，统一配置的 S1/S2/ERQA 实测待阶段 4 验收；
 - 官方公开值没有可比的 S1/S2 或 ERQA 延迟，性能不做官方对照；
 - **BF16 S2 候选（未替换当前 S2）**：B8 C16 v2+head **16.398 dec/s**、p95 1803 ms、Capability 74.2510/accuracy 1909（2PP）；B10 C20 16.670/2249；B12 C24 16.841/2598；B16 C64 17.110/6088。
 
@@ -110,9 +110,9 @@ bash Clef-27B/start.sh --model-dir /workspace/yangchen/models/Clef-27B \
   --output-dir /workspace/yangchen/logs/clef-run --config s1
 ```
 
-`start.sh` 使用 `PYTHON_BIN` 指定的解释器转发到 `inference.py`，启动前检查完整分片和联合头文件。`--output-dir` 写入 `launch-manifest.json` 和 `service.log`；默认监听 `127.0.0.1:18143`。`--config s1` 为最终采用的 TP2/4096/seqs1/缓存关；**不指定 `--config` 时默认 s1**，因此 `start.sh --model-dir ... --output-dir ...` 直接启动验收配置。`--config s2` 为 TP2/4096/seqs4/schema cache v2 开（吞吐候选，质量不通过）；`--config custom` 保留 BF16、TP1、1024、单序列的保守默认。附加 vLLM 参数放在 `--` 后，`--flag value` 与 `--flag=value` 均可；重复参数报错，passthrough 覆盖同名 launcher 参数时 manifest 记录实际生效值和来源。
+`start.sh` 使用 `PYTHON_BIN` 指定的解释器转发到 `inference.py`，启动前检查完整分片和联合头文件。`--output-dir` 写入 `launch-manifest.json` 和 `service.log`；默认监听 `127.0.0.1:18143`。`--config s1` 为单服务常驻候选：TP2/16384/seqs16/`image=16`/缓存关，启动时安装并校验 `/v1/systemone` 图文 `state` 列表补丁（2026-11-24 接口适配；`encoder-cache-tokens` 仍为 0，待阶段 0 证据）；**不指定 `--config` 时默认 s1**，因此 `start.sh --model-dir ... --output-dir ...` 直接启动单一常驻实例。`--config s2` 为 TP2/4096/seqs4/schema cache v2 开（吞吐候选，质量不通过）；`--config custom` 保留 BF16、TP1、1024、单序列的保守默认。附加 vLLM 参数放在 `--` 后，`--flag value` 与 `--flag=value` 均可；重复参数报错，passthrough 覆盖同名 launcher 参数时 manifest 记录实际生效值和来源。
 
-服务接口：`GET /health`（JSON：status/model/revision）、`GET /v1/decide/info`（身份、任务、协议、缓存）、`POST /v1/systemone`（文本决策）、`POST /v1/decide`（文本/图文决策，与 systemone 同协议）。
+服务接口：`GET /health`（JSON：status/model/revision）、`GET /v1/decide/info`（身份、任务、协议、缓存）、`POST /v1/systemone`（文本/图文决策；2026-11-24 起支持 `state` 列表内嵌 `image_url` + `text` 内容块）、`POST /v1/decide`（文本/图文决策，与 systemone 同协议）。
 
 ```bash
 python scripts/verify_systemone.py \
