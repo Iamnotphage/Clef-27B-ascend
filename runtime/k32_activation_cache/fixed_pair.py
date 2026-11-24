@@ -9,7 +9,6 @@ from activation_cache import text_key
 
 @dataclass(frozen=True)
 class PackedPair:
-    items: tuple
     offsets: tuple[int, int, int]
     step_key: bytes
     keys: tuple[bytes, bytes]
@@ -44,8 +43,8 @@ def pack_pair(items, req_ids, offsets, token_ids, position_axes, strides, domain
     # The physical layout and each occurrence are numerical provenance in this
     # probe. Reordering or replacing a partner never reuses a prior entry.
     step_key = sha256(b"clef-k64-fixed-pair-v1\0"+pack("<II",*lengths)+b"".join(item_keys)).digest()
-    return PackedPair(ordered,cuts,step_key,
-                      tuple(sha256(step_key+bytes([i])+key).digest() for i,key in enumerate(item_keys)))
+    keys = tuple(sha256(step_key + bytes([i]) + key).digest() for i, key in enumerate(item_keys))
+    return PackedPair(cuts, step_key, keys)
 
 
 def run_fixed_pair(pair, *, cache, restore, capture, exchange, stock, enabled):
@@ -53,14 +52,13 @@ def run_fixed_pair(pair, *, cache, restore, capture, exchange, stock, enabled):
     digest = pair.step_key if pair else None
     restored = None
     if pair and enabled:
-        with ExitStack() as leases:
-            retained = {key:leases.enter_context(cache.lease(key)) for key in dict.fromkeys(pair.keys)}
-            values = tuple(retained[key] for key in pair.keys)
-            if all(value is not None for value in values):
-                try:
-                    restored = restore(pair,values)
-                except (MemoryError,RuntimeError):
-                    restored = None
+        try:
+            with ExitStack() as leases:
+                values = tuple(leases.enter_context(cache.lease(key)) for key in pair.keys)
+                if all(value is not None for value in values):
+                    restored = restore(pair, values)
+        except (MemoryError, RuntimeError):
+            restored = None
     eligible, hit = exchange(digest,restored is not None)
     if hit:
         if restored is None:
@@ -71,7 +69,7 @@ def run_fixed_pair(pair, *, cache, restore, capture, exchange, stock, enabled):
     if not eligible or not enabled or pair is None:
         return result,False
 
-    for key in dict.fromkeys(pair.keys):
+    for key in pair.keys:
         cache.discard(key)
     prepared = []
     try:

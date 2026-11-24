@@ -463,6 +463,8 @@ def install(runner_class):
                   if formal or fixed_pair else MemoryBudget(cap))
         cache = ActivationCache(budget)
         cache.scheduler_bypasses = 0
+        if fixed_pair:
+            cache.batch_steps = Counter()
         runner._clef_private_k32_cache = cache
         gdn_layers = [x.linear_attn for x in core.layers if x.layer_type == "linear_attention"]
         attention = [x.self_attn.attn for x in core.layers if x.layer_type == "full_attention"]
@@ -496,6 +498,8 @@ def install(runner_class):
                        "counters": dict(counters), "published": cache.published,
                        "evicted": cache.evictions, "cache": cache.snapshot(),
                        "scheduler_bypasses": cache.scheduler_bypasses, "activation_boundary": BOUNDARY}
+                if fixed_pair:
+                    row["batch_steps"] = dict(cache.batch_steps)
                 with (diagnostics / f"endpoint-{snapshots:02d}-{tp.rank_in_group}.json").open("x") as out:
                     json.dump(row, out)
             if signal.getsignal(signal.SIGUSR2) != signal.SIG_DFL:
@@ -711,14 +715,14 @@ def install(runner_class):
                            for item in items):
                         return False
                     expected = [item.manager_block_ids[group][0] for item in items]
-                    slots = meta.non_spec_state_indices_tensor
+                    slots = (meta.non_spec_state_indices_tensor, meta.prefill_state_indices)
                     starts = (meta.non_spec_query_start_loc, meta.prefill_query_start_loc)
-                    actual = slots.to("cpu", non_blocking=False).tolist() if slots is not None else None
+                    actual = [x.to("cpu", non_blocking=False).tolist() if x is not None else None for x in slots]
                     queries = [x.to("cpu", non_blocking=False).tolist() if x is not None else None for x in starts]
                     valid &= check_fact(facts, f"gdn_state_slot_{len(checked)}",
                                         {"blocks": actual, "query_starts": queries, "capacity": capacity},
-                                        {"blocks": expected, "query_starts": [offsets, offsets]},
-                                        ok=(actual == expected and queries == [offsets, offsets]
+                                        {"blocks": [expected, expected], "query_starts": [offsets, offsets]},
+                                        ok=(actual == [expected, expected] and queries == [offsets, offsets]
                                             and len(set(expected)) == 2 and all(0 < x < capacity for x in expected)))
             verified_bindings = (tables, bindings, group_counts) if valid else None
             return valid
@@ -1251,10 +1255,13 @@ def install(runner_class):
                                    "mm_features": len(x.mm_features)}
                                   for x in scheduler_output.scheduled_new_reqs],
                 }), flush=True)
-        if (formal and candidate is None and not dummy and not profiling
-                and scheduler_output.total_num_scheduled_tokens > 0
+        if (formal and not dummy and not profiling and scheduler_output.total_num_scheduled_tokens > 0
                 and hasattr(runner, "_clef_private_k32_cache")):
-            runner._clef_private_k32_cache.scheduler_bypasses += 1
+            state = runner._clef_private_k32_cache
+            if candidate is None:
+                state.scheduler_bypasses += 1
+            if fixed_pair:
+                state.batch_steps[len(scheduler_output.num_scheduled_tokens)] += 1
         stamp = ACTIVE.set(Step(runner, candidate) if candidate is not None else None)
         try:
             return execute(runner, scheduler_output, intermediate_tensors, *args, **kwargs)
