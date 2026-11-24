@@ -1,0 +1,1493 @@
+{
+ "schema": "tiered-prefix-cache-stage1-hbm/1",
+ "encoder_cache_262144": {
+  "hbm_peak_mib": {
+   "chip0": 61358,
+   "chip1": 61009
+  },
+  "hbm_headroom_gib": {
+   "chip0": 4.08,
+   "chip1": 4.42
+  },
+  "c16_cold": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:05:42.849761+00:00",
+    "finished_at": "2026-11-24T16:06:40.389004+00:00",
+    "wall_seconds": 57.53046817,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4453322844469240,
+    "wall_end_ns": 4453380374937410,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 217,
+    "total": 400,
+    "value": 0.5425,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 217,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5425
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 168,
+     "failed": 0,
+     "accuracy": 0.5853658536585366
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 204,
+     "failed": 0,
+     "accuracy": 0.5340314136125655
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 42,
+     "failed": 0,
+     "accuracy": 0.5833333333333334
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 35,
+     "failed": 0,
+     "accuracy": 0.6363636363636364
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 21,
+     "failed": 0,
+     "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 32,
+     "failed": 0,
+     "accuracy": 0.48484848484848486
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 109,
+     "failed": 0,
+     "accuracy": 0.5828877005347594
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 923.4718196094036,
+    "max": 4412.921549752355,
+    "mean": 2239.5052609033883,
+    "p50": 2424.8057901859283,
+    "p95": 3492.2995802015066,
+    "p99": 4406.462940433994
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 6.952837561099235,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   }
+  },
+  "c16_warm": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:06:40.476865+00:00",
+    "finished_at": "2026-11-24T16:07:29.331296+00:00",
+    "wall_seconds": 48.8467162,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4453380470598200,
+    "wall_end_ns": 4453429317314400,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 167,
+     "failed": 0,
+     "accuracy": 0.5818815331010453
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 203,
+     "failed": 0,
+     "accuracy": 0.5314136125654451
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 42,
+     "failed": 0,
+     "accuracy": 0.5833333333333334
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.5833333333333334
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 35,
+     "failed": 0,
+     "accuracy": 0.6363636363636364
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 21,
+     "failed": 0,
+     "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 32,
+     "failed": 0,
+     "accuracy": 0.48484848484848486
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 109,
+     "failed": 0,
+     "accuracy": 0.5828877005347594
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 91,
+     "failed": 0,
+     "accuracy": 0.4972677595628415
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 124.75626077502966,
+    "max": 4088.5316198691726,
+    "mean": 1895.7192090898752,
+    "p50": 2100.2615997567773,
+    "p95": 2966.680549364537,
+    "p99": 3397.686712788418
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 8.188882101351984,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   }
+  },
+  "c16_warm2": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:08:51.808001+00:00",
+    "finished_at": "2026-11-24T16:09:40.676337+00:00",
+    "wall_seconds": 48.85950511,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4453511802345290,
+    "wall_end_ns": 4453560661850400,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 217,
+    "total": 400,
+    "value": 0.5425,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 217,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5425
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 168,
+     "failed": 0,
+     "accuracy": 0.5853658536585366
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 204,
+     "failed": 0,
+     "accuracy": 0.5340314136125655
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 42,
+     "failed": 0,
+     "accuracy": 0.5833333333333334
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 35,
+     "failed": 0,
+     "accuracy": 0.6363636363636364
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 21,
+     "failed": 0,
+     "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 32,
+     "failed": 0,
+     "accuracy": 0.48484848484848486
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 109,
+     "failed": 0,
+     "accuracy": 0.5828877005347594
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 200.51936991512775,
+    "max": 4264.62937053293,
+    "mean": 1894.1851318976842,
+    "p50": 2059.0200102888048,
+    "p95": 2963.4730328805745,
+    "p99": 3419.777428517118
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 8.186738672433517,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   }
+  },
+  "c1_bound_warm_cache_cold": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 3,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:10:01.917620+00:00",
+    "finished_at": "2026-11-24T16:11:10.049361+00:00",
+    "wall_seconds": 68.12436291947961,
+    "skipped_resumed": 0
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 167,
+     "failed": 0,
+     "accuracy": 0.5818815331010453
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 203,
+     "failed": 0,
+     "accuracy": 0.5314136125654451
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 41,
+     "failed": 0,
+     "accuracy": 0.5694444444444444
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 34,
+     "failed": 0,
+     "accuracy": 0.6181818181818182
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 21,
+     "failed": 0,
+     "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 33,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 100.262769497931,
+    "max": 1297.3400596529245,
+    "mean": 166.67652898468077,
+    "p50": 155.43896006420255,
+    "p95": 247.6115280762314,
+    "p99": 466.4490168914194
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 5.871614542256853,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   }
+  },
+  "c1_bound_warm_cache_warm": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 3,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:11:10.123888+00:00",
+    "finished_at": "2026-11-24T16:12:17.837201+00:00",
+    "wall_seconds": 67.70598550979048,
+    "skipped_resumed": 0
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 216,
+    "total": 400,
+    "value": 0.54,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 216,
+    "ok_only_total": 400,
+    "ok_only_value": 0.54
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 49,
+     "failed": 0,
+     "accuracy": 0.4336283185840708
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 167,
+     "failed": 0,
+     "accuracy": 0.5818815331010453
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 203,
+     "failed": 0,
+     "accuracy": 0.5314136125654451
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 41,
+     "failed": 0,
+     "accuracy": 0.5694444444444444
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 34,
+     "failed": 0,
+     "accuracy": 0.6181818181818182
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 21,
+     "failed": 0,
+     "accuracy": 0.5526315789473685
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 33,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 92,
+     "failed": 0,
+     "accuracy": 0.5027322404371585
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 99.29259028285742,
+    "max": 1310.2534394711256,
+    "mean": 165.61960231512785,
+    "p50": 154.33138981461525,
+    "p95": 247.62494266033144,
+    "p99": 467.81784308142915
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 5.907897167262396,
+    "basis": "successful decisions / wall clock, client concurrency 1"
+   }
+  }
+ },
+ "encoder_cache_131072": {
+  "hbm_peak_mib": {
+   "chip0": 61433,
+   "chip1": 61081
+  },
+  "hbm_headroom_gib": {
+   "chip0": 4.01,
+   "chip1": 4.35
+  },
+  "c16_cold": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:16:06.206087+00:00",
+    "finished_at": "2026-11-24T16:17:03.750013+00:00",
+    "wall_seconds": 57.53525667,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4453946200631000,
+    "wall_end_ns": 4454003735887670,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 219,
+    "total": 400,
+    "value": 0.5475,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 219,
+    "ok_only_total": 400,
+    "ok_only_value": 0.5475
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.4424778761061947
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 169,
+     "failed": 0,
+     "accuracy": 0.5888501742160279
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 206,
+     "failed": 0,
+     "accuracy": 0.5392670157068062
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 43,
+     "failed": 0,
+     "accuracy": 0.5972222222222222
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.2972972972972973
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 34,
+     "failed": 0,
+     "accuracy": 0.6181818181818182
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 22,
+     "failed": 0,
+     "accuracy": 0.5789473684210527
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 32,
+     "failed": 0,
+     "accuracy": 0.48484848484848486
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 109,
+     "failed": 0,
+     "accuracy": 0.5828877005347594
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 94,
+     "failed": 0,
+     "accuracy": 0.5136612021857924
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 814.2072204500437,
+    "max": 4996.2104596197605,
+    "mean": 2243.46954659326,
+    "p50": 2488.5279098525643,
+    "p95": 3617.6768417470157,
+    "p99": 3983.2775308471173
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 6.952258895693217,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   }
+  },
+  "c16_warm": {
+   "run": {
+    "scope": "full",
+    "api_url": "http://127.0.0.1:18143/v1",
+    "model": "clef",
+    "wire_format": "state-list",
+    "endpoint": "/systemone",
+    "retries": 1,
+    "timeout": 600,
+    "started_at": "2026-11-24T16:17:03.840209+00:00",
+    "finished_at": "2026-11-24T16:18:00.334962+00:00",
+    "wall_seconds": 56.48665537,
+    "skipped_resumed": 0,
+    "concurrency": 16,
+    "max_http_inflight": 16,
+    "wall_start_ns": 4454003834334590,
+    "wall_end_ns": 4454060320989960,
+    "wall_scope": "From first worker submission through last flushed journal entry; includes request preparation, HTTP and original per-item writes. Setup GET and final summaries excluded."
+   },
+   "data": {
+    "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+    "records": 400,
+    "images": 630,
+    "question_types": {
+     "Action Reasoning": 72,
+     "Multi-view Reasoning": 37,
+     "Other": 14,
+     "Pointing": 34,
+     "Spatial Reasoning": 84,
+     "State Estimation": 55,
+     "Task Reasoning": 38,
+     "Trajectory Reasoning": 66
+    }
+   },
+   "service": {
+    "status_code": 200,
+    "body": {
+     "model": "clef",
+     "revision": "local-65e5a3c5ffb6",
+     "model_dir": "/workspace/yangchen/models/Clef-27B",
+     "protocol_version": "2026-11-13",
+     "config": "s1",
+     "tasks": [
+      "choice",
+      "noul",
+      "score"
+     ],
+     "modalities": [
+      "text",
+      "image",
+      "video"
+     ],
+     "joint": "default",
+     "max_model_len": 16384,
+     "tensor_parallel_size": 2,
+     "cache": {
+      "prefix_caching": false,
+      "chunked_prefill": false,
+      "schema_token_cache": false,
+      "schema_token_cache_version": 0
+     }
+    }
+   },
+   "coverage": {
+    "fixed_total": 400,
+    "ok": 400,
+    "failed": 0,
+    "success_rate": 1.0,
+    "retry_count": 0,
+    "error_classes": {}
+   },
+   "accuracy": {
+    "correct": 218,
+    "total": 400,
+    "value": 0.545,
+    "denominator": "fixed 400-sample set; failures count as incorrect",
+    "ok_only_correct": 218,
+    "ok_only_total": 400,
+    "ok_only_value": 0.545
+   },
+   "breakdown": {
+    "images:multi": {
+     "total": 113,
+     "correct": 48,
+     "failed": 0,
+     "accuracy": 0.4247787610619469
+    },
+    "images:single": {
+     "total": 287,
+     "correct": 170,
+     "failed": 0,
+     "accuracy": 0.5923344947735192
+    },
+    "options:2": {
+     "total": 14,
+     "correct": 11,
+     "failed": 0,
+     "accuracy": 0.7857142857142857
+    },
+    "options:3": {
+     "total": 4,
+     "correct": 2,
+     "failed": 0,
+     "accuracy": 0.5
+    },
+    "options:4": {
+     "total": 382,
+     "correct": 205,
+     "failed": 0,
+     "accuracy": 0.5366492146596858
+    },
+    "type:Action Reasoning": {
+     "total": 72,
+     "correct": 42,
+     "failed": 0,
+     "accuracy": 0.5833333333333334
+    },
+    "type:Multi-view Reasoning": {
+     "total": 37,
+     "correct": 10,
+     "failed": 0,
+     "accuracy": 0.2702702702702703
+    },
+    "type:Other": {
+     "total": 14,
+     "correct": 3,
+     "failed": 0,
+     "accuracy": 0.21428571428571427
+    },
+    "type:Pointing": {
+     "total": 34,
+     "correct": 24,
+     "failed": 0,
+     "accuracy": 0.7058823529411765
+    },
+    "type:Spatial Reasoning": {
+     "total": 84,
+     "correct": 50,
+     "failed": 0,
+     "accuracy": 0.5952380952380952
+    },
+    "type:State Estimation": {
+     "total": 55,
+     "correct": 35,
+     "failed": 0,
+     "accuracy": 0.6363636363636364
+    },
+    "type:Task Reasoning": {
+     "total": 38,
+     "correct": 20,
+     "failed": 0,
+     "accuracy": 0.5263157894736842
+    },
+    "type:Trajectory Reasoning": {
+     "total": 66,
+     "correct": 34,
+     "failed": 0,
+     "accuracy": 0.5151515151515151
+    },
+    "visual:all-zero": {
+     "total": 187,
+     "correct": 108,
+     "failed": 0,
+     "accuracy": 0.5775401069518716
+    },
+    "visual:empty": {
+     "total": 183,
+     "correct": 94,
+     "failed": 0,
+     "accuracy": 0.5136612021857924
+    },
+    "visual:interleaved": {
+     "total": 30,
+     "correct": 16,
+     "failed": 0,
+     "accuracy": 0.5333333333333333
+    }
+   },
+   "latency_ms": {
+    "count": 400,
+    "min": 148.68720062077045,
+    "max": 4910.257199779153,
+    "mean": 2198.1745928083546,
+    "p50": 2447.090635076165,
+    "p95": 3502.679314184934,
+    "p99": 4138.18802616559
+   },
+   "input_tokens": {
+    "count": 400,
+    "min": 240,
+    "max": 10294,
+    "mean": 931.6775,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996
+   },
+   "images": {
+    "count": 400,
+    "min": 1,
+    "max": 16,
+    "mean": 1.575,
+    "p50": 1.0,
+    "p95": 4.0,
+    "p99": 6.0
+   },
+   "throughput": {
+    "decisions_per_second": 7.0813185411653805,
+    "basis": "valid successful decisions / complete bounded-run wall clock"
+   }
+  }
+ },
+ "c1_cold_warm_prob_diff": {
+  "max_prob_diff": 0.0,
+  "choice_flips": 0
+ },
+ "c16_warm2_vs_warm3_prob_diff": {
+  "max_prob_diff": 0.08836966753005981,
+  "choice_flips": 3,
+  "note": "C16 batching nondeterminism, present with the cache already warm"
+ },
+ "decision": "keep encoder_cache_tokens=262144; 530 unique images = 227,549 tokens fit, 131072 lowers warm throughput with no HBM benefit"
+}

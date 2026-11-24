@@ -1,0 +1,201 @@
+{
+ "schema": "tiered-prefix-cache-dataset-audit/1",
+ "generated_at": "2026-11-24T14:49:06Z",
+ "model_dir": "/workspace/yangchen/models/Clef-27B",
+ "alignment": 128,
+ "min_prefix_tokens": 128,
+ "joint_head_config": {
+  "hidden_size": 5120,
+  "width": 1024,
+  "routing_layers": 2,
+  "layers": 4,
+  "heads": 16,
+  "feedforward": 4096
+ },
+ "prefix_memory_bytes_per_token": 2048,
+ "kv_bytes_per_token_tp2": 65536,
+ "opendecisions": {
+  "split": {
+   "samples": 2352,
+   "L_prefix": {
+    "count": 2352,
+    "min": 40,
+    "p50": 182.0,
+    "p95": 780.4499999999998,
+    "p99": 1010.4899999999998,
+    "max": 1314,
+    "mean": 275.71641156462584
+   },
+   "L_aligned_128": {
+    "count": 2352,
+    "min": 0,
+    "p50": 128.0,
+    "p95": 768.0,
+    "p99": 896.0,
+    "max": 1280,
+    "mean": 211.2108843537415
+   },
+   "L_suffix": {
+    "count": 2352,
+    "min": 101,
+    "p50": 232.0,
+    "p95": 330.0,
+    "p99": 370.0,
+    "max": 446,
+    "mean": 235.59821428571428
+   },
+   "total_tokens": {
+    "count": 2352,
+    "min": 145,
+    "p50": 357.5,
+    "p95": 969.2499999999991,
+    "p99": 1211.9599999999991,
+    "max": 1595,
+    "mean": 446.8090986394558
+   },
+   "L_aligned_ge_128": 1450,
+   "L_aligned_ge_128_ratio": 0.6164965986394558,
+   "L_aligned_eq_0": 902
+  },
+  "prefix_bytes": {
+   "kv16_tp2_total": 65536,
+   "prefix_memory": 2048,
+   "gdn48_bf16_total": 78433484.8,
+   "gdn48_fp32_total": 153930956.8
+  },
+  "data_file": "/workspace/yangchen/datasets/clef-fixed-20261123/opendecisions-1.0.1/open-decisions2352.jsonl",
+  "data_sha256": "78614972006c5e5efbbfc121ce31e15cf576ef6c0cdf24a229b33d34d2bfcda6",
+  "unique_state_prefixes": 2240,
+  "unique_prompts": 2291,
+  "state_reuse": {
+   "unique_keys": 2240,
+   "reused_groups": 108,
+   "reused_samples": 220,
+   "second_plus_requests": 112,
+   "max_group": 5,
+   "group_sizes": {
+    "1": 2132,
+    "2": 106,
+    "3": 1,
+    "5": 1
+   }
+  },
+  "tier2_eligible_samples": 1450,
+  "tier2_eligible_ratio": 0.6164965986394558,
+  "prefix_reuse": {
+   "unique_keys": 1356,
+   "reused_groups": 86,
+   "reused_samples": 180,
+   "second_plus_requests": 94,
+   "max_group": 3,
+   "group_sizes": {
+    "1": 1270,
+    "2": 78,
+    "3": 8
+   }
+  },
+  "same_state_multi_schema_groups": 48,
+  "same_state_multi_schema_samples": 100,
+  "max_schema_variants_per_state": 5,
+  "tokens_match_service": {
+   "report": "/workspace/yangchen/logs/systemone-mm-20261124/od-final-s1/report.json",
+   "compared": 2352,
+   "mismatches": 0,
+   "examples": [],
+   "exact": true
+  }
+ },
+ "erqa": {
+  "split": {
+   "samples": 400,
+   "L_prefix": {
+    "count": 400,
+    "min": 149,
+    "p50": 810.0,
+    "p95": 1529.0,
+    "p99": 3430.449999999996,
+    "max": 10161,
+    "mean": 796.14
+   },
+   "L_aligned_128": {
+    "count": 400,
+    "min": 128,
+    "p50": 768.0,
+    "p95": 1408.0,
+    "p99": 3333.1199999999953,
+    "max": 10112,
+    "mean": 728.0
+   },
+   "L_suffix": {
+    "count": 400,
+    "min": 103,
+    "p50": 204.0,
+    "p95": 264.0,
+    "p99": 291.0,
+    "max": 414,
+    "mean": 203.6775
+   },
+   "total_tokens": {
+    "count": 400,
+    "min": 240,
+    "p50": 933.0,
+    "p95": 1653.0,
+    "p99": 3559.389999999996,
+    "max": 10294,
+    "mean": 931.6775
+   },
+   "L_aligned_ge_128": 400,
+   "L_aligned_ge_128_ratio": 1.0,
+   "L_aligned_eq_0": 0
+  },
+  "data_dir": "/workspace/yangchen/work/aa3e-conv-qkv-formal-20261123.Q3ozHxgd/erqa-fixed",
+  "samples": 400,
+  "unique_images": 530,
+  "image_occurrences": 630,
+  "unique_image_visual_tokens": 227549,
+  "all_image_occurrence_visual_tokens": 272571,
+  "per_image_visual_tokens": {
+   "count": 530,
+   "min": 64,
+   "p50": 382.0,
+   "p95": 983.2999999999997,
+   "p99": 1008.0,
+   "max": 1014,
+   "mean": 429.3377358490566
+  },
+  "media_token_residual_max": 0,
+  "encoder_cache_capacity_tokens": 262144,
+  "unique_fits_262144": true,
+  "state_reuse": {
+   "unique_keys": 399,
+   "reused_groups": 1,
+   "reused_samples": 2,
+   "second_plus_requests": 1,
+   "max_group": 2,
+   "group_sizes": {
+    "1": 398,
+    "2": 1
+   }
+  },
+  "tier2_eligible_samples": 400,
+  "prefix_reuse": {
+   "unique_keys": 399,
+   "reused_groups": 1,
+   "reused_samples": 2,
+   "second_plus_requests": 1,
+   "max_group": 2,
+   "group_sizes": {
+    "1": 398,
+    "2": 1
+   }
+  },
+  "tokens_match_service": {
+   "report": "/workspace/yangchen/logs/systemone-mm-20261124/erqa-final-c16/predictions.jsonl",
+   "compared": 400,
+   "mismatches": 0,
+   "examples": [],
+   "exact": true
+  }
+ },
+ "rows_note": "Full per-sample rows stay on the A3 host at /workspace/yangchen/logs/tiered-cache-20261124/stage0-dataset-audit.json"
+}
