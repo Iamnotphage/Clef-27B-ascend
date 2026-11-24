@@ -1455,6 +1455,9 @@ def build_launch(args):
         gdn_decision["conv_qkv_vendor"] = None
         gdn_decision["conv_qkv_varlen_vendor"] = None
     environment["CLEF_GDN_CONV_QKV"] = "1" if conv_patch["ready"] else "0"
+    for _tier2_key in ("CLEF_TIER2_ENGINE", "CLEF_TIER2_TRACE"):
+        if _tier2_key in os.environ:
+            environment[_tier2_key] = os.environ[_tier2_key]
     environment["CLEF_GDN_CONV_QKV_VARLEN"] = (
         "1" if varlen_patch["ready"] else "0")
     if os.environ.get("CLEF_GDN_FLAG_FILE"):

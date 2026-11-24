@@ -215,7 +215,8 @@ class AdmissionTests(unittest.TestCase):
         store.close()
 
     def test_ghost_capacity_is_bounded(self):
-        store = HostStore(budget_bytes=10_000, ghost_capacity=4, use_shm=False)
+        store = HostStore(budget_bytes=10_000, admission="second_hit",
+                          ghost_capacity=4, use_shm=False)
         for index in range(10):
             store.observe(bytes([index]) * 32)
         self.assertLessEqual(store.snapshot()["ghost"], 4)
@@ -320,6 +321,33 @@ class BudgetTests(unittest.TestCase):
         budget = read_memory_budget(default_gib=1, safety_gib=0)
         self.assertGreaterEqual(budget["budget_bytes"], 0)
         self.assertEqual(budget["safety_gib"], 0)
+        self.assertIn("cgroup_anon_bytes", budget)
+
+    def test_keep_longest_rejects_short_newcomer(self):
+        store = HostStore(budget_bytes=1_000, eviction_watermark=0.99,
+                          eviction_policy="keep_longest", use_shm=False)
+        long_key = b"l" * 32
+        self.assertTrue(store.publish(
+            long_key, {0: {"kv": b"x" * 700}}, length=900))
+        # The newcomer is shorter than the resident entry, so it must be
+        # rejected rather than evicting the longer prefix.
+        self.assertFalse(store.publish(
+            b"s" * 32, {0: {"kv": b"y" * 400}}, length=128))
+        self.assertTrue(store.contains(long_key))
+        self.assertFalse(store.contains(b"s" * 32))
+        store.close()
+
+    def test_keep_longest_evicts_shortest_idle_first(self):
+        store = HostStore(budget_bytes=700, eviction_watermark=0.99,
+                          eviction_policy="keep_longest", use_shm=False)
+        short, medium, long = b"a" * 32, b"b" * 32, b"c" * 32
+        self.assertTrue(store.publish(short, {0: {"kv": b"x" * 300}}, length=128))
+        self.assertTrue(store.publish(medium, {0: {"kv": b"y" * 200}}, length=512))
+        self.assertTrue(store.publish(long, {0: {"kv": b"z" * 200}}, length=1024))
+        self.assertFalse(store.contains(short))
+        self.assertTrue(store.contains(medium))
+        self.assertTrue(store.contains(long))
+        store.close()
 
 
 class SharedMemoryTests(unittest.TestCase):

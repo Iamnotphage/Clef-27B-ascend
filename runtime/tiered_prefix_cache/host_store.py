@@ -29,8 +29,8 @@ import time
 from typing import Any, Iterable, Mapping
 import uuid
 
-DEFAULT_BUDGET_GIB = 32
-DEFAULT_SAFETY_GIB = 12
+DEFAULT_BUDGET_GIB = 64
+DEFAULT_SAFETY_GIB = 16
 GHOST_CAPACITY = 65_536
 ADMISSIONS = ("second_hit", "always")
 
@@ -62,6 +62,7 @@ class HostEntry:
     prefix_memory_shm: str | None = None
     prefix_memory_nbytes: int = 0
     owner: bool = False
+    length: int = 0
     created_at: float = field(default_factory=time.monotonic)
     last_used: float = field(default_factory=time.monotonic)
     leases: int = 0
@@ -148,18 +149,22 @@ class HostStore:
         self,
         *,
         budget_bytes: int,
-        admission: str = "second_hit",
+        admission: str = "always",
         ghost_capacity: int = GHOST_CAPACITY,
         use_shm: bool | None = None,
         session: str | None = None,
         eviction_watermark: float = 0.92,
+        eviction_policy: str = "keep_longest",
     ):
         if admission not in ADMISSIONS:
             raise ValueError(f"unknown admission policy: {admission}")
+        if eviction_policy not in ("keep_longest", "lru"):
+            raise ValueError(f"unknown eviction policy: {eviction_policy}")
         if budget_bytes <= 0:
             raise ValueError("budget_bytes must be positive")
         self.budget_bytes = int(budget_bytes)
         self.admission = admission
+        self.eviction_policy = eviction_policy
         self.ghost_capacity = int(ghost_capacity)
         self.eviction_watermark = float(eviction_watermark)
         self.use_shm = shm_available() if use_shm is None else bool(use_shm)
@@ -251,6 +256,7 @@ class HostStore:
         shards: Mapping[int, Mapping[str, Any]],
         *,
         prefix_memory: Any = None,
+        length: int = 0,
     ) -> bool:
         """Insert a package, evicting idle LRU entries to make room.
 
@@ -263,7 +269,7 @@ class HostStore:
             if self._closed or key in self._entries:
                 self.counters["rejections"] += 1
                 return False
-            entry = HostEntry(key=key)
+            entry = HostEntry(key=key, length=int(length))
             entry.shards = {
                 int(rank): {str(name): value for name, value in shard.items()}
                 for rank, shard in shards.items()
@@ -282,7 +288,7 @@ class HostStore:
                 self.counters["rejections"] += 1
                 self._discard_entry(entry)
                 return False
-            self._evict_for(size)
+            self._evict_for(size, entry.length)
             if self._bytes + size > self.budget_bytes:
                 self.counters["rejections"] += 1
                 self._discard_entry(entry)
@@ -294,9 +300,29 @@ class HostStore:
             self.counters["populates"] += 1
             return True
 
-    def _evict_for(self, incoming: int) -> None:
+    def _evict_for(self, incoming: int, incoming_length: int = 0) -> None:
         target = int(self.budget_bytes * self.eviction_watermark)
         if self._bytes + incoming <= target:
+            return
+        if self.eviction_policy == "keep_longest":
+            # A short newcomer must never flush a longer resident prefix: a
+            # sequential three-round scan would otherwise cycle the whole pool.
+            lengths = [entry.length for entry in self._entries.values()
+                       if entry.length > 0]
+            if (incoming_length > 0 and lengths
+                    and incoming_length <= min(lengths)):
+                return
+            candidates = sorted(
+                ((entry.length, entry.last_used, key)
+                 for key, entry in self._entries.items() if not entry.leases),
+                key=lambda item: (item[0], item[1]))
+            for _length, _used, key in candidates:
+                if self._bytes + incoming <= target:
+                    break
+                entry = self._entries.pop(key)
+                self._bytes -= entry.nbytes()
+                self._discard_entry(entry)
+                self.counters["evictions"] += 1
             return
         for key in list(self._entries.keys()):
             if self._bytes + incoming <= target:
@@ -472,9 +498,26 @@ def tp_vote_result(local: tuple[int, ...], summed: tuple[int, ...]) -> tuple[boo
     return eligible, eligible and summed[1] == 2
 
 
+def _cgroup_anon_bytes() -> int | None:
+    """Anonymous RSS from cgroup v2 ``memory.stat``.
+
+    ``memory.current`` also counts reclaimable file page cache, which the
+    service creates by reading the 54 GiB of safetensors; subtracting it from
+    the budget would falsely disable the cache.
+    """
+    try:
+        for line in Path("/sys/fs/cgroup/memory.stat").read_text().splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[0] in ("anon", "total_anon"):
+                return int(fields[1])
+    except (OSError, ValueError):
+        return None
+    return None
+
+
 def read_memory_budget(default_gib: int = DEFAULT_BUDGET_GIB,
                        safety_gib: int = DEFAULT_SAFETY_GIB) -> dict:
-    """Read the cgroup limit and MemAvailable, keeping ``safety_gib`` free."""
+    """Budget from cgroup limit minus anonymous RSS and a safety reserve."""
     limit = None
     for path in ("/sys/fs/cgroup/memory.max",
                  "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
@@ -485,6 +528,12 @@ def read_memory_budget(default_gib: int = DEFAULT_BUDGET_GIB,
         if raw.isdigit():
             limit = int(raw)
             break
+    anon = _cgroup_anon_bytes()
+    current = None
+    try:
+        current = int(Path("/sys/fs/cgroup/memory.current").read_text().strip())
+    except (OSError, ValueError):
+        pass
     available = None
     try:
         for line in Path("/proc/meminfo").read_text().splitlines():
@@ -493,14 +542,19 @@ def read_memory_budget(default_gib: int = DEFAULT_BUDGET_GIB,
                 break
     except OSError:
         pass
-    database = default_gib * (1 << 30)
-    if limit is not None:
-        database = min(database, max(0, limit - safety_gib * (1 << 30)))
+    budget = default_gib * (1 << 30)
+    used = anon if anon is not None else current
+    if limit is not None and used is not None:
+        budget = min(budget, max(0, limit - used - safety_gib * (1 << 30)))
+    elif limit is not None:
+        budget = min(budget, max(0, limit - safety_gib * (1 << 30)))
     if available is not None:
-        database = min(database, max(0, available - safety_gib * (1 << 30)))
+        budget = min(budget, max(0, available - safety_gib * (1 << 30)))
     return {
         "cgroup_bytes": limit,
+        "cgroup_anon_bytes": anon,
+        "cgroup_current_bytes": current,
         "mem_available_bytes": available,
-        "budget_bytes": database,
+        "budget_bytes": budget,
         "safety_gib": safety_gib,
     }

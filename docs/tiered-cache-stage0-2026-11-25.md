@@ -191,3 +191,26 @@
 - 远端原始证据（含逐题审计行、完整服务报告、500 ms HBM 采样、捕获张量）：`/workspace/yangchen/logs/tiered-cache-20261124/` 与 `capture/`。
 - 阶段 2（纯 CPU 引擎与单测）可在不占用 NPU 的情况下继续；阶段 3 的引擎接入按计划必须在 512317e 上以安装器 `--check/--apply/--revert` 叠层，并保留 `CLEF_PREFIX_STATE_CACHE=0` 与 `admission=second_hit` 的冷首遍零回归。
 - 本阶段服务已停止，18143 与 NPU 6 已释放。
+
+## 9. M0/M1 引擎攻坚（2026-11-25 晚）
+
+### 9.1 M0 单算子门（全过）
+
+- **FIA `TND` + `sparse_mode=3` + `block_table=None` + 2048 bool causal mask**：B1 967/10,294、B8 450/mixed 全量用例 `torch.equal=True`（max_abs 0.0）。
+- **Conv 续算**：fla_npu 融合 prefill 的状态读入在 A3 上 `161002` 不可用，改用 `vllm_ascend.ops.causal_conv1d.causal_conv1d_fn`；B1 967/10,294 与 B8 450 的 suffix 输出全部 `torch.equal=True`（max_abs 0.0）。另验证 v4 融合核“前补 3 个 conv_state token”的 suffix q/k/v 与全量 v4 逐位一致（0.0），最终引擎用该快路径。
+- **阈值**：`min_prefix=512`；OD 1,450→418 条 eligible，唯一前缀 415，估算 **47.48 GiB** 双卡常驻；P95 尾部（token≥967）覆盖 **100%**；`keep_longest` 淘汰与 anon-aware 64 GiB 预算已实现。
+
+### 9.2 M1 B1 全链闭环（功能跑通，ERQA 数值门差 0.000913）
+
+实现并以进程内 `probe_engine`（sitecustomize/`tier2_boot` .pth）挂载 4 个 hook：`NPUModelRunner.execute_model` 上下文、`ClefFlashForJointSchema.forward` 前缀捕获+后缀、`AscendAttentionBackendImpl.forward` 连续 KV FIA、`QwenGatedDeltaNetAttention._forward_core` 状态续算、`JointSchemaPooler/Head` 旁路 AllPool。缓存命中走 HostStore 连续包（KV 16 层、GDN 48 层、prefix hidden），单次 H2D 3 包。
+
+| 样本 | tokens | L | populate | hit | vs baseline max_prob_diff | flips |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| od-1534 | 967 | 768 | 2013 ms | **109–114 ms** | **0.003582** | 0 |
+| od-0677 | 1595 | 1280 | 394 ms | **113 ms** | **0.000558** | 0 |
+| od-0105 | 307 | 128 | bypass | 103 ms | 0.0 | 0 |
+| erqa-0167（16 图） | 10,294 | 10,112 | 1999 ms | **169–181 ms** | **0.005913** | 0 |
+
+- 时间拆解：ERQA hit H2D **7.5–7.8 ms**、suffix 64 层 **90.1–90.5 ms**；OD hit load **2.0–2.8 ms**、suffix **86.6–88.7 ms**。
+- **结论**：M1 功能链完整、速度达到计划区间（OD 109–114 ms、ERQA 169–181 ms，ERQA 相对 1,940 ms 冷基线约 10.7×），OD 满足 5e-3 fallback，ERQA **0.005913 超 5e-3 门 0.000913**（0 flips）。按刚性门 **M1 未通过**，M2–M4 未启动；Tier 2 默认 off，主线保持 `ae5903f`。根因是分块 GEMM（QKV/MLP/记忆投影）M=L/T 形状不同带来的 BF16 tiling 差异，待用 T 形状前缀补齐或 FP32 累加方案再评估。
+- 探针清理：`/tmp/clef_tier2_engine|trace`、venv `tier2_probe.pth` 已移除；服务停止、18143/NPU6/`/dev/shm` 已清。
