@@ -154,6 +154,45 @@ class ActivationCache:
             entry.pending = None
             return True
 
+    def prepare_many(self, entries):
+        """Prepare all parts of one B2 result under a single budget read."""
+        tickets = tuple(ticket for ticket, _, _ in entries)
+        if len(tickets) != 2 or tickets[0].key == tickets[1].key:
+            return False
+        with self._lock:
+            limit = self._limit()
+            self._trim(limit)
+            if self._live_bytes > limit or any(
+                ticket not in self._inflight or ticket.epoch != self._epoch
+                or ticket.key in self._table or value is None or size != ticket.payload_bytes
+                for ticket, value, size in entries
+            ):
+                return False
+            count = self.published + len(entries)
+            try:
+                for ticket,value,_ in entries:
+                    self._table[ticket.key] = _Entry(value,ticket.charge,pending=ticket,next_published=count)
+            except MemoryError:
+                for ticket in tickets:
+                    self._table.pop(ticket.key,None)
+                return False
+            for ticket in tickets:
+                self._inflight.remove(ticket)
+            return True
+
+    def reveal_many(self, tickets):
+        """Make both pre-accounted entries visible together."""
+        with self._lock:
+            for ticket in tickets:
+                entry = self._table.get(ticket.key)
+                if entry is None or entry.pending is not ticket or ticket.epoch != self._epoch:
+                    return False
+            for ticket in tickets:
+                entry = self._table[ticket.key]
+                self.published = entry.next_published
+                entry.pending = None
+            return True
+
     def publish(self, ticket, value, payload_bytes):
         """Publish only after a complete synchronous copy and positive TP vote."""
         with self._lock:

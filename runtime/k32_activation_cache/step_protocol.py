@@ -15,7 +15,12 @@ class TextStep:
 
 def fresh_text_step(scheduler_output, *, dummy_run=False, is_profile=False):
     """Admit only from fields distributed identically to every TP rank."""
-    if dummy_run or is_profile or len(scheduler_output.scheduled_new_reqs) != 1:
+    items = fresh_text_items(scheduler_output, count=1, dummy_run=dummy_run, is_profile=is_profile)
+    return items[0] if items else None
+
+
+def fresh_text_items(scheduler_output, *, count, dummy_run=False, is_profile=False):
+    if dummy_run or is_profile or len(scheduler_output.scheduled_new_reqs) != count:
         return None
     if (scheduler_output.scheduled_cached_reqs.req_ids
             or scheduler_output.scheduled_cached_reqs.resumed_req_ids
@@ -26,24 +31,30 @@ def fresh_text_step(scheduler_output, *, dummy_run=False, is_profile=False):
             or scheduler_output.kv_connector_metadata is not None
             or scheduler_output.has_sync_kv_loads):
         return None
-    req = scheduler_output.scheduled_new_reqs[0]
-    prompt = req.prompt_token_ids
-    if (not prompt or req.mm_features or req.num_computed_tokens != 0
-            or req.lora_request is not None or req.prompt_embeds is not None
-            or req.replay_start != 0 or req.sampling_params is not None
-            or getattr(req.pooling_params, "task", None) != "token_classify"
-            or req.req_id in scheduler_output.finished_req_ids):
+
+    items = []
+    scheduled = {}
+    for req in scheduler_output.scheduled_new_reqs:
+        prompt = req.prompt_token_ids
+        if (not prompt or req.mm_features or req.num_computed_tokens != 0
+                or req.lora_request is not None or req.prompt_embeds is not None
+                or req.replay_start != 0 or req.sampling_params is not None
+                or getattr(req.pooling_params, "task", None) != "token_classify"
+                or req.req_id in scheduler_output.finished_req_ids or req.req_id in scheduled):
+            return None
+        if (req.prompt_is_token_ids is not None
+                and (len(req.prompt_is_token_ids) != len(prompt)
+                     or not all(req.prompt_is_token_ids))):
+            return None
+        if req.prefill_token_ids is not None and req.prefill_token_ids != prompt:
+            return None
+        scheduled[req.req_id] = len(prompt)
+        blocks = tuple(tuple(ids) for ids in getattr(req, "block_ids", ()))
+        items.append(TextStep(req.req_id, tuple(prompt), blocks))
+    if (scheduler_output.num_scheduled_tokens != scheduled
+            or scheduler_output.total_num_scheduled_tokens != sum(scheduled.values())):
         return None
-    if (req.prompt_is_token_ids is not None
-            and (len(req.prompt_is_token_ids) != len(prompt)
-                 or not all(req.prompt_is_token_ids))):
-        return None
-    if req.prefill_token_ids is not None and req.prefill_token_ids != prompt:
-        return None
-    if (scheduler_output.num_scheduled_tokens != {req.req_id: len(prompt)}
-            or scheduler_output.total_num_scheduled_tokens != len(prompt)):
-        return None
-    return TextStep(req.req_id, tuple(prompt), tuple(tuple(ids) for ids in getattr(req, "block_ids", ())))
+    return tuple(items)
 
 
 def vote_integers(key, ready):

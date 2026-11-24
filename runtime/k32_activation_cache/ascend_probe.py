@@ -16,7 +16,8 @@ from time import perf_counter_ns
 from types import MethodType
 
 from activation_cache import ActivationCache, BOUNDARY, POST_NORM, text_key
-from step_protocol import fresh_text_step, run_candidate, run_final_candidate, vote_integers, vote_result
+from fixed_pair import pack_pair, run_fixed_pair
+from step_protocol import fresh_text_items, fresh_text_step, run_candidate, run_final_candidate, vote_integers, vote_result
 
 
 ACTIVE = ContextVar("clef_private_k32_step", default=None)
@@ -68,6 +69,7 @@ class Step:
     times: dict = field(default_factory=dict)
     boundary: list | None = None
     contract: dict | None = None
+    ordered_items: tuple | None = None
     kv_proof: list | None = None
     guard_facts: dict = field(default_factory=dict)
 
@@ -156,22 +158,27 @@ def timing(step, name, call):
         step.times[name] = step.times.get(name, 0) + perf_counter_ns() - t0
 
 
-def metadata_checks(context, batch, n, full_type, gdn_type):
+def metadata_checks(context, batch, n, full_type, gdn_type, lengths=None):
     if batch is None:
         return {"missing_batch": False}
+    lengths = list(lengths) if lengths is not None else [n]
+    count = len(lengths)
+    offsets = [0]
+    for width in lengths:
+        offsets.append(offsets[-1] + width)
     checks = {
         "eager": getattr(context.cudagraph_runtime_mode, "name", None) == "NONE",
         "no_ubatch": context.ubatch_slices is None,
         "batch_descriptor": (context.batch_descriptor is not None and context.batch_descriptor.num_tokens == n),
         "per_layer_metadata": isinstance(context.attn_metadata, dict),
-        "num_reqs": batch.num_reqs == batch.num_reqs_after_padding == 1,
+        "num_reqs": batch.num_reqs == batch.num_reqs_after_padding == count,
         "tokens": batch.num_tokens == batch.num_tokens_after_padding == n,
         "num_drafts": batch.num_draft_tokens == 0,
-        "query_start": batch.query_start_loc_np.tolist()[:2] == [0, n],
-        "initial_computed": batch.num_computed_tokens_np.tolist() == [0],
-        "prefill_computed": batch.num_computed_prefill_tokens_np.tolist() == [0],
-        "prefill_len": batch.prefill_len_np.tolist() == [n],
-        "seq_len": batch.seq_lens_np[:1].tolist() == [n],
+        "query_start": batch.query_start_loc_np.tolist()[:count+1] == offsets,
+        "initial_computed": batch.num_computed_tokens_np.tolist() == [0] * count,
+        "prefill_computed": batch.num_computed_prefill_tokens_np.tolist() == [0] * count,
+        "prefill_len": batch.prefill_len_np.tolist() == lengths,
+        "seq_len": batch.seq_lens_np[:count].tolist() == lengths,
         "batch_attn_enum": getattr(batch.attn_state, "name", None) == "PrefillCacheHit",
     }
     if not checks["per_layer_metadata"]:
@@ -181,11 +188,11 @@ def metadata_checks(context, batch, n, full_type, gdn_type):
     gdn = [m for m in unique.values() if type(m) is gdn_type]
     checks["metadata_types"] = bool(full and gdn and len(full) + len(gdn) == len(unique))
     checks["metadata_prefill_counts"] = all(
-        m.num_prefills == 1 and m.num_decodes == m.num_decode_tokens == 0 and m.num_actual_tokens == n
+        m.num_prefills == count and m.num_decodes == m.num_decode_tokens == 0 and m.num_actual_tokens == n
         for m in (*full, *gdn)
     )
     checks["full_metadata"] = all(
-        m.attn_state is batch.attn_state and m.actual_seq_lengths_q == m.seq_lens_list == [n]
+        m.attn_state is batch.attn_state and m.actual_seq_lengths_q == offsets[1:] and m.seq_lens_list == lengths
         and m.causal is True and m.model_runner_type == "pooling"
         and not m.uses_pcp_sharded_layout
         for m in full
@@ -363,6 +370,9 @@ def install(runner_class):
         from vllm.v1.worker.gpu.pool.pooling_runner import PoolingRunner
 
     mode = os.environ["CLEF_PRIVATE_K32"]
+    fixed_pair = os.environ.get("CLEF_PRIVATE_K64_FIXED_PAIR") == "1"
+    if fixed_pair and not POST_NORM:
+        raise RuntimeError("fixed-pair cache requires the K64 post-norm boundary")
     namespace = bytes.fromhex(os.environ["CLEF_PRIVATE_K32_NAMESPACE"])
     # The supervisor supplies one namespace through an environment inherited
     # by both workers. The mode carries its own domain in the TP key.
@@ -414,12 +424,15 @@ def install(runner_class):
             "runner": (runner.is_pooling_model and runner.model_config.dtype == torch.bfloat16
                        and runner.model_config.enforce_eager),
         }
+        if fixed_pair and runner.scheduler_config.max_num_seqs != 2:
+            failures["fixed_pair_profile"] = False
         if not all(predicates.values()):
             failures.update({key: False for key, ok in predicates.items() if not ok})
         facts = {
             "rank": tp.rank_in_group, "pid": os.getpid(), "failures": failures,
             "activation_boundary": BOUNDARY, "activation_generation_sha256": namespace.hex(),
             "activation_representation": "post_norm" if POST_NORM else "hidden_residual",
+            "fixed_pair_only": fixed_pair,
             "old_base_exact": type(outer) is ClefFlashForJointSchema,
             "expected_outer": symbol_info(AscendClefFlashForJointSchema),
             "actual_outer": symbol_info(type(outer)),
@@ -447,7 +460,7 @@ def install(runner_class):
             raise RuntimeError(f"K32 model identity or partition rejected: {failures!r}")
         stock = core.forward
         budget = (MemoryBudget(cap, shared_reserve=10 << 30, partners=2)
-                  if formal else MemoryBudget(cap))
+                  if formal or fixed_pair else MemoryBudget(cap))
         cache = ActivationCache(budget)
         cache.scheduler_bypasses = 0
         runner._clef_private_k32_cache = cache
@@ -493,12 +506,23 @@ def install(runner_class):
             nonlocal verified_bindings
             full = context.attn_metadata
             tables = runner.block_tables
-            def manager_scope(group_counts):
-                groups = step.request.manager_block_ids
-                return all(group < len(groups) and valid_manager_ids(groups[group], count, n)
-                           for group, count in group_counts)
+            items = step.ordered_items if fixed_pair else (step.request,)
+            lengths = tuple(len(item.token_ids) for item in items)
 
-            if not record and verified_bindings is not None:
+            def manager_scope(group_counts):
+                for group, count in group_counts:
+                    used = set()
+                    for item, width in zip(items, lengths, strict=True):
+                        ids = item.manager_block_ids
+                        if group >= len(ids) or not valid_manager_ids(ids[group], count, width):
+                            return False
+                        if fixed_pair:
+                            if used.intersection(ids[group]):
+                                return False
+                            used.update(ids[group])
+                return True
+
+            if not fixed_pair and not record and verified_bindings is not None:
                 known_tables, identities, group_counts = verified_bindings
                 return (tables is known_tables and manager_scope(group_counts) and all(
                     context.no_compile_layers.get(layer.layer_name) is layer
@@ -508,7 +532,7 @@ def install(runner_class):
                     and (impl.value_cache is value or value is None and impl.value_cache is kv[1])
                     for layer, kv, impl, key, value in identities
                 ))
-            if not record and not formal:
+            if not fixed_pair and not record and not formal:
                 return False
 
             facts = {}
@@ -629,46 +653,95 @@ def install(runner_class):
             if not group_counts or not manager_scope(group_counts):
                 verified_bindings = None
                 return False
-            if not record:
+            if not record and not fixed_pair:
                 # The fixed planner derives slots from the fresh scheduler row
                 # and expanded kernel pages. No per-request device audit here.
                 verified_bindings = (tables, bindings, group_counts)
                 return True
             kv_positions = step.batch.positions.to("cpu", non_blocking=False).tolist()
-            valid &= check_fact(facts, "kv_positions", kv_positions, list(range(n)))
+            valid &= check_fact(facts, "kv_positions", kv_positions,
+                                [p for width in lengths for p in range(width)])
             observations = []
             step.kv_proof = observations
-            for (group, _, count), meta in proofs.items():
-                needed = (n + 127) // 128
-                manager_ids = step.request.manager_block_ids
-                manager = manager_ids[group] if group < len(manager_ids) else ()
-                good_shape = (meta.block_tables.ndim == 2 and meta.block_tables.shape[0] == 1
-                              and meta.block_tables.shape[1] >= needed and meta.slot_mapping.ndim == 1
-                              and meta.slot_mapping.numel() == n)
-                blocks = meta.block_tables[0, :needed].to("cpu", non_blocking=False).tolist() if good_shape else []
-                slots = meta.slot_mapping[:n].to("cpu", non_blocking=False).tolist() if good_shape else []
-                ok = good_shape and verify_mixed_pages(manager, blocks, slots, count, n)
-                observations.append({"group": group, "manager_ids": manager, "kernel_pages": count,
-                                     "block_size": 128, "blocks": blocks, "slots": slots, "verified": ok,
-                                     "table_shape": list(meta.block_tables.shape),
-                                     "slot_shape": list(meta.slot_mapping.shape)})
-                valid &= ok
+            for proof_id, ((group, _, count), meta) in enumerate(proofs.items()):
+                shape = (meta.block_tables.ndim == 2 and meta.block_tables.shape[0] == len(items)
+                         and meta.slot_mapping.ndim == 1 and meta.slot_mapping.numel() == n)
+                start = 0
+                occupied = set()
+                for index, (item, width) in enumerate(zip(items, lengths, strict=True)):
+                    needed = (width + 127) // 128
+                    manager = item.manager_block_ids[group]
+                    good = shape and meta.block_tables.shape[1] >= needed
+                    blocks = meta.block_tables[index, :needed].to("cpu", non_blocking=False).tolist() if good else []
+                    slots = meta.slot_mapping[start:start + width].to("cpu", non_blocking=False).tolist() if good else []
+                    ok = good and verify_mixed_pages(manager, blocks, slots, count, width)
+                    receipt = {"group": group, "manager_ids": manager, "kernel_pages": count,
+                               "block_size": 128, "blocks": blocks, "slots": slots,
+                               "table_shape": list(meta.block_tables.shape),
+                               "slot_shape": list(meta.slot_mapping.shape)}
+                    if fixed_pair:
+                        ok = ok and not occupied.intersection(slots)
+                        occupied.update(slots)
+                        receipt.update(proof_id=proof_id, request_id=item.request_id)
+                    receipt["verified"] = ok
+                    observations.append(receipt)
+                    valid &= ok
+                    start += width
+            gdn_metadata = [m for m in {id(m): m for m in full.values()
+                                         if type(m) is GDNAttentionMetadata}.values()]
             initial_state = [None if m.prefill_has_initial_state is None else
                              m.prefill_has_initial_state.to("cpu", non_blocking=False).tolist()
-                             for m in {id(m): m for m in full.values()
-                                       if type(m) is GDNAttentionMetadata}.values()]
-            valid &= check_fact(facts, "gdn_initial_state", initial_state, [[False]] * len(initial_state))
+                             for m in gdn_metadata]
+            valid &= check_fact(facts, "gdn_initial_state", initial_state, [[False] * len(items)] * len(initial_state))
+            if fixed_pair:
+                offsets = [0, lengths[0], n]
+                checked = set()
+                for layer in gdn_layers:
+                    group = layer_groups.get(layer.prefix)
+                    meta = full.get(layer.prefix)
+                    states = layer.kv_cache
+                    if group is None or type(meta) is not GDNAttentionMetadata or len(states) != 2:
+                        return False
+                    capacity = min(state.shape[0] for state in states)
+                    identity = (group, id(meta), capacity)
+                    if identity in checked:
+                        continue
+                    checked.add(identity)
+                    if any(group >= len(item.manager_block_ids) or len(item.manager_block_ids[group]) != 1
+                           for item in items):
+                        return False
+                    expected = [item.manager_block_ids[group][0] for item in items]
+                    slots = meta.non_spec_state_indices_tensor
+                    starts = (meta.non_spec_query_start_loc, meta.prefill_query_start_loc)
+                    actual = slots.to("cpu", non_blocking=False).tolist() if slots is not None else None
+                    queries = [x.to("cpu", non_blocking=False).tolist() if x is not None else None for x in starts]
+                    valid &= check_fact(facts, f"gdn_state_slot_{len(checked)}",
+                                        {"blocks": actual, "query_starts": queries, "capacity": capacity},
+                                        {"blocks": expected, "query_starts": [offsets, offsets]},
+                                        ok=(actual == expected and queries == [offsets, offsets]
+                                            and len(set(expected)) == 2 and all(0 < x < capacity for x in expected)))
             verified_bindings = (tables, bindings, group_counts) if valid else None
             return valid
 
         def contract(step, context, inputs_embeds, input_ids, positions, domain, record):
             pc = runner.parallel_config
             config = runner.vllm_config
-            n = len(step.request.token_ids)
+            if fixed_pair:
+                if step.batch is None:
+                    return None
+                by_id = {item.request_id:item for item in step.request}
+                ids = step.batch.req_ids
+                if len(ids)!=2 or set(ids)!=by_id.keys():
+                    return None
+                step.ordered_items = tuple(by_id[req_id] for req_id in ids)
+                lengths = tuple(len(item.token_ids) for item in step.ordered_items)
+            else:
+                lengths = (len(step.request.token_ids),)
+            n = sum(lengths)
             checks = {
                 "parallel": (pc.pipeline_parallel_size == pc.data_parallel_size ==
                              pc.prefill_context_parallel_size == pc.decode_context_parallel_size == 1),
-                "single_sequence": runner.scheduler_config.max_num_seqs == 1,
+                "scheduler_batch" if fixed_pair else "single_sequence": runner.scheduler_config.max_num_seqs == len(lengths),
                 "no_chunk": not runner.scheduler_config.enable_chunked_prefill,
                 "no_prefix": not runner.cache_config.enable_prefix_caching,
                 "no_mamba_prefix": runner.cache_config.mamba_cache_mode == "none",
@@ -684,7 +757,10 @@ def install(runner_class):
                 "no_fast_prefill_sharing": not runner.cache_config.kv_sharing_fast_prefill,
                 "gdn_fla": _get_fla_gdn_prefill_op() is not None,
             }
-            checks.update(metadata_checks(context, step.batch, n, AscendMetadata, GDNAttentionMetadata))
+            checks.update(metadata_checks(context,step.batch,n,AscendMetadata,GDNAttentionMetadata,lengths))
+            if fixed_pair:
+                checks["scheduled_lengths"] = tuple(step.batch.num_scheduled_tokens.tolist()) == lengths
+                checks["bound_total"] = n <= 4096
             if POST_NORM:
                 state = runner.model_state
                 checks.update(
@@ -704,7 +780,7 @@ def install(runner_class):
                         and inputs_embeds.shape == (n, 5120) and inputs_embeds.stride() == (5120, 1)
                     )
             step.contract = checks
-            if record:
+            if record and not fixed_pair:
                 batch = step.batch
                 expected = {
                     "parallel": [1, 1, 1, 1], "single_sequence": 1, "no_chunk": False,
@@ -784,6 +860,10 @@ def install(runner_class):
                     field: {"expected": expected.get(field, True), "actual": actual.get(field, ok), "ok": ok}
                     for field, ok in checks.items()
                 }
+            if record and fixed_pair:
+                step.guard_facts["step"] = {
+                    "checks": checks, "lengths": lengths, "packed_request_ids": list(step.batch.req_ids),
+                }
             if not all(checks.values()):
                 return None
             checks["verified_cache_binding"] = cache_binding(context, n, record, step)
@@ -805,7 +885,12 @@ def install(runner_class):
                                                           and tuple(inputs_embeds.shape) == (n, 5120))):
                 return None
             actual_tokens = step.batch.input_ids if input_ids is None else input_ids
-            tokens = tuple(actual_tokens.to("cpu", non_blocking=False).tolist())
+            tokens = tuple(actual_tokens.to("cpu",non_blocking=False).tolist())
+            if fixed_pair:
+                packed_positions = positions.to("cpu",non_blocking=False).tolist()
+                axes = [packed_positions] if positions.ndim == 1 else packed_positions
+                return pack_pair(step.ordered_items,step.batch.req_ids,step.batch.query_start_loc_np.tolist()[:3],
+                                 tokens,axes,positions.stride(),domain)
             if not check_fact(facts, "same_input_tokens", tokens == step.request.token_ids, True):
                 return None
             pos = positions.to("cpu", non_blocking=False).flatten().tolist()
@@ -927,9 +1012,14 @@ def install(runner_class):
             def original():
                 return stock(input_ids, positions, intermediate_tensors, inputs_embeds)
 
-            n = len(step.request.token_ids)
+            if fixed_pair:
+                n = sum(len(item.token_ids) for item in step.request)
+                request_id = "|".join(step.batch.req_ids) if step.batch is not None else ""
+            else:
+                n = len(step.request.token_ids)
+                request_id = step.request.request_id
             if chosen == "tap":
-                if record and intermediate_tensors is None:
+                if record and not fixed_pair and intermediate_tensors is None:
                     return tap_stock(step, n, original)
                 return original()
             ctx = get_forward_context()
@@ -1010,6 +1100,46 @@ def install(runner_class):
                     return None
                 return capture_tensors(digest, (output,))
 
+            def restore_pair(pair, values):
+                if veto_restore:
+                    step.times["injected_restore_veto"] = True
+                    return None
+
+                def copy():
+                    spans = tuple(zip(pair.offsets[:-1],pair.offsets[1:],values,strict=True))
+                    if any(not final_hidden_layout(host,end-begin,torch.device("cpu"))
+                           for begin,end,host in spans):
+                        return None
+                    packed = torch.empty((n,5120),dtype=torch.bfloat16,device=positions.device)
+                    try:
+                        for begin,end,host in spans:
+                            packed[begin:end].copy_(host,non_blocking=False)
+                    finally:
+                        try:
+                            torch.npu.current_stream().synchronize()
+                        except RuntimeError as exc:
+                            raise OSError("could not retire the paired H2D stream") from exc
+                    return packed if final_hidden_layout(packed,n,positions.device) else None
+
+                return timing(step,"h2d_ns",copy)
+
+            def capture_pair(digest,begin,end,output):
+                if not final_hidden_layout(output,n,positions.device):
+                    return None
+                size = (end-begin)*10240
+                ticket = cache.reserve(digest,size)
+                if ticket is None:
+                    return None
+                try:
+                    host = timing(step,"d2h_ns",lambda: output[begin:end].to("cpu",non_blocking=False,copy=True))
+                    if not final_hidden_layout(host,end-begin,torch.device("cpu")):
+                        cache.cancel(ticket)
+                        return None
+                    return ticket,host,size
+                except BaseException:
+                    cache.cancel(ticket)
+                    raise
+
             def input_pair():
                 hidden = inputs_embeds if inputs_embeds is not None else self.embed_input_ids(input_ids)
                 return hidden, None
@@ -1031,10 +1161,16 @@ def install(runner_class):
                             step.times["norm_calls"] += 1
                         handles.callback(core.norm.register_forward_hook(observe_norm).remove)
 
-                    result, hit = run_final_candidate(
-                        key=key, cache=cache, restore=restore, capture=capture_final,
-                        exchange=exchange, stock=original, enabled=chosen == "cache",
-                    )
+                    if fixed_pair:
+                        result, hit = run_fixed_pair(
+                            key,cache=cache,restore=restore_pair,capture=capture_pair,
+                            exchange=exchange,stock=original,enabled=chosen=="cache",
+                        )
+                    else:
+                        result, hit = run_final_candidate(
+                            key=key,cache=cache,restore=restore,capture=capture_final,
+                            exchange=exchange,stock=original,enabled=chosen=="cache",
+                        )
                 if record and type(result) is torch.Tensor:
                     step.times["final_return"] = {
                         "layout": layout(result), "format": torch_npu.get_npu_format(result),
@@ -1049,15 +1185,25 @@ def install(runner_class):
                 )
             if formal:
                 counters["calls"] += 1
+                if fixed_pair:
+                    counters["requests"] += 2
+                    counters["hit_requests"] += 2 * int(hit)
                 counters["hit" if hit else "miss" if key is not None else "guard_fallback"] += 1
                 for name in ("d2h_ns", "h2d_ns", "vote_ns", "key_ns"):
                     counters[name] += step.times.get(name, 0)
             if record:
-                digest = sha256(memoryview(result.to("cpu", non_blocking=False)
-                                           .contiguous().view(torch.uint8).numpy())).hexdigest()
+                host = result.to("cpu",non_blocking=False).contiguous()
+                digest = tensor_digest(host)
+                if fixed_pair:
+                    step.times["packed_req_ids"] = list(step.batch.req_ids)
+                    if key is not None:
+                        step.times["packed_offsets"] = key.offsets
+                        step.times["item_final_hidden_sha256"] = [
+                            tensor_digest(host[a:b]) for a,b in zip(key.offsets[:-1],key.offsets[1:],strict=True)
+                        ]
                 receipt = {
                     "rank": tp.rank_in_group, "pid": os.getpid(), "tokens": n, "mode": chosen,
-                    "request_id": step.request.request_id, "guard_facts": step.guard_facts,
+                    "request_id": request_id, "guard_facts": step.guard_facts,
                     "admitted_local": key is not None, "hit": hit, "boundary": step.boundary,
                     "layers": layers, "contract": step.contract,
                     "kv_proof": step.kv_proof,
@@ -1065,7 +1211,7 @@ def install(runner_class):
                 }
                 write_receipt(receipt)
                 if POST_NORM:
-                    head_audit = (audit_sequence, step.request.request_id, n)
+                    head_audit = (audit_sequence,request_id,n)
             return result
 
         core.forward = MethodType(forward, core)
@@ -1084,7 +1230,10 @@ def install(runner_class):
     def execute_model(runner, scheduler_output, intermediate_tensors=None, *args, **kwargs):
         dummy = kwargs.get("dummy_run", args[0] if args else False)
         profiling = kwargs.get("is_profile", args[2] if len(args) > 2 else False)
-        candidate = fresh_text_step(scheduler_output, dummy_run=dummy, is_profile=profiling)
+        if fixed_pair:
+            candidate = fresh_text_items(scheduler_output,count=2,dummy_run=dummy,is_profile=profiling)
+        else:
+            candidate = fresh_text_step(scheduler_output,dummy_run=dummy,is_profile=profiling)
         if candidate is None and not dummy and not profiling and control:
             try:
                 diagnose = json.loads(Path(control).read_bytes()).get("audit") is True
