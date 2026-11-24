@@ -147,3 +147,15 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **joint head**：门控打点显示 967 token 下 pooler 5.90–6.25 ms，head 4.78–5.05（decoder 2.23–2.33、routing 1.09–1.18、final 0.62–0.67），全部是小算子下发；CPU 卸载不划算（`memory_projection` 10.1 GFLOP 必须留 NPU），不采用。
 - **prefix caching**：Mamba 前缀缓存要求 chunked prefill（关闭态启动即断言失败），且 chunked prefill 会关闭决策快速路径；不启用。
 - **最终验证**：S1 五轮 **8.646 / 8.705 / 8.849 / 8.983 / 9.035 dec/s**、p95 **156.81 / 157.50 / 155.85 / 155.86 / 155.72 ms**，中位 **8.849 dec/s / 155.86 ms**（2352/2352）；全量 OpenDecisions 重评 Cap **74.2476**、Int 66.0840、Cal 82.4112、accuracy 1904/2352、MAE 0.40261，与既有证据逐位一致；ERQA 独立复跑 **216/400**（400/400、0 重试、请求哈希校验通过）。
+
+## 2026-11-24 单一常驻 TP2：TASK_QUEUE=2 + 48-AIV Conv+QKV（已采用）
+
+完整报告见 [docs/tp2-alwayson-2026-11-24.md](../docs/tp2-alwayson-2026-11-24.md)。
+
+- **统一评测服务**：单实例 TP2/BF16/eager，16K/seqs16/util .85/encoder cache 262144，无 RAM/JPEG 缓存；OD S1 与 `od-s1` 独立 profile 的 P95 差 ≤0.7 ms。
+- **TASK_QUEUE_ENABLE=2**：ABBA 全量 S1 mean **118.53→110.85 ms**、p50 111.39→101.09、p95 156.56→156.21、吞吐 +6.9%；2,352/2,352 逐位一致、0 choice 翻转；S2 中性。已设为入口默认，`=1` 复现旧基线。
+- **Conv+QKV v4（48 AIV）**：`Ascend910_9382` 为 24 AIC / 48 AIV，旧 tiling 只用 24；新 tiling 用满 48 并按 `min(totalTiles,48)` 设 blockDim，kernel `.o` 不变。v3/v4 48 例 144 张量 `max_abs=0.0`；长序列单算子 1.8–1.9×，对分解路径 3.2–3.7×。`CLEF_GDN_QKV_NORM_MAX_TOKENS` 1600→16384，使 ERQA 长 prefill 保持融合。
+- **官方 profile 实测（2026-11-24）**：OD S1 三轮 p95 **156.117 / 155.014 / 154.480 ms（中位 155.014）**、mean 119.156/117.671/114.871、吞吐 8.391/8.496/8.704；OD S2 profile B16 C64 **17.241 dec/s**、p95 6076.6 ms（C16 16.138 / 1778.8）。
+- **ERQA**：C1 冷首遍 **216/400**、p95 **293.893 ms**（基线 300.538）、4.633 dec/s；B8 C16 **219/400 = 0.5475**、7.006 dec/s（基线 216/400、7.166）。全部 400/400、0 失败、0 重试。
+- **质量**：OpenDecisions 与基线逐位一致（Cal 82.4113 / Int 66.0841 / Cap 74.2477、accuracy 1904/2352、MAE 0.402612）；ERQA 0.5400（C1）/0.5475（C16），均在 2PP 内。
+- **未采用**：ATB kernel cache（中性）、关闭 access log（中性）、Rank1 跳过 joint head（中性，开关默认 0）、GDN 自适应 chunk（64 仅在 307 token 附近占优、多序列全面更慢，默认全 128）、CPU 绑核（mean −1.95 ms，但 CPU 集与机器相关，保留 `CLEF_BIND_CPUS` opt-in）。

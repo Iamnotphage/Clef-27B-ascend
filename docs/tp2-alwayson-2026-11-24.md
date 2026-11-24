@@ -108,7 +108,20 @@ S2（同一 v4 服务）：C16 **15.998 dec/s / p95 1795.85 ms**、C64 **17.146 
 
 ERQA 长序列（>1,600 token）此前全部回退分解路径；v4 在 1,653–10,294 token 均快于分解路径，因此 C1/C16 的 P95 与吞吐同时改善。
 
-## 5. 采纳清单与回退
+## 5. 阶段 4：官方 profile 复核（单一常驻服务）
+
+最终默认配置（TQ2 + joint R + conv v4 + cap 16384 + chunk128，无 RAM/JPEG 缓存）用官方 `scripts/start_dataset_profile.sh` 逐 profile 冷启动复测：
+
+| profile | 结果 |
+| --- | --- |
+| `od-s1`（4K/seqs1/B1，3 轮） | p95 **156.117 / 155.014 / 154.480 ms（中位 155.014）**；mean 119.156 / 117.671 / 114.871；吞吐 8.391 / 8.496 / 8.704 dec/s；2,352/2,352 × 3 |
+| `od-s2`（4K/B16） | C16 **16.138 dec/s / p95 1778.85 ms**；C64 **17.241 dec/s / p95 6076.61 ms**；2,352/2,352 |
+| `erqa-c1`（16K/seqs1/util .85，冷首遍） | **216/400 = 0.540**；p95 **293.893 ms**；4.633 dec/s；400/400、0 重试 |
+| `erqa-s2`（16K/seqs8，客户端 C16） | **219/400 = 0.5475**；7.006 dec/s；p95 3670.31 ms；400/400、0 重试 |
+
+对照计划的 2026-11-23 参考：S1 P95 156.182 → **155.014（−1.17 ms）**；S2 C64 17.689 → 17.241（本窗口整体偏慢约 2.5%，融合路径不参与 S2）；ERQA S1 P95 300.538 → **293.893（−6.65 ms）**、S2 7.166 → 7.006（窗口漂移）、准确率 216/400 → **219/400（+0.75 pp）**。OD 质量与基线逐位一致（2,352/2,352、`max_prob_diff=0.0`、0 翻转；Cap 74.2477、accuracy 1904/2352、MAE 0.402612）。全部评估均通过官方 2PP 门、0 失败、0 重试。
+
+## 6. 采纳清单与回退
 
 | 项 | 状态 | 回退 |
 | --- | --- | --- |
@@ -119,8 +132,10 @@ ERQA 长序列（>1,600 token）此前全部回退分解路径；v4 在 1,653–
 | GDN 自适应 chunk | 未采用 | `CLEF_GDN_CHUNK128_MIN_TOKENS=0`（默认） |
 | ATB cache / 关 access log | 关闭 | 不设置 |
 
-## 6. 证据路径
+## 7. 证据路径
 
 - 阶段 0/1：`/workspace/yangchen/logs/tp2-alwayson-20261124/phase0|phase1/`（status.jsonl、逐轮 summary/report、质量 JSON）。
 - 阶段 2：`phase2/chunk-single-20261124.json`、`chunk-multi2-20261124.json`（以及误解析的 `chunk-multi-20261124.json`，仅作短序列参考）。
 - 阶段 3：`phase3/probe-v3.json`、`probe-v4.json`、`probe-v3-v4-equal.json`、`v4-s1-r{1,2,3}/`、`v4-quality.json`、`v4-erqa-*/summary.json`；vendor 备份 `/workspace/yangchen/work/tp2-alwayson-20261124/vendor-v3-backup`。
+- 阶段 4：`phase4-official/official-s1.json`（官方 od-s1 三轮）、`phase4/smoke-result.json`（冷启动 + 5 协议用例）、`phase5/final-profiles.json`（od-s2 / erqa-c1 / erqa-s2）。
+- 汇总：`Clef-27B/logs/tp2-alwayson-20261124/evidence-summary.json`。
