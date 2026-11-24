@@ -112,6 +112,19 @@ class AsyncCapture:
     def _snapshot_bytes_cap(self) -> int:
         return 1 << 30
 
+    def _persistent_host(self, tensor):
+        """Pinned host storage, or pageable if the pin budget is exhausted.
+
+        The Prefetcher detects pageable input and routes it through its
+        two-slot pinned staging pool, so a failed pin degrades bandwidth but
+        never correctness.
+        """
+        try:
+            return self._torch.empty(
+                tensor.shape, dtype=tensor.dtype, pin_memory=True)
+        except Exception:  # noqa: BLE001 - memlock/CANN pin budget
+            return self._torch.empty(tensor.shape, dtype=tensor.dtype)
+
     def _take_snapshot(self, source):
         key = (tuple(source.shape), source.dtype, str(source.device))
         with self._snapshot_lock:
@@ -155,9 +168,13 @@ class AsyncCapture:
         held_sources: list[Any] = []
         host: dict[str, Any] = {}
         offset = 0
+        snapshots: list[tuple[str, Any]] = []
         try:
             with self._torch.npu.stream(self._stream):
                 self._stream.wait_event(ready)
+                # Phase 1: every device-to-device snapshot.  The compute
+                # stream is ordered after snapshot_done only, never after the
+                # host transfer below.
                 for name, tensor in payload.items():
                     if tensor is None:
                         host[name] = None
@@ -169,15 +186,16 @@ class AsyncCapture:
                         source = source.contiguous()
                         if source.device.type in ("npu", "privateuseone"):
                             source.record_stream(self._stream)
-                    # Take an on-device snapshot under the copy stream, then
-                    # order the compute stream after the snapshot.  A caller
-                    # that immediately overwrites the source can no longer
-                    # race this D2H; the compute stream still does not wait
-                    # for the transfer itself.
                     snapshot = self._take_snapshot(source)
                     snapshot.copy_(source, non_blocking=True)
                     snapshot.record_stream(self._stream)
                     held_sources.append(snapshot)
+                    snapshots.append((name, snapshot))
+                snapshot_done = self._torch.npu.Event()
+                snapshot_done.record(self._stream)
+
+                # Phase 2: queue all D2H copies after every snapshot.
+                for name, snapshot in snapshots:
                     nbytes = snapshot.numel() * snapshot.element_size()
                     if offset + nbytes > buffer.numel():
                         raise RuntimeError("pinned ring slot overflow")
@@ -186,8 +204,6 @@ class AsyncCapture:
                     view.copy_(snapshot, non_blocking=True)
                     host[name] = view
                     offset += nbytes
-                snapshot_done = self._torch.npu.Event()
-                snapshot_done.record(self._stream)
                 done = self._torch.npu.Event()
                 done.record(self._stream)
         except BaseException:
@@ -203,8 +219,7 @@ class AsyncCapture:
             if tensor is None:
                 host[name] = None
                 continue
-            persistent = self._torch.empty(
-                tensor.shape, dtype=tensor.dtype, pin_memory=True)
+            persistent = self._persistent_host(tensor)
             persistent.copy_(tensor.detach())
             host[name] = persistent
         return host
@@ -223,8 +238,7 @@ class AsyncCapture:
                     if view is None:
                         persistent[name] = None
                         continue
-                    target = self._torch.empty(
-                        view.shape, dtype=view.dtype, pin_memory=True)
+                    target = self._persistent_host(view)
                     target.copy_(view)
                     persistent[name] = target
                 on_ready(persistent)
