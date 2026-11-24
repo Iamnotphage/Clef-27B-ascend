@@ -148,3 +148,7 @@ python scripts/verify_systemone.py \
 ## 2026-11-25 多序列 Varlen Conv+QKV（默认开启）
 
 `--config s1` 现默认启用多序列 `ClefGdnConvQkvVarlen`（`CLEF_GDN_CONV_QKV_VARLEN=1`、tile 64），`num_prefills == 1` 仍走原 v4 `ClefGdnConvQkv`，因此 OD S1 / ERQA C1 与之逐位一致。离线 4 门（B=1 对齐 v4、多序列对齐逐条 v4、NaN 零串扰、单算子 3.53–4.54×）与同窗 A/B 均通过：OD S2 C16 16.971 dec/s / p95 1704 ms、C64 18.039 / 5779 ms；ERQA C16 冷 7.281 / 3335 ms、暖 8.627 / 2816 ms，较 OFF 提升 4.3–6.0%、P95 下降 4.6–7.7%。OD 全量 S1 2,352/2,352 与 512317e `max_prob_diff=0.0`；质量 OD Cap 74.06–74.25、ERQA C16 218/400、C1 216/400，全部 2PP 内、0 失败、0 重试。显式 `CLEF_GDN_CONV_QKV_VARLEN=0` 复现 OFF 臂。详见 [varlen 报告](../docs/conv-qkv-varlen-2026-11-25.md) 与 [轻量日志](logs/conv-qkv-varlen-20261125/)。
+
+## 2026-11-25 分层缓存 Tier 2 决策（默认关闭）
+
+Tier 2 Hybrid Prefix State Cache（16 层 Full-Attn KV + 48 层 GDN `(conv,ssm)` + JointHead `prefix_memory`）完成阶段 0–2 离线工作：数据审计、A3 pinned 带宽、生产 GDN 128 对齐续算逐位一致（18/18 组 0.0）、HostStore/健壮性修复与 35 单测、4 GiB 压测。阶段 3 引擎接入遇到架构阻塞：vLLM 原生 Mamba 前缀缓存强制 `mamba_cache_mode="align"`（`single_type_kv_cache_manager.py:1442`），而决策快路径显式要求 `not enable_prefix_caching / not enable_chunked_prefill`（`apply_gdn_decision_patch.py:516-522`）；打开原生缓存会关闭 BIC/varlen，无法满足“冷首遍 ≤1%”；自定义 scheduler/KV/mamba 状态恢复属于 2–3 天引擎工程，本轮未收敛为可验收硬门。因此 **`--prefix-state-cache` 默认 `off`，主线保持 29a1bf8 的 Tier 1 + varlen 配置**，实验代码保留在 `feat/tiered-cache-20261124`。最终指标见 [Tier 2 报告](../docs/tiered-cache-2026-11-25.md) 第 8 节；`results.csv` 仅保留 OpenDecisions 与 ERQA 两行，历史行归档到 `logs/dataset-profiles-20261123/results-historical.csv`。

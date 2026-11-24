@@ -182,3 +182,11 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **S1 零回退**：ON1 OD S1 2,352/2,352 与 512317e `max_prob_diff=0.0`、0 flips；ERQA C1 冷/暖逐位一致，216/400，P95 289.26/244.66 ms。
 - **质量**：OD ON Cap 74.2477（S1）/74.0625（C16）/74.2322（C64），ERQA C16 **218/400**、C1 216/400，全部 2PP 内、0 失败、0 重试。
 - **入口**：`runtime/apply_conv_qkv_varlen_patch.py`（preimage `ead25cb2…` → postimage `afe6d4e8…`），`s1` 默认 `CLEF_GDN_CONV_QKV_VARLEN=1`、`CLEF_CONV_QKV_VARLEN_TILE=64`；显式 `=0` 回退。
+
+## 2026-11-25 分层缓存 Tier 2：实验完成但默认关闭
+
+完整记录见 [docs/tiered-cache-2026-11-25.md](../docs/tiered-cache-2026-11-25.md)。
+
+- **阶段 0–2 已完成**：OD/ERQA 前缀审计（离线 token 2,752/2,752 与服务一致）、A3 pinned H2D 55/D2H 39 GiB/s、生产 GDN 128 对齐续算 18/18 组逐位一致、Tier 1 定容 262144（HBM 61,358/61,009 MiB，余量 ≥4 GiB）、HostStore/LRU/SHM/异步传输与 35 单测、4 GiB 16 线程压测 0 泄漏。
+- **阶段 3 阻塞（自动不采纳）**：原生 Mamba prefix caching 强制 `mamba_cache_mode="align"`，而决策快路径要求 `not enable_prefix_caching` 且 `not enable_chunked_prefill`；两者互斥，打开即关闭 BIC/varlen，无法满足冷首遍 ≤1%。自定义 scheduler/KV/mamba per-request 状态恢复未完成。**Tier 2 默认 off，主线保持 29a1bf8。**
+- **最终 29a1bf8 指标**：OD S1 154.11 ms / 9.244 dec/s（与 512317e 逐位一致）、S2 C16 16.971 / p95 1704.4、C64 18.039 / p95 5779.1；ERQA C1 冷/暖 216/216、p95 289.26/244.66；C16 冷/暖 218/218、7.281/8.627 dec/s；OD Cap 74.2477/74.0625/74.2322，ERQA 0.5400/0.5450，全部 2PP 内、0 失败/重试。
