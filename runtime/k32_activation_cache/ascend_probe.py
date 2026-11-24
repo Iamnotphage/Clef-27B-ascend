@@ -134,15 +134,15 @@ def identity_failures(outer, core, tp, outer_class, pooler_class, core_class, fo
     """Return the exact failed predicates without changing admission."""
     kind = lambda item: f"{type(item).__module__}.{type(item).__qualname__}"
     method = getattr(core.forward, "__func__", None)
+    boundary_types = list(core.config.layer_types)[BOUNDARY - 1:BOUNDARY + 1]
+    expected_types = ["full_attention"] if POST_NORM else ["full_attention", "linear_attention"]
     checks = {
         "outer_type": (type(outer) is outer_class, kind(outer)),
         "pooler_type": (type(outer.pooler) is pooler_class, kind(outer.pooler)),
         "core_type": (type(core) is core_class, kind(core)),
         "forward_identity": (method is forward, getattr(method, "__qualname__", None)),
         "layer_count": (len(core.layers) == 64, len(core.layers)),
-        "boundary_types": (list(core.config.layer_types)[BOUNDARY - 1:BOUNDARY + 1] ==
-                           ["full_attention", "linear_attention"],
-                           list(core.config.layer_types)[BOUNDARY - 1:BOUNDARY + 1]),
+        "boundary_types": (boundary_types == expected_types, boundary_types),
         "tp_size": (tp.world_size == 2, tp.world_size),
     }
     return {field: value for field, (valid, value) in checks.items() if not valid}

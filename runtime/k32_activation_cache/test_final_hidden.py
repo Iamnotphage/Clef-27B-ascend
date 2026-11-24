@@ -1,8 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from activation_cache import ActivationCache, ENTRY_OVERHEAD
+import ascend_probe
 from step_protocol import run_final_candidate, vote_integers, vote_result
 
 
@@ -53,6 +56,27 @@ class FinalHiddenTest(unittest.TestCase):
         self.assertEqual(result[0], result[1])
         self.assertEqual(result[0][0], final)
         return result[0][1], stock_calls, vote_calls
+
+    def test_post_norm_identity_ends_on_full_attention(self):
+        class Core:
+            def forward(self):
+                return None
+
+        core = Core()
+        core.layers = [None] * 64
+        core.config = SimpleNamespace(layer_types=["linear_attention"] * 3 + ["full_attention"])
+        core.config.layer_types *= 16
+        outer = SimpleNamespace(pooler=object())
+        tp = SimpleNamespace(world_size=2)
+        args = outer, core, tp, type(outer), type(outer.pooler), Core, Core.forward
+        with patch.multiple(ascend_probe, BOUNDARY=64, POST_NORM=True):
+            self.assertEqual(ascend_probe.identity_failures(*args), {})
+            core.config.layer_types[-1] = "linear_attention"
+            self.assertIn("boundary_types", ascend_probe.identity_failures(*args))
+        with patch.multiple(ascend_probe, BOUNDARY=56, POST_NORM=False):
+            self.assertEqual(ascend_probe.identity_failures(*args), {})
+            core.config.layer_types[56] = "full_attention"
+            self.assertIn("boundary_types", ascend_probe.identity_failures(*args))
 
     def test_cold_norm_output_then_hit_without_stock(self):
         self.assertEqual(self.execute_two_ranks(), (False, [1, 1], [2, 2]))
