@@ -189,7 +189,7 @@ class ERQAProtocolTests(unittest.TestCase):
             self.skipTest("ERQA samples.jsonl is not present on this host")
         data_dir = path.parent
         samples = [json.loads(line) for line in
-                   path.read_text(encoding="utf-8").splitlines() if line.strip()]
+                   path.read_bytes().split(b"\n") if line.strip()]
         self.assertEqual(len(samples), 400)
         for sample in samples:
             with self.subTest(sample=sample["id"]):

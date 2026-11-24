@@ -199,7 +199,7 @@ class ZeroMisjudgmentTests(unittest.TestCase):
         if path is None:
             self.skipTest("OpenDecisions 2,352 snapshot is not present on this host")
         rows = [json.loads(line) for line in
-                path.read_text(encoding="utf-8").splitlines() if line.strip()]
+                path.read_bytes().split(b"\n") if line.strip()]
         self.assertEqual(len(rows), 2352)
         recognized = [
             row.get("id") for row in rows
