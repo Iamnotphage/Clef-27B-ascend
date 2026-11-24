@@ -379,6 +379,7 @@ def install(runner_class):
     assert len(namespace) == 32 and mode in {"split", "cache"}
     cap = int(os.environ.get("CLEF_PRIVATE_K32_RANK_BYTES", 256 << 20))
     formal = os.environ.get("CLEF_PRIVATE_K32_FORMAL") == "1"
+    track_counters = formal or fixed_pair
     approved_cap = (41 << 29) if formal else (256 << 20)
     assert 0 < cap <= approved_cap
     audit = os.environ.get("CLEF_PRIVATE_K32_AUDIT") == "1"
@@ -490,7 +491,7 @@ def install(runner_class):
 
         counters = Counter()
         snapshots = 0
-        if formal:
+        if track_counters:
             def write_counters(_number, _frame):
                 nonlocal snapshots
                 snapshots += 1
@@ -1187,7 +1188,7 @@ def install(runner_class):
                     stock=original,
                     enabled=chosen == "cache", observe_boundary=observe_boundary, observed_layers=layers,
                 )
-            if formal:
+            if track_counters:
                 counters["calls"] += 1
                 if fixed_pair:
                     counters["requests"] += 2
@@ -1255,7 +1256,7 @@ def install(runner_class):
                                    "mm_features": len(x.mm_features)}
                                   for x in scheduler_output.scheduled_new_reqs],
                 }), flush=True)
-        if (formal and not dummy and not profiling and scheduler_output.total_num_scheduled_tokens > 0
+        if (track_counters and not dummy and not profiling and scheduler_output.total_num_scheduled_tokens > 0
                 and hasattr(runner, "_clef_private_k32_cache")):
             state = runner._clef_private_k32_cache
             if candidate is None:
