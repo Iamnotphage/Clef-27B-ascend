@@ -131,7 +131,35 @@
 - C1（encoder 已暖）cold/warm 对照：**max_prob_diff = 0.0、0 choice flips、216/216**；mean 166.68→165.62 ms、p95 247.61→247.62 ms。512317e 已记录的干净 C1 冷首遍/第二遍为 288.40→244.38 ms、逐位一致，本轮未重复冷首遍。
 - 全部运行 0 失败、0 重试；ERQA 正确率 216–219/400，相对 baseline 219/400 的绝对波动 ≤ 0.75 PP，满足 2PP 门。
 
-## 4. 证据与后续
+## 4. 阶段 2：纯 CPU 缓存核心与单测
+
+新增独立包 `runtime/tiered_prefix_cache/`（不依赖 NPU，可在 CPU 侧完整验证）：
+
+| 模块 | 能力 |
+| --- | --- |
+| `prefix_key.py` | 最后一个 `\n\nSCHEMA FIELDS:\n` 定位、`L_aligned=(L_prefix//128)*128`、schema span 越界拒识；SHA-256 键覆盖 namespace、模型 revision、前缀 token ids 与每个多模态项的 `mm_hash`/placeholder/expanded 偏移长度，同尺寸不同图必不相同 |
+| `host_store.py` | 32 GiB 默认预算（cgroup/MemAvailable 扣 12 GiB 安全余量）、引用计数 LRU（在途 lease 永不回收）、`second_hit` Ghost LRU（65,536 键）/`always` 双准入、rank0 单份 POSIX SHM `prefix_memory` + rank1 只读映射、`tp_vote_vector`/`tp_vote_result` 与已验证 K32 协议逐字节一致 |
+| `async_transfer.py` | Pinned ring（默认 3 槽）、独立 `torch.npu.Stream()` D2H + Event 后台发布、H2D 分组预取与逐组 `wait`；CPU/无 NPU 环境自动退化为同步路径 |
+| `test_tiered_prefix_cache.py` | 27 项单测：307/967/1,595/10,294 边界、schema span、mm 防碰撞、second_hit/always、lease-safe 淘汰、8 线程并发压力、SHM 往返与清理、TP 投票 |
+| `stress_host_store.py` | 4 GiB 紧预算、16 线程、20,000 次操作的淘汰压测，校验预算/lease/SHM 残留 |
+
+实测：
+
+- 远端 pinned venv：**27 tests, OK, 0 failures**（含 POSIX SHM 用例）；本机无 torch//dev/shm 时 3 项按预期 skip。
+- 4 GiB 压测：`ok=true`、1,945 条常驻、bytes 4,079,022,080 ≤ 4 GiB、**10,765 次淘汰、17 次拒绝、lease 0、SHM 关闭后残留 0**、2.97 s 完成。
+- 证据：`Clef-27B/logs/tiered-cache-20261124/stage2-stress-host-store.json`。
+
+## 5. 阶段 3 的前置结论与风险（尚未开工）
+
+阶段 3 需要同时改动 `gdn.py`、`clef_joint_schema.py`、Full-Attention 的 paged KV 与调度器，严格按安装器 `--check/--apply/--revert` 叠层；本节列出已确认的接口与仍需在阶段 3 实测的差异：
+
+1. **GDN 已解决**：A3 生产算子在 128 对齐边界 BF16 续算逐位一致（18/18 组 0.0）；`ssm_state` 必须 BF16。`conv_state` 由卷积前最后 3 个 token 恢复；生产 `ClefGdnConvQkv` 与续算所用 `causal_conv1d_fn` 的跨算子舍入差需在阶段 3 用逐题概率对照量化（当前证据：conv 为 4-tap 因果卷积，状态语义确定）。
+2. **Full-Attn KV**：16 层、TP 分片、每 token 64 KiB（TP2 合计）；捕获/恢复是 paged block 拷贝，数值上应为纯拷贝逐位一致，但需要接入 `block_table` 与 vLLM-Ascend 128-token 页布局。
+3. **JointHead `prefix_memory`**：`hidden_norm` 与 `memory_projection` 都是逐 token 线性，命中时 `cat([prefix_memory, suffix_memory])` 数学上与全量一致；阶段 3 需在 `clef_joint_schema.py` 增加可选通道并保持 `CLEF_JOINT_RANK0_ONLY=1` 只让 rank 0 读取。
+4. **调度器**：`max_num_seqs=16` 下按 Miss / Hit / Populate 分桶；`second_hit` 首次命中不捕获、第二次才异步 D2H，保证冷首遍（官方 OD/ERQA 单遍）零额外延迟。
+5. **已知收益边界**：OD 967-token 命中估算 1.44–1.48×（eager 64 层 CPU dispatch ~100 ms 固定下限）；阶段 3 的验收应把 OD 冷单遍 S1/S2 零回归作为硬门，把 Tier 2 收益主要记在长 ERQA、同 STATE 多问与暖态复用。
+
+## 6. 证据与后续
 
 - 本报告与轻量证据：`Clef-27B/logs/tiered-cache-20261124/stage0-dataset-audit-summary.json`、`stage0-pinned-bandwidth.json`、`stage0-gdn-split-od967.json`、`stage0-gdn-split-erqa10294.json`、`stage0-latency-tokens.json`、`stage1-hbm-summary.json`。
 - 远端原始证据（含逐题审计行、完整服务报告、500 ms HBM 采样、捕获张量）：`/workspace/yangchen/logs/tiered-cache-20261124/` 与 `capture/`。
