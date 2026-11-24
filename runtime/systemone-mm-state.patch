@@ -1,0 +1,45 @@
+diff --git a/vllm/entrypoints/generate/structured_decisions/serving.py b/vllm/entrypoints/generate/structured_decisions/serving.py
+--- a/vllm/entrypoints/generate/structured_decisions/serving.py
++++ b/vllm/entrypoints/generate/structured_decisions/serving.py
+@@ -14,6 +14,7 @@
+ from vllm.entrypoints.openai.decisions.strategies import DecisionLimits
+ from vllm.entrypoints.serve.engine.protocol import ErrorResponse
+ 
++from ._clef_mm_state import normalize_systemone_state
+ from .protocol import (
+     DecisionUsage,
+     JointCanvas,
+@@ -90,7 +91,23 @@
+         request_id = f"decision-{base_id}"
+         try:
+             questions = parse_questions(request, self.limits)
+-            media = self._media(request)
++            try:
++                normalized = normalize_systemone_state(
++                    request.state, request.images
++                )
++            except ValueError as exc:
++                raise StructuredDecisionError(
++                    f"invalid multimodal state: {exc}"
++                ) from exc
++            if normalized.was_multimodal and normalized.mode == "interleave":
++                raise StructuredDecisionError(
++                    "invalid multimodal state: interleave mode requires the "
++                    "native strategy patch"
++                )
++            effective_request = request.model_copy(
++                update={"images": normalized.images}
++            )
++            media = self._media(effective_request)
+             lora_request = self._maybe_get_adapters(request)  # type: ignore[arg-type]
+             joint = self._admit(questions, request.joint)
+             trace_headers = (
+@@ -102,7 +119,7 @@
+             reads = await read_fn(
+                 questions,
+                 request.instructions,
+-                self.strategy.render_state(request.state),
++                self.strategy.render_state(normalized.state),
+                 request_id=request_id,
+                 chat_template_kwargs=request.chat_template_kwargs,
+                 lora_request=lora_request,
