@@ -30,6 +30,8 @@ IMAGE_PLACEHOLDER = "<|vision_start|><|image_pad|><|vision_end|>"
 #: ``JointSchemaStrategy.IMAGE_SIZE``: the reference service's pixel bound.
 REFERENCE_IMAGE_SIZE = {"shortest_edge": 65536, "longest_edge": 1048576}
 ANSWER_INSTRUCTION = re.compile(r"Please answer directly", re.IGNORECASE)
+WIRE_FORMATS = ("top-level-images", "state-list")
+DEFAULT_WIRE_FORMAT = "top-level-images"
 
 
 def parse_options(question: str) -> list[tuple[str, str]]:
@@ -81,9 +83,75 @@ def data_url(blob: bytes, fmt: str) -> str:
     return f"data:{media};base64,{base64.b64encode(blob).decode('ascii')}"
 
 
+def content_segments(sample: dict, images: list[str]) -> list[tuple[str, str]]:
+    """Official ``eval_harness.py`` placement as ``[(kind, value), ...]``.
+
+    ``images`` must already be in ``image_order``.  Empty or all-zero
+    ``visual_indices`` put every image before the question; otherwise the
+    question is sliced by character index, exactly like the official loop
+    (each image keeps its own source index, and the stable sort matches
+    ``image_order``).
+    """
+    question = sample["question"]
+    indices = sample.get("visual_indices") or []
+    if not indices:
+        return [*[("image", url) for url in images], ("text", question)]
+    order = image_order(sample)
+    pairs = [(images[position], indices[image_index])
+             for position, image_index in enumerate(order)]
+    if all(index == 0 for _, index in pairs):
+        return [*[("image", url) for url, _ in pairs], ("text", question)]
+    segments: list[tuple[str, str]] = []
+    last = 0
+    for url, index in pairs:
+        if index == 0:
+            segments.append(("image", url))
+        elif index <= len(question):
+            if index > last:
+                segments.append(("text", question[last:index]))
+            segments.append(("image", url))
+            last = index
+        else:
+            segments.append(("image", url))
+    if last < len(question):
+        segments.append(("text", question[last:]))
+    if not segments:
+        segments = [("text", question), *[("image", url) for url, _ in pairs]]
+    return segments
+
+
+def state_content_parts(segments: list[tuple[str, str]]) -> list[dict]:
+    """Build the 2026-11-24 ``state`` content-part list."""
+    parts = []
+    for kind, value in segments:
+        if kind == "image":
+            parts.append({"type": "image_url", "image_url": {"url": value}})
+        else:
+            parts.append({"type": "text", "text": value})
+    return parts
+
+
+def state_text(state) -> str:
+    """Join a content-part list's text parts; ``str`` passes through."""
+    if isinstance(state, str):
+        return state
+    return "".join(
+        part["text"] for part in state
+        if isinstance(part, dict) and part.get("type") == "text"
+    )
+
+
 def build_request(sample: dict, data_dir: Path, model: str = MODEL_NAME,
-                  instructions: str = DEFAULT_INSTRUCTIONS) -> dict:
-    """Build the complete native Clef request, images in official order."""
+                  instructions: str = DEFAULT_INSTRUCTIONS,
+                  wire_format: str = DEFAULT_WIRE_FORMAT) -> dict:
+    """Build the complete Clef request, images in official order.
+
+    ``top-level-images`` keeps the historical ``/v1/decide`` body byte for
+    byte.  ``state-list`` sends the same images as ``state`` content parts in
+    the official interleaved order and omits the top-level ``images`` field.
+    """
+    if wire_format not in WIRE_FORMATS:
+        raise ValueError(f"unknown wire format: {wire_format!r}")
     options = parse_options(sample["question"])
     criteria = {letter: text for letter, text in options}
     order = image_order(sample)
@@ -94,16 +162,24 @@ def build_request(sample: dict, data_dir: Path, model: str = MODEL_NAME,
         if hashlib.sha256(blob).hexdigest() != record["sha256"]:
             raise ValueError(f"image hash mismatch: {record['path']}")
         images.append(data_url(blob, record["format"]))
+    questions = {
+        "answer": {
+            "type": "choice",
+            "instructions": instructions,
+            "criteria": criteria,
+        }
+    }
+    if wire_format == "state-list":
+        return {
+            "model": model,
+            "state": state_content_parts(content_segments(sample, images)),
+            "questions": questions,
+        }
+    # Keep the historical key order so the default body stays byte-identical.
     return {
         "model": model,
         "state": {"question": sample["question"]},
-        "questions": {
-            "answer": {
-                "type": "choice",
-                "instructions": instructions,
-                "criteria": criteria,
-            }
-        },
+        "questions": questions,
         "images": images,
     }
 
@@ -111,7 +187,7 @@ def build_request(sample: dict, data_dir: Path, model: str = MODEL_NAME,
 def request_summary(request: dict, sample: dict) -> dict:
     """Lightweight request identity without the base64 payload."""
     criteria = request["questions"]["answer"]["criteria"]
-    return {
+    summary = {
         "model": request["model"],
         "state_sha256": hashlib.sha256(json.dumps(
             request["state"], ensure_ascii=False, sort_keys=True,
@@ -121,6 +197,9 @@ def request_summary(request: dict, sample: dict) -> dict:
         "image_order": image_order(sample),
         "image_sha256": [sample["images"][i]["sha256"] for i in image_order(sample)],
     }
+    if isinstance(request["state"], list):
+        summary["wire_format"] = "state-list"
+    return summary
 
 
 def wire_body(request: dict) -> bytes:

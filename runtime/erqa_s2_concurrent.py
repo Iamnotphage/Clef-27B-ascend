@@ -11,12 +11,13 @@ from time import monotonic, monotonic_ns, time_ns
 
 import erqa_baseline as base
 
-FROZEN="8d0632825ca5bf58e33427510f5d297b3080b00cce84959f736c72e974b2755a"
+FROZEN="a3a7a961f9ed6dab073403b0a2d7d0edfe37acf159bda189b1c53f3fe02f8119"
 PREDICTION_KEYS=(
     "id","record_index","question_type","gold","prediction","probabilities","confidence",
-    "correct","status","image_count","option_count","visual_index_pattern","image_sha256",
-    "image_order","request_structural_sha256","request_wire_sha256","body_bytes",
-    "input_tokens","output_tokens","latency_ms","started_at","finished_at",
+    "correct","status","image_count","option_count","visual_index_pattern","wire_format",
+    "endpoint","image_sha256","image_order","request_structural_sha256",
+    "request_wire_sha256","body_bytes","input_tokens","output_tokens","latency_ms",
+    "started_at","finished_at",
 )
 
 class Inflight:
@@ -28,16 +29,16 @@ class Inflight:
         self.context=local()
 
     def track(self,send):
-        def post(url,body,timeout):
+        def post(url,body,timeout,endpoint="/decide"):
             digest=sha256(body).hexdigest()
             with self.lock:
                 self.inflight+=1
                 self.peak=max(self.peak,self.inflight)
                 assert self.inflight<=self.limit
             event={"http_begin_ns":monotonic_ns(),"http_begin_wall_ns":time_ns(),
-                   "wire_sha256":digest}
+                   "wire_sha256":digest,"endpoint":endpoint}
             try:
-                code,data=send(url,body,timeout)
+                code,data=send(url,body,timeout,endpoint)
                 event["http_status"]=code
                 return code,data
             except Exception as exc:
@@ -74,6 +75,9 @@ def main():
     p.add_argument("--data-dir",type=Path,required=True)
     p.add_argument("--output-dir",type=Path,required=True)
     p.add_argument("--api-url",required=True)
+    p.add_argument("--wire-format",choices=base.WIRE_FORMATS,
+                   default=base.DEFAULT_WIRE_FORMAT)
+    p.add_argument("--endpoint",choices=("/decide","/systemone"),default="/decide")
     p.add_argument("--concurrency",type=int,choices=(8,16),required=True)
     p.add_argument("--timeout",type=float,default=600)
     args=p.parse_args()

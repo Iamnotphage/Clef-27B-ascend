@@ -78,7 +78,9 @@ def main():
             bucket["correct"] += int(is_correct)
             bucket["failed"] += int(row.get("status") != "ok")
         if args.verify_requests:
-            request = build_request(sample, args.data_dir, model=row.get("model", "clef"))
+            request = build_request(
+                sample, args.data_dir, model=row.get("model", "clef"),
+                wire_format=row.get("wire_format", "top-level-images"))
             summary = request_summary(request, sample)
             structural = hashlib.sha256(json.dumps(
                 {**summary, "images": summary["image_sha256"]},

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Run the formal ERQA baseline against Clef's native /v1/decide endpoint.
+"""Run the formal ERQA baseline against Clef's structured-decision endpoint.
 
 The runner keeps the official record order, builds one multimodal Choice
 request per sample, sends it at client concurrency 1, and stores the complete
 wire request, raw response, every attempt, timings and token usage.  Scoring
 uses the official exact-match rule from ``eval_harness.py``; failures stay in
 the fixed selected-sample denominator (400 samples for the full run).
+
+``--wire-format state-list`` sends the 2026-11-24 official content-part list to
+``--endpoint /systemone``; the default ``top-level-images`` keeps the
+historical ``/v1/decide`` body byte for byte.
 
 A new output directory is required for a new run.  ``--resume`` reuses an
 existing directory: a sample is skipped only when its saved structural request
@@ -28,8 +32,8 @@ import urllib.request
 from datetime import datetime, timezone
 
 from erqa_protocol import (
-    OFFICIAL_TFRECORD_SHA256, build_request, load_samples, parse_options,
-    request_summary, score, wire_body,
+    DEFAULT_WIRE_FORMAT, OFFICIAL_TFRECORD_SHA256, WIRE_FORMATS, build_request,
+    load_samples, parse_options, request_summary, score, wire_body,
 )
 
 SMOKE_TYPES = [
@@ -94,16 +98,24 @@ def service_info(url):
         return {"error": f"{type(exc).__name__}: {exc}"}
 
 
-def post(url, body, timeout):
+def endpoint_path(value):
+    path = str(value).strip()
+    if not path.startswith("/"):
+        path = "/" + path
+    return path
+
+
+def post(url, body, timeout, endpoint="/decide"):
     request = urllib.request.Request(
-        f"{url.rstrip('/')}/decide", data=body,
+        f"{url.rstrip('/')}{endpoint_path(endpoint)}", data=body,
         headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.status, response.read()
 
 
 def run_one(sample, data_dir, sample_dir, args):
-    request = build_request(sample, data_dir, model=args.model)
+    request = build_request(
+        sample, data_dir, model=args.model, wire_format=args.wire_format)
     body = wire_body(request)
     summary = request_summary(request, sample)
     structural = sha256(json.dumps(
@@ -115,6 +127,8 @@ def run_one(sample, data_dir, sample_dir, args):
         "structural_sha256": structural,
         "wire_sha256": sha256(body),
         "body_bytes": len(body),
+        "wire_format": args.wire_format,
+        "endpoint": endpoint_path(args.endpoint),
         **summary,
     }, ensure_ascii=False, indent=1) + "\n")
 
@@ -126,6 +140,8 @@ def run_one(sample, data_dir, sample_dir, args):
         "option_count": len(parse_options(sample["question"])),
         "image_count": sample["image_count"],
         "visual_index_pattern": sample["visual_index_pattern"],
+        "wire_format": args.wire_format,
+        "endpoint": endpoint_path(args.endpoint),
         "image_sha256": [img["sha256"] for img in sample["images"]],
         "image_order": summary["image_order"],
         "request_structural_sha256": structural,
@@ -141,7 +157,7 @@ def run_one(sample, data_dir, sample_dir, args):
         started_at, started = now(), time.monotonic()
         attempt_record = {"attempt": attempt, "started_at": started_at}
         try:
-            status, raw = post(args.api_url, body, args.timeout)
+            status, raw = post(args.api_url, body, args.timeout, args.endpoint)
             latency_ms = (time.monotonic() - started) * 1000
             (sample_dir / "response.json").write_bytes(raw)
             response = json.loads(raw)
@@ -225,6 +241,8 @@ def summarize(records, elapsed, args, service, manifest):
     return {
         "run": {
             "scope": args.scope, "api_url": args.api_url, "model": args.model,
+            "wire_format": args.wire_format,
+            "endpoint": endpoint_path(args.endpoint),
             "retries": args.retries, "timeout": args.timeout,
             "started_at": args.started_at, "finished_at": now(),
             "wall_seconds": elapsed,
@@ -264,6 +282,13 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--api-url", default="http://127.0.0.1:8000/v1")
     parser.add_argument("--model", default="clef")
+    parser.add_argument("--wire-format", choices=WIRE_FORMATS,
+                        default=DEFAULT_WIRE_FORMAT,
+                        help="top-level-images：历史 /v1/decide 报文；"
+                             "state-list：2026-11-24 官方 state 图文列表。")
+    parser.add_argument("--endpoint", choices=("/decide", "/systemone"),
+                        default="/decide",
+                        help="POST 目标；新规则使用 /systemone。")
     parser.add_argument("--scope", choices=("smoke", "full"), default="full")
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument("--retry-interval", type=float, default=5.0)
@@ -319,7 +344,8 @@ def main():
         json.dumps({key: record.get(key) for key in (
             "id", "record_index", "question_type", "gold", "prediction",
             "probabilities", "confidence", "correct", "status", "image_count",
-            "option_count", "visual_index_pattern", "image_sha256", "image_order",
+            "option_count", "visual_index_pattern", "wire_format", "endpoint",
+            "image_sha256", "image_order",
             "request_structural_sha256", "request_wire_sha256", "body_bytes",
             "input_tokens", "output_tokens", "latency_ms",
             "started_at", "finished_at")}, ensure_ascii=False) + "\n"
