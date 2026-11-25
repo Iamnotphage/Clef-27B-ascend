@@ -32,7 +32,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--vendor", required=True, type=Path,
                    help="Extracted candidate vendors/clef_conv_qkv directory")
     p.add_argument("--reference-vendor", default=str(
-        Path(__file__).resolve().parents[1] / "Clef-27B/src/ascendc/vendors/customize"),
+        Path(__file__).resolve().parents[2] / "src/ascendc/vendors/customize"),
         help="Deployed QKV norm vendor; empty string selects FLA l2norm")
     p.add_argument("--lengths", default="1,2,3,4,31,32,33,307,967,1595")
     p.add_argument("--seeds", default="20261117,101,2027")

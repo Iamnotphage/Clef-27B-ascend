@@ -144,7 +144,7 @@ def main():
             manifest["files"][str(path)] = {"sha256": sha256(path), "copy": name}
         else:
             manifest["files"][str(path)] = {"missing": True}
-    files = [project / "Clef-27B/logs/model_manifest.json", *sorted((project / "scripts/patches").glob("*.patch")), *args.sample_file]
+    files = [project / "logs/model_manifest.json", *sorted((project / "src/patches").glob("*.patch")), *args.sample_file]
     files += [Path(p) for p in ("/sys/fs/cgroup/cpu.max", "/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/cpuset.cpus.effective", "/proc/meminfo", "/etc/os-release", "/usr/local/Ascend/driver/version.info")]
     files += [Path(p) for p in ("/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_quota_us",
                                "/sys/fs/cgroup/cpu,cpuacct/cpu.cfs_period_us",

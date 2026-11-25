@@ -1,7 +1,7 @@
 #!/bin/bash
 # Recommended Clef-27B launcher for the A3 single-physical-card boundary.
 #
-# All argument construction lives in Clef-27B/inference.py. This wrapper only
+# All argument construction lives in inference.py. This wrapper only
 # selects the S1 (quality/latency) default; pass --config s2 for the throughput
 # candidate, which requires schema-cache v2 and enables it explicitly.
 #
@@ -13,12 +13,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 if [ -n "${CLEF_INFERENCE_PY:-}" ] && [ -f "${CLEF_INFERENCE_PY}" ]; then
   INFER_PY="${CLEF_INFERENCE_PY}"
-elif [ -f "$SCRIPT_DIR/../Clef-27B/inference.py" ]; then
-  INFER_PY="$SCRIPT_DIR/../Clef-27B/inference.py"
+elif [ -f "$SCRIPT_DIR/../../inference.py" ]; then
+  INFER_PY="$SCRIPT_DIR/../../inference.py"
 elif [ -f "$SCRIPT_DIR/inference.py" ]; then
   INFER_PY="$SCRIPT_DIR/inference.py"
 else
-  echo "inference.py not found (set CLEF_INFERENCE_PY or deploy beside Clef-27B/)" >&2
+  echo "inference.py not found (set CLEF_INFERENCE_PY or deploy beside the repo root)" >&2
   exit 1
 fi
 PYTHON_BIN="${PYTHON_BIN:-python3}"

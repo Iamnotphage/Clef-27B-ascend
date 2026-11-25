@@ -21,7 +21,7 @@ export CLEF_VENV=${CLEF_VENV:-/workspace/yangchen/venvs/clef-mix-ws-py312}
 source scripts/activate_env.sh >/dev/null 2>&1 || true
 mkdir -p "$OUT"
 
-CLEF_TIER2_TRACE=1 bash Clef-27B/start.sh --model-dir "$MODEL_DIR" \
+CLEF_TIER2_TRACE=1 bash start.sh --model-dir "$MODEL_DIR" \
   --output-dir "$OUT/service" --config s1 > "$OUT/start.log" 2>&1 &
 SERVICE=$!
 cleanup() {
@@ -44,7 +44,7 @@ print("prefix_state_cache disclosed: true")
 PY
 
 od_run() { # round concurrency
-  python runtime/od_full_benchmark.py --sample-file "$OD" \
+  python src/runtime/od_full_benchmark.py --sample-file "$OD" \
     --concurrency "$2" --report "$OUT/od-$1.json" > "$OUT/od-$1.log" 2>&1
   python - "$OUT/od-$1.json" <<'PY'
 import json, sys
@@ -59,7 +59,7 @@ PY
 
 erqa_run() { # round tag [concurrency]
   if [[ -n "${2:-}" ]]; then
-    PYTHONPATH="$REPO/scripts/official_eval" python runtime/erqa_s2_concurrent.py \
+    PYTHONPATH="$REPO/scripts/official_eval" python src/runtime/erqa_s2_concurrent.py \
       --data-dir "$ERQA" --output-dir "$OUT/erqa-$1" \
       --api-url "$BASE/v1" --wire-format state-list --endpoint /systemone \
       --concurrency "$2" > "$OUT/erqa-$1.log" 2>&1

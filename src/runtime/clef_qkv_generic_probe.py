@@ -29,7 +29,7 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--vendor", type=Path, required=True)
     p.add_argument("--reference-vendor", default=str(
-        Path(__file__).resolve().parents[1] / "Clef-27B/src/ascendc/vendors/customize"),
+        Path(__file__).resolve().parents[2] / "src/ascendc/vendors/customize"),
         help="Deployed TP2 QKV v2; empty string uses FLA for both TP sizes")
     p.add_argument("--key-heads", default="8,16")
     p.add_argument("--lengths", default="1,15,16,17,31,32,33,63,64,65,307,967,1595")

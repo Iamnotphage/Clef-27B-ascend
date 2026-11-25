@@ -23,7 +23,7 @@ mkdir -p "$OUT"
 
 CLEF_PREFIX_CACHE_RANK_BYTES=$RANK_BYTES \
 CLEF_TIER2_TRACE=1 \
-python Clef-27B/inference.py --config s1 --prefix-state-cache on \
+python inference.py --config s1 --prefix-state-cache on \
   --output-dir "$OUT/service" > "$OUT/service-launch.log" 2>&1 &
 LAUNCHER=$!
 cleanup() {
@@ -50,7 +50,7 @@ print(json.dumps({"prefix_state_cache": cache["prefix_state_cache"],
 PY
 
 for round in r1 r2; do
-  python runtime/od_full_benchmark.py --sample-file "$OD" --concurrency 16 \
+  python src/runtime/od_full_benchmark.py --sample-file "$OD" --concurrency 16 \
     --report "$OUT/od-c16-$round.json" > "$OUT/od-c16-$round.log" 2>&1
   python - "$OUT/od-c16-$round.json" "$round" <<'PY'
 import json, sys
@@ -84,7 +84,7 @@ PY
 
 if [[ -n "$OD_DATA" && -n "$OD_SCORER" && -n "$OD_TEMPLATE" ]]; then
   for round in r1 r2; do
-    python runtime/od_raw_acceptance.py --data "$OD_DATA" --scorer "$OD_SCORER" \
+    python src/runtime/od_raw_acceptance.py --data "$OD_DATA" --scorer "$OD_SCORER" \
       --template "$OD_TEMPLATE" --run "candidate=$OUT/od-c16-$round.json" \
       --reference candidate --output "$OUT/od-c16-$round-acceptance.json"
   done

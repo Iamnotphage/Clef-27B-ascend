@@ -84,7 +84,7 @@ def snapshot_environment(run):
         "model_manifest": {path: {key: value.get(key) for key in ("sha256", "bytes")}
                            for path, value in before_files.items() if path.endswith("/model_manifest.json")},
         "application_patch_hashes": {path: {key: value.get(key) for key in ("sha256", "bytes")}
-                                     for path, value in before_files.items() if "/scripts/patches/" in path},
+                                     for path, value in before_files.items() if "/src/patches/" in path},
         "npu_mapping": read_evidence(before / "npu-smi-mapping.txt"),
         "npu_smi_before": read_evidence(before / "npu-smi.txt"),
         "msprof_version_status": "--version succeeded" if manifest["commands"]["msprof-version"].get("returncode") == 0

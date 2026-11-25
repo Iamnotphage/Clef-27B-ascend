@@ -14,7 +14,7 @@ import unittest
 from unittest import mock
 
 
-ENTRY = Path(__file__).resolve().parent.parent / "Clef-27B" / "inference.py"
+ENTRY = Path(__file__).resolve().parents[2] / "inference.py"
 SPEC = importlib.util.spec_from_file_location("clef_inference_launch_test", ENTRY)
 launcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(launcher)
@@ -44,7 +44,7 @@ class LaunchTests(unittest.TestCase):
     def test_conv_qkv_installs_the_imported_preimage_once(self):
         target = self.root / launcher.CONV_QKV_TARGET
         target.parent.mkdir(parents=True)
-        original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+        original = (Path(__file__).resolve().parent / "qkv_norm/qkv_gdn.py").read_bytes()
         target.write_bytes(original)
         package = SimpleNamespace(origin=str(target.parent.parent / "__init__.py"))
         output = self.root / "output"
@@ -75,7 +75,7 @@ class LaunchTests(unittest.TestCase):
                 launcher.conv_qkv_patch(True, "/vendor", output, apply=True)
             self.assertEqual(target.read_bytes(), b"unknown source")
             self.assertFalse(output.exists())
-            original = (ENTRY.parent.parent / "runtime/qkv_norm/qkv_gdn.py").read_bytes()
+            original = (Path(__file__).resolve().parent / "qkv_norm/qkv_gdn.py").read_bytes()
             target.write_bytes(original)
             backup.parent.mkdir(parents=True)
             backup.write_bytes(b"unknown backup")
@@ -304,7 +304,7 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(enabled["argv"], baseline["argv"])
         self.assertEqual(enabled["service_environment"]["CLEF_ENCODER_CACHE_TOKENS"], "327680")
         self.assertEqual(enabled["service_environment"]["PYTHONPATH"],
-                         str(ENTRY.parent) + os.pathsep + "/existing/path")
+                         str(Path(__file__).resolve().parent) + os.pathsep + "/existing/path")
         self.assertEqual(enabled["effective"]["max_num_batched_tokens"], 16384)
         self.assertEqual(enabled["effective"]["encoder_cache_tokens"], 327680)
         self.assertEqual(enabled["sources"]["encoder_cache_tokens"], "explicit")
@@ -425,6 +425,33 @@ class LaunchTests(unittest.TestCase):
             with self.subTest(tokens=tokens), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit):
                     self.launch("--", *tokens)
+
+    def test_tiered_repo_points_to_src_for_runtime_namespace(self):
+        launch = self.launch("--config", "s1")
+        repo = launch["service_environment"]["CLEF_TIER2_REPO"]
+        self.assertEqual(repo, str(ENTRY.parent / "src"))
+        self.assertTrue(
+            (Path(repo) / "runtime" / "tiered_prefix_cache" / "engine_hooks.py").is_file())
+
+    def test_gdn_decision_prefill_passes_resolved_tree_and_output_backup(self):
+        site = self.root / "ascend_site"
+        site.mkdir()
+        failed = SimpleNamespace(returncode=1, stdout="", stderr="no tree")
+        with mock.patch.dict(os.environ, {"CLEF_GDN_DECISION_PREFILL": "1"}), \
+                mock.patch.object(launcher, "resolve_package_tree", return_value=site) as tree, \
+                mock.patch.object(launcher.subprocess, "run", return_value=failed) as run:
+            with self.assertRaises(SystemExit):
+                launcher.gdn_decision_prefill(
+                    "s1", apply=True, output_dir=self.root / "out")
+        tree.assert_called_once_with("vllm_ascend")
+        command = run.call_args.args[0]
+        self.assertEqual(command[-1], "--check")
+        self.assertIn("--tree", command)
+        self.assertEqual(command[command.index("--tree") + 1], str(site))
+        self.assertIn("--backup-dir", command)
+        self.assertEqual(
+            command[command.index("--backup-dir") + 1],
+            str((self.root / "out").resolve() / "patch-backup" / "gdn-decision"))
 
 
 class TieredMemoryPolicyTests(unittest.TestCase):

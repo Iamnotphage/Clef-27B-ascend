@@ -10,7 +10,7 @@ import unittest
 from unittest import mock
 
 
-ENTRY = Path(__file__).resolve().parents[1] / "Clef-27B" / "clef_encoder_cache_scheduler.py"
+ENTRY = Path(__file__).resolve().parent / "clef_encoder_cache_scheduler.py"
 PARENT_MODULE = "vllm_ascend.patch.platform.patch_balance_schedule"
 
 

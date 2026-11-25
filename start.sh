@@ -32,7 +32,7 @@ if ! command -v "$python_bin" >/dev/null 2>&1; then
 fi
 export PYTHONUNBUFFERED=1
 if [[ -n "${CLEF_BIND_CPUS:-}" ]]; then
-  exec "$python_bin" "$script_dir/../runtime/clef_bind_supervisor.py" \
+  exec "$python_bin" "$script_dir/src/runtime/clef_bind_supervisor.py" \
     "$python_bin" "$script_dir/inference.py" "$@"
 fi
 exec "$python_bin" "$script_dir/inference.py" "$@"
