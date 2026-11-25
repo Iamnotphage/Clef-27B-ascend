@@ -5,9 +5,14 @@ The Tier 2 key covers only the tokens before the schema delimiter, so the
 first request for a state populates the prefix and the three other schemas
 must resume from the same captured state.  Three rounds are sent:
 
-* R1 sequential, cold store (populate + hit mix inside the round);
-* R2 concurrent, warm store (hits);
-* R3 concurrent, warm store (repeat).
+* R1 sequential, cold store (each state populates once, then its three other
+  schemas hit);
+* R2 sequential, warm store (pure hits);
+* R3 sequential, warm store (repeat).
+
+Serial sends keep every step a B1 request, so the three rounds must be
+bitwise equal per (state, variant); a mismatch is cross-talk, not batch
+composition.  Mixed-batch behaviour is covered by the OD/ERQA S2 runs.
 
 Every response is kept so the driver can require R1 == R2 == R3 bitwise per
 (state, variant) and zero cross-talk between states.
@@ -46,13 +51,26 @@ def post(url, payload, timeout):
         return response.status, json.loads(response.read())
 
 
-def build_requests(sample_file: Path, states: int, variants: int):
+def build_requests(sample_file: Path, states: int, variants: int,
+                   min_state_chars: int):
     document = json.loads(sample_file.read_text(encoding="utf-8"))
     samples = document["samples"] if isinstance(document, dict) else document
-    usable = [sample for sample in samples if sample.get("request")]
+    usable = [sample for sample in samples
+              if sample.get("request", {}).get("state")]
+    # The engine's text minimum prefix is 512 tokens before the schema
+    # delimiter; pick long states so every variant can hit.
+    long_states = sorted(
+        (sample for sample in usable
+         if len(sample["request"]["state"]) >= min_state_chars),
+        key=lambda sample: -len(sample["request"]["state"]))
+    if len(long_states) < states:
+        raise SystemExit(
+            f"only {len(long_states)} states >= {min_state_chars} chars, "
+            f"need {states}")
+    bases = long_states[:states]
     requests = []
-    for state_index in range(states):
-        base = usable[state_index % len(usable)]["request"]
+    for state_index, base_sample in enumerate(bases):
+        base = base_sample["request"]
         for variant in range(variants):
             donor = usable[(state_index * variants + variant) % len(usable)]["request"]
             payload = {
@@ -124,12 +142,16 @@ def main():
     parser.add_argument("--url", default="http://127.0.0.1:18143/v1/systemone")
     parser.add_argument("--states", type=int, default=20)
     parser.add_argument("--variants", type=int, default=4)
-    parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--min-state-chars", type=int, default=2600,
+                        help="text proxy for the engine's 512-token prefix floor")
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="client workers per round; 1 keeps every step B1")
     parser.add_argument("--timeout", type=float, default=300.0)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
 
-    requests = build_requests(args.sample_file, args.states, args.variants)
+    requests = build_requests(args.sample_file, args.states, args.variants,
+                              args.min_state_chars)
     report = {
         "created_at": now(),
         "url": args.url,
@@ -143,9 +165,9 @@ def main():
                                        args.timeout)
     report["rounds"]["r3"] = run_round(requests, args.url, args.concurrency,
                                        args.timeout)
-    for other in ("r2", "r3"):
-        first = {entry["name"]: entry for entry in report["rounds"]["r1"]["requests"]}
-        current = {entry["name"]: entry for entry in report["rounds"][other]["requests"]}
+    for left, right in (("r1", "r2"), ("r1", "r3"), ("r2", "r3")):
+        first = {entry["name"]: entry for entry in report["rounds"][left]["requests"]}
+        current = {entry["name"]: entry for entry in report["rounds"][right]["requests"]}
         maximum = 0.0
         changes = []
         for name, entry in first.items():
@@ -153,15 +175,16 @@ def main():
             if entry.get("status") != "ok" or not peer or peer.get("status") != "ok":
                 changes.append(name)
                 continue
-            left = answer_probabilities(entry)
-            right = answer_probabilities(peer)
-            for key in set(left) | set(right):
-                delta = abs(float(left.get(key, 0.0)) - float(right.get(key, 0.0)))
+            left_probs = answer_probabilities(entry)
+            right_probs = answer_probabilities(peer)
+            for key in set(left_probs) | set(right_probs):
+                delta = abs(float(left_probs.get(key, 0.0))
+                            - float(right_probs.get(key, 0.0)))
                 maximum = max(maximum, delta)
                 if delta != 0.0:
                     changes.append(name)
                     break
-        report["self_check"][f"r1_vs_{other}"] = {
+        report["self_check"][f"{left}_vs_{right}"] = {
             "changed": sorted(set(changes)), "max_prob_diff": maximum}
     report["finished_at"] = now()
     if args.report:

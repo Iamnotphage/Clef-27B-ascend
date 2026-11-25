@@ -389,3 +389,11 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 - 质量（作者 `score.py` 离线复算，`od-c64-acceptance.json`）：R1 Cap 74.2142 / R2 74.3370 / R3 74.2874，acc 均 1904/2352，MAE 0.4023/0.4025/0.4024，0 协议失败；三项均在 2PP 内。
 - C64 命中轮相对主线 C64（18.039 dec/s、p95 5779）R3 **+19.0% / −31.3%**；R2/R3 对 R1 分别 4/2 条 choice 变化（C64 合批组成差异，与 C16 同性质，非缓存错误）。
 - 存储：OD 2,352 前缀全程驻留 32 GiB/rank 内；服务未开 TRACE，计数器未采集。
+
+**场景 A：20 STATE × 4 SCHEMA（活服务 `tap-install-20261125`，Tier 2 默认 on）**
+
+- 20 条最长 OD state（按字符长度 ≥2,600 预筛，实测 T=1,188、L=896）各配 4 套 schema，共 80 请求；三轮全部 C1 串行（每 step 均为 B1），逐位比较不受合批影响。
+- 结果：三轮各 80/80 成功、0 失败。R1（冷）mean 178.7 / p50 115.8 / p95 224.5 ms、5.59 dec/s；R2（暖）mean 107.0 / p50 106.0 / p95 114.0、9.34 dec/s；R3 mean 109.3 / p50 109.2 / p95 115.0、9.15 dec/s。
+- 正确性：**R2 vs R3 80/80 逐位 0.0**（纯命中确定性）；R1 vs R2/R3 27/80 有差、max 0.0177，全部集中在每 state 的 q0（populate）与少量 q1（发布未完成时的竞态 populate）——populate 全形状 vs 命中后缀的 GEMM `M` 差异，与 M1 记录的 5e-3 级差异同源；q2/q3 全部逐位相等。
+- 计数器（末次 `decision=` 快照）：entries 20、1.40 GB、publications 20、populates 27、hits 213、rejections 6、evictions 0；同一 STATE 的 3 个后续 schema 全部命中。
+- 首版脚本教训：`TEXT_MIN_PREFIX=512`，短 state（T≈286）全部 `bypass split`、零命中；已改为按 state 字符长度取最长样本。
