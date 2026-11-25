@@ -427,5 +427,60 @@ class LaunchTests(unittest.TestCase):
                     self.launch("--", *tokens)
 
 
+class TieredMemoryPolicyTests(unittest.TestCase):
+    """Static-RAM clamp for the Tier 2 per-rank store and ring slots."""
+
+    def test_128_gib_keeps_the_measured_defaults(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=128 << 30, rank_env=None, slots_env=None)
+        self.assertTrue(policy["enabled"])
+        self.assertIsNone(policy["rank_bytes"])
+        self.assertIsNone(policy["ring_slots"])
+        self.assertEqual(policy["reason"], "ram>=112GiB")
+
+    def test_96_gib_clamps_to_30_gib_and_two_slots(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=96 << 30, rank_env=None, slots_env=None)
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["rank_bytes"], 30 << 30)
+        self.assertEqual(policy["ring_slots"], 2)
+
+    def test_64_gib_clamps_to_14_gib_and_two_slots(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=64 << 30, rank_env=None, slots_env=None)
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["rank_bytes"], 14 << 30)
+        self.assertEqual(policy["ring_slots"], 2)
+
+    def test_32_gib_disables_the_cache(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=32 << 30, rank_env=None, slots_env=None)
+        self.assertFalse(policy["enabled"])
+        self.assertIsNone(policy["rank_bytes"])
+        self.assertEqual(policy["reason"], "ram<=48GiB")
+
+    def test_unreadable_limit_keeps_the_defaults(self):
+        with mock.patch.object(launcher, "static_ram_limit_bytes",
+                               return_value=None):
+            policy = launcher.tiered_memory_policy(True)
+        self.assertTrue(policy["enabled"])
+        self.assertIsNone(policy["rank_bytes"])
+        self.assertEqual(policy["reason"], "ram_limit_unreadable")
+
+    def test_explicit_rank_bytes_skip_the_clamp(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=32 << 30, rank_env=str(8 << 30), slots_env=None)
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["rank_bytes"], 8 << 30)
+        self.assertEqual(policy["reason"], "explicit_rank_bytes")
+
+    def test_static_limit_uses_the_tighter_of_memtotal_and_cgroup(self):
+        meminfo = io.StringIO("MemTotal:       134217728 kB\n")
+        with mock.patch("builtins.open", return_value=meminfo), \
+                mock.patch.object(launcher.Path, "read_text",
+                                  side_effect=["68719476736", "max"]):
+            self.assertEqual(launcher.static_ram_limit_bytes(), 64 << 30)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

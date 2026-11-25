@@ -51,6 +51,9 @@ TIERED_API_ROUTER_TARGET = Path(
 TIERED_API_ROUTER_PREIMAGE = "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f"
 TIERED_API_ROUTER_POSTIMAGE = "1875f0e1ff4ffa5e587b82e5755e743a72c148d53581a576b34ee1fc5cfd1b42"
 TIERED_RANK_BYTES_DEFAULT = str(32 << 30)
+TIERED_RING_SLOTS_DEFAULT = 8
+TIERED_RAM_FULL = 112 << 30
+TIERED_RAM_DISABLE = 48 << 30
 #: Phase-4 ERQA A/B locked arm: A1 (extract_plain) 213/400 vs
 #: A2 (extract_question_dict) 216/400, so the official entry defaults to A2.
 SYSTEMONE_MM_DEFAULT_MODE = "extract_question_dict"
@@ -758,6 +761,92 @@ def tiered_cache_patch(requested, output_dir, *, apply):
     return record
 
 
+def static_ram_limit_bytes():
+    """The container's static memory ceiling, or ``None`` when unreadable.
+
+    ``min(MemTotal, cgroup memory.max)`` — static totals only, never
+    ``MemAvailable``, so both TP workers compute the same clamp.
+    """
+    limits = []
+    try:
+        with open("/proc/meminfo", encoding="ascii") as handle:
+            for line in handle:
+                if line.startswith("MemTotal:"):
+                    limits.append(int(line.split()[1]) * 1024)
+                    break
+    except (OSError, ValueError, IndexError):
+        pass
+    for candidate in ("/sys/fs/cgroup/memory.max",
+                      "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            value = Path(candidate).read_text().strip()
+        except OSError:
+            continue
+        if value in ("", "max"):
+            continue
+        try:
+            number = int(value)
+        except ValueError:
+            continue
+        if number < (1 << 60):  # cgroup v1 "unlimited" sentinel
+            limits.append(number)
+    return min(limits) if limits else None
+
+
+def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
+                         slots_env=None):
+    """Clamp Tier 2 memory to the container's static RAM limit.
+
+    * unreadable or >= 112 GiB: keep the measured defaults untouched
+      (32 GiB/rank, 8 ring slots) — the 128 GiB acceptance host;
+    * <= 48 GiB: disable the cache so no PinnedRing is allocated and the
+      stock path always runs;
+    * 48..112 GiB: 2 ring slots and ``min(32 GiB, max(4 GiB,
+      (ram-36 GiB)//2))`` per rank (a 64 GiB container gets 14 GiB/rank).
+
+    An explicit ``CLEF_PREFIX_CACHE_RANK_BYTES`` always wins and skips the
+    clamp, including the small-RAM disable.
+    """
+    if rank_env is None:
+        rank_env = os.environ.get("CLEF_PREFIX_CACHE_RANK_BYTES")
+    if slots_env is None:
+        slots_env = os.environ.get("CLEF_TIER2_RING_SLOTS")
+    policy = {
+        "requested": bool(requested),
+        "enabled": bool(requested),
+        "ram_limit_bytes": None,
+        "rank_bytes": None,
+        "ring_slots": None,
+        "reason": "requested" if requested else "requested-off",
+    }
+    if not requested:
+        return policy
+    if rank_env is not None:
+        policy["rank_bytes"] = int(rank_env)
+        if slots_env is not None:
+            policy["ring_slots"] = int(slots_env)
+        policy["reason"] = "explicit_rank_bytes"
+        return policy
+    if ram_limit is None:
+        ram_limit = static_ram_limit_bytes()
+    policy["ram_limit_bytes"] = ram_limit
+    if ram_limit is None:
+        policy["reason"] = "ram_limit_unreadable"
+        return policy
+    if ram_limit >= TIERED_RAM_FULL:
+        policy["reason"] = "ram>=112GiB"
+        return policy
+    if ram_limit <= TIERED_RAM_DISABLE:
+        policy["enabled"] = False
+        policy["reason"] = "ram<=48GiB"
+        return policy
+    rank_bytes = min(32 << 30, max(4 << 30, (ram_limit - (36 << 30)) // 2))
+    policy["rank_bytes"] = rank_bytes
+    policy["ring_slots"] = int(slots_env) if slots_env is not None else 2
+    policy["reason"] = f"clamped:{ram_limit >> 30}GiB"
+    return policy
+
+
 def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
     """Install/verify the GDN chunk-128 decision-path patch.
 
@@ -1386,6 +1475,12 @@ def build_launch(args):
         prefix_state_requested = bool(CONFIGS[config].get("prefix_state_cache", False))
         prefix_state_source = (f"config:{config}" if "prefix_state_cache" in CONFIGS[config]
                                else "default")
+    # Small containers must never allocate the 32 GiB/rank pool; an explicit
+    # CLEF_PREFIX_CACHE_RANK_BYTES skips the clamp (see tiered_memory_policy).
+    tiered_memory = tiered_memory_policy(prefix_state_requested)
+    if prefix_state_requested and not tiered_memory["enabled"]:
+        prefix_state_source = "memory_policy"
+    tiered_requested = prefix_state_requested and tiered_memory["enabled"]
 
     # Extra vLLM arguments.
     extra = args.vllm_args
@@ -1560,7 +1655,14 @@ def build_launch(args):
         gdn_decision["files"][str(CONV_QKV_TARGET)] = varlen_patch["source_sha256"]
         gdn_decision["patch_state"][str(CONV_QKV_TARGET)] = "conv_varlen"
     tiered_patch = tiered_cache_patch(
-        prefix_state_requested, output_dir, apply=not dry_run)
+        tiered_requested, output_dir, apply=not dry_run)
+    tiered_patch["memory"] = {
+        "ram_limit_bytes": tiered_memory["ram_limit_bytes"],
+        "rank_bytes": tiered_memory["rank_bytes"],
+        "ring_slots": tiered_memory["ring_slots"],
+        "enabled": tiered_memory["enabled"],
+        "reason": tiered_memory["reason"],
+    }
     effective["prefix_state_cache"] = "on" if tiered_patch["ready"] else "off"
     sources["prefix_state_cache"] = prefix_state_source
     if qkv_env:
@@ -1579,8 +1681,17 @@ def build_launch(args):
     # CLEF_PREFIX_STATE_CACHE=0 keeps the hooks out of the service at runtime.
     environment["CLEF_PREFIX_STATE_CACHE"] = "1" if tiered_patch["ready"] else "0"
     environment["CLEF_TIER2_REPO"] = str(REPO_ROOT)
-    environment["CLEF_PREFIX_CACHE_RANK_BYTES"] = os.environ.get(
-        "CLEF_PREFIX_CACHE_RANK_BYTES", TIERED_RANK_BYTES_DEFAULT)
+    rank_bytes = tiered_memory["rank_bytes"]
+    if rank_bytes is None:
+        rank_bytes = int(os.environ.get(
+            "CLEF_PREFIX_CACHE_RANK_BYTES", TIERED_RANK_BYTES_DEFAULT))
+    environment["CLEF_PREFIX_CACHE_RANK_BYTES"] = str(rank_bytes)
+    if tiered_memory["ring_slots"] is not None:
+        environment["CLEF_TIER2_RING_SLOTS"] = str(tiered_memory["ring_slots"])
+    tiered_patch["memory"]["effective_rank_bytes"] = rank_bytes
+    tiered_patch["memory"]["effective_ring_slots"] = (
+        tiered_memory["ring_slots"] if tiered_memory["ring_slots"] is not None
+        else TIERED_RING_SLOTS_DEFAULT)
     if "CLEF_TIER2_TRACE" in os.environ:
         environment["CLEF_TIER2_TRACE"] = os.environ["CLEF_TIER2_TRACE"]
     environment["CLEF_GDN_CONV_QKV_VARLEN"] = (
