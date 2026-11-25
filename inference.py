@@ -1806,6 +1806,13 @@ def main():
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
+    print(
+        f"Clef-27B: 启动 model_dir={args.model_dir} config={args.config} "
+        f"output_dir={args.output_dir or '<model-dir>/output'}",
+        flush=True,
+    )
+    print("Clef-27B: 校验模型文件、检查运行时补丁（可能需要几十秒）……", flush=True)
+
     if args.output_dir is None:
         args.output_dir = str(Path(args.model_dir).expanduser().resolve() / "output")
 
@@ -1817,6 +1824,8 @@ def main():
     if args.dry_run:
         print(json.dumps(launch, ensure_ascii=False, indent=2))
         return
+
+    print("Clef-27B: 运行时补丁检查完成。", flush=True)
 
     model_dir = Path(launch["model_dir"])
     try:
@@ -1831,6 +1840,27 @@ def main():
     launch["log"] = str(output_dir / "service.log")
     manifest_path = output_dir / "launch-manifest.json"
     manifest_path.write_text(json.dumps(launch, ensure_ascii=False, indent=1) + "\n")
+
+    effective = launch["effective"]
+    health_host = effective["host"]
+    if health_host in ("0.0.0.0", "::"):
+        health_host = "127.0.0.1"
+    print(
+        f"Clef-27B: config={launch['config']} TP={effective['tensor_parallel_size']} "
+        f"max_model_len={effective['max_model_len']} port={effective['port']}",
+        flush=True,
+    )
+    print(f"Clef-27B: launch manifest: {manifest_path}", flush=True)
+    print(f"Clef-27B: 服务日志: {launch['log']}（另开终端 tail -f 查看）", flush=True)
+    print(
+        f"Clef-27B: 就绪检查: curl -sf http://{health_host}:{effective['port']}/health",
+        flush=True,
+    )
+    print(
+        f"Clef-27B: 正在加载模型并启动 vLLM（PID {os.getpid()}）；"
+        "后续日志写入上述文件。",
+        flush=True,
+    )
 
     os.environ.update(launch["service_environment"])
     os.environ.setdefault("OMP_NUM_THREADS", "1")
