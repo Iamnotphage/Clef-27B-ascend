@@ -308,6 +308,26 @@ OD S1（2,352）：
 ### 11.5 偏差、限制与下一步
 
 1. **Populate 残余税**：grouped 后 ERQA populate +9.4 ms mean / +21.8 p95；单层状态重算的设备时间与 KV/SSM 打包仍计入。`return_intermediate_states`（h 每 chunk 状态）在 A3 直接报 `161002: The prepare path is supported on Ascend950 only`，**不可用**；grouped varlen 已是 A3 上可验证的最优路径。
-2. **ERQA 覆盖 267/400**：133 条的对齐边界落在最后一张图的展开块内，按"不得切穿图像"规则必须 Bypass；阶段 0 审计的 400/400 仅按 delimiter 对齐、未计该规则。提高覆盖需要放宽边界或改缓存粒度，留作后续。
+2. **ERQA 覆盖**：Step 1 时为 267/400；**Step 2.0 已解封至 400/400**（见 §11.6），原 133 条图像展开跨 128 边界现可直接切分。
 3. **hit 均值与 R1 残余**：grouped 臂 OD R2 mean 已低于 OFF 2.6 ms（命中 −41.1 ms × 314 条抵消 bypass 会话漂移 +3.4）；immediate 臂因更大漂移为 +1.6 ms。OD R1 仍 +10.7 mean/+33.2 p95，主要为首轮新形状预热与打包，暖 2 轮已 −1.9%/−20.6%；与阶段 0 "收益定位长图文/暖态"的结论一致。
 4. **M2 多并发**：未启动；下一步按计划做 Varlen 混批（Bypass/Populate/Hit 分桶、`runner.input_batch.req_ids` 对齐、整批一次 `embed_lexical`）。
+
+### 11.6 Step 2.0：ERQA 400/400 覆盖解封（2026-11-25）
+
+- **改动**：`locate_state_prefix` 不再因对齐边界落在图像展开块内而回退；`prefix_items` 改为“起点 < `L_aligned` 的所有图像整体入 key（完整 `mm_hash` 与 span）”。Runner 已把整图视觉特征写入 `inputs_embeds [T, 5120]`、`positions [3, T]`，命中时后缀直接消费跨边界图片的剩余视觉 token，无需重跑 ViT；key 含整图 hash，不同图不会串答案。
+- **单样本**：`erqa-0382`（4 图、T=1260）原规则 Bypass；新规则 **L=1024、S=236**，populate→publish→hit 全通；两次命中逐位一致；hit vs populate max_abs **0.005985**（BF16 M-tiling）。
+- **全量 ERQA C1（400，A2 state-list）**：
+
+| 轮次 | mean (ms) | p50 | p95 | dec/s | 准确率 | 决策 |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| OFF 冷首遍 | 206.32 | 194.25 | 287.97 | 4.76 | 216/400 | — |
+| R1（grouped） | 217.08 | 202.12 | 298.78 | 4.52 | 216/400 | 388 populate + 12 暖命中，**0 bypass** |
+| R2（grouped） | **121.56** | 120.67 | **131.43** | **7.982** | **218/400** | **400 hit，0 bypass** |
+| R3（grouped） | 122.16 | 121.93 | **131.22** | 7.943 | 218/400 | 400 hit，0 bypass |
+| 冻结暖基线 | 165.40 | 153.42 | 244.66 | 5.94 | 216/400 | — |
+
+- **R2/R3 对冻结暖基线：mean −26.3%、p95 −46.3%、dec/s +34%、准确率 +2 题（2PP）**；对 267/400 覆盖版本（R2 131.22/206.46/7.418）**p95 −75.0 ms（−36.3%）**。
+- 自洽：R2 vs R3 **400/400 逐位 0.0**；R1 的 388 条 populate 对 OFF **逐位 0.0**（12 条暖命中 max 0.0239、0 翻转）；`erqa_score.py --verify-requests` 400/400、0 mismatch。
+- 存储：389 条 / **25.03 GB/rank**，R1/R2/R3 **0 淘汰**；R2/R3 `populates=0`。ERQA 唯一前缀总占用低于 32 GiB/rank 水位，400/400 常驻。
+- 证据：`Clef-27B/logs/tiered-cache-20261124/step2-0-erqa400-20261125.json`；远端原始 `tap-erqa400-20261125/`。
+

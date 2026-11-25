@@ -99,25 +99,20 @@ def locate_state_prefix(
     if delimiter_at < 0:
         return None
     l_aligned = (delimiter_at // align) * align
-    # Never split one image/video expansion: the suffix cannot re-embed only
-    # part of an item.  Roll the boundary back to the item's aligned start
-    # until no expansion straddles it.
-    changed = True
-    while changed:
-        changed = False
-        for item in mm_items:
-            end = item.expanded_offset + item.expanded_length
-            if item.expanded_offset < l_aligned < end:
-                l_aligned = (item.expanded_offset // align) * align
-                changed = True
+    # A boundary may fall inside one image's expanded block.  The runner has
+    # already scattered the image's full vision features into ``inputs_embeds``
+    # and ``positions``, so the suffix pass simply consumes the remaining
+    # visual tokens; no half-image re-encoding happens.  The key therefore
+    # includes every item that *starts* before the boundary (whole content
+    # hash and span), which keeps prefixes from different images distinct even
+    # when the cut lands inside the image.
     if l_aligned < min_prefix:
         return None
     for span in schema_spans:
         if not (l_aligned <= span.start < span.end <= len(token_ids)):
             return None
     prefix_items = tuple(sorted(
-        (item for item in mm_items
-         if item.expanded_offset + item.expanded_length <= l_aligned),
+        (item for item in mm_items if item.expanded_offset < l_aligned),
         key=lambda item: item.expanded_offset))
     split = PrefixSplit(
         total_tokens=len(token_ids),
@@ -134,12 +129,14 @@ def locate_state_prefix(
 
 
 def prefix_mm_matches(split: PrefixSplit, mm_items: Sequence[MmItem]) -> bool:
-    """Every described item that starts in the prefix must be inside it.
+    """Every described item must *start* before the aligned boundary.
 
-    Expanded image tokens may cross ``L_aligned`` only when the split is
-    inside that image's own expansion; the item is then part of the prefix by
-    construction.  An item starting after ``L_aligned`` must not be described
-    as a prefix item.
+    An item may extend past ``L_aligned``: the runner has already materialised
+    its full vision features in ``inputs_embeds``/``positions``, so the
+    boundary can cut inside the expansion.  Its whole content hash and span
+    are part of the key, which keeps two prefixes with different images
+    distinct.  Items starting after the boundary, empty placeholders, and
+    spans outside the prompt stay invalid.
     """
     for item in mm_items:
         if item.expanded_offset >= split.l_aligned:

@@ -107,7 +107,7 @@ class PrefixSplitTests(unittest.TestCase):
         assert split is not None
         self.assertEqual(split.l_prefix, 400)
 
-    def test_multimodal_items_are_classified_by_expansion(self):
+    def test_multimodal_items_are_classified_by_start_position(self):
         prompt = make_prompt(813, 967)
         inside = synthetic_mm(offset=100, expanded=256)
         split = locate_state_prefix(prompt, DELIMITER, mm_items=[inside])
@@ -121,22 +121,43 @@ class PrefixSplitTests(unittest.TestCase):
         self.assertIsNone(locate_state_prefix(
             prompt, DELIMITER, mm_items=[too_long]))
 
-    def test_image_expansion_is_never_split(self):
-        # delimiter_at=260 -> raw 256 sits inside the [100, 300) expansion;
-        # the boundary must roll back to 0 and become ineligible.
+    def test_boundary_may_cross_an_image(self):
+        # delimiter_at=260 -> L=256 falls inside the [100, 300) expansion.
+        # The runner has already scattered the whole image into inputs_embeds,
+        # so the suffix consumes the rest; the item stays in the key.
         prompt = make_prompt(260, 400)
         crossing = synthetic_mm(offset=100, expanded=200)
-        self.assertIsNone(locate_state_prefix(
-            prompt, DELIMITER, mm_items=[crossing]))
-        # A boundary beyond the expansion keeps the item whole.
+        split = locate_state_prefix(prompt, DELIMITER, mm_items=[crossing])
+        assert split is not None
+        self.assertEqual(split.l_aligned, 256)
+        self.assertEqual(split.mm_items, (crossing,))
+        self.assertLess(crossing.expanded_offset, split.l_aligned)
+        self.assertGreater(
+            crossing.expanded_offset + crossing.expanded_length,
+            split.l_aligned)
+        # The old rollback-to-item-start rule erased the prefix here; an image
+        # starting at 0 must not make the request ineligible.
+        prompt = make_prompt(130, 300)
+        head_image = synthetic_mm(offset=0, expanded=200)
+        split = locate_state_prefix(
+            prompt, DELIMITER, mm_items=[head_image])
+        assert split is not None
+        self.assertEqual(split.l_aligned, 128)
+        self.assertEqual(split.mm_items, (head_image,))
+        # An item starting after L stays in the suffix and out of the key.
         prompt = make_prompt(400, 600)
         item = synthetic_mm(offset=100, expanded=200)
-        split = locate_state_prefix(prompt, DELIMITER, mm_items=[item])
+        after = synthetic_mm(offset=500, expanded=50)
+        split = locate_state_prefix(
+            prompt, DELIMITER, mm_items=[item, after])
         assert split is not None
         self.assertEqual(split.l_aligned, 384)
         self.assertEqual(split.mm_items, (item,))
-        self.assertLessEqual(
-            item.expanded_offset + item.expanded_length, split.l_aligned)
+        # A span extending past the prompt is still rejected.
+        prompt = make_prompt(130, 300)
+        overflow = synthetic_mm(offset=100, expanded=300)
+        self.assertIsNone(locate_state_prefix(
+            prompt, DELIMITER, mm_items=[overflow]))
 
 
 class PrefixKeyTests(unittest.TestCase):
