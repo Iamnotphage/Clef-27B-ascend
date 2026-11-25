@@ -98,6 +98,9 @@ def _flag(name: str) -> bool:
 
 
 def _env_on() -> bool:
+    value = os.environ.get("CLEF_PREFIX_STATE_CACHE")
+    if value is not None:
+        return value.strip().lower() not in ("0", "false", "no", "off")
     return _flag("clef_tier2_engine") or os.environ.get(
         "CLEF_TIER2_ENGINE", "0").strip().lower() in ("1", "true", "yes", "on")
 

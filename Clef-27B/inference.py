@@ -42,6 +42,11 @@ SYSTEMONE_MM_INSTALLER = (
     REPO_ROOT / "runtime" / "apply_systemone_mm_state_patch.py")
 SYSTEMONE_MM_MODULE = REPO_ROOT / "runtime" / "systemone_mm_state.py"
 SYSTEMONE_MM_MODE_ENV = "CLEF_STATE_MM_MODE"
+TIERED_INSTALLER = REPO_ROOT / "runtime" / "apply_tiered_cache_patch.py"
+TIERED_MODEL_RUNNER_TARGET = Path("vllm_ascend/worker/v2/model_runner.py")
+TIERED_API_ROUTER_TARGET = Path(
+    "vllm/entrypoints/generate/structured_decisions/api_router.py")
+TIERED_RANK_BYTES_DEFAULT = str(32 << 30)
 #: Phase-4 ERQA A/B locked arm: A1 (extract_plain) 213/400 vs
 #: A2 (extract_question_dict) 216/400, so the official entry defaults to A2.
 SYSTEMONE_MM_DEFAULT_MODE = "extract_question_dict"
@@ -75,6 +80,7 @@ CONFIGS = {
         "limit_mm_per_prompt": '{"image":16,"video":0}',
         "encoder_cache_tokens": 262144,
         "schema_token_cache": "off",
+        "prefix_state_cache": True,
         "joint_single_field": True,
         "joint_fused_attention": True,
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
@@ -92,6 +98,7 @@ CONFIGS = {
         "max_num_batched_tokens": 4096,
         "limit_mm_per_prompt": '{"image":1,"video":1}',
         "schema_token_cache": "on",
+        "prefix_state_cache": True,
         "joint_single_field": True,
         "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
         "gdn_data_path": {
@@ -655,6 +662,87 @@ def conv_qkv_varlen_patch(requested, tree, output_dir, *, apply):
                   backup_dir=str(backup), source_sha256_before=before,
                   source_sha256=after,
                   installer_sha256=sha256_file(CONV_QKV_VARLEN_INSTALLER))
+    return record
+
+
+def tiered_cache_patch(requested, output_dir, *, apply):
+    """Install and verify the Tier 2 prefix-state cache entry points.
+
+    Two hash-gated targets: the worker's ``model_runner.py`` (lazy engine
+    hook install before the first ``execute_model``) and the API's
+    ``api_router.py`` (``/v1/decide/info`` disclosure).  ``ready`` means both
+    targets verify as patched in the trees the service will import.
+    """
+    record = {"requested": requested, "ready": False, "installed": False,
+              "installer": str(TIERED_INSTALLER)}
+    if not requested:
+        return record
+    if not TIERED_INSTALLER.is_file():
+        raise SystemExit(f"Tier 2 installer missing: {TIERED_INSTALLER}")
+    if not apply:
+        record["pending_install"] = True
+        return record
+
+    trees = {}
+    for package, key in (("vllm", "vllm_tree"), ("vllm_ascend", "ascend_tree")):
+        spec = importlib.util.find_spec(package)
+        init = Path(spec.origin).resolve() if spec and spec.origin else None
+        if init is None or init.name != "__init__.py" or init.parent.name != package:
+            raise SystemExit(f"Could not resolve the vLLM import tree for {package}")
+        trees[key] = init.parent.parent
+    targets = {
+        "model_runner": trees["ascend_tree"] / TIERED_MODEL_RUNNER_TARGET,
+        "api_router": trees["vllm_tree"] / TIERED_API_ROUTER_TARGET,
+    }
+    backup = output_dir / "tiered-cache-source-backup"
+    command = [sys.executable, str(TIERED_INSTALLER),
+               "--vllm-tree", str(trees["vllm_tree"]),
+               "--ascend-tree", str(trees["ascend_tree"]),
+               "--backup-dir", str(backup)]
+
+    def check():
+        result = installer_call([*command, "--check"])
+        report = result["report"]
+        entries = report.get("targets") or {}
+        valid = (not result["rc"]
+                 and report.get("vllm_tree") == str(trees["vllm_tree"])
+                 and report.get("ascend_tree") == str(trees["ascend_tree"])
+                 and set(entries) == set(targets))
+        if valid:
+            for name, target in targets.items():
+                entry = entries[name]
+                if (entry.get("target") != str(target)
+                        or entry.get("status_after") not in ("preimage", "patched")
+                        or not target.is_file()
+                        or sha256_file(target) != entry.get("sha256")):
+                    valid = False
+                    break
+        if not valid:
+            raise SystemExit(
+                "Tier 2 source state could not be verified: "
+                f"{report.get('error', 'installer report mismatch')}")
+        return {name: entries[name]["status_after"] for name in targets}
+
+    before = check()
+    if any(state == "preimage" for state in before.values()):
+        result = installer_call([*command, "--apply"])
+        if result["rc"]:
+            raise SystemExit(f"Tier 2 installation failed: "
+                             f"{result['report'].get('error', 'installer failed')}")
+        record["installed"] = True
+    after = check()
+    if any(state != "patched" for state in after.values()):
+        raise SystemExit("Tier 2 postimage SHA-256 mismatch")
+    record.update(
+        ready=True,
+        vllm_tree=str(trees["vllm_tree"]),
+        ascend_tree=str(trees["ascend_tree"]),
+        backup_dir=str(backup),
+        targets={name: {"path": str(target),
+                        "sha256": sha256_file(target),
+                        "status_before": before[name]}
+                 for name, target in targets.items()},
+        installer_sha256=sha256_file(TIERED_INSTALLER))
     return record
 
 
@@ -1271,6 +1359,22 @@ def build_launch(args):
     sources["schema_token_cache"] = (
         "explicit" if args.schema_token_cache is not None else f"config:{config}")
 
+    # Tier 2 prefix-state cache: explicit flag, then CLEF_PREFIX_STATE_CACHE,
+    # then the config default (s1/s2 on).
+    prefix_state_explicit = getattr(args, "prefix_state_cache", None)
+    prefix_state_env = os.environ.get("CLEF_PREFIX_STATE_CACHE")
+    if prefix_state_explicit is not None:
+        prefix_state_requested = prefix_state_explicit == "on"
+        prefix_state_source = "explicit"
+    elif prefix_state_env is not None:
+        prefix_state_requested = prefix_state_env.strip().lower() not in (
+            "0", "false", "no", "off")
+        prefix_state_source = "environment"
+    else:
+        prefix_state_requested = bool(CONFIGS[config].get("prefix_state_cache", False))
+        prefix_state_source = (f"config:{config}" if "prefix_state_cache" in CONFIGS[config]
+                               else "default")
+
     # Extra vLLM arguments.
     extra = args.vllm_args
     if extra[:1] == ["--"]:
@@ -1443,6 +1547,10 @@ def build_launch(args):
     if varlen_patch["ready"]:
         gdn_decision["files"][str(CONV_QKV_TARGET)] = varlen_patch["source_sha256"]
         gdn_decision["patch_state"][str(CONV_QKV_TARGET)] = "conv_varlen"
+    tiered_patch = tiered_cache_patch(
+        prefix_state_requested, output_dir, apply=not dry_run)
+    effective["prefix_state_cache"] = "on" if tiered_patch["ready"] else "off"
+    sources["prefix_state_cache"] = prefix_state_source
     if qkv_env:
         environment.update(qkv_env)
         os.environ.update(qkv_env)
@@ -1455,9 +1563,14 @@ def build_launch(args):
         gdn_decision["conv_qkv_vendor"] = None
         gdn_decision["conv_qkv_varlen_vendor"] = None
     environment["CLEF_GDN_CONV_QKV"] = "1" if conv_patch["ready"] else "0"
-    for _tier2_key in ("CLEF_TIER2_ENGINE", "CLEF_TIER2_TRACE"):
-        if _tier2_key in os.environ:
-            environment[_tier2_key] = os.environ[_tier2_key]
+    # Tier 2 engine hooks are installed by the hash-gated model_runner block;
+    # CLEF_PREFIX_STATE_CACHE=0 keeps the hooks out of the service at runtime.
+    environment["CLEF_PREFIX_STATE_CACHE"] = "1" if tiered_patch["ready"] else "0"
+    environment["CLEF_TIER2_REPO"] = str(REPO_ROOT)
+    environment["CLEF_PREFIX_CACHE_RANK_BYTES"] = os.environ.get(
+        "CLEF_PREFIX_CACHE_RANK_BYTES", TIERED_RANK_BYTES_DEFAULT)
+    if "CLEF_TIER2_TRACE" in os.environ:
+        environment["CLEF_TIER2_TRACE"] = os.environ["CLEF_TIER2_TRACE"]
     environment["CLEF_GDN_CONV_QKV_VARLEN"] = (
         "1" if varlen_patch["ready"] else "0")
     if os.environ.get("CLEF_GDN_FLAG_FILE"):
@@ -1478,6 +1591,7 @@ def build_launch(args):
         "gdn_decision_prefill": gdn_decision,
         "joint_patch": joint_patch,
         "systemone_mm_state": systemone_mm,
+        "tiered_cache": tiered_patch,
         "software": software_provenance(),
         "schema_cache": {
             "enabled": schema_enabled,
@@ -1525,6 +1639,9 @@ def main():
                         help="多模态处理器参数 JSON，可覆盖 s1/s2 默认值。")
     parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
                         help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
+    parser.add_argument("--prefix-state-cache", choices=("on", "off"), default=None,
+                        help="Tier 2 前缀状态缓存；on 要求已安装 runtime/apply_tiered_cache_patch.py，"
+                             "CLEF_PREFIX_STATE_CACHE=0 可运行时关闭。")
     parser.add_argument("--distributed-executor-backend", default=None)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)
