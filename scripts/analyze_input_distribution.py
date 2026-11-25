@@ -183,15 +183,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--od-report", type=Path,
-        default=Path("Clef-27B/logs/gdn-data-path-20261115/qkv-norm-entry5/od-full.json.gz"),
+        default=Path("logs/gdn-data-path-20261115/qkv-norm-entry5/od-full.json.gz"),
     )
     parser.add_argument(
         "--erqa-predictions", type=Path,
-        default=Path("Clef-27B/logs/gdn-data-path-20261115/qkv-norm-erqa/full/predictions.jsonl"),
+        default=Path("logs/gdn-data-path-20261115/qkv-norm-erqa/full/predictions.jsonl"),
     )
     parser.add_argument(
         "--output", type=Path,
-        default=Path("Clef-27B/logs/input-distribution-2026-11-16.json"),
+        default=Path("logs/input-distribution-2026-11-16.json"),
     )
     args = parser.parse_args()
 

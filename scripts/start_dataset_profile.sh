@@ -44,7 +44,7 @@ case "${CLEF_PRIVATE_JPEG_CACHE_GIB:-0}" in
             printf '%s\n' 'The JPEG cache requires the erqa-c1 profile.' >&2
             exit 2
         fi
-        export PYTHONPATH="$repo/runtime/jpeg_decode_cache${PYTHONPATH:+:$PYTHONPATH}"
+        export PYTHONPATH="$repo/src/runtime/jpeg_decode_cache${PYTHONPATH:+:$PYTHONPATH}"
         ;;
     *)
         printf '%s\n' 'CLEF_PRIVATE_JPEG_CACHE_GIB accepts 0 or 2.' >&2
@@ -67,8 +67,8 @@ if [[ "$profile" == "od-s1-k32" || "$profile" == "od-s1-k56" || "$profile" == "o
     export CLEF_PRIVATE_K32_RANK_BYTES="$rank_bytes"
     export CLEF_PRIVATE_K32_FORMAL=1 CLEF_PRIVATE_K32_AUDIT=0 CLEF_PRIVATE_K32=cache
     unset CLEF_PRIVATE_K32_CONTROL
-    export PYTHONPATH="$repo/runtime/k32_activation_cache${PYTHONPATH:+:$PYTHONPATH}"
+    export PYTHONPATH="$repo/src/runtime/k32_activation_cache${PYTHONPATH:+:$PYTHONPATH}"
     printf 'Activation cache receipts: %s\n' "$receipts" >&2
 fi
 
-exec bash "$repo/Clef-27B/start.sh" "${options[@]}" "$@"
+exec bash "$repo/start.sh" "${options[@]}" "$@"

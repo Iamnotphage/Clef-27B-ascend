@@ -18,14 +18,14 @@ import types
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parent.parent
-ENTRY = REPO / "Clef-27B" / "inference.py"
+REPO = Path(__file__).resolve().parents[2]
+ENTRY = REPO / "inference.py"
 SPEC = importlib.util.spec_from_file_location("clef_inference_joint_test", ENTRY)
 launcher = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(launcher)
 
-F810 = REPO / "runtime" / "joint_single_field" / "clef_joint_schema.py"
-AA3E = REPO / "runtime" / "joint_fused_attention" / "clef_joint_schema.py"
+F810 = REPO / "src" / "runtime" / "joint_single_field" / "clef_joint_schema.py"
+AA3E = REPO / "src" / "runtime" / "joint_fused_attention" / "clef_joint_schema.py"
 ORIGINAL = os.environ.get("CLEF_ORIGINAL_JOINT_SCHEMA")
 TARGET_REL = "vllm/model_executor/models/clef_joint_schema.py"
 
@@ -223,11 +223,14 @@ class JointFusedEntryTest(unittest.TestCase):
         self.assertEqual(launch["service_environment"]["CLEF_JOINT_SINGLE_FIELD"], "1")
         self.assertFalse(self.output.exists())
 
-    def test_f810_config_dry_run_pops_candidate_env(self):
+    def test_non_fused_config_dry_run_pops_candidate_env(self):
         os.environ[launcher.JOINT_FLAG_ENV] = "1"
         os.environ[launcher.JOINT_ALLOW_ENV] = launcher.JOINT_FUSED_SHA
-        with mock.patch.dict(os.environ, {"CLEF_GDN_DECISION_PREFILL": "0"}):
-            launch = self.dry_run("--config", "s2")
+        # The single-field arm has no preset any more; enable it on the
+        # conservative config to exercise the non-fused branch.
+        with mock.patch.dict(os.environ, {"CLEF_GDN_DECISION_PREFILL": "0"}), \
+                mock.patch.dict(launcher.CONFIGS["custom"], {"joint_single_field": True}):
+            launch = self.dry_run("--config", "custom")
             self.assertNotIn(launcher.JOINT_FLAG_ENV, launch["service_environment"])
             self.assertNotIn(launcher.JOINT_ALLOW_ENV, launch["service_environment"])
             self.assertNotIn(launcher.JOINT_FLAG_ENV, os.environ)
@@ -236,19 +239,19 @@ class JointFusedEntryTest(unittest.TestCase):
         self.assertTrue(launch["joint_patch"]["pending_install"])
 
     def test_assets_are_bundled_without_scratch_dependency(self):
-        for path in (REPO / "runtime/apply_joint_fused_attention.py",
-                     REPO / "runtime/apply_joint_single_field_patch_fused.py",
-                     REPO / "runtime/joint_fused_attention/clef_joint_schema.py",
-                     REPO / "runtime/apply_joint_service_check.py",
-                     REPO / "runtime/joint_service_check/apply_joint_single_field_patch.py"):
+        for path in (REPO / "src/runtime/apply_joint_fused_attention.py",
+                     REPO / "src/runtime/apply_joint_single_field_patch_fused.py",
+                     REPO / "src/runtime/joint_fused_attention/clef_joint_schema.py",
+                     REPO / "src/runtime/apply_joint_service_check.py",
+                     REPO / "src/runtime/joint_service_check/apply_joint_single_field_patch.py"):
             self.assertTrue(path.is_file(), path)
-        self.assertEqual(launcher.sha256_file(REPO / "runtime/apply_joint_fused_attention.py"),
+        self.assertEqual(launcher.sha256_file(REPO / "src/runtime/apply_joint_fused_attention.py"),
                          "2a659d07154768a5e2a4a51001aff05aa966359bdf1deef3b6b1d2f115e7e7c5")
-        self.assertEqual(launcher.sha256_file(REPO / "runtime/apply_joint_single_field_patch_fused.py"),
+        self.assertEqual(launcher.sha256_file(REPO / "src/runtime/apply_joint_single_field_patch_fused.py"),
                          launcher.JOINT_GUARD_POST_SHA)
-        self.assertEqual(launcher.sha256_file(REPO / "runtime/joint_fused_attention/clef_joint_schema.py"),
+        self.assertEqual(launcher.sha256_file(REPO / "src/runtime/joint_fused_attention/clef_joint_schema.py"),
                          launcher.JOINT_FUSED_SHA)
-        self.assertEqual(launcher.sha256_file(REPO / "runtime/apply_joint_service_check.py"),
+        self.assertEqual(launcher.sha256_file(REPO / "src/runtime/apply_joint_service_check.py"),
                          "1ed35f0a24f8b23d8ac099992d703aca20d7f1460c89ff02c30635dfde6a219c")
         text = ENTRY.read_text()
         self.assertNotIn("scratch-24", text)

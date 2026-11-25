@@ -34,7 +34,7 @@ def load(name: str, path: Path):
 HERE = Path(__file__).resolve().parent
 flags = load("gdn_decision_flags_test", HERE / "gdn_decision_flags.py")
 installer = load("apply_gdn_decision_patch_test", HERE / "apply_gdn_decision_patch.py")
-launcher = load("clef_inference_test", HERE.parent / "Clef-27B" / "inference.py")
+launcher = load("clef_inference_test", HERE.parents[1] / "inference.py")
 
 
 class FlagTests(unittest.TestCase):
@@ -362,7 +362,7 @@ class PatcherTests(unittest.TestCase):
         self.assertFalse(target._decision_safe_config)
 
     def test_hash_contract_matches_accepted_artifacts(self):
-        evidence = HERE.parent / "Clef-27B/logs/gdn-decision-20261115"
+        evidence = HERE.parents[1] / "logs/gdn-decision-20261115"
         accepted = json.loads((evidence / "entry-s1/launch-manifest.json").read_text())
         record = accepted["gdn_decision_prefill"]
         # The historical entry is the v2 contract; v3 must still recognise it

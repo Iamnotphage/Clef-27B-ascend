@@ -23,26 +23,26 @@ import types
 DEFAULT_MODEL_DIR = "/workspace/yangchen/models/Clef-27B"
 SERVED_MODEL_NAME = "clef"
 PROTOCOL_VERSION = "2026-11-13"
-REPO_ROOT = Path(__file__).resolve().parent.parent
-GDN_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_decision_patch.py"
-QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_qkv_norm_patch.py"
-CONV_QKV_INSTALLER = REPO_ROOT / "runtime" / "apply_conv_qkv_patch.py"
-CONV_QKV_VARLEN_INSTALLER = REPO_ROOT / "runtime" / "apply_conv_qkv_varlen_patch.py"
+REPO_ROOT = Path(__file__).resolve().parent
+RUNTIME_DIR = REPO_ROOT / "src" / "runtime"
+GDN_INSTALLER = RUNTIME_DIR / "apply_gdn_decision_patch.py"
+QKV_INSTALLER = RUNTIME_DIR / "apply_qkv_norm_patch.py"
+CONV_QKV_INSTALLER = RUNTIME_DIR / "apply_conv_qkv_patch.py"
+CONV_QKV_VARLEN_INSTALLER = RUNTIME_DIR / "apply_conv_qkv_varlen_patch.py"
 CONV_QKV_TARGET = Path("vllm_ascend/ops/gdn.py")
 CONV_QKV_PREIMAGE = "c8c0d4d8a693658e075a2232b6938584760672bacf101bf50ca5fdfab2c0be7e"
 CONV_QKV_POSTIMAGE = "ead25cb2691cb9ab1c322353fc8e168f8bfc9c23b9e4d53de01c762943027e78"
 CONV_QKV_VARLEN_POSTIMAGE = "afe6d4e87c0eb47bfb325fb630620e47f845fb5a893cb1dada78069ad4e3ca07"
-JOINT_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_single_field_patch.py"
-JOINT_FUSED_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_fused_attention.py"
-JOINT_FUSED_GUARD = REPO_ROOT / "runtime" / "apply_joint_single_field_patch_fused.py"
-JOINT_SERVICE_CHECK_INSTALLER = REPO_ROOT / "runtime" / "apply_joint_service_check.py"
-CHUNK128_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_chunk128_patch.py"
-ADAPTIVE_CHUNK_INSTALLER = REPO_ROOT / "runtime" / "apply_gdn_adaptive_chunk_patch.py"
-SYSTEMONE_MM_INSTALLER = (
-    REPO_ROOT / "runtime" / "apply_systemone_mm_state_patch.py")
-SYSTEMONE_MM_MODULE = REPO_ROOT / "runtime" / "systemone_mm_state.py"
+JOINT_INSTALLER = RUNTIME_DIR / "apply_joint_single_field_patch.py"
+JOINT_FUSED_INSTALLER = RUNTIME_DIR / "apply_joint_fused_attention.py"
+JOINT_FUSED_GUARD = RUNTIME_DIR / "apply_joint_single_field_patch_fused.py"
+JOINT_SERVICE_CHECK_INSTALLER = RUNTIME_DIR / "apply_joint_service_check.py"
+CHUNK128_INSTALLER = RUNTIME_DIR / "apply_gdn_chunk128_patch.py"
+ADAPTIVE_CHUNK_INSTALLER = RUNTIME_DIR / "apply_gdn_adaptive_chunk_patch.py"
+SYSTEMONE_MM_INSTALLER = RUNTIME_DIR / "apply_systemone_mm_state_patch.py"
+SYSTEMONE_MM_MODULE = RUNTIME_DIR / "systemone_mm_state.py"
 SYSTEMONE_MM_MODE_ENV = "CLEF_STATE_MM_MODE"
-TIERED_INSTALLER = REPO_ROOT / "runtime" / "apply_tiered_cache_patch.py"
+TIERED_INSTALLER = RUNTIME_DIR / "apply_tiered_cache_patch.py"
 TIERED_MODEL_RUNNER_TARGET = Path("vllm_ascend/worker/v2/model_runner.py")
 TIERED_MODEL_RUNNER_PREIMAGE = "e866aeb27d04afe2141850122c03343c38d2a9b14cf1f9f136866003b35968a6"
 TIERED_MODEL_RUNNER_POSTIMAGE = "a772213f322392608d9204245f301d37e700b799475377f0dade206f887c5f73"
@@ -96,23 +96,6 @@ CONFIGS = {
             "skip_initial_state": True,
             "skip_conv_state": True,
             "preprocess_fusion": True,
-        },
-    },
-    "s2": {
-        "tensor_parallel_size": 2,
-        "max_model_len": 4096,
-        "max_num_seqs": 4,
-        "max_num_batched_tokens": 4096,
-        "limit_mm_per_prompt": '{"image":1,"video":1}',
-        "schema_token_cache": "on",
-        "prefix_state_cache": True,
-        "joint_single_field": True,
-        "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
-        "gdn_data_path": {
-            "bsnd": True,
-            "skip_initial_state": True,
-            "skip_conv_state": True,
-            "preprocess_fusion": False,
         },
     },
 }
@@ -232,6 +215,15 @@ def resolve_vllm_tree(timeout=60):
             "probe_stdout": result.stdout[-500:], "probe_stderr": result.stderr[-500:]}
 
 
+def resolve_package_tree(package_name):
+    """Return the parent directory of an installed package, or None if unavailable."""
+    spec = importlib.util.find_spec(package_name)
+    init = Path(spec.origin).resolve() if spec and spec.origin else None
+    if init is None or init.name != "__init__.py" or init.parent.name != package_name:
+        return None
+    return init.parent.parent
+
+
 def model_files(model_dir):
     """Check both the joint head and every shard named by the backbone index."""
     names = {
@@ -303,7 +295,7 @@ def software_provenance():
     return provenance
 
 
-def gdn_decision_prefill(config, apply=True):
+def gdn_decision_prefill(config, apply=True, output_dir=None):
     """Install and verify the decision-only GDN prefill patch.
 
     Enabled by default for the submission config ``s1``; set
@@ -336,9 +328,15 @@ def gdn_decision_prefill(config, apply=True):
     exec(compile(GDN_INSTALLER.read_bytes(), str(GDN_INSTALLER), "exec"), contract.__dict__)
 
     def run(flag):
-        result = subprocess.run(
-            [sys.executable, str(GDN_INSTALLER), flag],
-            capture_output=True, text=True, check=False)
+        argv = [sys.executable, str(GDN_INSTALLER)]
+        tree = resolve_package_tree("vllm_ascend")
+        if tree is not None:
+            argv += ["--tree", str(tree)]
+        if output_dir is not None:
+            argv += ["--backup-dir",
+                     str(Path(output_dir).expanduser().resolve() / "patch-backup" / "gdn-decision")]
+        argv.append(flag)
+        result = subprocess.run(argv, capture_output=True, text=True, check=False)
         if result.returncode != 0:
             raise SystemExit(
                 f"GDN decision patch {flag} failed:\n"
@@ -507,7 +505,7 @@ def systemone_mm_state_patch(apply=True):
     return record
 
 
-def qkv_norm_patch(config, apply=True):
+def qkv_norm_patch(config, apply=True, output_dir=None):
     """Install/verify the checked-in GDN QKV fusion postimage."""
     requested = bool(
         CONFIGS[config].get("gdn_data_path", {}).get("preprocess_fusion", False)
@@ -531,9 +529,15 @@ def qkv_norm_patch(config, apply=True):
         return record
 
     def run(flag):
-        result = subprocess.run(
-            [sys.executable, str(QKV_INSTALLER), flag],
-            capture_output=True, text=True, check=False)
+        argv = [sys.executable, str(QKV_INSTALLER)]
+        tree = resolve_package_tree("vllm_ascend")
+        if tree is not None:
+            argv += ["--tree", str(tree)]
+        if output_dir is not None:
+            argv += ["--backup-dir",
+                     str(Path(output_dir).expanduser().resolve() / "patch-backup" / "qkv-norm")]
+        argv.append(flag)
+        result = subprocess.run(argv, capture_output=True, text=True, check=False)
         if result.returncode != 0:
             raise SystemExit(
                 f"QKV norm patch {flag} failed:\n"
@@ -847,7 +851,7 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
     return policy
 
 
-def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
+def gdn_chunk128_patch(config, apply=True, decision_enabled=False, output_dir=None):
     """Install/verify the GDN chunk-128 decision-path patch.
 
     Measured default on the decision path: another 1.3-2.3% on S1 over the
@@ -874,9 +878,15 @@ def gdn_chunk128_patch(config, apply=True, decision_enabled=False):
         return record
 
     def run(flag):
-        result = subprocess.run(
-            [sys.executable, str(CHUNK128_INSTALLER), flag],
-            capture_output=True, text=True, check=False)
+        argv = [sys.executable, str(CHUNK128_INSTALLER)]
+        tree = resolve_package_tree("vllm_ascend")
+        if tree is not None:
+            argv += ["--tree", str(tree)]
+        if output_dir is not None:
+            argv += ["--backup-dir",
+                     str(Path(output_dir).expanduser().resolve() / "patch-backup" / "gdn-chunk128")]
+        argv.append(flag)
+        result = subprocess.run(argv, capture_output=True, text=True, check=False)
         if result.returncode != 0:
             raise SystemExit(
                 f"GDN chunk128 patch {flag} failed:\n"
@@ -972,7 +982,7 @@ def gdn_adaptive_chunk_patch(config, output_dir, apply=True, decision_enabled=Fa
     return record
 
 
-def joint_single_field_patch(config, apply=True):
+def joint_single_field_patch(config, apply=True, output_dir=None):
     """Install/verify the Q=1 joint-head postimage."""
     requested = bool(CONFIGS[config].get("joint_single_field", False))
     record = {
@@ -992,9 +1002,15 @@ def joint_single_field_patch(config, apply=True):
         return record
 
     def run(flag):
-        result = subprocess.run(
-            [sys.executable, str(JOINT_INSTALLER), flag],
-            capture_output=True, text=True, check=False)
+        argv = [sys.executable, str(JOINT_INSTALLER)]
+        tree = resolve_package_tree("vllm")
+        if tree is not None:
+            argv += ["--tree", str(tree)]
+        if output_dir is not None:
+            argv += ["--backup-dir",
+                     str(Path(output_dir).expanduser().resolve() / "patch-backup" / "joint-single-field")]
+        argv.append(flag)
+        result = subprocess.run(argv, capture_output=True, text=True, check=False)
         if result.returncode != 0:
             raise SystemExit(
                 f"joint single-field patch {flag} failed:\n"
@@ -1242,8 +1258,8 @@ def resolve_schema_cache(config, explicit):
     version = schema_cache_version(strategies) if strategies else 0
     if enabled and version != 2:
         raise ValueError(
-            "S2 配置要求 schema cache v2，但固定源码中的版本为 "
-            f"{version}（{strategies}）。先运行 runtime/apply_schema_cache_patch.py --apply。"
+            "schema cache v2 未安装：固定源码中的版本为 "
+            f"{version}（{strategies}）。先运行 src/runtime/apply_schema_cache_patch.py --apply。"
         )
     return enabled, version, strategies
 
@@ -1461,7 +1477,7 @@ def build_launch(args):
         "explicit" if args.schema_token_cache is not None else f"config:{config}")
 
     # Tier 2 prefix-state cache: explicit flag, then CLEF_PREFIX_STATE_CACHE,
-    # then the config default (s1/s2 on).
+    # then the config default (s1 on).
     prefix_state_explicit = getattr(args, "prefix_state_cache", None)
     prefix_state_env = os.environ.get("CLEF_PREFIX_STATE_CACHE")
     if prefix_state_explicit is not None:
@@ -1526,7 +1542,7 @@ def build_launch(args):
         for flag, value, _ in parsed:
             if flag in ("--scheduler-cls", "--async-scheduling", "--scheduler-config"):
                 raise ValueError(f"encoder cache 候选与 {flag} 透传冲突")
-        encoder_scheduler = Path(__file__).resolve().with_name("clef_encoder_cache_scheduler.py")
+        encoder_scheduler = RUNTIME_DIR / "clef_encoder_cache_scheduler.py"
         if not encoder_scheduler.is_file():
             raise ValueError(f"encoder cache 候选模块缺失：{encoder_scheduler}")
 
@@ -1557,7 +1573,8 @@ def build_launch(args):
         command += ["--scheduler-cls",
                     "clef_encoder_cache_scheduler.EncoderCacheBudgetScheduler"]
 
-    gdn_decision = gdn_decision_prefill(config, apply=not getattr(args, "dry_run", False))
+    gdn_decision = gdn_decision_prefill(
+        config, apply=not getattr(args, "dry_run", False), output_dir=output_dir)
 
     environment = {
         "CLEF_MODEL_NAME": SERVED_MODEL_NAME,
@@ -1593,11 +1610,12 @@ def build_launch(args):
     data_path, data_env = gdn_data_path(config, gdn_decision["enabled"])
     gdn_decision["data_path"] = data_path
     environment.update(data_env)
-    qkv_patch = qkv_norm_patch(config, apply=not getattr(args, "dry_run", False))
+    qkv_patch = qkv_norm_patch(
+        config, apply=not getattr(args, "dry_run", False), output_dir=output_dir)
     gdn_decision["qkv_norm_patch"] = qkv_patch
     chunk128_patch = gdn_chunk128_patch(
         config, apply=not getattr(args, "dry_run", False),
-        decision_enabled=gdn_decision["enabled"])
+        decision_enabled=gdn_decision["enabled"], output_dir=output_dir)
     gdn_decision["gdn_chunk128_patch"] = chunk128_patch
     adaptive_patch = gdn_adaptive_chunk_patch(
         config, output_dir, apply=not getattr(args, "dry_run", False),
@@ -1612,7 +1630,7 @@ def build_launch(args):
             config, output_dir, apply=not getattr(args, "dry_run", False))
     else:
         joint_patch = joint_single_field_patch(
-            config, apply=not getattr(args, "dry_run", False))
+            config, apply=not getattr(args, "dry_run", False), output_dir=output_dir)
     gdn_decision["joint_patch"] = joint_patch
     if joint_patch["enabled"]:
         environment["CLEF_JOINT_SINGLE_FIELD"] = "1"
@@ -1680,7 +1698,7 @@ def build_launch(args):
     # Tier 2 engine hooks are installed by the hash-gated model_runner block;
     # CLEF_PREFIX_STATE_CACHE=0 keeps the hooks out of the service at runtime.
     environment["CLEF_PREFIX_STATE_CACHE"] = "1" if tiered_patch["ready"] else "0"
-    environment["CLEF_TIER2_REPO"] = str(REPO_ROOT)
+    environment["CLEF_TIER2_REPO"] = str(REPO_ROOT / "src")
     rank_bytes = tiered_memory["rank_bytes"]
     if rank_bytes is None:
         rank_bytes = int(os.environ.get(
@@ -1747,7 +1765,7 @@ def main():
                         help="默认监听 127.0.0.1:18143（比赛接口约定）。")
     parser.add_argument("--config", choices=sorted(CONFIGS), default=DEFAULT_CONFIG,
                         help="s1（默认，单服务常驻）：TP2/16384/seqs16/image16/缓存关；"
-                             "s2：TP2/4096/seqs4/缓存 v2 开；custom：TP1/1024 保守默认。")
+                             "custom：TP1/1024 保守默认。")
     parser.add_argument("--tensor-parallel-size", type=int, default=None)
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
@@ -1759,11 +1777,11 @@ def main():
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')
     parser.add_argument("--mm-processor-kwargs", default=None,
-                        help="多模态处理器参数 JSON，可覆盖 s1/s2 默认值。")
+                        help="多模态处理器参数 JSON，可覆盖 s1 默认值。")
     parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
                         help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
     parser.add_argument("--prefix-state-cache", choices=("on", "off"), default=None,
-                        help="Tier 2 前缀状态缓存；on 要求已安装 runtime/apply_tiered_cache_patch.py，"
+                        help="Tier 2 前缀状态缓存；on 要求已安装 src/runtime/apply_tiered_cache_patch.py，"
                              "CLEF_PREFIX_STATE_CACHE=0 可运行时关闭。")
     parser.add_argument("--distributed-executor-backend", default=None)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")

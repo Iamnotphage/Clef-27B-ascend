@@ -11,7 +11,7 @@ set -euo pipefail
 : "${CLEF_TIER2_ACTIVE_WINDOW:=500}"; export CLEF_TIER2_ACTIVE_WINDOW
 # 以下默认值由 inference.py 在对应安装器校验通过后按 --config 写入
 # （s1 的有效值；custom 不启用这些优化）：
-#   CLEF_PREFIX_STATE_CACHE=1              Tier 2 前缀状态缓存（s1/s2 默认 on，
+#   CLEF_PREFIX_STATE_CACHE=1              Tier 2 前缀状态缓存（s1 默认 on，
 #                                          custom 默认 off；=0 可运行时关闭）
 #   CLEF_MLP_BF16_NZ=1                     MLP BF16 NZ（GDN v4 补丁内）
 #   CLEF_GDN_DECISION_PREFILL=1 / CLEF_GDN_NO_RECOMPUTE=1
@@ -32,7 +32,7 @@ if ! command -v "$python_bin" >/dev/null 2>&1; then
 fi
 export PYTHONUNBUFFERED=1
 if [[ -n "${CLEF_BIND_CPUS:-}" ]]; then
-  exec "$python_bin" "$script_dir/../runtime/clef_bind_supervisor.py" \
+  exec "$python_bin" "$script_dir/src/runtime/clef_bind_supervisor.py" \
     "$python_bin" "$script_dir/inference.py" "$@"
 fi
 exec "$python_bin" "$script_dir/inference.py" "$@"
