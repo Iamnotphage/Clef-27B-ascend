@@ -2,8 +2,10 @@
 
 > **2026-11-25 晚更新**：`vllm_ascend_C` 编译失败根因已定位并修复——CANN
 > `recompile_binary.py` 的 `glob(..., recursive=True)` 跳过隐藏目录 `.build`；
-> 源码树已迁到 `<repo>/build/src`。一键安装、评测依赖、uv 加速、计时与全隔离
-> 验收见 [`docs/setup-env-2026-11-25.md`](setup-env-2026-11-25.md)。下文保留
+> 源码树已迁到 `<repo>/build/src`。当前默认改为固定提交 archive 优先（SHA-256）、
+> git 浅拉取回退，并默认跳过 `flash_attn_npu`（`--with-flash-attn` 可开启）；
+> 一键安装、评测依赖、uv 加速、计时与全隔离验收见
+> [`docs/setup-env-2026-11-25.md`](setup-env-2026-11-25.md)。下文保留
 > 当时的现状记录。
 
 ## 0. 一句话现状

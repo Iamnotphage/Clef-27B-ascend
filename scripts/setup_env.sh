@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # 在仓库根目录构建项目内 .venv（A3 / Linux aarch64）。
 #
-#   bash scripts/setup_env.sh              # 完整：服务 + 质量/性能评测依赖 + 源码构建
-#   bash scripts/setup_env.sh --pip-only   # 只建 .venv 并安装全部 pip 依赖（不编译源码）
-#   bash scripts/setup_env.sh --no-eval    # 完整服务环境，跳过 EvalScope 与评测依赖
-#   bash scripts/setup_env.sh --force      # 已完成也重新执行
+#   bash scripts/setup_env.sh                 # 完整：服务 + 评测依赖 + 源码构建（不含 flash_attn_npu）
+#   bash scripts/setup_env.sh --with-flash-attn # 额外源码编译 flash_attn_npu 0.5.0
+#   bash scripts/setup_env.sh --pip-only      # 只建 .venv 并安装全部 pip 依赖（不编译源码）
+#   bash scripts/setup_env.sh --no-eval       # 完整服务环境，跳过 EvalScope 与评测依赖
+#   bash scripts/setup_env.sh --force         # 已完成也重新执行
 #
 # 目录约定（可用环境变量覆盖）：
 #   CLEF_VENV       虚拟环境          [<repo>/.venv]
@@ -13,7 +14,8 @@
 #   CLEF_MATERIALS  已校验材料        [<repo>/.build/materials]
 #   PIP_INDEX_URL   PyPI 镜像         [华为云 PyPI]
 #   CLEF_GIT_MIRROR GitHub 代理前缀   [https://gh-proxy.com]
-#   CLEF_FORCE_TARBALL=1 跳过 git，直接用固定提交 archive（SHA-256 校验）
+#   CLEF_FORCE_GIT=1  改为 git 浅拉取优先（默认 archive 优先）
+#   CLEF_FORCE_TARBALL=1 只用固定提交 archive（SHA-256 校验），不回退 git
 #   MAX_JOBS        编译并发          [自动：min(配额 CPU 核, 内存 GiB/4, 16)]
 #
 # 为什么源码树放在 <repo>/build 而不是 <repo>/.build：
@@ -30,10 +32,12 @@ repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 mode=full
 force=0
 eval_enabled=1
+with_flash_attn=0
 for arg in "$@"; do
   case "$arg" in
     --pip-only) mode=pip ;;
     --no-eval) eval_enabled=0 ;;
+    --with-flash-attn) with_flash_attn=1 ;;
     --force) force=1 ;;
     -h|--help) sed -n '2,/^set -euo pipefail$/p' "${BASH_SOURCE[0]}" | sed '$d'; exit 0 ;;
     *) printf '未知参数：%s\n' "$arg" >&2; exit 2 ;;
@@ -67,7 +71,7 @@ git_mirrors=("${CLEF_GIT_MIRROR:-https://gh-proxy.com}" "https://ghproxy.net" ""
 logs="$build/logs"
 constraints="$repo/scripts/requirements/runtime-constraints.txt"
 marker="$venv/.clef-env-complete"
-marker_version="clef-env-v2"
+marker_version="clef-env-v3"
 
 vllm_commit=24420b7a341af37a9bc3186e6fc6062512e0aa58
 ascend_commit=89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d
@@ -78,8 +82,10 @@ ascend_archive_sha=9b59a63495b586569dc64ed3b97e1e0fc3f9d3b4343606588ffde0bd2edad
 evalscope_archive_sha=61c596f4a2c2ad9164075cf54e51cbf0c0f6865fd1f2a208f363cce7fbdc2cc8
 vllm_version_hint=0.33.0rc1.dev370+g24420b7a3
 ascend_version_hint=0.1.dev1+g89eb8a5e7
-# 网络到 GitHub git 智能协议极慢时，可强制走 archive 回退。
+# 默认 archive 优先（内容寻址 + SHA-256），git 浅拉取回退；
+# CLEF_FORCE_GIT=1 改为 git 优先，CLEF_FORCE_TARBALL=1 则只用 archive。
 force_tarball="${CLEF_FORCE_TARBALL:-0}"
+force_git="${CLEF_FORCE_GIT:-0}"
 source_submodules=()
 
 step() { printf '\n=== %s ===\n' "$*"; }
@@ -250,6 +256,8 @@ end_stage
 export CLEF_VENV="$venv"
 # shellcheck source=scripts/activate_env.sh
 source "$repo/scripts/activate_env.sh"
+# venv 已就绪；计时 JSON 用 venv Python 写出，而不是构建前的系统 Python。
+[[ -x "$venv/bin/python" ]] && timing_python="$venv/bin/python"
 
 begin_stage "base-check"
 step "基础校验"
@@ -553,7 +561,18 @@ ensure_source() { # dir tarball url commit recursive [archive_sha]
     return
   fi
   have git || die "缺少 $tarball 且未安装 git"
-  local mirror prefix cfg cloned=0
+  local mirror prefix cfg cloned=0 archive_tried=0
+  # 1) archive 优先（默认）：固定提交 + 内置 SHA-256，避免 git 协议无限等待。
+  if [[ "$force_tarball" != 1 && "$force_git" != 1 && -n "$archive_sha" ]]; then
+    archive_tried=1
+    printf '  archive（默认优先，SHA-256 校验）\n'
+    if install_source_archive "$dir" "$repo_path" "$commit" "$archive_sha" "$recursive"; then
+      verify_source "$dir" "$commit" "$recursive"
+      return
+    fi
+    printf '  archive 失败，回退 git 浅拉取\n'
+  fi
+  # 2) git 浅拉取（默认回退；CLEF_FORCE_GIT=1 时优先）。
   if [[ "$force_tarball" != 1 ]]; then
     for mirror in "${git_mirrors[@]}"; do
       prefix=""
@@ -585,7 +604,9 @@ ensure_source() { # dir tarball url commit recursive [archive_sha]
     verify_source "$dir" "$commit" "$recursive"
     return
   fi
-  if [[ "$cloned" -eq 0 && -n "$archive_sha" ]]; then
+  # 3) archive 回退（CLEF_FORCE_GIT=1 的首轮，或 archive-only 模式）。
+  if [[ "$archive_tried" -eq 0 && -n "$archive_sha" ]]; then
+    archive_tried=1
     printf '  git 通道不可用，回退固定提交 archive（SHA-256 校验）\n'
     if install_source_archive "$dir" "$repo_path" "$commit" "$archive_sha" "$recursive"; then
       verify_source "$dir" "$commit" "$recursive"
@@ -616,7 +637,7 @@ ensure_source() { # dir tarball url commit recursive [archive_sha]
       return
     fi
   fi
-  die "无法获取 $url @ $commit（可把源码包放到 $materials，或设置 CLEF_FORCE_TARBALL=1）"
+  die "无法获取 $url @ $commit（可把源码包放到 $materials，或设置 CLEF_FORCE_TARBALL=1 / CLEF_FORCE_GIT=1）"
 }
 
 run_build() { # log command...
@@ -727,27 +748,31 @@ python -m pip install --index-url "$index" --constraint "$constraints" --timeout
   expecttest==0.3.0
 end_stage
 
-begin_stage "flash-attn-build"
-step "flash_attn_npu 0.5.0（无预编译 wheel，源码构建）"
-flash_dir="$src/flash_attn_npu-0.5.0"
-if [[ ! -d "$flash_dir" ]]; then
-  flash_tar="$(first_glob "$materials/flash_attn_npu-0.5.0.tar.gz")"
-  if [[ -z "$flash_tar" ]]; then
-    printf '  从 PyPI 获取 flash_attn_npu 0.5.0 源码包\n'
-    python -m pip download --no-deps --no-binary :all: --no-build-isolation \
-      --dest "$materials" --index-url "$index" --timeout 60 flash-attn-npu==0.5.0 \
-      || die "无法下载 flash_attn_npu 0.5.0（把源码包放到 $materials）"
-    flash_tar="$(first_glob "$materials"/flash*attn*npu-0.5.0.tar.gz)"
-    [[ -n "$flash_tar" ]] || die "$materials 下未找到 flash_attn_npu 0.5.0 源码包"
+if [[ "$with_flash_attn" == 1 ]]; then
+  begin_stage "flash-attn-build"
+  step "flash_attn_npu 0.5.0（无预编译 wheel，源码构建）"
+  flash_dir="$src/flash_attn_npu-0.5.0"
+  if [[ ! -d "$flash_dir" ]]; then
+    flash_tar="$(first_glob "$materials/flash_attn_npu-0.5.0.tar.gz")"
+    if [[ -z "$flash_tar" ]]; then
+      printf '  从 PyPI 获取 flash_attn_npu 0.5.0 源码包\n'
+      python -m pip download --no-deps --no-binary :all: --no-build-isolation \
+        --dest "$materials" --index-url "$index" --timeout 60 flash-attn-npu==0.5.0 \
+        || die "无法下载 flash_attn_npu 0.5.0（把源码包放到 $materials）"
+      flash_tar="$(first_glob "$materials"/flash*attn*npu-0.5.0.tar.gz)"
+      [[ -n "$flash_tar" ]] || die "$materials 下未找到 flash_attn_npu 0.5.0 源码包"
+    fi
+    tar --no-same-owner -xzf "$flash_tar" -C "$src"
   fi
-  tar --no-same-owner -xzf "$flash_tar" -C "$src"
+  apply_patch "$flash_dir" "$repo/src/patches/flash-attn-npu-max-jobs.patch"
+  run_build "$logs/flash-attn-build.log" env FLASH_ATTN_BUILD_NPU=910 \
+    FLASH_ATTENTION_FORCE_BUILD=TRUE MAX_JOBS="$MAX_JOBS" \
+    python -m pip install --no-build-isolation -v --constraint "$constraints" \
+    --index-url "$index" --timeout 60 "$flash_dir"
+  end_stage
+else
+  printf '\n跳过 flash_attn_npu（默认；需要时加 --with-flash-attn）。\n'
 fi
-apply_patch "$flash_dir" "$repo/src/patches/flash-attn-npu-max-jobs.patch"
-run_build "$logs/flash-attn-build.log" env FLASH_ATTN_BUILD_NPU=910 \
-  FLASH_ATTENTION_FORCE_BUILD=TRUE MAX_JOBS="$MAX_JOBS" \
-  python -m pip install --no-build-isolation -v --constraint "$constraints" \
-  --index-url "$index" --timeout 60 "$flash_dir"
-end_stage
 
 # ---------------------------------------------------------------- 验收
 begin_stage "verify"
@@ -771,7 +796,8 @@ print(text)
 open(sys.argv[1], "w").write(text + "\n")
 PY
 
-CLEF_CHECK_EVAL="$eval_enabled" python - "$logs/env-checks.txt" <<'PY' | tee "$logs/env-checks.txt"
+CLEF_CHECK_EVAL="$eval_enabled" CLEF_CHECK_FLASH="$with_flash_attn" \
+  python - "$logs/env-checks.txt" <<'PY' | tee "$logs/env-checks.txt"
 import os
 import sys
 
@@ -782,7 +808,6 @@ print("triton:", triton.__version__, triton.__file__)
 print("triton backends:", sorted(backends))
 
 import fla_npu  # noqa: F401
-import flash_attn_npu  # noqa: F401
 import torch
 import torch_npu  # noqa: F401
 import vllm
@@ -791,6 +816,12 @@ import vllm_ascend
 print("torch:", torch.__version__, "npu:", torch.npu.is_available(), torch.npu.device_count())
 print("vllm:", vllm.__version__)
 print("vllm_ascend:", os.path.dirname(vllm_ascend.__file__))
+
+if os.environ.get("CLEF_CHECK_FLASH") == "1":
+    import flash_attn_npu
+    print("flash_attn_npu:", getattr(flash_attn_npu, "__version__", "installed"))
+else:
+    print("flash_attn_npu: skipped (default; use --with-flash-attn)")
 
 if os.environ.get("CLEF_CHECK_EVAL") == "1":
     import evalscope
