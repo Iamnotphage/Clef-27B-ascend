@@ -366,3 +366,14 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 - `erqa_score.py --verify-requests`：R2 217/400、R3 218/400，均 **400/400 通过、0 mismatch**；相对 baseline 219/400 偏差 ≤0.5 PP，2PP 内。
 - 发布：866 次 submit、89 次 ring 满丢弃（fail-closed，下一轮补齐）、0 skip、0 混批错误。
 - ERQA C16 的批次为 B≤8（长图文 16,384 token 预算），混合批（populate+hit+bypass）全程无死锁；此前的 `miss` 投票缺失已修复（提交 `0073a79`）。
+
+### 11.8 步骤 3：安装器与推理入口接入（代码完成，服务验收待跑）
+
+- **目标**：把 Tier 2 从探针 `.pth`/sitecustomize 轮询收敛为与其它优化一致的两处哈希门控源码补丁，由官方入口 `Clef-27B/start.sh` 静态安装，服务进程零重启。
+- **`runtime/apply_tiered_cache_patch.py`**（新）：两个目标，均校验 preimage、未知内容直接拒绝；patched 状态用“剥离注入文本必须还原 preimage SHA-256”的往返检测。
+  - `vllm_ascend/worker/v2/model_runner.py`（preimage `e866aeb2…`）：文件尾追加惰性安装块，在**首次** `execute_model` 前调用 `runtime.tiered_prefix_cache.engine_hooks.install()`；不在 import 期执行（hooks 自身要 patch 该模块的类）。`CLEF_PREFIX_STATE_CACHE=0` 跳过安装，`CLEF_TIER2_REPO` 指定含 `runtime/` 的树。
+  - `vllm/entrypoints/generate/structured_decisions/api_router.py`（preimage `bdf11bee…`）：在 `/v1/decide/info` 的 `cache` 字典插入 `prefix_state_cache`，取值按同一环境变量在请求时计算，服务配置对外可见。
+- **`Clef-27B/inference.py`**：新增 `--prefix-state-cache {on,off}`（显式 > `CLEF_PREFIX_STATE_CACHE` > 配置，s1/s2 默认 on），execv 前完成安装/校验并把两个目标路径与 SHA-256 写入 `launch-manifest.json` 的 `tiered_cache`；服务环境写入 `CLEF_PREFIX_STATE_CACHE`、`CLEF_TIER2_REPO` 与 `CLEF_PREFIX_CACHE_RANK_BYTES`（默认 32 GiB/rank）。原 `.pth` 轮询不再使用。
+- **引擎门**：`engine_hooks._env_on()` 优先读 `CLEF_PREFIX_STATE_CACHE`（未设置时保留探针 `CLEF_TIER2_ENGINE`/`/tmp` flag 行为），关闭时 `prepare_execute` 直接返回库存路径。
+- **本地验证**：`py_compile` 通过；新增 5 个安装器单测（往返、锚点缩进、未知源拒绝、重复锚点拒绝、篡改检测）；tiered 全量单测 41/41 OK（10 个 NPU-only 跳过）。
+- **待跑**：场景 A（20×4 同 STATE 多 SCHEMA，`runtime/tiered_scenario_a.py`，本地 mock 烟测 80/80 与 R1==R2==R3 0.0）、场景 D（4 GiB C16 淘汰压力）、官方裸启动零重启 1 预热 + 2 实测（OD S1/S2 C16/C64、ERQA S1/S2 C16）与 2PP。
