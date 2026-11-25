@@ -25,9 +25,16 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-python_bin="${PYTHON_BIN:-python3}"
+python_bin="${PYTHON_BIN:-}"
+if [[ -z "$python_bin" ]]; then
+  if [[ -x "$script_dir/.venv/bin/python" ]]; then
+    python_bin="$script_dir/.venv/bin/python"
+  else
+    python_bin=python3
+  fi
+fi
 if ! command -v "$python_bin" >/dev/null 2>&1; then
-  printf 'Python 解释器不可用：%s\n请加载 scripts/activate_env.sh 或设置 PYTHON_BIN。\n' "$python_bin" >&2
+  printf 'Python 解释器不可用：%s\n请先运行 bash scripts/setup_env.sh（项目内 .venv），或 source scripts/activate_env.sh / 设置 PYTHON_BIN。\n' "$python_bin" >&2
   exit 127
 fi
 export PYTHONUNBUFFERED=1

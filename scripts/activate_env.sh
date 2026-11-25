@@ -6,6 +6,11 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 fi
 
 export CLEF_WORKSPACE="${CLEF_WORKSPACE:-/workspace/yangchen}"
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# A project-local .venv (scripts/setup_env.sh) wins unless CLEF_VENV is set.
+if [[ -z "${CLEF_VENV:-}" && -x "$repo_root/.venv/bin/python" ]]; then
+  CLEF_VENV="$repo_root/.venv"
+fi
 export CLEF_VENV="${CLEF_VENV:-$CLEF_WORKSPACE/venvs/clef-py312}"
 export CLEF_CANN_ENV="${CLEF_CANN_ENV:-/usr/local/Ascend/cann/set_env.sh}"
 export CLEF_ATB_ENV="${CLEF_ATB_ENV:-/usr/local/Ascend/nnal/atb/set_env.sh}"

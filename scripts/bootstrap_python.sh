@@ -11,8 +11,9 @@ fi
 }
 
 workspace="${CLEF_WORKSPACE:-/workspace/yangchen}"
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 prefix="$workspace/python/cpython-3.12.16+20261110"
-venv="${CLEF_VENV:-$workspace/venvs/clef-py312}"
+venv="${CLEF_VENV:-$repo_root/.venv}"
 archive="$1"
 expected='4792f81750282597fb2a3389fe18b945ed2ba6aad5e45ad406d122c58cb33081'
 printf '%s  %s\n' "$expected" "$archive" | sha256sum --check --strict
