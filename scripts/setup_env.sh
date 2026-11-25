@@ -221,8 +221,8 @@ if [[ ! -d "$flash_dir" ]]; then
   flash_tar="$(first_glob "$materials/flash_attn_npu-0.5.0.tar.gz")"
   if [[ -z "$flash_tar" ]]; then
     printf '  从 PyPI 获取 flash_attn_npu 0.5.0 源码包\n'
-    python -m pip download --no-deps --no-binary :all: --dest "$materials" \
-      --index-url "$index" --timeout 60 flash-attn-npu==0.5.0 \
+    python -m pip download --no-deps --no-binary :all: --no-build-isolation \
+      --dest "$materials" --index-url "$index" --timeout 60 flash-attn-npu==0.5.0 \
       || die "无法下载 flash_attn_npu 0.5.0（把源码包放到 $materials）"
     flash_tar="$(first_glob "$materials"/flash*attn*npu-0.5.0.tar.gz)"
     [[ -n "$flash_tar" ]] || die "$materials 下未找到 flash_attn_npu 0.5.0 源码包"
