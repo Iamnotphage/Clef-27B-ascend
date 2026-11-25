@@ -183,10 +183,13 @@ S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 1
 - **质量**：OD ON Cap 74.2477（S1）/74.0625（C16）/74.2322（C64），ERQA C16 **218/400**、C1 216/400，全部 2PP 内、0 失败、0 重试。
 - **入口**：`runtime/apply_conv_qkv_varlen_patch.py`（preimage `ead25cb2…` → postimage `afe6d4e8…`），`s1` 默认 `CLEF_GDN_CONV_QKV_VARLEN=1`、`CLEF_CONV_QKV_VARLEN_TILE=64`；显式 `=0` 回退。
 
-## 2026-11-25 分层缓存 Tier 2：实验完成但默认关闭
+## 2026-11-25 分层缓存 Tier 2：B1 1-Pass Tap + M2 混批 + 正式安装器（默认开启）
 
-完整记录见 [docs/tiered-cache-2026-11-25.md](../docs/tiered-cache-2026-11-25.md)。
+完整记录见 [docs/tiered-cache-stage0-2026-11-25.md](../docs/tiered-cache-stage0-2026-11-25.md) §11。
 
-- **阶段 0–2 已完成**：OD/ERQA 前缀审计（离线 token 2,752/2,752 与服务一致）、A3 pinned H2D 55/D2H 39 GiB/s、生产 GDN 128 对齐续算 18/18 组逐位一致、Tier 1 定容 262144（HBM 61,358/61,009 MiB，余量 ≥4 GiB）、HostStore/LRU/SHM/异步传输与 35 单测、4 GiB 16 线程压测 0 泄漏。
-- **阶段 3 阻塞（自动不采纳）**：原生 Mamba prefix caching 强制 `mamba_cache_mode="align"`，而决策快路径要求 `not enable_prefix_caching` 且 `not enable_chunked_prefill`；两者互斥，打开即关闭 BIC/varlen，无法满足冷首遍 ≤1%。自定义 scheduler/KV/mamba per-request 状态恢复未完成。**Tier 2 默认 off，主线保持 29a1bf8。**
-- **最终 29a1bf8 指标**：OD S1 154.11 ms / 9.244 dec/s（与 512317e 逐位一致）、S2 C16 16.971 / p95 1704.4、C64 18.039 / p95 5779.1；ERQA C1 冷/暖 216/216、p95 289.26/244.66；C16 冷/暖 218/218、7.281/8.627 dec/s；OD Cap 74.2477/74.0625/74.2322，ERQA 0.5400/0.5450，全部 2PP 内、0 失败/重试。
+- **实现**：16 层 Full-Attn 连续 post-RoPE KV + 48 层 GDN `(conv, ssm)` + JointHead `prefix_memory`，键为 128 对齐语义前缀的 SHA-256（token、图像内容 hash、revision、TP）。Populate 全长一遍且与 OFF 逐位；命中走后缀 Pass（单次 FIA TND sparse3 + `x_aug` varlen conv + 批量 `fla`）；B1 与 M2 混批（真实打包顺序、一次 `[B,35]` `cpu_all_reduce_` 投票、同 key 去重）；发布走后台队列 + 捕获时 `ready` 事件 + 8×640 MiB ring；CPU 侧 `aged_keep_longest` 32 GiB/rank 预算。
+- **安装**：`runtime/apply_tiered_cache_patch.py` 两个哈希门控目标（`model_runner.py` `e866aeb2…`→`a772213f…`；`api_router.py` `bdf11bee…`→`1875f0e1…`），`inference.py` 的 `--prefix-state-cache {on,off}` 默认随 s1/s2 开启，`/v1/decide/info` 披露，manifest 记录 postimage SHA 与 32 GiB 预算。
+- **官方裸启动验收**（`bash start.sh --config s1`，零重启，1 预热 + 2 实测）：OD S1 p95 **117.7/117.8 ms**（9.726/9.732 dec/s，两轮 2,352/2,352 逐位 0.0）、S2 C16 **19.826/20.060 dec/s**（p95 1127.1/1120.0）、C64 **21.580/21.613**（p95 3961.7/3963.5）；相对主线 varlen（154.11 ms、16.971、18.039）S1 **−23.7%**、C16 **+18.2%**、C64 **+19.8%**。质量 Cap 74.2394–74.2563、acc 1904–1905、MAE 0.4016–0.4026、0 协议失败、2PP。
+- **ERQA**（独立官方进程，空池）：S1 mean **118.4/119.3 ms**、p95 130.5/129.8、218/400×2；S2 C16 **21.628/21.809 dec/s**、p95 784.9/775.9、216/400×2；存储 389 条/25.03 GB、0 淘汰、0 拒绝；`--verify-requests` 400/400、0 mismatch，相对主线暖 8.627 dec/s **+152.7%**、S1 mean 165.4→119.3 **−27.9%**。
+- **场景**：A（20×4 同 STATE 多 SCHEMA）80/80×3、R2==R3 逐位 0.0；D（4 GiB/rank、C16）0 失败、125 次淘汰、Cap 74.064–74.068，Fail-Closed（miss→bypass）。
+- **限制**：32 GiB/rank 无法同时容纳 OD（≈25.7 GB）与 ERQA（≈25.0 GB）工作集；单进程跨数据集会触发淘汰，ERQA C16 回落到 8.08 dec/s（399 次淘汰）。S1/S2 提交值按数据集分别起官方服务测量（与历次口径一致）。

@@ -72,6 +72,8 @@ erqa_run() { # round tag [concurrency]
   echo "erqa-$1 done"
 }
 
+SUITES=${SUITES:-both}
+if [[ "$SUITES" == both || "$SUITES" == od ]]; then
 echo "== warmup OD"
 od_run warmup 1
 echo "== measured OD"
@@ -81,11 +83,13 @@ od_run c16-r1 16
 od_run c16-r2 16
 od_run c64-r1 64
 od_run c64-r2 64
+fi
 # ERQA is warmed right before its own rounds: the 32 GiB store cannot hold
 # both datasets (OD ~28 GB + ERQA ~25 GB), and aged_keep_longest keeps the
 # longer entries, so a single shared warmup would turn one dataset's measured
 # rounds into pure bypass.  Dataset-major order keeps each suite warm for its
 # own two measured passes.
+if [[ "$SUITES" == both || "$SUITES" == erqa ]]; then
 echo "== warmup ERQA"
 erqa_run warmup
 echo "== measured ERQA"
@@ -93,6 +97,7 @@ erqa_run s1-r1
 erqa_run s1-r2
 erqa_run c16-r1 16
 erqa_run c16-r2 16
+fi
 
 python - "$OUT/service/service.log" "$OUT/counters.json" <<'PY'
 import json, re, sys
