@@ -17,6 +17,9 @@ PORT=${PORT:-18143}
 BASE=http://127.0.0.1:$PORT
 
 cd "$REPO"
+if [[ -z "${CLEF_VENV:-}" && -x "$REPO/.venv/bin/python" ]]; then
+  export CLEF_VENV="$REPO/.venv"
+fi
 export CLEF_VENV=${CLEF_VENV:-/workspace/yangchen/venvs/clef-mix-ws-py312}
 source scripts/activate_env.sh >/dev/null 2>&1 || true
 mkdir -p "$OUT"
