@@ -9,6 +9,8 @@
 #   CLEF_MATERIALS       已校验材料目录   [<repo>/.build/materials，缺失时自动下载]
 #   PIP_INDEX_URL        PyPI 镜像        [华为云镜像]
 #   CLEF_VENV            venv 路径        [<repo>/.venv]
+#   CLEF_PYTHON_URL      CPython 下载源   [NJU 镜像 → GitHub]
+#   CLEF_GIT_MIRROR      GitHub 代理前缀  [https://gh-proxy.com]
 #
 # 完成后：source scripts/activate_env.sh && bash start.sh
 set -euo pipefail
@@ -20,7 +22,7 @@ for arg in "$@"; do
   case "$arg" in
     --pip-only) mode=pip ;;
     --force) force=1 ;;
-    -h|--help) sed -n '2,13p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,15p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) printf '未知参数：%s\n' "$arg" >&2; exit 2 ;;
   esac
 done
@@ -41,6 +43,8 @@ python_urls=(
   "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-unknown-linux-gnu-install_only.tar.gz"
 )
 [[ -n "${CLEF_PYTHON_URL:-}" ]] && python_urls=("$CLEF_PYTHON_URL" "${python_urls[@]}")
+# vLLM / vLLM-Ascend clones: domestic GitHub proxies first, direct last.
+git_mirrors=("${CLEF_GIT_MIRROR:-https://gh-proxy.com}" "https://ghproxy.net" "")
 build="$repo/.build"
 src="$build/src"
 logs="$build/logs"
@@ -109,14 +113,40 @@ python -m pip install --index-url "$index" --constraint "$constraints" --timeout
   -r "$repo/scripts/requirements/build-tools.txt"
 
 wheels="$materials/wheels"
+torch_filenames=(
+  "torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl#sha256=179451716487f8cb09b56459667fa1f5c4c0946c1e75fbeae77cfc40a5768d87"
+  "torchvision-0.25.0%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl#sha256=727334e9a721cfc1ac296ce0bf9e69d9486821bfa5b1e75a8feb6f78041db481"
+  "torchaudio-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl#sha256=2ef1f8d0f0feba5a9364620925c864890b90abc98a65f35895256dd6aa1710be"
+)
+torch_mirrors=(
+  "https://mirror.nju.edu.cn/pytorch/whl/cpu"
+  "https://mirrors.aliyun.com/pytorch-wheels/cpu"
+)
 if [[ -f "$wheels/torch-2.10.0+cpu-cp312-cp312-manylinux_2_28_aarch64.whl" ]]; then
-  torch_inputs=("$wheels"/torch-*.whl "$wheels"/torchvision-*.whl
-                "$wheels"/torchaudio-*.whl "$wheels"/torch_npu-*.whl)
+  python -m pip install --index-url "$index" --constraint "$constraints" --timeout 60 \
+    "$wheels"/torch-*.whl "$wheels"/torchvision-*.whl \
+    "$wheels"/torchaudio-*.whl "$wheels"/torch_npu-*.whl \
+    -r "$repo/scripts/requirements/cann-tools.txt"
 else
-  torch_inputs=(-r "$repo/scripts/requirements/base-torch.txt")
+  torch_ok=0
+  for mirror in "${torch_mirrors[@]}"; do
+    printf '  尝试 PyTorch 镜像 %s\n' "$mirror"
+    if python -m pip install --index-url "$index" --constraint "$constraints" \
+         --timeout 120 "${torch_filenames[@]/#/$mirror/}" \
+         "torch-npu==2.10.0.post7" \
+         -r "$repo/scripts/requirements/cann-tools.txt"; then
+      torch_ok=1
+      break
+    fi
+    printf '  镜像失败，换下一个\n'
+  done
+  if [[ "$torch_ok" -eq 0 ]]; then
+    printf '  镜像不可用，回退官方 wheel URL\n'
+    python -m pip install --index-url "$index" --constraint "$constraints" --timeout 120 \
+      -r "$repo/scripts/requirements/base-torch.txt" \
+      -r "$repo/scripts/requirements/cann-tools.txt"
+  fi
 fi
-python -m pip install --index-url "$index" --constraint "$constraints" --timeout 60 \
-  "${torch_inputs[@]}" -r "$repo/scripts/requirements/cann-tools.txt"
 
 triton_wheel="$(first_glob "$materials/triton_ascend-*.whl")"
 if [[ -n "$triton_wheel" ]]; then
@@ -171,12 +201,24 @@ ensure_source() { # dir tarball url commit recursive(0|1)
     return
   fi
   command -v git >/dev/null || die "缺少 $tarball 且未安装 git"
-  rm -rf "$dir"
-  if [[ "$recursive" == 1 ]]; then
-    git clone --recursive "$url" "$dir"
-  else
-    git clone "$url" "$dir"
-  fi
+  local mirror prefix cfg cloned=0
+  for mirror in "${git_mirrors[@]}"; do
+    prefix=""
+    [[ -n "$mirror" ]] && prefix="${mirror%/}/"
+    cfg=()
+    if [[ -n "$prefix" ]]; then
+      cfg=(-c "url.${prefix}https://github.com/.insteadOf=https://github.com/")
+    fi
+    printf '  git clone %s%s\n' "$prefix" "$url"
+    rm -rf "$dir"
+    if [[ "$recursive" == 1 ]]; then
+      git "${cfg[@]}" clone --recursive "${prefix}${url}" "$dir" && cloned=1 && break
+    else
+      git "${cfg[@]}" clone "${prefix}${url}" "$dir" && cloned=1 && break
+    fi
+    printf '  clone 失败，换下一个源\n'
+  done
+  [[ "$cloned" -eq 1 ]] || die "无法克隆 $url（可把源码包放到 $materials）"
   git -C "$dir" checkout "$commit"
   if [[ "$recursive" == 1 ]]; then
     git -C "$dir" submodule update --init --recursive
