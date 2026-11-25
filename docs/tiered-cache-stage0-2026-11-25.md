@@ -397,3 +397,14 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 - 正确性：**R2 vs R3 80/80 逐位 0.0**（纯命中确定性）；R1 vs R2/R3 27/80 有差、max 0.0177，全部集中在每 state 的 q0（populate）与少量 q1（发布未完成时的竞态 populate）——populate 全形状 vs 命中后缀的 GEMM `M` 差异，与 M1 记录的 5e-3 级差异同源；q2/q3 全部逐位相等。
 - 计数器（末次 `decision=` 快照）：entries 20、1.40 GB、publications 20、populates 27、hits 213、rejections 6、evictions 0；同一 STATE 的 3 个后续 schema 全部命中。
 - 首版脚本教训：`TEXT_MIN_PREFIX=512`，短 state（T≈286）全部 `bypass split`、零命中；已改为按 state 字符长度取最长样本。
+
+**场景 D：4 GiB/rank 淘汰压力（`CLEF_PREFIX_CACHE_RANK_BYTES=4294967296`，OD C16）**
+
+| 轮次 | dec/s | p50 (ms) | p95 (ms) | 失败 | Capability | acc |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| R1 | 16.233 | 852.3 | 1790.6 | 0 | 74.0682 | 1904 |
+| R2 | 15.549 | 840.3 | 2145.0 | 0 | 74.0641 | 1903 |
+
+- 计数器：entries 56、**4,028,154,880 B（≤4 GiB）**、evictions **125**、rejections 2、hits 48、misses 574、populates 194、publications 181。
+- 紧预算下以 miss→bypass 为主（Fail-Closed），两轮 0 失败、质量 2PP；性能回到主线量级（不指望 4 GiB 收缩带来收益，只验证淘汰路径安全）。
+- 驱动 `runtime/tiered_scenario_d.sh`：官方 launcher 起服务（4 GiB + TRACE）→ 断言 `/v1/decide/info` 披露 → 两轮全量 C16 → 计数器断言 evictions>0 → 作者 `score.py` 评分。
