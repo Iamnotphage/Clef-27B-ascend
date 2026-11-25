@@ -58,11 +58,11 @@ PY
 }
 
 erqa_run() { # round tag [concurrency]
-  if [[ -n "${3:-}" ]]; then
+  if [[ -n "${2:-}" ]]; then
     PYTHONPATH="$REPO/scripts/official_eval" python runtime/erqa_s2_concurrent.py \
       --data-dir "$ERQA" --output-dir "$OUT/erqa-$1" \
       --api-url "$BASE/v1" --wire-format state-list --endpoint /systemone \
-      --concurrency "$3" > "$OUT/erqa-$1.log" 2>&1
+      --concurrency "$2" > "$OUT/erqa-$1.log" 2>&1
   else
     python scripts/official_eval/erqa_baseline.py \
       --data-dir "$ERQA" --output-dir "$OUT/erqa-$1" \
