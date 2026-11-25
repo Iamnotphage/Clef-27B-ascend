@@ -48,6 +48,30 @@ def _startup_color_enabled():
     return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
 
 
+def _start_startup_progress(log_path, host, port):
+    """Spawn the terminal-only model-load progress watchdog.
+
+    The helper inherits the current stdout (a TTY), tails the vLLM shard
+    progress in service.log, and exits when /health is ready.  It is skipped
+    for non-interactive runs so redirected logs stay clean.
+    """
+    if not sys.stdout.isatty():
+        return
+    setting = os.environ.get("CLEF_STARTUP_PROGRESS", "1").strip().lower()
+    if setting in ("0", "false", "no", "off"):
+        return
+    script = RUNTIME_DIR / "startup_progress.py"
+    if not script.is_file():
+        return
+    try:
+        subprocess.Popen(
+            [sys.executable, str(script), "--log", str(log_path),
+             "--host", host, "--port", str(port), "--pid", str(os.getpid())],
+            stdout=None, stderr=subprocess.DEVNULL, close_fds=True)
+    except OSError:
+        pass
+
+
 def startup_log(message, level="INFO"):
     """Write one ISO-8601 UTC timestamped startup line to the terminal.
 
@@ -1897,7 +1921,7 @@ def main():
     )
     startup_log(
         f"Loading model and starting vLLM (pid={os.getpid()}); "
-        "subsequent logs go to the service log."
+        "progress stays on this terminal, full logs go to the service log."
     )
 
     os.environ.update(launch["service_environment"])
@@ -1905,6 +1929,7 @@ def main():
     os.environ.setdefault("TASK_QUEUE_ENABLE", "2")
 
     log_fd = os.open(launch["log"], os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    _start_startup_progress(launch["log"], health_host, effective["port"])
     os.dup2(log_fd, 1)
     os.dup2(log_fd, 2)
     print(json.dumps({"launch_manifest": str(manifest_path), **launch},
