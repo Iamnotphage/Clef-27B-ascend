@@ -22,10 +22,10 @@
 
 | 数据集 | S1 P95（ms） | S2 吞吐（decisions/s） | S2 客户端并发 | 计量口径 |
 | --- | ---: | ---: | ---: | --- |
-| OpenDecisions | 154.548 | 17.193 | 64 | 单一常驻 TP2，2026-11-24 systemone A2，全量 2,352 题；S1 C1，S2 C64 |
-| ERQA | 288.400 | 8.240 | 16 | 同一常驻进程，ERQA `state` 列表 A2；S1 400 题冷首遍，S2 C16 400 题 |
+| OpenDecisions | 117.8 | 21.613 | 64 | 单一常驻 TP2 + Tier 2 前缀状态缓存（32 GiB/rank），全量 2,352 题；S1 C1 暖轮两轮 117.8/117.7 且逐位一致，S2 C64（C16 为 20.060） |
+| ERQA | 129.8 | 21.809 | 16 | 官方入口单独起服，ERQA `state` 列表 A2；S1 400 题暖轮（mean 118.4/119.3 ms），S2 C16（`--verify-requests` 400/400、0 mismatch） |
 
-[`results.csv`](results.csv) 的批量与 batched tokens 两列描述选定的 S2 点。S1 和 S2 各自的预算、并发、状态和原数由各自测量 ID 关联。ERQA 自然第二遍和可选 JPEG 暖态成绩随图文明细提供。[测量索引](logs/dataset-profiles-20261123/manifest.json) · [独立入口与图文复现](../runtime/jpeg_decode_cache/README.md) · [历史性能表](logs/dataset-profiles-20261123/results-historical.csv)
+[`results.csv`](results.csv) 的批量与 batched tokens 两列描述选定的 S2 点。S1 和 S2 各自的预算、并发、状态和原数由各自测量 ID 关联。`prefix_cache` 列指 vLLM 原生 `--enable-prefix-caching`（全部为 `false`）；Tier 2 由 `workload_basis` 的 `tier2-prefix-state-32GiB` 标记。ERQA 自然第二遍和可选 JPEG 暖态成绩随图文明细提供。[测量索引](logs/dataset-profiles-20261123/manifest.json) · [独立入口与图文复现](../runtime/jpeg_decode_cache/README.md) · [历史性能表](logs/dataset-profiles-20261123/results-historical.csv)
 
 ## 历史提交指标（2026-11-17 至 2026-11-18）
 
@@ -39,9 +39,10 @@
 | 我们适配后 baseline（2026-11-13） | 82.7941 | 66.0568 | 74.4255 | 0.8104（1906/2352） | 0.401389（588） |
 | 上一版（BIC + GDN v2 + 单字段 head + aclnn cache + MLP NZ，2026-11-17） | 82.7092 | 65.9122 | 74.3107 | 0.8087（1902/2352） | 0.401545 |
 | **当前优化版本（conv+QKV 融合 + GDN chunk128，2026-11-17）** | **82.4112** | **66.0840** | **74.2476** | **0.8095**（1904/2352） | **0.402615** |
-| **2026-11-24 单一常驻 TP2 + systemone A2（最终）** | **82.4113** | **66.0841** | **74.2477** | **0.8095**（1904/2352） | **0.402612** |
-| 当前 − 官方 | +0.1112 | +0.2840 | +0.1476 | — | — |
-| 当前 − 适配 baseline | −0.3829 | +0.0272 | −0.1779 | −2 题 | +0.001226 |
+| **2026-11-24 单一常驻 TP2 + systemone A2** | **82.4113** | **66.0841** | **74.2477** | **0.8095**（1904/2352） | **0.402612** |
+| **2026-11-25 Tier 2 分层缓存（最终）** | **82.4254** | **66.0872** | **74.2563** | **0.8095**（1904/2352） | **0.402579** |
+| 当前 − 官方 | +0.1254 | +0.2872 | +0.1563 | — | — |
+| 当前 − 适配 baseline | −0.3687 | +0.0304 | −0.1692 | −2 题 | +0.001190 |
 
 - conv+QKV 融合与 chunk128 都改变最后几位浮点，当前与适配 baseline **不再逐位一致**；
 - 相对官方公开 as-served 的三项最大偏差 **0.284 pp**，按 2PP 口径**通过**；
@@ -60,8 +61,10 @@
 | 上一版（BIC + GDN v2 + 单字段 head + aclnn cache + MLP NZ） | 217/400 = 0.5425 | 168/287 = 0.5854 | 49/113 = 0.4336 |
 | **当前优化版本（conv+QKV 融合 + GDN chunk128，2026-11-17）** | **216/400 = 0.5400** | 167/287 = 0.5819 | 49/113 = 0.4336 |
 | **2026-11-24 单一常驻 TP2 + systemone A2（最终，C1 冷首遍）** | **216/400 = 0.5400** | — | — |
-| **2026-11-24 同一进程 C16（最终）** | **217/400 = 0.5425** | — | — |
-| 当前 − 适配 baseline | **−3 题（−0.75 pp）** | −3 题（−1.04 pp） | 0 |
+| 2026-11-24 同一进程 C16 | **217/400 = 0.5425** | — | — |
+| **2026-11-25 Tier 2（最终，C1 暖轮）** | **218/400 = 0.5450** | — | — |
+| **2026-11-25 Tier 2 同一进程 C16（最终）** | **216/400 = 0.5400** | — | — |
+| 当前 − 适配 baseline | **−1 题（−0.25 pp）** | −3 题（−1.04 pp） | 0 |
 | 当前 − 官方 | **N/A** | — | — |
 
 - 最终 A2 C1 相对适配 baseline 少 3 题（−0.75 pp），C16 少 2 题（−0.50 pp），均在 2PP 内；
@@ -74,7 +77,8 @@
 | 适配后 baseline | TP2/BF16/eager/4096/seqs1 | 217.036 ms | 180.069 ms | 205.034 ms | 5.715 | C16 | 325.84 ms |
 | 上一版（BIC + GDN v2 + SF + aclnn cache + MLP NZ） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | 166.002 ms | 121.705 ms | 113.656 ms | 16.376 @ C16 | C16 | 313.506 ms |
 | **当前优化（conv+QKV 融合 + GDN chunk128，2026-11-18 五轮复核）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs16 | **155.86 ms** | **112.98 ms** | **102.87 ms** | **17.462 @ C64** | C64 | **309.926 ms** |
-| **2026-11-24 单一常驻 TP2 + systemone A2（最终）** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 | **154.55 ms** | **109.49 ms** | **99.04 ms** | **17.193 @ C64** | C64 | **288.400 ms** |
+| **2026-11-24 单一常驻 TP2 + systemone A2** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 | **154.55 ms** | **109.49 ms** | **99.04 ms** | **17.193 @ C64** | C64 | **288.400 ms** |
+| **2026-11-25 Tier 2 分层缓存（最终）** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 + 32 GiB 前缀状态 | **117.8 ms** | **102.8 ms** | **99.7 ms** | **21.613 @ C64**（C16 20.060） | C64 | **129.8 ms** |
 | 变化 | — | **−61.18 ms（−28.19%）** | −67.09 ms（−37.26%） | −102.16 ms（−49.83%） | **约 3.06×** | — | **−15.91 ms（−4.88%）** |
 
 - S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-18 五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50，mean 112.98、p50 102.87）；历史链路为 2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms、**MLP BF16 NZ** 166.002 ms、**conv+QKV 融合** 165.091→160.419、**GDN chunk128** 160.419→157.745 ms / 8.652 dec/s；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
@@ -141,7 +145,7 @@ python scripts/verify_systemone.py \
 
 2026-11-17 晚完成 **conv+QKV 融合算子**与 **GDN chunk 128 默认启用**：`ClefGdnConvQkv` 一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，并直接读 packed QKVZ `[T,8192]`（省去逐层 5120 列连续化拷贝），vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，由 `inference.py` 自动注入；chunk 128 在 `inference.py` 中随决策 prefill 自动安装。同窗口全量 S1 从 165.091 降到 **157.745 ms**（mean 122.762→115.418、吞吐 8.137→8.652 dec/s），S2 从 B8 C16 16.376 升到 **B16 C64 17.446**（B8 C16 为 16.727、p95 1768.9），OpenDecisions Capability 74.2476、ERQA 216/400，三项均在 2PP 内；`CLEF_GDN_CONV_QKV=0` / `CLEF_GDN_CHUNK128=0` 可分别复现对照臂。[conv+QKV 报告](../docs/gdn-conv-qkv-2026-11-17.md) · [chunk128 报告](../docs/gdn-chunk128-2026-11-17.md)
 
-`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5400（216/400），其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
+`metrics.csv` 采用比赛七列质量汇总，保存 OpenDecisions 与 ERQA 两行实测值。OpenDecisions 三项质量分按 0～100 分记录，accuracy 按 0～1 记录，Score MAE 保留等级单位。ERQA 行 accuracy 为 0.5450（218/400，S1 暖轮；同一进程 C16 为 216/400），其余四项为 `NA`。逐题证据见 [OpenDecisions 日志](logs/opendecisions-baseline-20261113/) 与 [ERQA 日志](logs/erqa-baseline-20261114/)。
 
 历史性能表保留 2026-11-18 五轮 S1 P95 中位 **155.86 ms**、B16 C64 S2 **17.462 decisions/s**，以及第四轮未过工程质量门的 seqs4 候选 **13.764 decisions/s**。ERQA 的 baseline C1 P95 323.476 ms、BIC P95 309.84 ms、融合 v2 P95 311.349 ms 分别记录在独立报告中。[历史性能表](logs/dataset-profiles-20261123/results-historical.csv) · [优化与兼容记录](optimization.md) · [GDN 边界融合](../docs/gdn-boundary-fusion-2026-11-16.md)
 

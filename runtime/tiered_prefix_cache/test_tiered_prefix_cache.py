@@ -10,6 +10,7 @@ plain bytes so every invariant is exercised on a laptop or the A3 CPU side.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 from pathlib import Path
 import random
@@ -446,6 +447,74 @@ class AgedEvictionTests(unittest.TestCase):
         self.assertEqual(store.snapshot()["stale_entries"], 1)
         self.assertEqual(store.observe(key), "hit")
         self.assertEqual(store.snapshot()["stale_entries"], 0)
+        store.close()
+
+
+class CrossDatasetHandoverTests(unittest.TestCase):
+    """One process, two datasets: the departed pool must age out.
+
+    The real geometry: one OpenDecisions round observes 418 eligible
+    prefixes, one ERQA round observes 400, and the two working sets are
+    ~25 GB each inside a 32 GiB budget.  A window larger than one round
+    keeps the departed dataset active for every measured pass, so the
+    newcomer's short prefixes are rejected forever.
+    """
+
+    @staticmethod
+    def _key(tag, index):
+        return hashlib.sha256(f"{tag}:{index}".encode()).digest()
+
+    def _store(self, window):
+        return HostStore(
+            budget_bytes=4 << 20, eviction_watermark=0.95,
+            eviction_policy="aged_keep_longest", active_window=window,
+            use_shm=False)
+
+    def _run_round(self, store, keys, length, nbytes):
+        decisions = []
+        for key in keys:
+            decision = store.observe(key, length=length, est_bytes=nbytes)
+            decisions.append(decision)
+            if decision == "populate":
+                self.assertTrue(store.publish(
+                    key, {0: {"kv": b"x" * nbytes}}, length=length))
+        return decisions
+
+    def _handover(self, window, rounds):
+        store = self._store(window)
+        od = [self._key("od", index) for index in range(418)]
+        self.assertEqual(
+            set(self._run_round(store, od, 2000, 6 << 10)), {"populate"})
+        self.assertEqual(
+            set(self._run_round(store, od, 2000, 6 << 10)), {"hit"})
+        self.assertEqual(store.snapshot()["counters"]["evictions"], 0)
+        # ERQA: 300 long prefixes and 100 short ones, the mix that the
+        # length rule alone cannot settle while the old pool stays active.
+        erqa = [self._key("erqa", index) for index in range(400)]
+        lengths = [(3000, 8 << 10) if index % 4 != 3 else (500, 5 << 10)
+                   for index in range(400)]
+        per_round = []
+        for _ in range(rounds):
+            decisions = []
+            for key, (length, nbytes) in zip(erqa, lengths):
+                decision = store.observe(key, length=length, est_bytes=nbytes)
+                decisions.append(decision)
+                if decision == "populate":
+                    self.assertTrue(store.publish(
+                        key, {0: {"kv": b"x" * nbytes}}, length=length))
+            per_round.append(decisions)
+        return store, od, erqa, per_round
+
+    def test_short_newcomers_are_admitted_once_the_old_pool_ages(self):
+        store, od, erqa, per_round = self._handover(window=500, rounds=3)
+        self.assertTrue(all(store.contains(key) for key in erqa))
+        self.assertEqual(per_round[2].count("hit"), 400)
+        self.assertEqual(per_round[2].count("miss"), 0)
+        store.close()
+
+    def test_a_window_larger_than_one_round_keeps_the_old_pool_alive(self):
+        store, od, erqa, per_round = self._handover(window=3000, rounds=3)
+        self.assertGreater(per_round[2].count("miss"), 0)
         store.close()
 
 

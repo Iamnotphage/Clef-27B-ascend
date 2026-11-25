@@ -63,7 +63,12 @@ DELIMITER_TEXT = "\n\nSCHEMA FIELDS:\n"
 ALIGN = 128
 TEXT_MIN_PREFIX = 512
 MM_MIN_PREFIX = 128
-ACTIVE_WINDOW = 3000
+#: One full dataset round observes at most 418 (OD) / 400 (ERQA) eligible
+#: prefixes, so 500 sightings keep a live dataset active while a previous
+#: dataset's entries age out within the next dataset's first measured pass.
+#: Larger windows (the former 3000) let a departed 25 GB working set linger
+#: for many rounds and force the newcomer into eviction churn.
+ACTIVE_WINDOW = 500
 #: TP2 state package per rank: 16 full-attention layers x K/V x 2 heads x
 #: 256 elements x 2 bytes = 32 KiB/token, plus the rank-0 2 KiB/token memory
 #: projection.  Both ranks use the same estimate so the admission decision
@@ -153,8 +158,10 @@ def _store() -> HostStore:
         _STATE["store"] = HostStore(
             budget_bytes=budget, admission="always", use_shm=False,
             eviction_policy="aged_keep_longest",
-            active_window=int(os.environ.get(
-                "CLEF_PREFIX_ACTIVE_WINDOW", str(ACTIVE_WINDOW))),
+            active_window=int(
+                os.environ.get("CLEF_TIER2_ACTIVE_WINDOW")
+                or os.environ.get("CLEF_PREFIX_ACTIVE_WINDOW",
+                                  str(ACTIVE_WINDOW))),
             eviction_watermark=0.95)
     return _STATE["store"]
 
@@ -2271,4 +2278,5 @@ def install() -> None:
         schema_mod.JointSchemaHead.forward)
     print(
         f"[tier2-engine] hooks installed policy=aged_keep_longest "
-        f"window={ACTIVE_WINDOW} rank0_only={_joint_rank0_only()}", flush=True)
+        f"window={_store().active_window} rank0_only={_joint_rank0_only()}",
+        flush=True)

@@ -34,7 +34,7 @@ DEFAULT_SAFETY_GIB = 16
 GHOST_CAPACITY = 65_536
 ADMISSIONS = ("second_hit", "always")
 EVICTION_POLICIES = ("keep_longest", "aged_keep_longest", "lru")
-DEFAULT_ACTIVE_WINDOW = 3000
+DEFAULT_ACTIVE_WINDOW = 500
 
 
 def buffer_nbytes(value: Any) -> int:

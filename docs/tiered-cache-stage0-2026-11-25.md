@@ -445,3 +445,9 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 **单进程混布限制（重要）**：32 GiB/rank 装不下 OD（≈25.7 GB）+ ERQA（≈25.0 GB）两个工作集。同一进程先跑完 OD 再跑 ERQA 时，ERQA 预热与命中过程中发生 **399 次淘汰**、batch admit 大量 `bypass`，ERQA C16 实测只有 8.08 dec/s（`tap-bare3`）。因此：**提交口径的 S1/S2 按数据集分别用官方入口起服务测量**（与主线历次口径一致）；同一进程的跨数据集复用受存储预算限制，不作为性能承诺。
 
 **步骤 3 结论**：安装器/披露/`--prefix-state-cache` 默认 on 可提交；OD S1 p95 **117.7 ms**（主线 varlen 154.1，−23.7%）、OD S2 C16 **20.06 dec/s**（主线 16.97，+18.2%）、C64 **21.61**（主线 18.04，+19.8%）；ERQA S1 mean **118–119 ms**（主线暖 165.4，−28.2%）、ERQA S2 C16 **21.8 dec/s**（主线暖 8.63，+152.7%）。全部质量门 2PP。
+
+### 11.10 老化窗口从 3000 调到 500（2026-11-25 复核）
+
+- **问题**：`store.observe()` 只对切分成功的 eligible 请求调用，一轮 OD 只有 418 次、ERQA 只有 400 次。旧 `ACTIVE_WINDOW=3000` 大于两轮观测数，OD（25.77 GB）跑完后在 ERQA 的 5 轮（2,000 次观测）内**永远不会变 stale**，32 GiB 池无法为 ERQA 腾挪，短前缀被拒、长前缀互踩，产生 399 次淘汰与 8.08 dec/s。
+- **修复**：`engine_hooks.ACTIVE_WINDOW = 500`（`host_store.DEFAULT_ACTIVE_WINDOW` 同步），并支持 `CLEF_TIER2_ACTIVE_WINDOW`（兼容原 `CLEF_PREFIX_ACTIVE_WINDOW`）覆盖。500 > 单轮最大 418，单数据集任意多轮仍 0 老化、0 淘汰；跨数据集时旧池在新数据集第 1–2 轮内全部 stale，被优先换出。
+- **单测**：新增 `CrossDatasetHandoverTests`（`test_tiered_prefix_cache.py`）：418 条 OD（6 KiB）→ 400 条混合长短 ERQA（8/5 KiB）三轮；window=500 时第 3 轮 400/400 命中、0 miss；window=3000 时短前缀持续 miss。离线 43/43 通过（10 个 NPU-only 跳过）。
