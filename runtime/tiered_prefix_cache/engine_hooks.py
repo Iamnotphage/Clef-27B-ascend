@@ -644,7 +644,8 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
         return None
     rows = []
     for request in requests:
-        mode = {"bypass": 0, "populate": 1, "hit": 2}[request.decision]
+        mode = {"bypass": 0, "miss": 0, "populate": 1,
+                "hit": 2}[request.decision]
         load_ok = request.decision != "hit" or request.lease is not None
         rows.append((request.key, load_ok, mode))
     votes = _vote_batch(rows)
@@ -1424,7 +1425,7 @@ def _batch_pooler(self, hidden_states, pooling_metadata,
             def tap(hidden_norm, _projection=projection,
                     _captured=captured, _limit=request.L):
                 memory = _projection(hidden_norm)
-                _captured["memory"] = memory[:_limit]
+                _captured["memory"] = memory[:_limit].clone()
                 return memory
 
             object.__setattr__(head, "memory_projection", tap)
@@ -2116,7 +2117,7 @@ def _pooler_forward(original):
 
             def tap(hidden):
                 memory = projection(hidden)
-                captured["memory"] = memory[: ctx.L]
+                captured["memory"] = memory[: ctx.L].clone()
                 return memory
 
             object.__setattr__(head, "memory_projection", tap)
