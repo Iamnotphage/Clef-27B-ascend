@@ -98,23 +98,6 @@ CONFIGS = {
             "preprocess_fusion": True,
         },
     },
-    "s2": {
-        "tensor_parallel_size": 2,
-        "max_model_len": 4096,
-        "max_num_seqs": 4,
-        "max_num_batched_tokens": 4096,
-        "limit_mm_per_prompt": '{"image":1,"video":1}',
-        "schema_token_cache": "on",
-        "prefix_state_cache": True,
-        "joint_single_field": True,
-        "mm_processor_kwargs": MM_PROCESSOR_KWARGS,
-        "gdn_data_path": {
-            "bsnd": True,
-            "skip_initial_state": True,
-            "skip_conv_state": True,
-            "preprocess_fusion": False,
-        },
-    },
 }
 
 DATA_PATH_ENV = {
@@ -1275,7 +1258,7 @@ def resolve_schema_cache(config, explicit):
     version = schema_cache_version(strategies) if strategies else 0
     if enabled and version != 2:
         raise ValueError(
-            "S2 配置要求 schema cache v2，但固定源码中的版本为 "
+            "schema cache v2 未安装：固定源码中的版本为 "
             f"{version}（{strategies}）。先运行 src/runtime/apply_schema_cache_patch.py --apply。"
         )
     return enabled, version, strategies
@@ -1494,7 +1477,7 @@ def build_launch(args):
         "explicit" if args.schema_token_cache is not None else f"config:{config}")
 
     # Tier 2 prefix-state cache: explicit flag, then CLEF_PREFIX_STATE_CACHE,
-    # then the config default (s1/s2 on).
+    # then the config default (s1 on).
     prefix_state_explicit = getattr(args, "prefix_state_cache", None)
     prefix_state_env = os.environ.get("CLEF_PREFIX_STATE_CACHE")
     if prefix_state_explicit is not None:
@@ -1782,7 +1765,7 @@ def main():
                         help="默认监听 127.0.0.1:18143（比赛接口约定）。")
     parser.add_argument("--config", choices=sorted(CONFIGS), default=DEFAULT_CONFIG,
                         help="s1（默认，单服务常驻）：TP2/16384/seqs16/image16/缓存关；"
-                             "s2：TP2/4096/seqs4/缓存 v2 开；custom：TP1/1024 保守默认。")
+                             "custom：TP1/1024 保守默认。")
     parser.add_argument("--tensor-parallel-size", type=int, default=None)
     parser.add_argument("--max-model-len", type=int, default=None)
     parser.add_argument("--max-num-seqs", "--seqs", dest="max_num_seqs", type=int, default=None)
@@ -1794,7 +1777,7 @@ def main():
     parser.add_argument("--limit-mm-per-prompt", default=None,
                         help='每请求多模态上限 JSON，如 \'{"image":1,"video":0}\'。')
     parser.add_argument("--mm-processor-kwargs", default=None,
-                        help="多模态处理器参数 JSON，可覆盖 s1/s2 默认值。")
+                        help="多模态处理器参数 JSON，可覆盖 s1 默认值。")
     parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
                         help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
     parser.add_argument("--prefix-state-cache", choices=("on", "off"), default=None,

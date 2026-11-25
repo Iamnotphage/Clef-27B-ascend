@@ -188,10 +188,9 @@ class LaunchTests(unittest.TestCase):
         self.assertEqual(record["source"], "env")
         self.assertNotIn("CLEF_GDN_BSND", launch["service_environment"])
 
-    def test_s1_and_s2_defaults_emit_one_mm_option(self):
-        for config in ("s1", "s2"):
-            launch = self.launch("--config", config)
-            self.assert_mm(launch, launcher.MM_PROCESSOR_KWARGS, f"config:{config}")
+    def test_s1_defaults_emit_one_mm_option(self):
+        launch = self.launch("--config", "s1")
+        self.assert_mm(launch, launcher.MM_PROCESSOR_KWARGS, "config:s1")
 
     def test_encoder_cache_default_is_tier1_and_explicit_off_disables(self):
         baseline = self.launch("--config", "s1")

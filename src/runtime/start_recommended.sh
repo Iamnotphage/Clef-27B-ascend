@@ -2,12 +2,12 @@
 # Recommended Clef-27B launcher for the A3 single-physical-card boundary.
 #
 # All argument construction lives in inference.py. This wrapper only
-# selects the S1 (quality/latency) default; pass --config s2 for the throughput
-# candidate, which requires schema-cache v2 and enables it explicitly.
+# selects the S1 (quality/latency) default; the S2 throughput scenario is
+# driven by concurrency against the same service, not by a separate preset.
 #
 # Usage:
 #   bash start_recommended.sh --model-dir /path/to/Clef-27B --output-dir /path/to/out \
-#     [--config s1|s2] [--port 8000] [--dry-run] [-- <extra vLLM args>]
+#     [--config s1|custom] [--port 8000] [--dry-run] [-- <extra vLLM args>]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"

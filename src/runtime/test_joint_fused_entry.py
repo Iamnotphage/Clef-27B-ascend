@@ -223,11 +223,14 @@ class JointFusedEntryTest(unittest.TestCase):
         self.assertEqual(launch["service_environment"]["CLEF_JOINT_SINGLE_FIELD"], "1")
         self.assertFalse(self.output.exists())
 
-    def test_f810_config_dry_run_pops_candidate_env(self):
+    def test_non_fused_config_dry_run_pops_candidate_env(self):
         os.environ[launcher.JOINT_FLAG_ENV] = "1"
         os.environ[launcher.JOINT_ALLOW_ENV] = launcher.JOINT_FUSED_SHA
-        with mock.patch.dict(os.environ, {"CLEF_GDN_DECISION_PREFILL": "0"}):
-            launch = self.dry_run("--config", "s2")
+        # The single-field arm has no preset any more; enable it on the
+        # conservative config to exercise the non-fused branch.
+        with mock.patch.dict(os.environ, {"CLEF_GDN_DECISION_PREFILL": "0"}), \
+                mock.patch.dict(launcher.CONFIGS["custom"], {"joint_single_field": True}):
+            launch = self.dry_run("--config", "custom")
             self.assertNotIn(launcher.JOINT_FLAG_ENV, launch["service_environment"])
             self.assertNotIn(launcher.JOINT_ALLOW_ENV, launch["service_environment"])
             self.assertNotIn(launcher.JOINT_FLAG_ENV, os.environ)
