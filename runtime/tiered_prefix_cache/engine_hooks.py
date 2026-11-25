@@ -33,6 +33,7 @@ cache manager.
 from __future__ import annotations
 
 import os
+import queue
 import re
 from pathlib import Path
 import threading
@@ -81,6 +82,14 @@ _STATE: dict = {
     "capture_layer": None,
     "capture": None,
     "prefetcher": None,
+    "batch": None,
+    "batch_tap": None,
+    "batch_pool": None,
+    "batch_layer": None,
+    "sched": None,
+    "runner": None,
+    "packed_req_ids": None,
+    "sub": None,
 }
 
 
@@ -151,8 +160,9 @@ def _capture() -> AsyncCapture:
     if _STATE["capture"] is None:
         slot_bytes = int(os.environ.get(
             "CLEF_TIER2_RING_BYTES", str(640 << 20)))
+        slots = int(os.environ.get("CLEF_TIER2_RING_SLOTS", "8"))
         _STATE["capture"] = AsyncCapture(
-            PinnedRing(slots=2, slot_bytes=slot_bytes))
+            PinnedRing(slots=slots, slot_bytes=slot_bytes))
     return _STATE["capture"]
 
 
@@ -296,8 +306,15 @@ def _log_store(decision: str, ctx: Context | None, key: bytes | None = None,
 
 
 def prepare_execute(scheduler_output, runner) -> None:
-    """Set the B1 Tier 2 context before the model runs; fail closed to bypass."""
+    """Set the Tier 2 context (B1 or batch) before the model runs."""
     _STATE["ctx"] = None
+    old_batch = _STATE.get("batch")
+    if old_batch is not None:
+        _STATE["batch"] = None
+        _STATE["batch_pool"] = None
+        old_batch.release()
+    _STATE["batch"] = None
+    _STATE["packed_req_ids"] = None
     _STATE["pool_only"] = False
     if not _env_on():
         return
@@ -312,6 +329,21 @@ def prepare_execute(scheduler_output, runner) -> None:
         if old.lease is not None:
             old.lease.release()
         _STATE["pool_ctx"] = None
+    try:
+        # The input batch is re-ordered/compacted inside execute_model, so a
+        # multi-request step is admitted from the model forward, where
+        # ``runner.input_batch.req_ids`` is the real packed order.
+        if len(scheduler_output.num_scheduled_tokens) > 1:
+            _STATE["sched"] = scheduler_output
+            _STATE["runner"] = runner
+            return
+    except Exception:  # noqa: BLE001 - never poison the stock path
+        import traceback
+        _debug("batch prepare error:\n" + traceback.format_exc())
+        _STATE["sched"] = None
+        _STATE["runner"] = None
+        _STATE["batch"] = None
+        return
     lease = None
     try:
         fresh = _fresh_b1(scheduler_output)
@@ -441,7 +473,236 @@ def _wait_restored(ctx: Context) -> None:
     restored.wait(groups)
 
 
+class BatchRequest:
+    """One request of a multi-request step (M2)."""
+
+    def __init__(self, req_id, index, start, tokens, split=None, key=None,
+                 decision="bypass", lease=None):
+        self.req_id = req_id
+        self.index = index
+        self.start = start
+        self.T = len(tokens)
+        self.L = int(split.l_aligned) if split is not None else 0
+        self.S = self.T - self.L
+        self.split = split
+        self.key = key
+        self.decision = decision
+        self.lease = lease
+        self.captured_kv = {}
+        self.captured_conv = {}
+        self.captured_ssm = {}
+        self.prefix_memory = None
+        self.restored = None
+        self.restored_kv = {}
+        self.restored_conv = {}
+        self.restored_ssm = {}
+        self.output_start = 0
+        self.output_len = 0
+
+
+class BatchContext:
+    """The agreed per-request plan of one multi-request step."""
+
+    def __init__(self, req_ids, requests, total_tokens):
+        self.req_ids = req_ids
+        self.requests = requests
+        self.T_total = total_tokens
+        self.fresh = [r for r in requests
+                      if r.decision in ("bypass", "populate")]
+        self.hits = [r for r in requests if r.decision == "hit"]
+        self.populates = [r for r in requests if r.decision == "populate"]
+
+    def release(self) -> None:
+        for request in self.requests:
+            if request.lease is not None:
+                try:
+                    request.lease.release()
+                except Exception:  # noqa: BLE001
+                    pass
+                request.lease = None
+            request.restored = None
+
+
+def _vote_batch(rows) -> list[bool]:
+    """One ``[B,35]`` CPU all-reduce over the whole step."""
+    local_rows = [list(tp_vote_vector(key, bool(load_ok))) + [int(mode)]
+                  for key, load_ok, mode in rows]
+    if not local_rows:
+        return []
+    try:
+        from vllm.distributed.parallel_state import get_tp_group
+
+        tensor = torch.tensor(local_rows, dtype=torch.int32, device="cpu")
+        get_tp_group().cpu_all_reduce_(tensor)
+        summed_rows = [[int(value) for value in row] for row in tensor.tolist()]
+    except Exception:  # noqa: BLE001
+        import traceback
+        _debug("batch vote error:\n" + traceback.format_exc())
+        return [False] * len(local_rows)
+    results = []
+    for local, summed in zip(local_rows, summed_rows):
+        eligible, resume = tp_vote_result(tuple(local[:34]), tuple(summed[:34]))
+        results.append(bool(eligible and resume
+                            and summed[34] == 2 * local[34]))
+    return results
+
+
+def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
+    """Admit a multi-request step by ``input_batch.req_ids`` order."""
+    packed = _STATE.get("packed_req_ids")
+    if packed is not None:
+        req_ids = list(packed)
+    else:
+        req_ids = list(getattr(getattr(runner, "input_batch", None),
+                               "req_ids", ()) or ())
+    _trace(
+        f"batch probe ids={len(req_ids)} "
+        f"sched={len(scheduler_output.num_scheduled_tokens)} "
+        f"total={scheduler_output.total_num_scheduled_tokens} "
+        f"new={len(scheduler_output.scheduled_new_reqs)} "
+        f"cached={len(scheduler_output.scheduled_cached_reqs.req_ids)}")
+    if len(req_ids) < 2:
+        return None
+    if (scheduler_output.scheduled_cached_reqs.req_ids
+            or scheduler_output.preempted_req_ids
+            or scheduler_output.scheduled_spec_decode_tokens):
+        _trace(f"batch bypass cached={len(scheduler_output.scheduled_cached_reqs.req_ids)}")
+        return None
+    new_by_id = {req.req_id: req for req in scheduler_output.scheduled_new_reqs}
+    offsets = []
+    total = 0
+    for req_id in req_ids:
+        req = new_by_id.get(req_id)
+        num = int(scheduler_output.num_scheduled_tokens.get(req_id, 0))
+        if (req is None or req.prompt_token_ids is None
+                or req.num_computed_tokens != 0
+                or num != len(req.prompt_token_ids)):
+            _trace(f"batch bypass nonfresh req={req_id} num={num}")
+            return None
+        offsets.append(total)
+        total += num
+    if total != int(scheduler_output.total_num_scheduled_tokens):
+        _trace(
+            f"batch bypass total {total} != "
+            f"{scheduler_output.total_num_scheduled_tokens}")
+        return None
+    delimiter = _delimiter_ids(runner.model_config)
+    revision = str(getattr(runner.model_config, "revision", "") or "")
+    rank = _tp_rank()
+    requests = []
+    for index, req_id in enumerate(req_ids):
+        req = new_by_id[req_id]
+        tokens = list(req.prompt_token_ids)
+        mm_items = tuple(
+            MmItem(
+                mm_hash=str(f.identifier or f.mm_hash or ""),
+                placeholder_offset=int(f.mm_position.offset),
+                placeholder_length=int(f.mm_position.length),
+                expanded_offset=int(f.mm_position.offset),
+                expanded_length=int(f.mm_position.length),
+                modality=str(f.modality),
+            )
+            for f in req.mm_features)
+        request = BatchRequest(req_id, index, offsets[index], tokens)
+        requests.append(request)
+        if getattr(req.pooling_params, "task", None) != "token_classify":
+            continue
+        if any(not item.mm_hash for item in mm_items):
+            continue
+        min_prefix = MM_MIN_PREFIX if mm_items else TEXT_MIN_PREFIX
+        split = locate_state_prefix(
+            tokens, delimiter, align=ALIGN, min_prefix=min_prefix,
+            mm_items=mm_items)
+        if split is None:
+            continue
+        key = compute_prefix_key(
+            "clef-tier2", split, model_revision=revision, align=ALIGN,
+            tp_size=2)
+        decision = store.observe(
+            key, split.l_aligned, _estimate_package_bytes(split.l_aligned))
+        lease = None
+        if decision == "hit":
+            lease = store.acquire(key)
+            entry = lease.entry if lease is not None else None
+            problem = (None if entry is not None
+                       else "entry vanished after acquire")
+            if entry is not None:
+                problem = _shard_problem(entry, rank)
+            if problem is not None:
+                if lease is not None:
+                    lease.release()
+                    lease = None
+                decision = "bypass"
+        request.split = split
+        request.key = key
+        request.L = split.l_aligned
+        request.S = request.T - request.L
+        request.decision = decision
+        request.lease = lease
+    if not any(request.key is not None for request in requests):
+        # No request in this step is cache eligible: zero-collective bypass.
+        return None
+    rows = []
+    for request in requests:
+        mode = {"bypass": 0, "populate": 1, "hit": 2}[request.decision]
+        load_ok = request.decision != "hit" or request.lease is not None
+        rows.append((request.key, load_ok, mode))
+    votes = _vote_batch(rows)
+    for request, ok in zip(requests, votes):
+        if not ok and request.decision != "bypass":
+            if request.lease is not None:
+                request.lease.release()
+                request.lease = None
+            request.decision = "bypass"
+    seen: set[bytes] = set()
+    for request in requests:
+        if request.decision != "populate":
+            continue
+        if request.key in seen:
+            request.decision = "bypass"
+        else:
+            seen.add(request.key)
+    for request in requests:
+        if request.decision != "hit":
+            continue
+        entry = request.lease.entry if request.lease is not None else None
+        if entry is None or not _bind_restored(request, entry, rank):
+            if request.lease is not None:
+                request.lease.release()
+                request.lease = None
+            request.decision = "bypass"
+    live = [request for request in requests
+            if request.decision in ("populate", "hit")]
+    if not live:
+        for request in requests:
+            if request.lease is not None:
+                request.lease.release()
+                request.lease = None
+        return None
+    context = BatchContext(req_ids, requests, total)
+    _trace(
+        f"batch admit B={len(req_ids)} T={total} "
+        f"populate={len(context.populates)} hit={len(context.hits)} "
+        f"bypass={len([r for r in requests if r.decision == 'bypass'])}")
+    return context
+
+
 def finish_execute() -> None:
+    _STATE["batch_tap"] = None
+    _STATE["batch_layer"] = None
+    _STATE["sched"] = None
+    _STATE["runner"] = None
+    batch = _STATE.get("batch")
+    if batch is not None:
+        if _STATE.get("batch_pool") is batch:
+            # v2 pooling calls ``pool()`` after ``execute_model`` returns;
+            # keep the context (and its leases/captures) for that call.
+            _STATE["ctx"] = None
+            return
+        _STATE["batch"] = None
+        _STATE["batch_pool"] = None
+        batch.release()
+    _STATE["packed_req_ids"] = None
     ctx = _STATE["ctx"]
     _STATE["ctx"] = None
     if ctx is None:
@@ -539,38 +800,22 @@ def _pack_capture_device(ctx: Context) -> dict:
     return payload
 
 
-def _publish_populate(ctx: Context) -> None:
-    """Hand the captured package to the async D2H ring; publish on completion."""
-    if not (ctx.captured_kv and ctx.captured_conv and ctx.captured_ssm):
-        _trace("populate skipped: empty capture")
-        return
-    if set(ctx.captured_conv) != set(ctx.captured_ssm):
-        _trace(
-            f"populate skipped: incomplete GDN capture "
-            f"conv={len(ctx.captured_conv)} ssm={len(ctx.captured_ssm)}")
-        return
-    counts = (len(ctx.captured_kv), len(ctx.captured_conv),
-              len(ctx.captured_ssm))
+def _capture_counts_ok(captured_kv, captured_conv, captured_ssm) -> bool:
+    if not (captured_kv and captured_conv and captured_ssm):
+        return False
+    if set(captured_conv) != set(captured_ssm):
+        return False
+    counts = (len(captured_kv), len(captured_conv), len(captured_ssm))
     expected = _STATE.get("layer_counts")
     if expected is None:
         _STATE["layer_counts"] = counts
-    elif expected != counts:
-        _trace(
-            f"populate skipped: layer counts {counts} != {expected}")
-        return
-    try:
-        payload = _pack_capture_device(ctx)
-    except Exception:  # noqa: BLE001
-        import traceback
-        _debug("pack error:\n" + traceback.format_exc())
-        return
-    if ctx.prefix_memory is not None:
-        payload["prefix_memory"] = ctx.prefix_memory.detach()
-    store = _store()
-    key = ctx.key
-    rank = ctx.rank
-    length = ctx.L
-    total = int(ctx.T)
+        return True
+    return expected == counts
+
+
+def _submit_publish_now(store, key, rank, length, payload,
+                        ready_event=None) -> None:
+    """Hand one package to the async D2H ring; publish on completion."""
 
     def on_ready(host: dict) -> None:
         try:
@@ -587,17 +832,627 @@ def _publish_populate(ctx: Context) -> None:
 
     started = time.perf_counter()
     try:
-        _capture().submit(payload, on_ready)
+        ticket = _capture().submit(
+            payload, on_ready, ready_event=ready_event)
     except Exception:  # noqa: BLE001
         import traceback
         _debug("capture submit error:\n" + traceback.format_exc())
         return
     _trace(
-        f"populate submitted L={length} T={total} rank={rank} "
+        f"populate submitted L={length} rank={rank} dropped="
+        f"{ticket is None} "
         f"submit_ms={(time.perf_counter() - started) * 1000.0:.2f}")
+
+
+class _PublishQueue:
+    """Serialize D2H publishes off the request path.
+
+    A C16 populate batch can produce more packages than the two-slot pinned
+    ring holds; submitting inline makes the main thread wait the full acquire
+    timeout and drops packages.  The queue absorbs the burst and keeps the
+    capture stream ordering by entering the capture's stream explicitly.
+    """
+
+    def __init__(self, capacity: int = 256):
+        self._queue: "queue.Queue" = queue.Queue(maxsize=max(1, capacity))
+        self._thread = threading.Thread(
+            target=self._run, name="clef-tiered-publish", daemon=True)
+        self._thread.start()
+
+    def submit(self, ready, store, key, rank, length, payload) -> bool:
+        try:
+            self._queue.put_nowait(
+                (ready, store, key, rank, length, payload))
+            return True
+        except queue.Full:
+            return False
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            try:
+                if item is None:
+                    return
+                ready, store, key, rank, length, payload = item
+                _submit_publish_now(
+                    store, key, rank, length, payload,
+                    ready_event=ready)
+            except Exception:  # noqa: BLE001
+                import traceback
+                _debug("publish queue error:\n" + traceback.format_exc())
+            finally:
+                self._queue.task_done()
+
+
+_PUBLISH_QUEUE: "_PublishQueue | None" = None
+
+
+def _publish_queue() -> "_PublishQueue":
+    global _PUBLISH_QUEUE
+    if _PUBLISH_QUEUE is None:
+        _PUBLISH_QUEUE = _PublishQueue()
+    return _PUBLISH_QUEUE
+
+
+def _submit_publish(store, key, rank, length, payload) -> None:
+    """Enqueue one package; the queue thread owns the ring wait."""
+    ready = torch.npu.Event()
+    ready.record(torch.npu.current_stream())
+    if not _publish_queue().submit(
+            ready, store, key, rank, length, payload):
+        _trace(f"populate queue full L={length} rank={rank}")
+
+
+def _publish_populate(ctx: Context) -> None:
+    """Package, submit and clear one B1 request's populate capture."""
+    if not _capture_counts_ok(
+            ctx.captured_kv, ctx.captured_conv, ctx.captured_ssm):
+        _trace(
+            f"populate skipped: incomplete capture "
+            f"kv={len(ctx.captured_kv)} conv={len(ctx.captured_conv)} "
+            f"ssm={len(ctx.captured_ssm)}")
+        return
+    try:
+        payload = _pack_capture_device(ctx)
+    except Exception:  # noqa: BLE001
+        import traceback
+        _debug("pack error:\n" + traceback.format_exc())
+        return
+    if ctx.prefix_memory is not None:
+        payload["prefix_memory"] = ctx.prefix_memory.detach()
+    _submit_publish(_store(), ctx.key, ctx.rank, ctx.L, payload)
     ctx.captured_kv.clear()
     ctx.captured_conv.clear()
     ctx.captured_ssm.clear()
+
+
+# ----------------------------------------------------------------------
+# M2: batch taps during the stock full-batch pass
+def _tap_batch_kv(batch: BatchContext, layer_index: int, key, value) -> None:
+    tokens = key.shape[0]
+    for request in batch.populates:
+        end = request.start + request.L
+        if request.L > 0 and end <= tokens:
+            request.captured_kv[layer_index] = (
+                key[request.start:end].detach().clone(),
+                value[request.start:end].detach().clone())
+
+
+def _tap_batch_conv(batch: BatchContext, layer_index: int, mixed_qkv) -> None:
+    tokens = mixed_qkv.shape[0]
+    for request in batch.populates:
+        end = request.start + request.L
+        if request.L >= 3 and end <= tokens:
+            request.captured_conv[layer_index] = mixed_qkv[
+                end - 3:end, :5120].detach().clone()
+
+
+def _tap_batch_ssm(batch: BatchContext, layer: int, q, k, v, g, beta, scale,
+                   original, fused_fwd, runtime, qkv_pre_normalized) -> None:
+    tokens = int(q.shape[1])
+    populate = [request for request in batch.populates
+                if request.L > 0 and request.start + request.L <= tokens]
+    if not populate:
+        return
+    q_parts, k_parts, v_parts, g_parts, b_parts = [], [], [], [], []
+    cu = [0]
+    chunk = _gdn_chunk_size()
+    chunks = []
+    for request in populate:
+        begin, end = request.start, request.start + request.L
+        q_parts.append(q[0, begin:end])
+        k_parts.append(k[0, begin:end])
+        v_parts.append(v[0, begin:end])
+        g_parts.append(g[0, begin:end])
+        b_parts.append(beta[0, begin:end])
+        cu.append(cu[-1] + request.L)
+        chunks.append((request.L + chunk - 1) // chunk)
+    q_cat = torch.cat(q_parts, dim=0).unsqueeze(0)
+    k_cat = torch.cat(k_parts, dim=0).unsqueeze(0)
+    v_cat = torch.cat(v_parts, dim=0).unsqueeze(0)
+    g_cat = torch.cat(g_parts, dim=0).unsqueeze(0)
+    b_cat = torch.cat(b_parts, dim=0).unsqueeze(0)
+    meta = SimpleNamespace(
+        cu_seqlens_host=tuple(cu),
+        chunk_indices_chunk64_host=tuple(
+            value for seq in range(len(populate))
+            for index in range(chunks[seq])
+            for value in (seq, index)),
+        keep_meta=None,
+    )
+    zeros = torch.zeros((len(populate), 24, 128, 128), dtype=torch.bfloat16,
+                        device=q.device)
+    runtime_stub = SimpleNamespace(
+        bsnd=True, no_recompute=True, decision_prefill=True,
+        state_free=lambda: runtime_stub)
+    _, states = original(
+        q_cat, k_cat, v_cat, g_cat, b_cat, zeros, scale, meta, fused_fwd,
+        decision_only=False, runtime=runtime_stub,
+        qkv_pre_normalized=qkv_pre_normalized)
+    for index, request in enumerate(populate):
+        request.captured_ssm[layer] = states[index].unsqueeze(0).clone()
+
+
+def _publish_batch(batch: BatchContext) -> None:
+    store = _store()
+    rank = _tp_rank()
+    for request in batch.populates:
+        if not _capture_counts_ok(
+                request.captured_kv, request.captured_conv,
+                request.captured_ssm):
+            _trace(
+                f"batch populate skipped key={request.key.hex()[:12]} "
+                f"kv={len(request.captured_kv)} "
+                f"conv={len(request.captured_conv)} "
+                f"ssm={len(request.captured_ssm)}")
+            continue
+        try:
+            payload = _pack_capture_device(request)
+        except Exception:  # noqa: BLE001
+            import traceback
+            _debug("batch pack error:\n" + traceback.format_exc())
+            continue
+        if request.prefix_memory is not None:
+            payload["prefix_memory"] = request.prefix_memory.detach()
+        _submit_publish(store, request.key, rank, request.L, payload)
+        request.captured_kv.clear()
+        request.captured_conv.clear()
+        request.captured_ssm.clear()
+
+
+class SubBatch:
+    """One explicit varlen pass over a subset of the batch."""
+
+    def __init__(self, kind: str, requests):
+        self.kind = kind
+        self.requests = requests
+        self.offsets: list[int] = []
+        self.cu: list[int] = [0]
+        self.embeds = None
+        self.positions = None
+        self.keep_idx = None
+
+
+def _conv_input(x):
+    """Expose the first 5120 channels of a strided packed QKVZ row."""
+    if x.is_contiguous():
+        return x
+    if (x.dim() == 2 and x.stride(1) == 1 and x.stride(0) == 8192):
+        end = x.storage_offset() + x.shape[0] * 8192
+        if end * x.element_size() <= x.untyped_storage().nbytes():
+            return x.as_strided((x.shape[0], 8192), (8192, 1))
+    raise RuntimeError("tier2: unsupported GDN input layout")
+
+
+_VARLEN_RUNTIME = None
+_VARLEN_VENDOR = None
+_ORIGINAL_FLA = None
+
+
+def _gdn_stub():
+    runtime = SimpleNamespace(
+        bsnd=True, no_recompute=True, decision_prefill=True,
+        state_free=None)
+    runtime.state_free = lambda: runtime
+    return runtime
+
+
+def _varlen_qkv(x, weight, cu):
+    """Run ``aclnnClefGdnConvQkvVarlen`` for 2..64 packed sequences."""
+    global _VARLEN_RUNTIME, _VARLEN_VENDOR
+    import ctypes
+    from fla_npu.ops.ascendc import _runtime as aclnn_runtime
+
+    vendor = os.environ.get("CLEF_CONV_QKV_VARLEN_VENDOR")
+    if not vendor:
+        raise RuntimeError("CLEF_CONV_QKV_VARLEN_VENDOR is required")
+    if _VARLEN_RUNTIME is None:
+        library = ctypes.CDLL(
+            f"{vendor}/op_api/lib/libcust_opapi.so",
+            mode=getattr(os, "RTLD_LOCAL", 0) | getattr(os, "RTLD_NOW", 0)
+            | getattr(os, "RTLD_NODELETE", 0))
+        _VARLEN_RUNTIME = aclnn_runtime.runtime()
+        _VARLEN_RUNTIME._libraries.insert(0, library)
+        _VARLEN_VENDOR = vendor
+    elif vendor != _VARLEN_VENDOR:
+        raise RuntimeError("CLEF_CONV_QKV_VARLEN_VENDOR changed")
+    tokens = x.shape[0]
+    tile = int(os.environ.get("CLEF_CONV_QKV_VARLEN_TILE", "64"))
+    q = torch.empty((1, tokens, 8, 128), dtype=x.dtype, device=x.device)
+    k = torch.empty_like(q)
+    v = torch.empty((1, tokens, 24, 128), dtype=x.dtype, device=x.device)
+    aclnn_runtime.call_aclnn(
+        "aclnnClefGdnConvQkvVarlen",
+        lambda ctx: [ctx.tensor(x, "x"), ctx.tensor(weight, "weight"),
+                     ctx.tensor(cu, "cuSeqlens"), ctypes.c_double(1e-6),
+                     ctypes.c_int64(tile), ctx.tensor(q, "qOut"),
+                     ctx.tensor(k, "kOut"), ctx.tensor(v, "vOut")],
+        (q, k, v),
+        get_workspace_argtypes=[ctypes.c_void_p, ctypes.c_void_p,
+                                ctypes.c_void_p, ctypes.c_double,
+                                ctypes.c_int64, ctypes.c_void_p,
+                                ctypes.c_void_p, ctypes.c_void_p,
+                                ctypes.POINTER(ctypes.c_uint64),
+                                ctypes.POINTER(ctypes.c_void_p)],
+    )
+    return q, k, v
+
+
+def _sub_meta(lengths):
+    chunk = _gdn_chunk_size()
+    cu = [0]
+    chunks = []
+    for length in lengths:
+        cu.append(cu[-1] + length)
+        chunks.append((length + chunk - 1) // chunk)
+    return SimpleNamespace(
+        cu_seqlens_host=tuple(cu),
+        chunk_indices_chunk64_host=tuple(
+            value for seq in range(len(lengths))
+            for index in range(chunks[seq])
+            for value in (seq, index)),
+        keep_meta=None,
+    )
+
+
+def _build_sub_batch(kind, requests, embeds, positions):
+    sub = SubBatch(kind, requests)
+    parts_embeds = []
+    parts_positions = []
+    total = 0
+    for request in requests:
+        if kind == "fresh":
+            begin = request.start
+        else:
+            begin = request.start + request.L
+        end = request.start + request.T
+        embed = embeds[begin:end]
+        position = positions[..., begin:end]
+        sub.offsets.append(total)
+        total += embed.shape[0]
+        parts_embeds.append(embed)
+        parts_positions.append(position)
+        sub.cu.append(total)
+    sub.embeds = torch.cat(parts_embeds, dim=0)
+    sub.positions = torch.cat(parts_positions, dim=-1)
+    if kind == "resume":
+        keep = []
+        augmented = 0
+        for request in requests:
+            keep.extend(range(augmented + 3,
+                              augmented + 3 + request.S))
+            augmented += 3 + request.S
+        sub.keep_idx = torch.tensor(
+            keep, dtype=torch.int64, device=sub.embeds.device)
+    return sub
+
+
+def _sub_fia(self, query, key, value, q_cu, kv_cu, attn_metadata):
+    from vllm_ascend.device.device_op import DeviceOperator
+
+    return DeviceOperator.npu_fused_infer_attention_score(
+        query=query,
+        key=key.contiguous(),
+        value=value.contiguous(),
+        attn_metadata=attn_metadata,
+        key_cache=None,
+        value_cache=None,
+        current_key=key,
+        current_value=value,
+        num_heads=self.num_heads,
+        num_key_value_heads=self.num_kv_heads,
+        head_size=self.head_size,
+        scale=self.scale,
+        is_prefill_no_cache=True,
+        atten_mask=_mask(),
+        input_layout="TND",
+        actual_seq_lengths=list(q_cu),
+        actual_seq_lengths_kv=list(kv_cu),
+        block_table=None,
+        block_size=0,
+        sparse_mode=3,
+    )[0]
+
+
+def _tap_sub_ssm(sub, layer, q, k, v, g, beta, scale):
+    pairs = [(request, begin)
+             for request, begin in zip(sub.requests, sub.offsets)
+             if request.decision == "populate"]
+    if not pairs:
+        return
+    q_parts, k_parts, v_parts, g_parts, b_parts = [], [], [], [], []
+    lengths = []
+    for request, begin in pairs:
+        end = begin + request.L
+        q_parts.append(q[0, begin:end])
+        k_parts.append(k[0, begin:end])
+        v_parts.append(v[0, begin:end])
+        g_parts.append(g[0, begin:end])
+        b_parts.append(beta[0, begin:end])
+        lengths.append(request.L)
+    q_cat = torch.cat(q_parts, dim=0).unsqueeze(0)
+    k_cat = torch.cat(k_parts, dim=0).unsqueeze(0)
+    v_cat = torch.cat(v_parts, dim=0).unsqueeze(0)
+    g_cat = torch.cat(g_parts, dim=0).unsqueeze(0)
+    b_cat = torch.cat(b_parts, dim=0).unsqueeze(0)
+    zeros = torch.zeros((len(pairs), 24, 128, 128),
+                        dtype=torch.bfloat16, device=q.device)
+    runtime_stub = SimpleNamespace(
+        bsnd=True, no_recompute=True, decision_prefill=True,
+        state_free=lambda: runtime_stub)
+    _, states = _ORIGINAL_FLA(
+        q_cat, k_cat, v_cat, g_cat, b_cat, zeros, scale, _sub_meta(lengths),
+        _get_fla_op(), decision_only=False, runtime=runtime_stub,
+        qkv_pre_normalized=True)
+    for index, (request, _begin) in enumerate(pairs):
+        request.captured_ssm[layer] = states[index].unsqueeze(0).clone()
+
+
+def _get_fla_op():
+    from vllm_ascend.ops.gdn import _get_fla_gdn_prefill_op
+
+    return _get_fla_gdn_prefill_op()
+
+
+def _fresh_gdn_sub(self, sub, layer, mixed_qkv, b, a, core_attn_out):
+    from vllm_ascend.device.device_op import DeviceOperator
+    from vllm_ascend.ops.gdn import _get_packed_conv_weights
+
+    tokens = mixed_qkv.shape[0]
+    weight = _get_packed_conv_weights(self)
+    x = _conv_input(mixed_qkv)
+    if len(sub.requests) == 1:
+        q, k, v = _v4_qkv(x, weight)
+    else:
+        cu = torch.tensor(
+            sub.cu, dtype=torch.int32, device=x.device)
+        q, k, v = _varlen_qkv(x, weight, cu)
+    for request, begin in zip(sub.requests, sub.offsets):
+        if request.decision != "populate":
+            continue
+        end = begin + request.L
+        request.captured_conv[layer] = mixed_qkv[
+            end - 3:end, :5120].detach().clone()
+    g, beta = DeviceOperator.fused_gdn_gating(
+        self.A_log, a[:tokens], b[:tokens], self.dt_bias)
+    scale = self.head_k_dim ** -0.5
+    output, _ = DeviceOperator.fla_gdn_prefill(
+        q, k, v, g, beta, None, scale,
+        _sub_meta([request.T for request in sub.requests]), _get_fla_op(),
+        decision_only=True, runtime=_gdn_stub(),
+        qkv_pre_normalized=True)
+    core_attn_out[:tokens] = output.reshape(tokens, 24, 128).to(
+        core_attn_out.dtype)
+    _tap_sub_ssm(sub, layer, q, k, v, g, beta, scale)
+
+
+def _resume_gdn_sub(self, sub, layer, mixed_qkv, b, a, core_attn_out):
+    from vllm_ascend.device.device_op import DeviceOperator
+    from vllm_ascend.ops.gdn import _get_packed_conv_weights
+
+    tokens = mixed_qkv.shape[0]
+    weight = _get_packed_conv_weights(self)
+    x = mixed_qkv[:, :5120].contiguous()
+    parts = []
+    augmented_cu = [0]
+    for request, begin in zip(sub.requests, sub.offsets):
+        conv_state = request.restored_conv.get(layer)
+        if conv_state is None:
+            raise RuntimeError(
+                f"tier2: missing conv state for layer {layer}")
+        parts.append(conv_state)
+        parts.append(x[begin:begin + request.S])
+        augmented_cu.append(augmented_cu[-1] + 3 + request.S)
+    x_aug = torch.cat(parts, dim=0).contiguous()
+    if len(sub.requests) == 1:
+        q, k, v = _v4_qkv(x_aug, weight)
+        q = q[:, 3:].contiguous()
+        k = k[:, 3:].contiguous()
+        v = v[:, 3:].contiguous()
+    else:
+        cu = torch.tensor(
+            augmented_cu, dtype=torch.int32, device=x_aug.device)
+        q, k, v = _varlen_qkv(x_aug, weight, cu)
+        q = q.index_select(1, sub.keep_idx).contiguous()
+        k = k.index_select(1, sub.keep_idx).contiguous()
+        v = v.index_select(1, sub.keep_idx).contiguous()
+    g, beta = DeviceOperator.fused_gdn_gating(
+        self.A_log, a[:tokens], b[:tokens], self.dt_bias)
+    states = []
+    for request in sub.requests:
+        state = request.restored_ssm.get(layer)
+        if state is None:
+            raise RuntimeError(
+                f"tier2: missing ssm state for layer {layer}")
+        states.append(state.squeeze(0))
+    ssm_batch = torch.stack(states, dim=0)
+    scale = self.head_k_dim ** -0.5
+    output, _ = DeviceOperator.fla_gdn_prefill(
+        q, k, v, g, beta, ssm_batch, scale,
+        _sub_meta([request.S for request in sub.requests]), _get_fla_op(),
+        decision_only=True, runtime=_gdn_stub(),
+        qkv_pre_normalized=True)
+    core_attn_out[:tokens] = output.reshape(tokens, 24, 128).to(
+        core_attn_out.dtype)
+
+
+def _wait_hits(batch: BatchContext) -> None:
+    for request in batch.hits:
+        if request.restored is not None:
+            request.restored.wait(
+                [name for name in ("kv_k", "kv_v", "conv_all", "ssm_all",
+                                   "prefix_memory")
+                 if name in request.restored.tensors])
+
+
+def _run_batch_model(self, input_ids, positions, inputs_embeds, batch,
+                     original):
+    """Pass 1 (bypass+populate full) then Pass 2 (hit suffix), if needed."""
+    core = self.language_model.model
+    if inputs_embeds is None:
+        embeds = core.embed_input_ids(input_ids)
+    else:
+        embeds = inputs_embeds
+    if batch.hits:
+        _wait_hits(batch)
+    if batch.fresh:
+        sub = _build_sub_batch("fresh", batch.fresh, embeds, positions)
+        _STATE["sub"] = sub
+        try:
+            hidden = _run_layers(core, sub.embeds, sub.positions)
+        finally:
+            _STATE["sub"] = None
+        for index, request in enumerate(sub.requests):
+            start = sub.offsets[index]
+            request.out = hidden[start:start + request.T]
+    if batch.hits:
+        sub = _build_sub_batch("resume", batch.hits, embeds, positions)
+        _STATE["sub"] = sub
+        try:
+            hidden = _run_layers(core, sub.embeds, sub.positions)
+        finally:
+            _STATE["sub"] = None
+        for index, request in enumerate(sub.requests):
+            start = sub.offsets[index]
+            request.out = hidden[start:start + request.S]
+    total = 0
+    parts = []
+    for request in batch.requests:
+        request.output_start = total
+        request.output_len = int(request.out.shape[0])
+        total += request.output_len
+        parts.append(request.out)
+    packed = torch.cat(parts, dim=0) if parts else embeds[:0]
+    _STATE["batch_pool"] = batch
+    return packed
+
+
+def _batch_pooler(self, hidden_states, pooling_metadata,
+                  batch: BatchContext):
+    """One collective lexical embed, per-request head, batched publish."""
+    from vllm.model_executor.models import clef_joint_schema as schema_mod
+    from vllm.utils.torch_utils import async_tensor_h2d
+
+    params_list = pooling_metadata.pooling_params
+    token_lists = pooling_metadata.get_prompt_token_ids_cpu()
+    if (len(params_list) != len(batch.requests)
+            or len(token_lists) != len(batch.requests)):
+        _trace("batch pooler fallback: length mismatch")
+        return None
+    device = hidden_states.device
+    entries = []
+    flat_tokens: list[int] = []
+    for index, request in enumerate(batch.requests):
+        hidden = hidden_states[
+            request.output_start:request.output_start + request.output_len]
+        params = params_list[index]
+        parsed = schema_mod.parse_joint_schema(params.extra_kwargs, request.T)
+        if parsed is None:
+            entries.append((request, hidden, params, None, None, None, 0))
+            continue
+        schema, lexical_ids, lexical_span_ids = self._indices(
+            *parsed, device)
+        if request.decision == "hit":
+            schema = schema_mod.SchemaIndices(
+                positions=schema.positions - request.L,
+                span_ids=schema.span_ids,
+                span_lengths=schema.span_lengths,
+                question_types=schema.question_types,
+                option_question=schema.option_question,
+                option_slots=schema.option_slots,
+                option_mask=schema.option_mask,
+            )
+        token_ids = token_lists[index]
+        tokens = [int(token_ids[position]) for position in
+                  lexical_ids.tolist()]
+        flat_tokens.extend(tokens)
+        entries.append((request, hidden, params, parsed, schema,
+                        lexical_span_ids, len(tokens)))
+    embeddings = None
+    if flat_tokens:
+        embeddings = self.embed_lexical(
+            async_tensor_h2d(flat_tokens, device))
+    if _joint_rank0_only() and _tp_rank() != 0:
+        outputs = []
+        for request, hidden, params, parsed, _schema, _span, _count in entries:
+            if parsed is None:
+                outputs.append(hidden.new_empty(0, dtype=torch.float32))
+            else:
+                outputs.append(hidden.new_zeros(
+                    sum(int(count) for count in parsed[2]),
+                    dtype=torch.float32))
+        _publish_batch(batch)
+        batch.release()
+        _STATE["batch_pool"] = None
+        _STATE["batch"] = None
+        return outputs
+    outputs = []
+    offset = 0
+    for request, hidden, params, parsed, schema, span_ids, count in entries:
+        if parsed is None:
+            outputs.append(hidden.new_empty(0, dtype=torch.float32))
+            continue
+        lexical = schema_mod.segment_mean(
+            embeddings[offset:offset + count], span_ids,
+            schema.span_lengths[len(parsed[0]):])
+        offset += count
+        if request.decision == "populate":
+            head = self.head
+            projection = head.memory_projection
+            captured: dict = {}
+
+            def tap(hidden_norm, _projection=projection,
+                    _captured=captured, _limit=request.L):
+                memory = _projection(hidden_norm)
+                _captured["memory"] = memory[:_limit]
+                return memory
+
+            object.__setattr__(head, "memory_projection", tap)
+            try:
+                logits = self.head(hidden, lexical, schema).float()
+            finally:
+                object.__setattr__(
+                    head, "memory_projection", projection)
+            request.prefix_memory = captured.get("memory")
+            logits = self.head(hidden, lexical, schema).float()
+        elif request.decision == "hit":
+            logits = self.head(
+                hidden, lexical, schema,
+                prefix_memory=request.prefix_memory).float()
+        else:
+            logits = self.head(hidden, lexical, schema).float()
+        if params.use_activation is not False:
+            mask = schema.option_mask
+            grid = logits.new_full((mask.numel(),), float("-inf"))
+            grid[schema.option_slots] = logits
+            probs = grid.view(mask.shape).softmax(dim=-1)
+            logits = probs.view(-1)[schema.option_slots]
+        outputs.append(logits)
+    _publish_batch(batch)
+    batch.release()
+    _STATE["batch_pool"] = None
+    _STATE["batch"] = None
+    return outputs
 
 
 # ----------------------------------------------------------------------
@@ -614,6 +1469,61 @@ def _run_layers(core, embeds, positions):
 def _model_forward(original):
     def forward(self, input_ids, positions, intermediate_tensors=None,
                 inputs_embeds=None, **kwargs):
+        sched = _STATE.pop("sched", None)
+        if sched is not None:
+            _trace(
+                f"model sched total={sched.total_num_scheduled_tokens} "
+                f"inter={intermediate_tensors is not None}")
+        if sched is not None and intermediate_tensors is None:
+            runner = _STATE.get("runner")
+            _STATE["runner"] = None
+            try:
+                batch = _prepare_batch(sched, runner, _store())
+            except Exception:  # noqa: BLE001
+                import traceback
+                _debug("batch admit error:\n" + traceback.format_exc())
+                batch = None
+            if (batch is not None
+                    and positions.shape[-1] < batch.T_total):
+                _trace(
+                    f"batch bypass shape {positions.shape[-1]} < "
+                    f"{batch.T_total}")
+                batch.release()
+                batch = None
+            _STATE["batch"] = batch
+        batch = _STATE.get("batch")
+        if (batch is not None and intermediate_tensors is None
+                and (input_ids is not None or inputs_embeds is not None)
+                and positions.shape[-1] >= batch.T_total):
+            _trace(
+                f"model batch pos={positions.shape[-1]} "
+                f"T={batch.T_total} hits={len(batch.hits)}")
+            if batch.hits:
+                try:
+                    return _run_batch_model(
+                        self, input_ids, positions, inputs_embeds, batch,
+                        original)
+                except Exception:  # noqa: BLE001 - rerun the stock full path
+                    import traceback
+                    _debug("batch mixed error:\n" + traceback.format_exc())
+                    _STATE["batch"] = None
+                    _STATE["batch_pool"] = None
+                    batch.release()
+                    return original(self, input_ids, positions,
+                                    intermediate_tensors, inputs_embeds,
+                                    **kwargs)
+            _STATE["batch_tap"] = batch
+            try:
+                hidden = original(self, input_ids, positions,
+                                  intermediate_tensors, inputs_embeds,
+                                  **kwargs)
+            finally:
+                _STATE["batch_tap"] = None
+            for request in batch.requests:
+                request.output_start = request.start
+                request.output_len = request.T
+            _STATE["batch_pool"] = batch
+            return hidden
         ctx = _STATE["ctx"]
         if (ctx is None or intermediate_tensors is not None
                 or (input_ids is None and inputs_embeds is None)
@@ -670,8 +1580,57 @@ def _model_forward(original):
 def _attention_forward(original):
     def forward(self, layer, query, key, value, kv_cache, attn_metadata,
                 output=None, output_scale=None, output_block_scale=None):
-        ctx = _STATE["ctx"]
+        batch = _STATE.get("batch_tap")
         layer_index = _layer_index(_layer_name(layer))
+        if batch is not None:
+            if (layer_index is not None and output is not None
+                    and key is not None and value is not None):
+                _tap_batch_kv(batch, layer_index, key, value)
+            return original(self, layer, query, key, value, kv_cache,
+                            attn_metadata, output, output_scale,
+                            output_block_scale)
+        sub = _STATE.get("sub")
+        if sub is not None:
+            if layer_index is None or output is None or key is None:
+                raise RuntimeError("tier2: sub attention missing tensors")
+            if sub.kind == "fresh":
+                for request, begin in zip(sub.requests, sub.offsets):
+                    if request.decision != "populate":
+                        continue
+                    end = begin + request.L
+                    if end <= key.shape[0]:
+                        request.captured_kv[layer_index] = (
+                            key[begin:end].detach().clone(),
+                            value[begin:end].detach().clone())
+                attn = _sub_fia(
+                    self, query, key, value, sub.cu[1:], sub.cu[1:],
+                    attn_metadata)
+            else:
+                parts_k = []
+                parts_v = []
+                kv_cu = [0]
+                for request, begin in zip(sub.requests, sub.offsets):
+                    cached = request.restored_kv.get(layer_index)
+                    if cached is None:
+                        raise RuntimeError(
+                            "tier2: missing KV state for layer "
+                            f"{layer_index}")
+                    end = begin + request.S
+                    parts_k.append(cached[0])
+                    parts_k.append(key[begin:end])
+                    parts_v.append(cached[1])
+                    parts_v.append(value[begin:end])
+                    kv_cu.append(kv_cu[-1] + request.T)
+                attn = _sub_fia(
+                    self, query, torch.cat(parts_k, dim=0),
+                    torch.cat(parts_v, dim=0), sub.cu[1:], kv_cu[1:],
+                    attn_metadata)
+            num_tokens = query.shape[0]
+            output[:num_tokens] = (
+                attn if output.dim() == 3
+                else attn.reshape(num_tokens, -1))
+            return output
+        ctx = _STATE["ctx"]
         if (ctx is None or layer_index is None or output is None
                 or key is None or value is None):
             return original(self, layer, query, key, value, kv_cache,
@@ -730,8 +1689,30 @@ def _attention_forward(original):
 # GDN: tap conv/ssm at L; resume with reference conv + initial_state
 def _gdn_forward_core(original):
     def forward_core(self, mixed_qkv, b, a, core_attn_out):
-        ctx = _STATE["ctx"]
+        batch = _STATE.get("batch_tap")
         layer_index = _layer_index(str(getattr(self, "prefix", "")))
+        if batch is not None:
+            if layer_index is not None:
+                _tap_batch_conv(batch, layer_index, mixed_qkv)
+            _STATE["batch_layer"] = layer_index
+            try:
+                return original(self, mixed_qkv, b, a, core_attn_out)
+            finally:
+                _STATE["batch_layer"] = None
+        sub = _STATE.get("sub")
+        if sub is not None:
+            if layer_index is None:
+                raise RuntimeError("tier2: sub GDN missing layer")
+            if sub.kind == "fresh":
+                _fresh_gdn_sub(
+                    self, sub, layer_index, mixed_qkv, b, a,
+                    core_attn_out)
+            else:
+                _resume_gdn_sub(
+                    self, sub, layer_index, mixed_qkv, b, a,
+                    core_attn_out)
+            return None
+        ctx = _STATE["ctx"]
         if ctx is None or layer_index is None:
             return original(self, mixed_qkv, b, a, core_attn_out)
         if ctx.mode == "populate" and ctx.phase == "tap":
@@ -1023,6 +2004,24 @@ def _fla_gdn_prefill(original):
     def wrapper(q, k, v, g, beta, initial_state, scale, prebuilt_meta,
                 fused_fwd, *, decision_only=None, runtime=None,
                 qkv_pre_normalized=False):
+        batch = _STATE.get("batch_tap")
+        batch_layer = _STATE.get("batch_layer")
+        if (batch is not None and batch_layer is not None
+                and initial_state is None):
+            result = original(q, k, v, g, beta, initial_state, scale,
+                              prebuilt_meta, fused_fwd,
+                              decision_only=decision_only, runtime=runtime,
+                              qkv_pre_normalized=qkv_pre_normalized)
+            try:
+                _tap_batch_ssm(
+                    batch, batch_layer, q, k, v, g, beta, scale, original,
+                    fused_fwd, runtime, qkv_pre_normalized)
+            except Exception:  # noqa: BLE001 - keep the response
+                import traceback
+                _debug("batch ssm tap error:\n" + traceback.format_exc())
+                for request in batch.populates:
+                    request.captured_ssm.pop(batch_layer, None)
+            return result
         ctx = _STATE["ctx"]
         layer = _STATE["capture_layer"]
         if not (ctx is not None and ctx.mode == "populate"
@@ -1095,6 +2094,16 @@ def _fla_gdn_prefill(original):
 # pooler/head: tap prefix_memory on populate; consume it on hits
 def _pooler_forward(original):
     def forward(self, hidden_states, pooling_metadata):
+        batch = _STATE.get("batch_pool")
+        if batch is not None:
+            result = _batch_pooler(
+                self, hidden_states, pooling_metadata, batch)
+            if result is not None:
+                return result
+            _STATE["batch_pool"] = None
+            _STATE["batch"] = None
+            batch.release()
+            return original(self, hidden_states, pooling_metadata)
         ctx = _STATE["ctx"]
         if ctx is None:
             return original(self, hidden_states, pooling_metadata)
@@ -1224,6 +2233,20 @@ def install() -> None:
             finish_execute()
 
     runner_mod.NPUModelRunner.execute_model = execute_model
+
+    original_prepare_inputs = runner_mod.NPUModelRunner.prepare_inputs
+
+    def prepare_inputs(self, scheduler_output, batch_req_state, *args,
+                       **kwargs):
+        if _STATE.get("sched") is not None:
+            try:
+                _STATE["packed_req_ids"] = list(batch_req_state.req_ids)
+            except Exception:  # noqa: BLE001
+                _STATE["packed_req_ids"] = None
+        return original_prepare_inputs(
+            self, scheduler_output, batch_req_state, *args, **kwargs)
+
+    runner_mod.NPUModelRunner.prepare_inputs = prepare_inputs
     ClefFlashForJointSchema.forward = _model_forward(
         ClefFlashForJointSchema.forward)
     attn_mod.AscendAttentionBackendImpl.forward = _attention_forward(
@@ -1234,6 +2257,8 @@ def install() -> None:
     original_prefill = (
         descriptor.__func__ if isinstance(descriptor, staticmethod)
         else descriptor)
+    global _ORIGINAL_FLA
+    _ORIGINAL_FLA = original_prefill
     setattr(DeviceOperator, "fla_gdn_prefill",
             staticmethod(_fla_gdn_prefill(original_prefill)))
     schema_mod.JointSchemaPooler.forward = _pooler_forward(

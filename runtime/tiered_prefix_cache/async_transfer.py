@@ -156,8 +156,15 @@ class AsyncCapture:
 
     # ------------------------------------------------------------------
     def submit(self, payload: Mapping[str, Any],
-               on_ready: Callable[[dict[str, Any]], None]):
-        """Queue one publish; returns ``None`` when the ring is full/dropped."""
+               on_ready: Callable[[dict[str, Any]], None],
+               ready_event=None):
+        """Queue one publish; returns ``None`` when the ring is full/dropped.
+
+        ``ready_event`` may be recorded by the caller at capture time.  A
+        background publisher must pass it: recording inside the publisher
+        would place the event behind the producer's next-step backlog and
+        delay every D2H by that backlog.
+        """
         if self.synchronous:
             try:
                 host = self._synchronous_host(payload)
@@ -179,9 +186,13 @@ class AsyncCapture:
             self.dropped += 1
             self.ring.dropped += 1
             return None
-        compute_stream = self._torch.npu.current_stream()
-        ready = self._torch.npu.Event()
-        ready.record(compute_stream)
+        if ready_event is None:
+            compute_stream = self._torch.npu.current_stream()
+            ready = self._torch.npu.Event()
+            ready.record(compute_stream)
+        else:
+            compute_stream = None
+            ready = ready_event
         held_sources: list[Any] = []
         host: dict[str, Any] = {}
         offset = 0
@@ -227,7 +238,8 @@ class AsyncCapture:
         except BaseException:
             self.ring.release(buffer)
             raise
-        compute_stream.wait_event(snapshot_done)
+        if compute_stream is not None:
+            compute_stream.wait_event(snapshot_done)
         self._queue.put((done, host, held_sources, buffer, on_ready))
         return done
 
