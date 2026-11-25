@@ -9,6 +9,7 @@ source for every configurable flag.
 """
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
@@ -26,6 +27,46 @@ REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_MODEL_DIR = str(REPO_ROOT / ".build" / "models" / "Clef-27B")
 SERVED_MODEL_NAME = "clef"
 PROTOCOL_VERSION = "2026-11-13"
+
+
+_LEVEL_COLORS = {
+    "DEBUG": "\033[36m",
+    "INFO": "\033[32m",
+    "WARNING": "\033[33m",
+    "ERROR": "\033[31m",
+}
+_RESET = "\033[0m"
+
+
+def _startup_color_enabled():
+    """ANSI color only on an interactive terminal unless explicitly overridden."""
+    if os.environ.get("NO_COLOR") is not None:
+        return False
+    override = os.environ.get("CLEF_LOG_COLOR")
+    if override is not None:
+        return override.strip().lower() not in ("0", "false", "no", "off")
+    return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
+
+
+def startup_log(message, level="INFO"):
+    """Write one ISO-8601 UTC timestamped startup line to the terminal.
+
+    Format: ``<timestamp> <level> clef.launcher: <message>`` (RFC 3339 time,
+    syslog-like level and logger name).  The service later redirects stdout
+    and stderr to <output-dir>/service.log, so these lines are the operator's
+    terminal-side confirmation that startup has begun.  Colors are emitted
+    only for a TTY; set NO_COLOR=1 (or CLEF_LOG_COLOR=0) to force plain text.
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    if not _startup_color_enabled():
+        print(f"{stamp} {level:<5} clef.launcher: {message}", flush=True)
+        return
+    color = _LEVEL_COLORS.get(level.upper(), "")
+    print(
+        f"\033[2m{stamp}{_RESET} {color}{level:<5}{_RESET} "
+        f"\033[36mclef.launcher:{_RESET} {message}",
+        flush=True,
+    )
 RUNTIME_DIR = REPO_ROOT / "src" / "runtime"
 GDN_INSTALLER = RUNTIME_DIR / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = RUNTIME_DIR / "apply_qkv_norm_patch.py"
@@ -1806,6 +1847,12 @@ def main():
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
+    startup_log(
+        f"Starting Clef-27B: model_dir={args.model_dir} config={args.config} "
+        f"output_dir={args.output_dir or '<model-dir>/output'}"
+    )
+    startup_log("Validating model files and runtime patches (may take tens of seconds)...")
+
     if args.output_dir is None:
         args.output_dir = str(Path(args.model_dir).expanduser().resolve() / "output")
 
@@ -1817,6 +1864,8 @@ def main():
     if args.dry_run:
         print(json.dumps(launch, ensure_ascii=False, indent=2))
         return
+
+    startup_log("Runtime patches ready.")
 
     model_dir = Path(launch["model_dir"])
     try:
@@ -1831,6 +1880,25 @@ def main():
     launch["log"] = str(output_dir / "service.log")
     manifest_path = output_dir / "launch-manifest.json"
     manifest_path.write_text(json.dumps(launch, ensure_ascii=False, indent=1) + "\n")
+
+    effective = launch["effective"]
+    health_host = effective["host"]
+    if health_host in ("0.0.0.0", "::"):
+        health_host = "127.0.0.1"
+    startup_log(
+        f"Effective config: config={launch['config']} "
+        f"tensor_parallel_size={effective['tensor_parallel_size']} "
+        f"max_model_len={effective['max_model_len']} port={effective['port']}"
+    )
+    startup_log(f"Launch manifest: {manifest_path}")
+    startup_log(f"Service log: {launch['log']} (run 'tail -f' in another terminal)")
+    startup_log(
+        f"Readiness check: curl -sf http://{health_host}:{effective['port']}/health"
+    )
+    startup_log(
+        f"Loading model and starting vLLM (pid={os.getpid()}); "
+        "subsequent logs go to the service log."
+    )
 
     os.environ.update(launch["service_environment"])
     os.environ.setdefault("OMP_NUM_THREADS", "1")
