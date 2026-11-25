@@ -70,15 +70,12 @@ def find_last_subsequence(
     """The index of the last occurrence of ``pattern``, or ``-1``."""
     if not pattern or len(pattern) > len(token_ids):
         return -1
-    last = -1
-    first = pattern[0]
+    pattern = tuple(int(value) for value in pattern)
     limit = len(token_ids) - len(pattern)
-    for index in range(limit + 1):
-        if token_ids[index] != first:
-            continue
-        if tuple(token_ids[index:index + len(pattern)]) == tuple(pattern):
-            last = index
-    return last
+    for index in range(limit, -1, -1):
+        if tuple(token_ids[index:index + len(pattern)]) == pattern:
+            return index
+    return -1
 
 
 def locate_state_prefix(

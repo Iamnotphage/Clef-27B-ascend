@@ -32,7 +32,12 @@ from types import SimpleNamespace
 import torch
 import torch_npu  # noqa: F401 - workers already have the backend loaded
 
-from runtime.tiered_prefix_cache.host_store import HostStore, read_memory_budget
+from runtime.tiered_prefix_cache.host_store import (
+    HostStore,
+    read_memory_budget,
+    tp_vote_result,
+    tp_vote_vector,
+)
 from runtime.tiered_prefix_cache.prefix_key import (
     MmItem,
     compute_prefix_key,
@@ -41,7 +46,7 @@ from runtime.tiered_prefix_cache.prefix_key import (
 
 DELIMITER_TEXT = "\n\nSCHEMA FIELDS:\n"
 ALIGN = 128
-MIN_PREFIX = 512
+MIN_PREFIX = 256
 _STATE: dict = {
     "store": None,
     "tokenizer": None,
@@ -65,6 +70,8 @@ def _env_on() -> bool:
 
 
 def _debug(msg: str) -> None:
+    if not os.path.exists("/tmp/clef_tier2_debug"):
+        return
     try:
         with open("/tmp/clef_tier2_engine.log", "a") as handle:
             handle.write(f"{os.getpid()} {time.time():.3f} {msg}\n")
@@ -92,8 +99,10 @@ def _mask() -> torch.Tensor:
 
 def _store() -> HostStore:
     if _STATE["store"] is None:
-        # The 64 GiB total plan is split evenly across the two TP workers.
-        budget = read_memory_budget()["budget_bytes"] // 2
+        # Deterministic per-rank budget: both TP workers must agree byte for
+        # byte, so never read /proc/meminfo here.
+        budget = int(os.environ.get(
+            "CLEF_PREFIX_CACHE_RANK_BYTES", str(32 << 30)))
         _STATE["store"] = HostStore(
             budget_bytes=budget, admission="always", use_shm=False,
             eviction_policy="keep_longest", eviction_watermark=0.95)
@@ -123,7 +132,7 @@ class Context:
         self.S = split.l_suffix
         self.phase = "capture"
         self.prefix_memory = None
-        self.prefix_hidden = None
+        self.pool_done = False
         self.captured_kv = {}
         self.captured_conv = {}
         self.captured_ssm = {}
@@ -219,8 +228,11 @@ def prepare_execute(scheduler_output, runner) -> None:
                 modality=str(f.modality),
             )
             for f in req.mm_features)
+        if any(not item.mm_hash for item in mm_items):
+            return
+        min_prefix = 128 if mm_items else 512
         split = locate_state_prefix(
-            tokens, delimiter, align=ALIGN, min_prefix=MIN_PREFIX,
+            tokens, delimiter, align=ALIGN, min_prefix=min_prefix,
             mm_items=mm_items)
         if split is None:
             _debug(f"bypass split T={len(tokens)}")
@@ -229,10 +241,10 @@ def prepare_execute(scheduler_output, runner) -> None:
         key = compute_prefix_key(
             "clef-tier2", split, model_revision=revision, align=ALIGN, tp_size=2)
         rank = _tp_rank()
-        decision = _store().observe(key)
+        decision = _store().observe(key, split.l_aligned)
         _debug(f"decision={decision} T={split.total_tokens} L={split.l_aligned} "
                f"rank={rank}")
-        if decision == "miss":
+        if decision == "miss" or not _vote_decision(key, decision):
             return
         ctx = Context(key, split, decision, rank)
         if decision == "hit":
@@ -253,9 +265,6 @@ def prepare_execute(scheduler_output, runner) -> None:
             if entry.prefix_memory is not None:
                 ctx.prefix_memory = entry.prefix_memory.to(
                     _device(), non_blocking=False)
-            hidden = shard.get("prefix_hidden")
-            if hidden is not None:
-                ctx.prefix_hidden = hidden.to(_device(), non_blocking=False)
             ctx.load_ms = (time.perf_counter() - started) * 1000.0
             _trace(f"hit load L={ctx.L} T={ctx.T} load_ms={ctx.load_ms:.2f}")
             if len(ctx.restored_kv) == 0 or len(ctx.restored_conv) == 0:
@@ -279,7 +288,7 @@ def finish_execute() -> None:
             return
         _debug(f"finish mode={ctx.mode} model_done={getattr(ctx,'model_done',False)} "
                f"phase={ctx.phase} pool_only={_STATE.get('pool_only')}")
-        if getattr(ctx, "model_done", False):
+        if getattr(ctx, "model_done", False) and not getattr(ctx, "pool_done", False):
             _STATE["pool_ctx"] = ctx
             _STATE["ctx"] = ctx
         if ctx.mode == "populate":
@@ -294,6 +303,29 @@ def finish_execute() -> None:
             ctx.lease.release()
     except Exception:  # noqa: BLE001
         pass
+
+
+def _vote_decision(key: bytes, decision: str) -> bool:
+    """One TP2 all_reduce: both ranks must agree on key and bucket."""
+    mode = 1 if decision == "populate" else 2
+    local = list(tp_vote_vector(key, True)) + [mode]
+    try:
+        tensor = torch.tensor(local, dtype=torch.int64, device=_device())
+        torch.distributed.all_reduce(tensor)
+        summed = tuple(int(value) for value in tensor.tolist())
+    except Exception:  # noqa: BLE001 - distributed not ready: fail closed
+        return False
+    eligible, _resume = tp_vote_result(tuple(local[:34]), summed[:34])
+    return eligible and summed[34] == 2 * mode
+
+
+def _gdn_chunk_size() -> int:
+    try:
+        from vllm_ascend.ops.gdn_attn_builder import _GDN_CHUNK_SIZE
+
+        return int(_GDN_CHUNK_SIZE)
+    except Exception:  # noqa: BLE001
+        return 128
 
 
 def _pack_capture(ctx) -> dict:
@@ -311,8 +343,6 @@ def _pack_capture(ctx) -> dict:
         shards["conv_all"] = torch.stack(
             [ctx.captured_conv[layer] for layer in layers]).cpu()
         shards["conv_layers"] = torch.tensor(layers, dtype=torch.int64)
-    if ctx.prefix_hidden is not None:
-        shards["prefix_hidden"] = ctx.prefix_hidden.cpu()
     if ctx.captured_ssm:
         layers = sorted(ctx.captured_ssm)
         shards["ssm_all"] = torch.stack(
@@ -409,7 +439,6 @@ def _model_forward(original):
                     core, embeds[: ctx.L], positions[..., : ctx.L])
                 ctx.prefix_memory = head.memory_projection(
                     head.hidden_norm(prefix_hidden)).contiguous()
-                ctx.prefix_hidden = prefix_hidden.contiguous()
                 ctx.phase = "resume"
             else:
                 ctx.phase = "resume"
@@ -603,10 +632,11 @@ def _resume_gdn(self, mixed_qkv, b, a, core_attn_out, conv_state, ssm_state):
     k = k[:, 3:].contiguous()
     v = v[:, 3:].contiguous()
     g, beta = DeviceOperator.fused_gdn_gating(self.A_log, a, b, self.dt_bias)
+    chunk = _gdn_chunk_size()
     meta = SimpleNamespace(
         cu_seqlens_host=(0, tokens),
         chunk_indices_chunk64_host=tuple(
-            value for index in range((tokens + 127) // 128)
+            value for index in range((tokens + chunk - 1) // chunk)
             for value in (0, index)),
         keep_meta=None,
     )
@@ -635,10 +665,11 @@ def _fla_gdn_prefill(original):
                 bsnd=True, no_recompute=True, decision_prefill=True,
                 state_free=lambda: runtime_stub)
             tokens = int(q.shape[1])
+            chunk = _gdn_chunk_size()
             capture_meta = SimpleNamespace(
                 cu_seqlens_host=(0, tokens),
                 chunk_indices_chunk64_host=tuple(
-                    value for index in range((tokens + 127) // 128)
+                    value for index in range((tokens + chunk - 1) // chunk)
                     for value in (0, index)),
                 keep_meta=None)
             output, state = original(
@@ -675,19 +706,15 @@ def _pooler_forward(original):
                 return original(self, hidden_states, pooling_metadata)
             schema, lexical_ids, lexical_span_ids = self._indices(
                 *parsed, hidden_states.device)
-            full_hidden = None
-            if ctx.prefix_hidden is not None:
-                full_hidden = torch.cat([ctx.prefix_hidden, hidden_states], dim=0)
-            else:
-                schema = schema_mod.SchemaIndices(
-                    positions=schema.positions - ctx.L,
-                    span_ids=schema.span_ids,
-                    span_lengths=schema.span_lengths,
-                    question_types=schema.question_types,
-                    option_question=schema.option_question,
-                    option_slots=schema.option_slots,
-                    option_mask=schema.option_mask,
-                )
+            schema = schema_mod.SchemaIndices(
+                positions=schema.positions - ctx.L,
+                span_ids=schema.span_ids,
+                span_lengths=schema.span_lengths,
+                question_types=schema.question_types,
+                option_question=schema.option_question,
+                option_slots=schema.option_slots,
+                option_mask=schema.option_mask,
+            )
             token_ids = prompt_token_ids[0]
             lexical_tokens = [token_ids[index] for index in lexical_ids.tolist()]
             lexical_embeddings = self.embed_lexical(
@@ -696,10 +723,8 @@ def _pooler_forward(original):
                 lexical_embeddings, lexical_span_ids,
                 schema.span_lengths[len(parsed[0]):])
             logits = self.head(
-                full_hidden if full_hidden is not None else hidden_states,
-                lexical, schema,
-                prefix_memory=None if full_hidden is not None else ctx.prefix_memory
-            ).float()
+                hidden_states, lexical, schema,
+                prefix_memory=ctx.prefix_memory).float()
             if params.use_activation is not False:
                 mask = schema.option_mask
                 grid = logits.new_full((mask.numel(),), float("-inf"))

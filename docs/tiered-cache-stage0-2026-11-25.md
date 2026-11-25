@@ -214,3 +214,24 @@
 - 时间拆解：ERQA hit H2D **7.5–7.8 ms**、suffix 64 层 **90.1–90.5 ms**；OD hit load **2.0–2.8 ms**、suffix **86.6–88.7 ms**。
 - **结论**：M1 功能链完整、速度达到计划区间（OD 109–114 ms、ERQA 169–181 ms，ERQA 相对 1,940 ms 冷基线约 10.7×），OD 满足 5e-3 fallback，ERQA **0.005913 超 5e-3 门 0.000913**（0 flips）。按刚性门 **M1 未通过**，M2–M4 未启动；Tier 2 默认 off，主线保持 `ae5903f`。根因是分块 GEMM（QKV/MLP/记忆投影）M=L/T 形状不同带来的 BF16 tiling 差异，待用 T 形状前缀补齐或 FP32 累加方案再评估。
 - 探针清理：`/tmp/clef_tier2_engine|trace`、venv `tier2_probe.pth` 已移除；服务停止、18143/NPU6/`/dev/shm` 已清。
+
+## 10. 架构审阅 P0 修复与复测（2026-11-25 晚）
+
+按审阅报告完成核心修复：
+
+- **P0-1**：删除 `ctx.prefix_hidden` 全链（Model 捕获、Store 打包、Hit 恢复、Pooler 全 Hidden 分支）；`_pooler_forward` 现严格传后缀 `hidden [S,5120]`、`positions-ctx.L` 与 `ctx.prefix_memory [L,1024]`；`find_last_subsequence` 改尾部倒序；`_debug` 改为 `/tmp/clef_tier2_debug` 门控，不再无条件写盘。
+- **P0-2 部分**：`pool_done` 生命周期与 lease 释放修正；TP2 单次 `all_reduce` 投票（key+mode）；`mm_hash` 为空直接 Bypass；`chunk_indices` 动态读取 `_GDN_CHUNK_SIZE`；`min_prefix` 分模态（文本 512 / 多图 128）；HostStore `observe(key, L)` 满水位早拒。
+- **P0-4 部分**：每 rank 预算固定 `CLEF_PREFIX_CACHE_RANK_BYTES`（默认 32 GiB），不再读 `/proc/meminfo`；持久化仍为 pageable `.cpu()`。
+
+复测（单进程 TP2，修正后）：
+
+| 运行 | mean | p95 | acc | vs OFF max_prob_diff | flips |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ERQA C1 R1 Warmup | 248.06 ms | 326.94 ms | 216/400 | 0.064700 | 2（erqa-0075/0165） |
+| ERQA C1 R2 | **134.79 ms** | **202.94 ms** | 216/400 | 0.064700 | 2 |
+| OD S1 R1 Warmup | 148.83 ms | 300.29 ms | — | — | — |
+| OD S1 R2 | 127.01 ms | 215.95 ms | — | — | — |
+| OD S1 R3 | 126.89 ms | 216.80 ms | — | — | — |
+
+- **关键结论**：修复 Pooler 错位后 ERQA 单样本仍为 `0.003582 / 0.005913`、全量 maxdiff 0.064700、2 flips 不变，**证明审阅报告“0.005913 由 `prefix_hidden` 索引错位导致”的根因判断不成立**；全 Hidden 分支确为真实 Bug，已修复，但数值差来自 64 层分块 GEMM 的 M-tiling（L/S vs T），需 T 形状补齐或确定性 GEMM 才能压入 5e-3。
+- **S1 对比**：OD 暖态 R2/R3 **7.87 dec/s / p95 216 ms**，慢于基线 9.24 / 154 ms；ERQA C1 R2 134.8 / 202.9 快于基线 206.9 / 289.3。OD 短前缀命中收益不足，另有 2-Substep Populate 税；1-Pass Tap 未实现。**Tier 2 仍默认 off，M2–M4 未启动，main 保持 `ae5903f`。**

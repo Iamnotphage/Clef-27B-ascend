@@ -193,8 +193,13 @@ class HostStore:
 
     # ------------------------------------------------------------------
     # admission
-    def observe(self, key: bytes) -> str:
-        """Record one sighting and return ``hit`` / ``populate`` / ``miss``."""
+    def observe(self, key: bytes, length: int = 0) -> str:
+        """Record one sighting and return ``hit`` / ``populate`` / ``miss``.
+
+        With ``keep_longest`` a full pool rejects a newcomer that is no longer
+        than every resident prefix, so a sequential scan cannot churn the pool
+        and the caller pays no populate cost.
+        """
         if not isinstance(key, bytes) or len(key) != 32:
             raise ValueError("prefix key must be 32 bytes")
         with self._lock:
@@ -202,6 +207,13 @@ class HostStore:
             if entry is not None:
                 self.counters["hits"] += 1
                 return "hit"
+            if (self.eviction_policy == "keep_longest" and length > 0
+                    and self._bytes >= self.budget_bytes * self.eviction_watermark):
+                resident = [item.length for item in self._entries.values()
+                            if item.length > 0]
+                if resident and length <= min(resident):
+                    self.counters["misses"] += 1
+                    return "miss"
             if self.admission == "always":
                 self.counters["populates"] += 1
                 return "populate"
