@@ -1,0 +1,107 @@
+{
+ "schema": "tiered-prefix-cache-step2-m2/1",
+ "branch": "feat/tiered-cache-20261124",
+ "commits": [
+  "cba18a1",
+  "0073a79"
+ ],
+ "remote_runs": {
+  "subset16": "/workspace/yangchen/logs/tiered-cache-20261124/tap-m2a10-20261125/subset16-*.json",
+  "od_c16": "/workspace/yangchen/logs/tiered-cache-20261124/tap-m2a10-20261125/od-c16-*.json",
+  "od_c16_quality": "/workspace/yangchen/logs/tiered-cache-20261124/tap-m2a10-20261125/od-c16-quality-*.json",
+  "erqa_c16": "/workspace/yangchen/logs/tiered-cache-20261124/tap-m2a11-20261125/erqa-c16-*",
+  "od_c64": "/workspace/yangchen/logs/tiered-cache-20261124/tap-m2a11-20261125/od-c64-*.json"
+ },
+ "subset16": {
+  "samples": 16,
+  "r1_mean_ms": 4170.6,
+  "r2_mean_ms": 2587.7,
+  "r3_mean_ms": 1190.1,
+  "r3_decisions_per_second": 11.107,
+  "publishes": 32,
+  "dropped": 0,
+  "mixed_errors": 0
+ },
+ "od_s2_c16": {
+  "requests": 2352,
+  "r1": {
+   "decisions_per_second": 16.027,
+   "p95_ms": 1863.3,
+   "mean_ms": 997.7,
+   "failed": 0
+  },
+  "r2": {
+   "decisions_per_second": 19.113,
+   "p95_ms": 1166.1,
+   "mean_ms": 836.7,
+   "failed": 0,
+   "quality": {
+    "capability": 74.257856,
+    "intelligence": 66.05363,
+    "calibration": 82.462082,
+    "correct": 1904,
+    "score_mae": 0.401459,
+    "protocol_failures": 0
+   }
+  },
+  "r3": {
+   "decisions_per_second": 20.026,
+   "p95_ms": 1127.4,
+   "mean_ms": 798.6,
+   "failed": 0,
+   "quality": {
+    "capability": 74.274861,
+    "intelligence": 65.981131,
+    "calibration": 82.56859,
+    "correct": 1903,
+    "score_mae": 0.401633,
+    "protocol_failures": 0
+   }
+  },
+  "main_reference": {
+   "decisions_per_second": 16.971,
+   "p95_ms": 1704.39,
+   "mean_ms": 942.19
+  },
+  "r2_vs_r3": {
+   "bitwise_identical": 2022,
+   "differing": 330,
+   "max_prob_diff": 0.10690981149673462,
+   "note": "C16 batch composition; main C16 warm2/warm3 also differs 0.088/3 flips"
+  }
+ },
+ "erqa_s2_c16": {
+  "requests": 400,
+  "coverage": "400/400",
+  "r1": {
+   "accuracy": 219,
+   "wall_seconds": 63.4,
+   "decisions_per_second": 6.31
+  },
+  "r2": {
+   "accuracy": 217,
+   "wall_seconds": 28.0,
+   "decisions_per_second": 14.289,
+   "verify_requests": "400/400, 0 mismatches"
+  },
+  "r3": {
+   "accuracy": 218,
+   "wall_seconds": 20.2,
+   "decisions_per_second": 19.849,
+   "verify_requests": "400/400, 0 mismatches"
+  },
+  "main_reference": {
+   "cold_decisions_per_second": 6.953,
+   "warm_decisions_per_second": 8.627
+  },
+  "publishes": 866,
+  "dropped": 89,
+  "skipped": 0,
+  "mixed_errors": 0
+ },
+ "quality_gates": "all within 2PP; 0 failures / 0 retries",
+ "fixes": [
+  "miss must join the [B,35] vote (cross-dataset watermark KeyError / TP split deadlock)",
+  "prefix_memory tapped slice cloned before the async D2H"
+ ]
+}

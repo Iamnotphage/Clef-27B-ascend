@@ -331,3 +331,38 @@ OD S1（2,352）：
 - 存储：389 条 / **25.03 GB/rank**，R1/R2/R3 **0 淘汰**；R2/R3 `populates=0`。ERQA 唯一前缀总占用低于 32 GiB/rank 水位，400/400 常驻。
 - 证据：`Clef-27B/logs/tiered-cache-20261124/step2-0-erqa400-20261125.json`；远端原始 `tap-erqa400-20261125/`。
 
+
+### 11.7 Step 2：M2 多并发混批与 S2 收益（2026-11-25）
+
+- **实现**（提交 `cba18a1`、`0073a79`）：批量准入从 `prepare_inputs` 的 `batch_req_state.req_ids` 取真实打包顺序；`observe` 后一次 `[B,35]` `cpu_all_reduce_`（`miss` 也参与），同批同 key 只留第一条 `populate`；hit 逐请求 `Prefetcher` 预取。至多两次层遍历：**Pass1 Fresh**（bypass+populate，全长；显式 `aclnnClefGdnConvQkvVarlen` + FIA TND，层内 tap KV/conv/grouped SSM）与 **Pass2 Resume**（hit 后缀；逐层 `cat([K_pfx,K_sfx])` 单次 FIA TND；`x_aug` varlen conv + `keep_idx` + 批量 `fla_gdn_prefill`）。batch pooler 整批一次 `embed_lexical`、逐请求 head；populate 切 `memory[:L]`，hit 用恢复的 `prefix_memory`。发布路径记录捕获时的 `ready` 事件、后台队列按 8×640 MiB ring 提交，C16 突发不再阻塞请求线程。
+- **关键修复**：`miss` 必须映射为投票的 bypass 模式——否则跨数据集水位早拒时 `KeyError`，且双卡 hit/miss 不一致会让一卡回退、一卡进子批，TP 对死锁；`prefix_memory` 切片改为私有 clone，异步 D2H 不再读下一 step 可复用的瞬时缓冲。
+- **subset16**（最长 16 条 eligible OD）：R1/R2/R3 0 失败、32/32 publish、0 丢包；R3 全命中 **1.44 s / 11.1 dec/s**。
+
+OD S2 C16（2,352，`tap-m2a10-20261125`）：
+
+| 轮次 | dec/s | p95 (ms) | mean (ms) | 失败 |
+| --- | ---: | ---: | ---: | ---: |
+| 主线 29a1bf8 参考 | 16.971 | 1704.39 | 942.19 | 0 |
+| R1（populate/mixed） | 16.027 | 1863.3 | 997.7 | 0 |
+| R2（hit/mixed） | 19.113 | 1166.1 | 836.7 | 0 |
+| R3（hit/mixed） | **20.026** | **1127.4** | 798.6 | 0 |
+
+- **R3 对主线 +18.0% dec/s、−33.9% p95；R2 +12.6%/−31.6%**；R1 因 populate 捕获/发布 p95 +9.3%，仍 0 失败。
+- 质量（`od_raw_acceptance`）：R2 Cap **74.2579** / Int 66.0536 / Cal 82.4621 / acc 1904 / MAE 0.401459；R3 Cap **74.2749** / Int 65.9811 / Cal 82.5686 / acc 1903 / MAE 0.401633。相对主线 S1 74.2477 与作者 baseline 74.4255 均在 2PP 内，0 协议失败。
+- R2 vs R3：2,022/2,352 逐位、330 条差异 max 0.1069。差异来自 C16 **批次组成随机性**（同一请求在不同轮与不同邻批合批，GEMM `M` 不同；主线自身 C16 warm2/warm3 亦有 0.088/3 flips），不是缓存错误；B1/C1 的 R2==R3 逐位 0.0 仍未变。
+- 发布：C16 突发下 1,526 次 submit、197 次 ring 满丢弃（fail-closed，下一轮自动补）、0 skip。
+
+ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
+
+| 轮次 | dec/s | 准确率 | 说明 |
+| --- | ---: | --- | --- |
+| 主线 cold | 6.953 | 217/400 | 参考 |
+| 主线 warm | 8.627 | 218/400 | 参考 |
+| R1 | 6.31 | 219/400 | populate/mixed，0 失败 |
+| R2 | **14.289** | 217/400 | hit/mixed |
+| R3 | **19.849** | 218/400 | hit/mixed |
+
+- **R3 对主线暖态 +130.1%、R2 +65.6%**；R1 因 populate 捕获/发布比主线冷首遍 −9.2%，0 失败/0 重试。
+- `erqa_score.py --verify-requests`：R2 217/400、R3 218/400，均 **400/400 通过、0 mismatch**；相对 baseline 219/400 偏差 ≤0.5 PP，2PP 内。
+- 发布：866 次 submit、89 次 ring 满丢弃（fail-closed，下一轮补齐）、0 skip、0 混批错误。
+- ERQA C16 的批次为 B≤8（长图文 16,384 token 预算），混合批（populate+hit+bypass）全程无死锁；此前的 `miss` 投票缺失已修复（提交 `0073a79`）。
