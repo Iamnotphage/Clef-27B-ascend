@@ -235,3 +235,79 @@
 
 - **关键结论**：修复 Pooler 错位后 ERQA 单样本仍为 `0.003582 / 0.005913`、全量 maxdiff 0.064700、2 flips 不变，**证明审阅报告“0.005913 由 `prefix_hidden` 索引错位导致”的根因判断不成立**；全 Hidden 分支确为真实 Bug，已修复，但数值差来自 64 层分块 GEMM 的 M-tiling（L/S vs T），需 T 形状补齐或确定性 GEMM 才能压入 5e-3。
 - **S1 对比**：OD 暖态 R2/R3 **7.87 dec/s / p95 216 ms**，慢于基线 9.24 / 154 ms；ERQA C1 R2 134.8 / 202.9 快于基线 206.9 / 289.3。OD 短前缀命中收益不足，另有 2-Substep Populate 税；1-Pass Tap 未实现。**Tier 2 仍默认 off，M2–M4 未启动，main 保持 `ae5903f`。**
+
+## 11. Step 1：Tier 2 B1 1-Pass Tap、老化淘汰与性能闭环（2026-11-25 晚）
+
+> 分支 `feat/tiered-cache-20261124`（基于 `a0af111`，含 varlen main `29a1bf8`）。本轮把 M1 的 2-Substep Populate 改为 **1-Pass Tap**，补齐 `aged_keep_longest` 与 `observe(est_bytes)` 水位修复，接入 `AsyncCapture`/`Prefetcher` 与 CPU `cpu_all_reduce_` 投票，并用 **grouped varlen SSM 捕获**把 48 层 GDN 状态压到每 4–8 层一次调用。OFF 对照为同一代码树、关闭 Tier 2 的独立服务（`tap-off-20261125`）。
+
+### 11.1 实现
+
+1. **Populate = 全长一遍**：`ClefFlashForJointSchema.forward` 在 populate 时直接跑 `[0:T]` 全 64 层，输出经原装 pooler（FRACTAL_NZ/单字段等常规路径），层内旁路切 `key[:L]`、`value[:L]`、`mixed_qkv[L-3:L, :5120]`，JointHead 侧切 `memory[:L]`；不再跑第二遍 64 层。
+2. **Grouped SSM 捕获**：GDN 状态在 `fla_gdn_prefill` 旁路按层暂存 prefix q/k/v/g/beta，每 `G` 层合并为一次 varlen 调用（`cu_seqlens=[0,L,…,G·L]`、seq-major `chunk_indices`、`initial_state=0`、`output_final_state=True`）。`G=min(8, 512 MiB / 单层字节)`：OD 常取 8（约 105 MiB），ERQA 10,112-token 取 5（约 525 MiB）。离线 2 层 OD/ERQA 与单层捕获 **max_abs=0.0**；在线 grouped R2 与 immediate R2 **400/400 逐位 0.0**。
+3. **异步存取**：`AsyncCapture` 独立 copy 流 + 双事件 + 设备内 snapshot，`PinnedRing(slots=2, slot_bytes=640 MiB)`；HostStore 持久化 pageable；Hit 经 `Prefetcher` 精确尺寸 pinned staging（总缓存 ≤ 768 MiB）恢复，`wait_event` 不阻塞 CPU。CPU 张量不再调用 `record_stream`。
+4. **准入与淘汰**：`HostStore` 新增 `aged_keep_longest`（`ACTIVE_WINDOW=3000` 次 observe，stale 按 `last_obs_seq` 优先淘汰）与 `observe(key, length, est_bytes)`——早拒按 `bytes+est` 预测 publish 水位，不再用淘汰后的 `bytes`（修复每轮重复 Populate 抖动）；`populates`（准入）与 `publications`（发布）分离。TP2 所有 `split` 请求（含 `miss`）统一 `get_tp_group().cpu_all_reduce_` 35 元 int32（key+mode+load），不一致双卡同步 Bypass。
+5. **B1 作用域**：仍只接管"每步恰好一条全新请求"；`dummy_run`/`is_profile` 直接跳过；其余走原路径。
+
+### 11.2 数值等价
+
+| 对照 | 结果 |
+| --- | --- |
+| OFF 服务 vs 冻结基线（ERQA C1 400） | **400/400 逐位 0.0** |
+| OD R1（tap）vs OFF | **2,351/2,352 逐位**；唯一差异 `od-1534` 为冒烟预热后的 hit（0.002028） |
+| ERQA R1（tap）vs OFF | **388/400 逐位**；12 条为冒烟/同轮预热命中（max 0.023889） |
+| OD R2 vs R3 | immediate **2,352/2,352 逐位 0.0**；grouped 同为 **2,352/2,352 逐位 0.0** |
+| ERQA R2 vs R3 | **400/400 逐位 0.0** |
+| grouped vs immediate 命中（ERQA R2） | **400/400 逐位 0.0** |
+| hit vs OFF | OD max 0.069327（302/2,352 条非零）、ERQA max 0.055595（252/400 条）；2PP 内 |
+| 质量 | OD R2（grouped）Cap **74.2586** / Int **66.0880** / Cal **82.4292** / acc 1904 / MAE 0.402523（immediate Cap 74.2573）；ERQA R2 **217/400** |
+
+- **结论：Populate（1-Pass Tap）与 OFF 逐位一致**；所有差异均来自 hit 路径的 BF16 分块 GEMM `M=L/S` vs `M=T` 累加顺序，与 S2 合批误差同源，不涉及缓存实现正确性。
+- grouped 与 immediate 两次 OD R2 有 7 条差异（2,345/2,352 逐位，max 0.0167）；逐条核对全部是“一条命中、另一条 Bypass”的**缓存驻留集合差异**（异步 publish 完成时序影响 keep_longest 早拒），不是状态捕获差异；ERQA 无淘汰场景 grouped vs immediate **400/400 逐位 0.0**。同一次运行的 R2 vs R3 才是缓存自洽门。
+
+### 11.3 性能（S1 C1，同机同服务对照）
+
+ERQA C1（400，A2 state-list）：
+
+| 轮次 | mean (ms) | p50 | p95 | dec/s | 准确率 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| OFF 冷首遍 | 206.32 | 194.25 | 287.97 | 4.76 | 216/400 |
+| Tap R1（populate，grouped） | **206.46** | 197.72 | **286.98** | 4.76 | 216/400 |
+| Tap R2（hit，grouped） | **131.22** | 120.38 | **206.46** | 7.42 | 217/400 |
+| Tap R2（hit，immediate） | 138.52 | 129.86 | 202.35 | 7.04 | 217/400 |
+| Tap R3（hit，immediate） | 135.94 | 126.63 | 202.77 | 7.17 | 217/400 |
+| 冻结暖基线（C1 第二遍） | 165.40 | 153.42 | 244.66 | 5.94 | 216/400 |
+
+- R1 对 OFF **mean +0.14 ms / p95 −1.0 ms / wall 84.0 vs 84.0 s**：Populate 已"冷不亏"。
+- 按请求配对（R1 vs OFF）：populate n=255 **+9.43 ms mean / +21.83 p95**（immediate 为 +18.9/+30.1）；bypass −0.86（噪声）；12 条命中 −186 ms。
+- R2 对冻结暖基线 **mean −20.7%、p95 −15.6%**；267/400 命中（133 条因图像展开跨 128 边界不可切分而 Bypass，属设计上限）。
+- ERQA 聚合（grouped R1+R2、immediate R3）：暖 2 轮 mean 133.58 vs 冻结暖基线 165.40（**−19.2%**）、p95 204.62 vs 244.66（**−16.4%**）；3 轮 mean 157.87 vs OFF 冷+暖+暖 179.04（**−11.8%**）。
+
+OD S1（2,352）：
+
+| 轮次 | mean (ms) | p50 | p95 | dec/s |
+| --- | ---: | ---: | ---: | ---: |
+| OFF 对照 | 109.10 | 100.41 | 153.87 | 9.164 |
+| Tap R1（populate，immediate） | 123.19 | 106.56 | 195.25 | 8.116 |
+| Tap R2（hit，immediate） | 110.67 | 106.31 | **124.06** | 9.034 |
+| Tap R3（hit，immediate） | 109.92 | 106.01 | **123.96** | 9.096 |
+| Tap R1（populate，grouped） | 119.79 | 105.54 | 187.11 | 8.346 |
+| Tap R2（hit，grouped） | **106.49** | 102.54 | **121.66** | 9.388 |
+| Tap R3（hit，grouped） | **107.66** | 103.61 | **122.55** | 9.286 |
+
+- 按请求配对（grouped R2 vs OFF）：hit n=314 **−41.09 ms mean / −8.52 p95**；bypass +3.42（会话漂移）；R2 总体 **mean −2.61 ms（−2.4%）、p95 −32.21 ms（−20.9%）、9.388 dec/s（+2.4%）**。R3 与 R2 同量级（mean −1.44 ms、p95 −20.4%、9.286 dec/s）。immediate 臂的 hit 为 −36.23 ms、R2 总体 p95 −19.6%。
+- 聚合：OD **暖 2 轮 mean 107.08 vs OFF 109.10（−1.9%）、p95 122.11 vs 153.87（−20.6%）**；3 轮 mean 111.31（+2.0%）、p95 受 R1 的 187.11 拉高。
+- 缓存准入（grouped 臂）：R1 379 条 populate、32 条 keep_longest 早拒、154–158 条淘汰；R2/R3 **0 准入、0 淘汰**，存储稳定在 478–479 条 / 32.6 GB/rank（0.95 水位）。
+- 配对说明：R1 的 populate 增量 grouped 为 +28.34 mean / +103.21 p95（immediate +43.75/+119.91）；ERQA grouped 为 +9.43/+21.83。OD R1 的残余主要来自首轮新形状的 aclnn/组调用预热与打包，非稳态成本。
+
+### 11.4 跨数据集与稳定性
+
+- 同一常驻服务 ERQA×2 → OD×3（grouped 臂）：ERQA 17.1 GB/rank 常驻后，OD R1 淘汰 154–158 条、R2/R3 **零准入零淘汰**；ERQA 的 133 条 bypass、OD 的 1,941 条 bypass 与 97 条 keep_longest 早拒全程稳定，无双卡分叉（`cpu_all_reduce_` 投票下仅出现一次 C1 连发同 key 的 hit/populate 竞态，双卡同步 Bypass）。immediate 臂的 ERQA×3 → OD×3 计数相同量级（158 淘汰、R2/R3 零准入）。
+- 41 项单测（远端 41/41 OK）；`torch_npu`/SHM 用例全跑。
+- 失败/重试：所有 ERQA/OD 运行 **0 失败、0 重试**；`erqa_score.py --verify-requests` 400/400、0 mismatch。
+
+### 11.5 偏差、限制与下一步
+
+1. **Populate 残余税**：grouped 后 ERQA populate +9.4 ms mean / +21.8 p95；单层状态重算的设备时间与 KV/SSM 打包仍计入。`return_intermediate_states`（h 每 chunk 状态）在 A3 直接报 `161002: The prepare path is supported on Ascend950 only`，**不可用**；grouped varlen 已是 A3 上可验证的最优路径。
+2. **ERQA 覆盖 267/400**：133 条的对齐边界落在最后一张图的展开块内，按"不得切穿图像"规则必须 Bypass；阶段 0 审计的 400/400 仅按 delimiter 对齐、未计该规则。提高覆盖需要放宽边界或改缓存粒度，留作后续。
+3. **hit 均值与 R1 残余**：grouped 臂 OD R2 mean 已低于 OFF 2.6 ms（命中 −41.1 ms × 314 条抵消 bypass 会话漂移 +3.4）；immediate 臂因更大漂移为 +1.6 ms。OD R1 仍 +10.7 mean/+33.2 p95，主要为首轮新形状预热与打包，暖 2 轮已 −1.9%/−20.6%；与阶段 0 "收益定位长图文/暖态"的结论一致。
+4. **M2 多并发**：未启动；下一步按计划做 Varlen 混批（Bypass/Populate/Hit 分桶、`runner.input_batch.req_ids` 对齐、整批一次 `embed_lexical`）。
