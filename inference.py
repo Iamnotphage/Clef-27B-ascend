@@ -20,10 +20,12 @@ import sys
 import time
 import types
 
-DEFAULT_MODEL_DIR = "/workspace/yangchen/models/Clef-27B"
+REPO_ROOT = Path(__file__).resolve().parent
+# 运行根默认在项目内（source scripts/activate_env.sh 会设置 MODEL_DIR）；
+# 不再隐式依赖 /workspace/yangchen。
+DEFAULT_MODEL_DIR = str(REPO_ROOT / ".build" / "models" / "Clef-27B")
 SERVED_MODEL_NAME = "clef"
 PROTOCOL_VERSION = "2026-11-13"
-REPO_ROOT = Path(__file__).resolve().parent
 RUNTIME_DIR = REPO_ROOT / "src" / "runtime"
 GDN_INSTALLER = RUNTIME_DIR / "apply_gdn_decision_patch.py"
 QKV_INSTALLER = RUNTIME_DIR / "apply_qkv_norm_patch.py"
@@ -209,7 +211,16 @@ def resolve_vllm_tree(timeout=60):
     target = tree / "vllm/model_executor/models/clef_joint_schema.py"
     if not target.is_file():
         raise ValueError(f"vllm joint schema target missing: {target}")
-    if not os.access(target, os.W_OK) or not os.access(target.parent, os.W_OK):
+    # root 会绕过 0444 权限，os.access 不能反映“声明为只读”的意图；
+    # 同时看 mode 位与 os.access（后者覆盖只读挂载/ACL）。
+    def _writable(path):
+        try:
+            mode = path.stat().st_mode
+        except OSError:
+            return False
+        return bool(mode & 0o222) and os.access(path, os.W_OK)
+
+    if not _writable(target) or not _writable(target.parent):
         raise ValueError(f"vllm joint schema target is not writable: {target}")
     return {"tree": str(tree), "target": str(target), "probe_rc": result.returncode,
             "probe_stdout": result.stdout[-500:], "probe_stderr": result.stderr[-500:]}
@@ -271,17 +282,24 @@ def software_provenance():
             if spec and spec.submodule_search_locations:
                 pkg_dir = Path(list(spec.submodule_search_locations)[0])
                 entry["package_dir"] = str(pkg_dir)
+                source_root = pkg_dir.parent
+                marker = source_root / ".clef-source-commit"
                 try:
-                    head = subprocess.run(
-                        ["git", "-C", str(pkg_dir.parent), "rev-parse", "HEAD"],
-                        capture_output=True, text=True, timeout=10)
-                    dirty = subprocess.run(
-                        ["git", "-C", str(pkg_dir.parent), "status", "--porcelain"],
-                        capture_output=True, text=True, timeout=10)
-                    if head.returncode == 0:
-                        entry["git_head"] = head.stdout.strip()
-                        entry["worktree_dirty"] = bool(dirty.stdout.strip())
-                        entry["dirty_files"] = len(dirty.stdout.splitlines())
+                    if (source_root / ".git").exists():
+                        head = subprocess.run(
+                            ["git", "-C", str(source_root), "rev-parse", "HEAD"],
+                            capture_output=True, text=True, timeout=10)
+                        dirty = subprocess.run(
+                            ["git", "-C", str(source_root), "status", "--porcelain"],
+                            capture_output=True, text=True, timeout=10)
+                        if head.returncode == 0:
+                            entry["git_head"] = head.stdout.strip()
+                            entry["worktree_dirty"] = bool(dirty.stdout.strip())
+                            entry["dirty_files"] = len(dirty.stdout.splitlines())
+                    elif marker.is_file():
+                        # scripts/setup_env.sh archive 回退：固定提交 tarball 无 .git。
+                        entry["git_head"] = marker.read_text(encoding="utf-8").strip()
+                        entry["head_source"] = "marker"
                 except OSError:
                     pass
                 if name == "vllm":

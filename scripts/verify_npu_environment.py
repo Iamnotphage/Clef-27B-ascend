@@ -82,6 +82,7 @@ def inspect_package(distribution, module_name, expected, cpu_local, required):
     else:
         result["import_passed"] = None
     result["passed"] = bool(result["version_passed"] and result.get("import_passed", False))
+    result["validated"] = bool(required)
     return result
 
 
@@ -236,8 +237,22 @@ def check_extensions(model_dir):
         (vllm_ascend, "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"),
     ):
         root = Path(module.__file__).resolve().parents[1]
-        head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
-        sources[module.__name__] = {"path": str(root), "head": head, "expected_head": expected, "passed": head == expected}
+        marker = root / ".clef-source-commit"
+        if (root / ".git").exists():
+            head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+            head_source = "git"
+        elif marker.is_file():
+            # scripts/setup_env.sh archive 回退：固定提交 tarball 无 .git，
+            # 以提取时写入的 marker 为准；不能向父仓库误读 HEAD。
+            head = marker.read_text(encoding="utf-8").strip()
+            head_source = "marker"
+        else:
+            head = None
+            head_source = "missing"
+        sources[module.__name__] = {
+            "path": str(root), "head": head, "head_source": head_source,
+            "expected_head": expected, "passed": head == expected,
+        }
     return {
         "platform": f"{type(current_platform).__module__}.{type(current_platform).__name__}",
         "architecture": architecture,
@@ -264,7 +279,8 @@ def write_report(path, report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("torch", "runtime"), default="torch")
-    parser.add_argument("--require-extensions", action="store_true", help="Also import and require FLA, flash_attn_npu, vLLM and vLLM-Ascend")
+    parser.add_argument("--require-extensions", action="store_true", help="Also import and require FLA, vLLM and vLLM-Ascend; flash_attn_npu is recorded but optional")
+    parser.add_argument("--require-flash-attn", action="store_true", help="Require flash_attn_npu as well (it is not built by default; use setup_env.sh --with-flash-attn)")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--size", type=int, default=2048)
     parser.add_argument("--seed", type=int, default=20261112)
@@ -275,11 +291,14 @@ def main():
         parser.error("--size and --cpu-threads must be positive")
     if args.require_extensions and args.stage != "runtime":
         parser.error("--require-extensions requires --stage runtime")
+    if args.require_flash_attn and not args.require_extensions:
+        parser.error("--require-flash-attn requires --require-extensions")
     report = {
         "schema_version": 1,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "stage": args.stage,
         "require_extensions": args.require_extensions,
+        "require_flash_attn": args.require_flash_attn,
         "script": {"path": str(Path(__file__).resolve()), "sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()},
         "passed": False,
         "python": {
@@ -308,7 +327,11 @@ def main():
         for package in required:
             report["packages"].append(inspect_package(*package, required=True))
         for package in EXTENSION_PACKAGES:
-            report["packages"].append(inspect_package(*package, required=args.require_extensions))
+            required = args.require_extensions
+            if package[0] == "flash_attn_npu" and not args.require_flash_attn:
+                # 默认不构建 flash_attn_npu；--require-extensions 只记录状态。
+                required = False
+            report["packages"].append(inspect_package(*package, required=required))
         report["pip_check"] = pip_check()
         try:
             check_npu(report, args)

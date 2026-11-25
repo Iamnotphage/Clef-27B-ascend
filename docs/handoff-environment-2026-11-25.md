@@ -1,5 +1,13 @@
 # 环境构建与评测镜像 Handoff（2026-11-25）
 
+> **2026-11-25 晚更新**：`vllm_ascend_C` 编译失败根因已定位并修复——CANN
+> `recompile_binary.py` 的 `glob(..., recursive=True)` 跳过隐藏目录 `.build`；
+> 源码树已迁到 `<repo>/build/src`。当前默认改为固定提交 archive 优先（SHA-256）、
+> git 浅拉取回退，并默认跳过 `flash_attn_npu`（`--with-flash-attn` 可开启）；
+> 一键安装、评测依赖、uv 加速、计时与全隔离验收见
+> [`docs/setup-env-2026-11-25.md`](setup-env-2026-11-25.md)。下文保留
+> 当时的现状记录。
+
 ## 0. 一句话现状
 
 仓库已能在项目内一键建 `.venv`（`scripts/setup_env.sh`），纯 PyPI 层已跑通，但 **vLLM-Ascend 的 Ascend C 扩展编译在 `/workspace/final-test` 容器上失败（`cmake --build ... --target=vllm_ascend_C` exit 2，真实错误未取得）**；同时出现一个更关键的问题：**如果评测机固定使用 `quay.io/ascend/vllm-ascend:v0.30.0-a3` 镜像，本仓库的运行时补丁（`src/runtime/apply_*.py`）会因 SHA-256 不匹配而拒绝启动**。下一步必须先确认评测镜像归属，再决定“移植补丁 / 自带镜像 / wheelhouse 安装”。
@@ -60,12 +68,13 @@ bash start.sh                          # 自动使用 <repo>/.venv/bin/python
 ### 2.4 产物位置
 
 - `<repo>/.venv/`（gitignore）
-- `<repo>/.build/src/{vllm,vllm-ascend,flash_attn_npu-0.5.0}`
+- `<repo>/build/src/{vllm,vllm-ascend,flash_attn_npu-0.5.0,evalscope}`（非隐藏目录；
+  旧 `.build/src` 会自动迁移）
 - `<repo>/.build/materials/`（CPython 包、flash sdist）
 - `<repo>/.build/logs/{vllm-build.log,vllm-ascend-build.log,flash-attn-build.log,pip-check.txt,freeze-*.txt,versions.txt}`
 - 完成标记 `<repo>/.venv/.clef-env-complete`
 
-## 3. 当前阻塞：`vllm_ascend_C` 编译失败
+## 3. 当时的阻塞：`vllm_ascend_C` 编译失败（已修复）
 
 ### 3.1 现象
 
@@ -85,7 +94,7 @@ cmake --build . -j=8 --target=vllm_ascend_C
 cd /workspace/final-test/Clef-27B-ascend
 git pull --ff-only origin main          # 确保含 ef46a9d
 source scripts/activate_env.sh
-cd .build/src/vllm-ascend
+cd build/src/vllm-ascend
 SOC_VERSION=ascend910_9382 COMPILE_CUSTOM_KERNELS=1 MAX_JOBS=8 \
   python -m pip install --no-build-isolation --no-deps -v -e . 2>&1 | tee /tmp/va-build.log
 grep -nE "error:|fatal error|Killed|out of memory|Error [0-9]+" /tmp/va-build.log | head -40
@@ -192,13 +201,19 @@ python3 scripts/probe_runtime_image.py
 4. vLLM/vLLM-Ascend 的 git clone 走 gh-proxy/ghproxy；子模块 URL 通过 `url.<proxy>https://github.com/.insteadOf` 改写。若代理不可用会回退直连。
 5. `flash_attn_npu` 从 PyPI 拉 sdist 时用了 `--no-build-isolation`，依赖环境里已有 torch；如果未来镜像里没有 torch，这条会失败。
 
-## 8. 建议的下一步顺序
+## 8. 建议的下一步顺序（2026-11-25 晚更新）
 
-1. 在 `v0.30.0-a3` 镜像里跑 `scripts/probe_runtime_image.py`，把输出发回。
-2. 向主办方确认镜像归属（固定 vs 自带）。
-3. 若镜像固定：根据探针结果决定“移植补丁”还是“wheelhouse 安装”；移植需要重跑 OD/ERQA 全量质量与 S1/S2 性能。
-4. 若允许自带镜像：在现有 A3 机器上把 `.venv` + 源码树打成镜像，`results.csv` 的 `image` 填自己的 tag。
-5. 无论哪条路，先把 `/workspace/final-test` 上 `vllm_ascend_C` 的真实编译错误取出来；`ef46a9d` 之后的脚本会自动打印。
+1. ~~在 `v0.30.0-a3` 镜像里跑探针~~：已跑，镜像自带 vLLM `0.30.0` / vLLM-Ascend
+   `0.30.0`，与固定提交不匹配（4 个文件差异、无 `ClefFlashForJointSchema`），
+   必须用项目 `.venv`。
+2. ~~取出 `vllm_ascend_C` 真实编译错误~~：已定位为 CANN glob 跳过隐藏目录
+   `.build`，源码树迁到 `build/src` 后构建通过。
+3. 向主办方确认镜像归属（固定 vs 自带），以及是否允许首次运行
+   `bash scripts/setup_env.sh` 自建 `.venv`。
+4. 若镜像固定且允许自建环境：按 [`setup-env-2026-11-25.md`](setup-env-2026-11-25.md)
+   的冷构建与验收结果提交；若不允许联网/编译，则需 wheelhouse 或自带镜像。
+5. `flash_attn_npu` 无预编译 wheel、且服务路径未引用；默认仍源码编译，是否改为
+   可选需确认（见新报告第 6 节）。
 
 ## 9. 关键路径与命令速查
 
