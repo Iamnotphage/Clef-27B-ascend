@@ -26,6 +26,13 @@ SHARD_RE = re.compile(
 STARTED_RE = re.compile(
     r"Application startup complete|Uvicorn running on|Started server process")
 CLEAR_LINE = "\r\033[K"
+LEVEL_COLORS = {
+    "DEBUG": "\033[36m",
+    "INFO": "\033[32m",
+    "WARNING": "\033[33m",
+    "ERROR": "\033[31m",
+}
+RESET = "\033[0m"
 
 
 def _stamp():
@@ -34,6 +41,28 @@ def _stamp():
 
 def _elapsed(seconds):
     return f"{int(seconds) // 60:02d}:{int(seconds) % 60:02d}"
+
+
+def _color_enabled():
+    if os.environ.get("NO_COLOR") is not None:
+        return False
+    override = os.environ.get("CLEF_LOG_COLOR")
+    if override is not None:
+        return override.strip().lower() not in ("0", "false", "no", "off")
+    return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
+
+
+def _log_line(level, message):
+    stamp = _stamp()
+    if not _color_enabled():
+        print(f"{stamp} {level:<5} clef.launcher: {message}", flush=True)
+        return
+    color = LEVEL_COLORS.get(level.upper(), "")
+    print(
+        f"\033[2m{stamp}{RESET} {color}{level:<5}{RESET} "
+        f"\033[36mclef.launcher:{RESET} {message}",
+        flush=True,
+    )
 
 
 def _pid_alive(pid):
@@ -119,18 +148,18 @@ def watch(log, host, port, parent_pid, timeout, force=False):
                     state = "vLLM API starting"
             if _health(host, port):
                 _clear()
-                print(f"{_stamp()} INFO  clef.launcher: "
-                      f"Service ready at http://{host}:{port} "
-                      f"(startup {_elapsed(elapsed)})", flush=True)
+                _log_line("INFO",
+                          f"Service ready at http://{host}:{port} "
+                          f"(startup {_elapsed(elapsed)})")
                 return 0
             if state != last_state or int(elapsed * 2) % 2 == 0:
                 _render_line(elapsed, state)
                 last_state = state
             if elapsed >= timeout:
                 _clear()
-                print(f"{_stamp()} WARNING clef.launcher: "
-                      f"Service not ready after {int(elapsed)}s; "
-                      f"see {log}", flush=True)
+                _log_line("WARNING",
+                          f"Service not ready after {int(elapsed)}s; "
+                          f"see {log}")
                 return 0
             time.sleep(0.5)
     finally:
