@@ -35,7 +35,12 @@ materials="${CLEF_MATERIALS:-$repo/.build/materials}"
 index="${PIP_INDEX_URL:-https://mirrors.huaweicloud.com/repository/pypi/simple}"
 ascend_index="https://mirrors.huaweicloud.com/ascend/repos/pypi"
 python_archive="${CLEF_PYTHON_ARCHIVE:-$materials/cpython-3.12.16+20261110-aarch64-unknown-linux-gnu-install_only.tar.gz}"
-python_url="https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-unknown-linux-gnu-install_only.tar.gz"
+python_sha=4792f81750282597fb2a3389fe18b945ed2ba6aad5e45ad406d122c58cb33081
+python_urls=(
+  "https://mirror.nju.edu.cn/github-release/astral-sh/python-build-standalone/20261110/cpython-3.12.16%2B20261110-aarch64-unknown-linux-gnu-install_only.tar.gz"
+  "https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-unknown-linux-gnu-install_only.tar.gz"
+)
+[[ -n "${CLEF_PYTHON_URL:-}" ]] && python_urls=("$CLEF_PYTHON_URL" "${python_urls[@]}")
 build="$repo/.build"
 src="$build/src"
 logs="$build/logs"
@@ -49,16 +54,24 @@ step() { printf '\n=== %s ===\n' "$*"; }
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 first_glob() { compgen -G "$1" | head -n1 || true; }
 
-download() { # url dest
-  local url="$1" dest="$2"
-  command -v curl >/dev/null || die "需要 curl 下载 $url，或把材料放到 $materials"
-  mkdir -p "$(dirname "$dest")"
-  printf '  下载 %s\n' "$url"
-  if ! curl -fL --retry 3 --connect-timeout 20 -o "$dest.part" "$url"; then
+download_python() { # dest
+  local dest="$1" url digest
+  for url in "${python_urls[@]}"; do
+    printf '  下载 %s\n' "$url"
     rm -f "$dest.part"
-    die "下载失败：$url（可把材料放到 $materials 或设置 CLEF_MATERIALS）"
-  fi
-  mv "$dest.part" "$dest"
+    if curl -fL --retry 2 --connect-timeout 20 -o "$dest.part" "$url"; then
+      digest="$(sha256sum "$dest.part" | awk '{print $1}')"
+      if [[ "$digest" == "$python_sha" ]]; then
+        mv "$dest.part" "$dest"
+        return 0
+      fi
+      printf '  SHA-256 不匹配（%s），换下一个源\n' "$digest"
+    else
+      printf '  下载失败，换下一个源\n'
+    fi
+    rm -f "$dest.part"
+  done
+  return 1
 }
 
 if [[ "$mode" == full && "$force" -eq 0 && -f "$marker" ]]; then
@@ -72,7 +85,8 @@ if [[ ! -x "$venv/bin/python" ]]; then
   step "创建 $venv（CPython 3.12.16）"
   if [[ ! -f "$python_archive" ]]; then
     [[ -n "${CLEF_PYTHON_ARCHIVE:-}" ]] && die "CLEF_PYTHON_ARCHIVE 不存在：$python_archive"
-    download "$python_url" "$python_archive"
+    download_python "$python_archive" \
+      || die "CPython 下载失败；请手动下载后放到 $python_archive（SHA-256 $python_sha）"
   fi
   CLEF_VENV="$venv" bash "$repo/scripts/bootstrap_python.sh" "$python_archive"
 else
