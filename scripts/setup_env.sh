@@ -6,7 +6,7 @@
 #   bash scripts/setup_env.sh --force      # 已完成也重新执行
 #
 # 可选覆盖（都有默认值，正常不需要设置）：
-#   CLEF_MATERIALS       已校验材料目录   [/workspace/yangchen/work/materials]
+#   CLEF_MATERIALS       已校验材料目录   [<repo>/.build/materials，缺失时自动下载]
 #   PIP_INDEX_URL        PyPI 镜像        [华为云镜像]
 #   CLEF_VENV            venv 路径        [<repo>/.venv]
 #
@@ -31,10 +31,11 @@ done
 }
 
 venv="${CLEF_VENV:-$repo/.venv}"
-materials="${CLEF_MATERIALS:-/workspace/yangchen/work/materials}"
+materials="${CLEF_MATERIALS:-$repo/.build/materials}"
 index="${PIP_INDEX_URL:-https://mirrors.huaweicloud.com/repository/pypi/simple}"
 ascend_index="https://mirrors.huaweicloud.com/ascend/repos/pypi"
 python_archive="${CLEF_PYTHON_ARCHIVE:-$materials/cpython-3.12.16+20261110-aarch64-unknown-linux-gnu-install_only.tar.gz}"
+python_url="https://github.com/astral-sh/python-build-standalone/releases/download/20261110/cpython-3.12.16%2B20261110-aarch64-unknown-linux-gnu-install_only.tar.gz"
 build="$repo/.build"
 src="$build/src"
 logs="$build/logs"
@@ -48,18 +49,31 @@ step() { printf '\n=== %s ===\n' "$*"; }
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 first_glob() { compgen -G "$1" | head -n1 || true; }
 
-need_file() { [[ -f "$1" ]] || die "缺少材料 $1（可用 CLEF_MATERIALS 指定材料目录）"; }
+download() { # url dest
+  local url="$1" dest="$2"
+  command -v curl >/dev/null || die "需要 curl 下载 $url，或把材料放到 $materials"
+  mkdir -p "$(dirname "$dest")"
+  printf '  下载 %s\n' "$url"
+  if ! curl -fL --retry 3 --connect-timeout 20 -o "$dest.part" "$url"; then
+    rm -f "$dest.part"
+    die "下载失败：$url（可把材料放到 $materials 或设置 CLEF_MATERIALS）"
+  fi
+  mv "$dest.part" "$dest"
+}
 
 if [[ "$mode" == full && "$force" -eq 0 && -f "$marker" ]]; then
   printf '环境已完整：%s\n如需重建请加 --force；只验证 pip 请用 --pip-only。\n' "$marker"
   exit 0
 fi
 
-mkdir -p "$logs"
+mkdir -p "$logs" "$materials"
 
 if [[ ! -x "$venv/bin/python" ]]; then
   step "创建 $venv（CPython 3.12.16）"
-  need_file "$python_archive"
+  if [[ ! -f "$python_archive" ]]; then
+    [[ -n "${CLEF_PYTHON_ARCHIVE:-}" ]] && die "CLEF_PYTHON_ARCHIVE 不存在：$python_archive"
+    download "$python_url" "$python_archive"
+  fi
   CLEF_VENV="$venv" bash "$repo/scripts/bootstrap_python.sh" "$python_archive"
 else
   step "复用已有 venv：$venv"
@@ -189,6 +203,7 @@ SOC_VERSION=ascend910_9382 COMPILE_CUSTOM_KERNELS=1 MAX_JOBS="${MAX_JOBS:-8}" \
   -e "$src/vllm-ascend"
 
 step "MemFabric / FLA / flash_attn_npu"
+command -v mfcli >/dev/null || die "mfcli 不在 PATH；检查 memfabric_hybrid 是否装进 $venv"
 ( cd "$repo" && TORCH_DEVICE_BACKEND_AUTOLOAD=0 mfcli kernel install --soc-version A3 )
 
 fla_wheel="$(first_glob "$materials/flash_linear_attention_npu_a3-*.whl")"
@@ -203,8 +218,16 @@ python -m pip install --index-url "$index" --constraint "$constraints" --timeout
 
 flash_dir="$src/flash_attn_npu-0.5.0"
 if [[ ! -d "$flash_dir" ]]; then
-  need_file "$materials/flash_attn_npu-0.5.0.tar.gz"
-  tar --no-same-owner -xzf "$materials/flash_attn_npu-0.5.0.tar.gz" -C "$src"
+  flash_tar="$(first_glob "$materials/flash_attn_npu-0.5.0.tar.gz")"
+  if [[ -z "$flash_tar" ]]; then
+    printf '  从 PyPI 获取 flash_attn_npu 0.5.0 源码包\n'
+    python -m pip download --no-deps --no-binary :all: --dest "$materials" \
+      --index-url "$index" --timeout 60 flash-attn-npu==0.5.0 \
+      || die "无法下载 flash_attn_npu 0.5.0（把源码包放到 $materials）"
+    flash_tar="$(first_glob "$materials"/flash*attn*npu-0.5.0.tar.gz)"
+    [[ -n "$flash_tar" ]] || die "$materials 下未找到 flash_attn_npu 0.5.0 源码包"
+  fi
+  tar --no-same-owner -xzf "$flash_tar" -C "$src"
 fi
 apply_patch "$flash_dir" "$repo/src/patches/flash-attn-npu-max-jobs.patch"
 FLASH_ATTN_BUILD_NPU=910 FLASH_ATTENTION_FORCE_BUILD=TRUE MAX_JOBS="${MAX_JOBS:-8}" \
