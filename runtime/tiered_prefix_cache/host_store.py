@@ -33,6 +33,8 @@ DEFAULT_BUDGET_GIB = 64
 DEFAULT_SAFETY_GIB = 16
 GHOST_CAPACITY = 65_536
 ADMISSIONS = ("second_hit", "always")
+EVICTION_POLICIES = ("keep_longest", "aged_keep_longest", "lru")
+DEFAULT_ACTIVE_WINDOW = 3000
 
 
 def buffer_nbytes(value: Any) -> int:
@@ -65,6 +67,7 @@ class HostEntry:
     length: int = 0
     created_at: float = field(default_factory=time.monotonic)
     last_used: float = field(default_factory=time.monotonic)
+    last_obs_seq: int = 0
     leases: int = 0
 
     def nbytes(self) -> int:
@@ -155,11 +158,14 @@ class HostStore:
         session: str | None = None,
         eviction_watermark: float = 0.92,
         eviction_policy: str = "keep_longest",
+        active_window: int = 0,
     ):
         if admission not in ADMISSIONS:
             raise ValueError(f"unknown admission policy: {admission}")
-        if eviction_policy not in ("keep_longest", "lru"):
+        if eviction_policy not in EVICTION_POLICIES:
             raise ValueError(f"unknown eviction policy: {eviction_policy}")
+        if eviction_policy == "aged_keep_longest" and active_window <= 0:
+            active_window = DEFAULT_ACTIVE_WINDOW
         if budget_bytes <= 0:
             raise ValueError("budget_bytes must be positive")
         self.budget_bytes = int(budget_bytes)
@@ -167,6 +173,7 @@ class HostStore:
         self.eviction_policy = eviction_policy
         self.ghost_capacity = int(ghost_capacity)
         self.eviction_watermark = float(eviction_watermark)
+        self.active_window = int(active_window)
         self.use_shm = shm_available() if use_shm is None else bool(use_shm)
         self.session = session or (
             f"{os.getpid()}-{time.time_ns()}-{uuid.uuid4().hex[:8]}")
@@ -175,6 +182,7 @@ class HostStore:
         self._ghost: "OrderedDict[bytes, None]" = OrderedDict()
         self._bytes = 0
         self._sequence = 0
+        self._obs_seq = 0
         self._shm_objects: dict[str, tuple[Any, bool]] = {}
         self._attachments: dict[str, list[AttachedShm]] = {}
         self._closed = False
@@ -183,6 +191,7 @@ class HostStore:
             "hits": 0,
             "misses": 0,
             "populates": 0,
+            "publications": 0,
             "evictions": 0,
             "rejections": 0,
             "ghost_evictions": 0,
@@ -193,22 +202,47 @@ class HostStore:
 
     # ------------------------------------------------------------------
     # admission
-    def observe(self, key: bytes, length: int = 0) -> str:
+    def _ages(self) -> None:
+        self._obs_seq += 1
+
+    def _is_stale(self, entry: HostEntry) -> bool:
+        return (self.active_window > 0 and not entry.leases
+                and self._obs_seq - entry.last_obs_seq > self.active_window)
+
+    def _stale_entries(self) -> list[HostEntry]:
+        if self.active_window <= 0:
+            return []
+        return [entry for entry in self._entries.values()
+                if self._is_stale(entry)]
+
+    def observe(self, key: bytes, length: int = 0, est_bytes: int = 0) -> str:
         """Record one sighting and return ``hit`` / ``populate`` / ``miss``.
 
-        With ``keep_longest`` a full pool rejects a newcomer that is no longer
-        than every resident prefix, so a sequential scan cannot churn the pool
-        and the caller pays no populate cost.
+        A resident entry keeps its age current on every sighting.  With
+        ``keep_longest`` a full pool rejects a newcomer that is no longer than
+        every resident prefix, so a sequential scan cannot churn the pool and
+        the caller pays no populate cost.  The check predicts the publish
+        decision with ``est_bytes`` (data bytes plus the state tail) instead of
+        the post-eviction watermark, which a full pool can fall below after an
+        eviction and thereby re-admit every round.  With aging enabled an
+        entry nobody has touched for ``active_window`` sightings is stale:
+        stale entries are evicted first and never trigger an early rejection,
+        so a new dataset can reclaim the pool even when its prefixes are
+        shorter than the departed dataset's.
         """
         if not isinstance(key, bytes) or len(key) != 32:
             raise ValueError("prefix key must be 32 bytes")
         with self._lock:
+            self._ages()
             entry = self._entries.get(key)
             if entry is not None:
+                entry.last_obs_seq = self._obs_seq
                 self.counters["hits"] += 1
                 return "hit"
-            if (self.eviction_policy == "keep_longest" and length > 0
-                    and self._bytes >= self.budget_bytes * self.eviction_watermark):
+            if (self.eviction_policy != "lru" and length > 0
+                    and self._bytes + max(int(est_bytes), 0)
+                    > self.budget_bytes * self.eviction_watermark
+                    and not self._stale_entries()):
                 resident = [item.length for item in self._entries.values()
                             if item.length > 0]
                 if resident and length <= min(resident):
@@ -244,6 +278,7 @@ class HostStore:
                 return None
             entry.leases += 1
             entry.last_used = time.monotonic()
+            entry.last_obs_seq = self._obs_seq
             self._entries.move_to_end(key)
             return Lease(self, key)
 
@@ -281,7 +316,8 @@ class HostStore:
             if self._closed or key in self._entries:
                 self.counters["rejections"] += 1
                 return False
-            entry = HostEntry(key=key, length=int(length))
+            entry = HostEntry(key=key, length=int(length),
+                              last_obs_seq=self._obs_seq)
             entry.shards = {
                 int(rank): {str(name): value for name, value in shard.items()}
                 for rank, shard in shards.items()
@@ -309,40 +345,55 @@ class HostStore:
             self._entries.move_to_end(key)
             self._bytes += size
             self._ghost.pop(key, None)
-            self.counters["populates"] += 1
+            self.counters["publications"] += 1
             return True
 
     def _evict_for(self, incoming: int, incoming_length: int = 0) -> None:
         target = int(self.budget_bytes * self.eviction_watermark)
         if self._bytes + incoming <= target:
             return
-        if self.eviction_policy == "keep_longest":
-            # A short newcomer must never flush a longer resident prefix: a
-            # sequential three-round scan would otherwise cycle the whole pool.
-            lengths = [entry.length for entry in self._entries.values()
-                       if entry.length > 0]
-            if (incoming_length > 0 and lengths
-                    and incoming_length <= min(lengths)):
-                return
-            candidates = sorted(
-                ((entry.length, entry.last_used, key)
-                 for key, entry in self._entries.items() if not entry.leases),
-                key=lambda item: (item[0], item[1]))
-            for _length, _used, key in candidates:
+        if self.eviction_policy == "lru":
+            for key in list(self._entries.keys()):
                 if self._bytes + incoming <= target:
                     break
-                entry = self._entries.pop(key)
+                entry = self._entries[key]
+                if entry.leases:
+                    continue
+                self._entries.pop(key)
                 self._bytes -= entry.nbytes()
                 self._discard_entry(entry)
                 self.counters["evictions"] += 1
             return
-        for key in list(self._entries.keys()):
+        # Stale entries belong to a scan that has moved on; evict them first,
+        # oldest sighting first, regardless of length.  This is what frees a
+        # pool left behind by a previous dataset.
+        for entry in sorted(self._stale_entries(),
+                            key=lambda item: item.last_obs_seq):
+            if self._bytes + incoming <= target:
+                return
+            if entry.leases or self._entries.get(entry.key) is not entry:
+                continue
+            self._entries.pop(entry.key)
+            self._bytes -= entry.nbytes()
+            self._discard_entry(entry)
+            self.counters["evictions"] += 1
+        if self._bytes + incoming <= target:
+            return
+        # A short newcomer must never flush a longer resident prefix: a
+        # sequential three-round scan would otherwise cycle the whole pool.
+        lengths = [entry.length for entry in self._entries.values()
+                   if entry.length > 0]
+        if (incoming_length > 0 and lengths
+                and incoming_length <= min(lengths)):
+            return
+        candidates = sorted(
+            ((entry.length, entry.last_used, key)
+             for key, entry in self._entries.items() if not entry.leases),
+            key=lambda item: (item[0], item[1]))
+        for _length, _used, key in candidates:
             if self._bytes + incoming <= target:
                 break
-            entry = self._entries[key]
-            if entry.leases:
-                continue
-            self._entries.pop(key)
+            entry = self._entries.pop(key)
             self._bytes -= entry.nbytes()
             self._discard_entry(entry)
             self.counters["evictions"] += 1
@@ -466,6 +517,10 @@ class HostStore:
                 "counters": dict(self.counters),
                 "use_shm": self.use_shm,
                 "shm_objects": len(self._shm_objects),
+                "obs_seq": self._obs_seq,
+                "active_window": self.active_window,
+                "stale_entries": len(self._stale_entries()),
+                "eviction_policy": self.eviction_policy,
             }
 
 

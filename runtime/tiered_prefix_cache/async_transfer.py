@@ -48,7 +48,7 @@ class PinnedRing:
     ``None`` after ``timeout`` (Fail-Closed), and the caller records the drop.
     """
 
-    def __init__(self, slots: int = 3, slot_bytes: int = 512 << 20):
+    def __init__(self, slots: int = 2, slot_bytes: int = 640 << 20):
         if slots < 1:
             raise ValueError("slots must be positive")
         self.slots = slots
@@ -113,17 +113,25 @@ class AsyncCapture:
         return 1 << 30
 
     def _persistent_host(self, tensor):
-        """Pinned host storage, or pageable if the pin budget is exhausted.
+        """Pageable host storage for the long-lived cache package.
 
-        The Prefetcher detects pageable input and routes it through its
-        two-slot pinned staging pool, so a failed pin degrades bandwidth but
-        never correctness.
+        A 64 GiB pool must never be pinned: the container also holds weights,
+        CANN buffers, rings and request memory, and pinned pages cannot be
+        reclaimed.  The D2H still travels the pinned ring; the Prefetcher
+        routes the pageable package through its own pinned staging pool on the
+        way back.  ``CLEF_TIER2_PIN_PERSISTENT=1`` restores pinned persistence
+        for isolated bandwidth probes.
         """
-        try:
-            return self._torch.empty(
-                tensor.shape, dtype=tensor.dtype, pin_memory=True)
-        except Exception:  # noqa: BLE001 - memlock/CANN pin budget
-            return self._torch.empty(tensor.shape, dtype=tensor.dtype)
+        import os  # noqa: PLC0415
+
+        if os.environ.get("CLEF_TIER2_PIN_PERSISTENT", "0").strip().lower() in (
+                "1", "true", "yes", "on"):
+            try:
+                return self._torch.empty(
+                    tensor.shape, dtype=tensor.dtype, pin_memory=True)
+            except Exception:  # noqa: BLE001 - memlock/CANN pin budget
+                pass
+        return self._torch.empty(tensor.shape, dtype=tensor.dtype)
 
     def _take_snapshot(self, source):
         key = (tuple(source.shape), source.dtype, str(source.device))
@@ -157,6 +165,15 @@ class AsyncCapture:
             except BaseException as error:  # noqa: BLE001
                 self.errors.append(error)
             return None
+        total_bytes = sum(
+            int(tensor.numel()) * int(tensor.element_size())
+            for tensor in payload.values() if tensor is not None)
+        if total_bytes > self.ring.slot_bytes:
+            # One package larger than a ring slot can never be published
+            # without blocking; drop it and let the next pass repopulate.
+            self.dropped += 1
+            self.ring.dropped += 1
+            return None
         buffer = self.ring.acquire(timeout=0.05)
         if buffer is None:
             self.dropped += 1
@@ -188,7 +205,8 @@ class AsyncCapture:
                             source.record_stream(self._stream)
                     snapshot = self._take_snapshot(source)
                     snapshot.copy_(source, non_blocking=True)
-                    snapshot.record_stream(self._stream)
+                    if snapshot.device.type in ("npu", "privateuseone"):
+                        snapshot.record_stream(self._stream)
                     held_sources.append(snapshot)
                     snapshots.append((name, snapshot))
                 snapshot_done = self._torch.npu.Event()
@@ -310,7 +328,13 @@ class RestoredState:
 
 
 class Prefetcher:
-    """Pipelined host-to-device copies with a small pinned staging pool."""
+    """Pipelined host-to-device copies with a small pinned staging pool.
+
+    Pageable packages are copied into exact-size pinned buffers.  The cache is
+    keyed by byte size and capped at ``staging_slots * staging_bytes``, so
+    repeated hits of one workload reuse the same buffers instead of allocating
+    a 384 MiB bucket per small tensor.
+    """
 
     def __init__(self, *, synchronous: bool | None = None,
                  staging_slots: int = 2,
@@ -322,8 +346,9 @@ class Prefetcher:
         self._stream = None if self.synchronous else torch.npu.Stream()
         self._staging_slots = max(1, int(staging_slots))
         self._staging_bytes = int(staging_bytes)
+        self._staging_budget = self._staging_slots * self._staging_bytes
         self._staging_cond = threading.Condition()
-        self._free_staging: list[Any] = []
+        self._free_staging: dict[int, list[Any]] = {}
         self._reaper: "queue.Queue" = queue.Queue()
         self._reaper_thread = None
         self.errors: list[BaseException] = []
@@ -366,15 +391,18 @@ class Prefetcher:
         return staging, view
 
     def _acquire_staging(self, nbytes: int):
+        nbytes = max(int(nbytes), 1)
         with self._staging_cond:
-            for index, slot in enumerate(self._free_staging):
-                if slot.numel() >= nbytes:
-                    return self._free_staging.pop(index)
-        if nbytes > self._staging_bytes:
-            return self._torch.empty(nbytes, dtype=self._torch.uint8,
-                                     pin_memory=True)
-        return self._torch.empty(self._staging_bytes, dtype=self._torch.uint8,
+            pool = self._free_staging.get(nbytes)
+            if pool:
+                return pool.pop()
+        return self._torch.empty(nbytes, dtype=self._torch.uint8,
                                  pin_memory=True)
+
+    def _cached_staging_bytes(self) -> int:
+        return sum(
+            slot.numel()
+            for pool in self._free_staging.values() for slot in pool)
 
     def _reap(self) -> None:
         while True:
@@ -386,9 +414,12 @@ class Prefetcher:
             try:
                 event.synchronize()
                 with self._staging_cond:
-                    if staging.numel() <= self._staging_bytes and \
-                            len(self._free_staging) < self._staging_slots:
-                        self._free_staging.append(staging)
+                    nbytes = int(staging.numel())
+                    pool = self._free_staging.setdefault(nbytes, [])
+                    if (len(pool) < self._staging_slots
+                            and self._cached_staging_bytes() + nbytes
+                            <= self._staging_budget):
+                        pool.append(staging)
                         self._staging_cond.notify()
             except BaseException as error:  # noqa: BLE001
                 self.errors.append(error)

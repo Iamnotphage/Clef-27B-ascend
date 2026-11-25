@@ -350,6 +350,84 @@ class BudgetTests(unittest.TestCase):
         store.close()
 
 
+class AgedEvictionTests(unittest.TestCase):
+    def test_stale_entries_are_reclaimed_by_a_short_newcomer(self):
+        store = HostStore(
+            budget_bytes=1_000, eviction_watermark=0.90,
+            eviction_policy="aged_keep_longest", active_window=10,
+            use_shm=False)
+        long_key, medium_key = b"l" * 32, b"m" * 32
+        self.assertTrue(store.publish(
+            long_key, {0: {"kv": b"x" * 700}}, length=900))
+        for index in range(6):
+            store.observe(bytes([index]) * 32)
+        self.assertTrue(store.publish(
+            medium_key, {0: {"kv": b"y" * 150}}, length=500))
+        for index in range(6, 12):
+            store.observe(bytes([index]) * 32)
+        # The long entry is beyond the window; the newcomer is shorter than
+        # every resident prefix but must still be admitted by evicting it.
+        newcomer = b"n" * 32
+        self.assertEqual(
+            store.observe(newcomer, length=128, est_bytes=60), "populate")
+        self.assertTrue(store.publish(
+            newcomer, {0: {"kv": b"z" * 60}}, length=128))
+        self.assertFalse(store.contains(long_key))
+        self.assertTrue(store.contains(medium_key))
+        self.assertTrue(store.contains(newcomer))
+        self.assertEqual(store.snapshot()["stale_entries"], 0)
+        store.close()
+
+    def test_active_short_newcomer_is_still_rejected(self):
+        store = HostStore(
+            budget_bytes=1_000, eviction_watermark=0.90,
+            eviction_policy="aged_keep_longest", active_window=10_000,
+            use_shm=False)
+        self.assertTrue(store.publish(
+            b"a" * 32, {0: {"kv": b"x" * 700}}, length=800))
+        self.assertTrue(store.publish(
+            b"b" * 32, {0: {"kv": b"y" * 200}}, length=600))
+        # bytes=900, est=60 > target=900, no stale, shorter than min(800,600).
+        self.assertEqual(
+            store.observe(b"c" * 32, length=128, est_bytes=60), "miss")
+        snapshot = store.snapshot()["counters"]
+        self.assertEqual(snapshot["populates"], 0)
+        self.assertEqual(snapshot["publications"], 2)
+        store.close()
+
+    def test_estimate_closes_the_post_eviction_watermark_hole(self):
+        store = HostStore(
+            budget_bytes=1_000, eviction_watermark=0.95,
+            eviction_policy="aged_keep_longest", active_window=10_000,
+            use_shm=False)
+        self.assertTrue(store.publish(
+            b"a" * 32, {0: {"kv": b"x" * 500}}, length=800))
+        self.assertTrue(store.publish(
+            b"b" * 32, {0: {"kv": b"y" * 400}}, length=700))
+        # A third package cannot fit under keep_longest and is rejected,
+        # leaving bytes=900, i.e. below the 950 watermark but with no room.
+        self.assertFalse(store.publish(
+            b"c" * 32, {0: {"kv": b"z" * 200}}, length=600))
+        self.assertEqual(store.snapshot()["bytes"], 900)
+        self.assertEqual(
+            store.observe(b"d" * 32, length=600, est_bytes=100), "miss")
+        store.close()
+
+    def test_hit_refreshes_the_active_window(self):
+        store = HostStore(
+            budget_bytes=1_000, eviction_watermark=0.99,
+            eviction_policy="aged_keep_longest", active_window=5,
+            use_shm=False)
+        key = b"k" * 32
+        self.assertTrue(store.publish(key, {0: {"kv": b"x" * 100}}, length=256))
+        for index in range(8):
+            store.observe(bytes([index]) * 32)
+        self.assertEqual(store.snapshot()["stale_entries"], 1)
+        self.assertEqual(store.observe(key), "hit")
+        self.assertEqual(store.snapshot()["stale_entries"], 0)
+        store.close()
+
+
 class SharedMemoryTests(unittest.TestCase):
     @unittest.skipUnless(shm_available(), "POSIX /dev/shm is unavailable")
     def test_prefix_memory_round_trip_and_cleanup(self):
