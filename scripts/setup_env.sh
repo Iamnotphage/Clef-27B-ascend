@@ -239,20 +239,46 @@ apply_patch() { # dir patch
     fi )
 }
 
+run_build() { # log command...
+  local log="$1"; shift
+  if ! "$@" 2>&1 | tee "$log"; then
+    printf '\n--- 构建失败，关键错误（%s） ---\n' "$log" >&2
+    grep -n -A3 -E "error:|fatal error|Killed|Error [0-9]+" "$log" | tail -60 >&2 || true
+    die "构建失败；完整日志：$log"
+  fi
+}
+
+printf 'CPU: %s 核；内存上限: %s\n' "$(nproc)" \
+  "$(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo unknown)"
+
 ensure_source "$src/vllm" "$materials/vllm-24420b7-with-git.tar.gz" \
   https://github.com/vllm-project/vllm.git "$vllm_commit" 0
 apply_patch "$src/vllm" "$repo/src/patches/vllm-a3-numpy126.patch"
 apply_patch "$src/vllm" "$repo/src/patches/vllm-clef-load-audit.patch"
 apply_patch "$src/vllm" "$repo/src/patches/clef-api-routes.patch"
-VLLM_TARGET_DEVICE=empty python -m pip install --no-build-isolation \
+run_build "$logs/vllm-build.log" env VLLM_TARGET_DEVICE=empty \
+  python -m pip install --no-build-isolation -v \
   --constraint "$constraints" --index-url "$index" --timeout 60 -e "$src/vllm"
 
 ensure_source "$src/vllm-ascend" "$materials/vllm-ascend-89eb8a5-with-submodules.tar.gz" \
   https://github.com/vllm-project/vllm-ascend.git "$ascend_commit" 1
 apply_patch "$src/vllm-ascend" "$repo/src/patches/vllm-ascend-clef-tp-embedding.patch"
 apply_patch "$src/vllm-ascend" "$repo/src/patches/gdn-bsnd.patch"
-SOC_VERSION=ascend910_9382 COMPILE_CUSTOM_KERNELS=1 MAX_JOBS="${MAX_JOBS:-8}" \
-  python -m pip install --no-build-isolation --constraint "$constraints" \
+if [[ -z "${ASCEND_HOME_PATH:-}" || ! -d "${ASCEND_HOME_PATH:-/nonexistent}" ]]; then
+  for candidate in /usr/local/Ascend/ascend-toolkit/latest /usr/local/Ascend/cann \
+                   /usr/local/Ascend/cann-9.2.1; do
+    if [[ -d "$candidate" ]]; then
+      export ASCEND_HOME_PATH="$candidate"
+      printf '  ASCEND_HOME_PATH=%s\n' "$candidate"
+      break
+    fi
+  done
+fi
+[[ -d "${ASCEND_HOME_PATH:-/nonexistent}" ]] \
+  || die "ASCEND_HOME_PATH 无效；请先 source CANN 的 set_env.sh 或 export ASCEND_HOME_PATH"
+run_build "$logs/vllm-ascend-build.log" env SOC_VERSION=ascend910_9382 \
+  COMPILE_CUSTOM_KERNELS=1 MAX_JOBS="${MAX_JOBS:-8}" \
+  python -m pip install --no-build-isolation -v --constraint "$constraints" \
   --index-url "$index" --timeout 60 \
   --extra-index-url "$ascend_index" \
   --extra-index-url https://mirrors.huaweicloud.com/ascend/repos/pypi/nightly \
@@ -286,8 +312,9 @@ if [[ ! -d "$flash_dir" ]]; then
   tar --no-same-owner -xzf "$flash_tar" -C "$src"
 fi
 apply_patch "$flash_dir" "$repo/src/patches/flash-attn-npu-max-jobs.patch"
-FLASH_ATTN_BUILD_NPU=910 FLASH_ATTENTION_FORCE_BUILD=TRUE MAX_JOBS="${MAX_JOBS:-8}" \
-  python -m pip install --no-build-isolation --constraint "$constraints" \
+run_build "$logs/flash-attn-build.log" env FLASH_ATTN_BUILD_NPU=910 \
+  FLASH_ATTENTION_FORCE_BUILD=TRUE MAX_JOBS="${MAX_JOBS:-8}" \
+  python -m pip install --no-build-isolation -v --constraint "$constraints" \
   --index-url "$index" --timeout 60 "$flash_dir"
 
 step "4/4 验收"
