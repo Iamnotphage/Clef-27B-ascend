@@ -44,8 +44,12 @@ SYSTEMONE_MM_MODULE = REPO_ROOT / "runtime" / "systemone_mm_state.py"
 SYSTEMONE_MM_MODE_ENV = "CLEF_STATE_MM_MODE"
 TIERED_INSTALLER = REPO_ROOT / "runtime" / "apply_tiered_cache_patch.py"
 TIERED_MODEL_RUNNER_TARGET = Path("vllm_ascend/worker/v2/model_runner.py")
+TIERED_MODEL_RUNNER_PREIMAGE = "e866aeb27d04afe2141850122c03343c38d2a9b14cf1f9f136866003b35968a6"
+TIERED_MODEL_RUNNER_POSTIMAGE = "a772213f322392608d9204245f301d37e700b799475377f0dade206f887c5f73"
 TIERED_API_ROUTER_TARGET = Path(
     "vllm/entrypoints/generate/structured_decisions/api_router.py")
+TIERED_API_ROUTER_PREIMAGE = "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f"
+TIERED_API_ROUTER_POSTIMAGE = "1875f0e1ff4ffa5e587b82e5755e743a72c148d53581a576b34ee1fc5cfd1b42"
 TIERED_RANK_BYTES_DEFAULT = str(32 << 30)
 #: Phase-4 ERQA A/B locked arm: A1 (extract_plain) 213/400 vs
 #: A2 (extract_question_dict) 216/400, so the official entry defaults to A2.
@@ -694,6 +698,12 @@ def tiered_cache_patch(requested, output_dir, *, apply):
         "model_runner": trees["ascend_tree"] / TIERED_MODEL_RUNNER_TARGET,
         "api_router": trees["vllm_tree"] / TIERED_API_ROUTER_TARGET,
     }
+    known = {
+        "model_runner": {"preimage": TIERED_MODEL_RUNNER_PREIMAGE,
+                         "patched": TIERED_MODEL_RUNNER_POSTIMAGE},
+        "api_router": {"preimage": TIERED_API_ROUTER_PREIMAGE,
+                       "patched": TIERED_API_ROUTER_POSTIMAGE},
+    }
     backup = output_dir / "tiered-cache-source-backup"
     command = [sys.executable, str(TIERED_INSTALLER),
                "--vllm-tree", str(trees["vllm_tree"]),
@@ -711,8 +721,10 @@ def tiered_cache_patch(requested, output_dir, *, apply):
         if valid:
             for name, target in targets.items():
                 entry = entries[name]
+                status = entry.get("status_after")
                 if (entry.get("target") != str(target)
-                        or entry.get("status_after") not in ("preimage", "patched")
+                        or status not in known[name]
+                        or entry.get("sha256") != known[name][status]
                         or not target.is_file()
                         or sha256_file(target) != entry.get("sha256")):
                     valid = False

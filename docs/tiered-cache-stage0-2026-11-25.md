@@ -377,3 +377,15 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 - **引擎门**：`engine_hooks._env_on()` 优先读 `CLEF_PREFIX_STATE_CACHE`（未设置时保留探针 `CLEF_TIER2_ENGINE`/`/tmp` flag 行为），关闭时 `prepare_execute` 直接返回库存路径。
 - **本地验证**：`py_compile` 通过；新增 5 个安装器单测（往返、锚点缩进、未知源拒绝、重复锚点拒绝、篡改检测）；tiered 全量单测 41/41 OK（10 个 NPU-only 跳过）。
 - **待跑**：场景 A（20×4 同 STATE 多 SCHEMA，`runtime/tiered_scenario_a.py`，本地 mock 烟测 80/80 与 R1==R2==R3 0.0）、场景 D（4 GiB C16 淘汰压力）、官方裸启动零重启 1 预热 + 2 实测（OD S1/S2 C16/C64、ERQA S1/S2 C16）与 2PP。
+
+**OD S2 C64 干净复测**（空池服务 `tap-final-20261125`，替换受 ERQA 满池污染的数据）：
+
+| 轮次 | dec/s | p95 (ms) | mean (ms) | 失败 |
+| --- | ---: | ---: | ---: | ---: |
+| R1（populate/mixed） | 16.894 | 6291.4 | 3750.4 | 0 |
+| R2（hit/mixed） | 20.677 | 4109.2 | 3067.0 | 0 |
+| R3（hit/mixed） | **21.461** | **3972.9** | 2958.0 | 0 |
+
+- 质量（作者 `score.py` 离线复算，`od-c64-acceptance.json`）：R1 Cap 74.2142 / R2 74.3370 / R3 74.2874，acc 均 1904/2352，MAE 0.4023/0.4025/0.4024，0 协议失败；三项均在 2PP 内。
+- C64 命中轮相对主线 C64（18.039 dec/s、p95 5779）R3 **+19.0% / −31.3%**；R2/R3 对 R1 分别 4/2 条 choice 变化（C64 合批组成差异，与 C16 同性质，非缓存错误）。
+- 存储：OD 2,352 前缀全程驻留 32 GiB/rank 内；服务未开 TRACE，计数器未采集。
