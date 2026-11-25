@@ -22,8 +22,8 @@
 
 | 数据集 | S1 P95（ms） | S2 吞吐（decisions/s） | S2 客户端并发 | 计量口径 |
 | --- | ---: | ---: | ---: | --- |
-| OpenDecisions | 117.8 | 21.613 | 64 | 单一常驻 TP2 + Tier 2 前缀状态缓存（32 GiB/rank），全量 2,352 题；S1 C1 暖轮两轮 117.8/117.7 且逐位一致，S2 C64（C16 为 20.060） |
-| ERQA | 129.8 | 21.809 | 16 | 官方入口单独起服，ERQA `state` 列表 A2；S1 400 题暖轮（mean 118.4/119.3 ms），S2 C16（`--verify-requests` 400/400、0 mismatch） |
+| OpenDecisions | 117.5 | 21.607 | 64 | 单一常驻 TP2 + Tier 2 前缀状态缓存（32 GiB/rank），全量 2,352 题；S1 C1 暖轮两轮 117.9/117.5 且逐位一致，S2 C64（C16 为 19.971–20.016） |
+| ERQA | 123.8 | 22.302 | 16 | 同一进程零重启（OD → ERQA，老化窗口 500），ERQA `state` 列表 A2；S1 400 题暖轮（mean 116.2/118.5 ms），S2 C16（`--verify-requests` 400/400、0 mismatch） |
 
 [`results.csv`](results.csv) 的批量与 batched tokens 两列描述选定的 S2 点。S1 和 S2 各自的预算、并发、状态和原数由各自测量 ID 关联。`prefix_cache` 列指 vLLM 原生 `--enable-prefix-caching`（全部为 `false`）；Tier 2 由 `workload_basis` 的 `tier2-prefix-state-32GiB` 标记。ERQA 自然第二遍和可选 JPEG 暖态成绩随图文明细提供。[测量索引](logs/dataset-profiles-20261123/manifest.json) · [独立入口与图文复现](../runtime/jpeg_decode_cache/README.md) · [历史性能表](logs/dataset-profiles-20261123/results-historical.csv)
 
@@ -78,7 +78,7 @@
 | 上一版（BIC + GDN v2 + SF + aclnn cache + MLP NZ） | TP2/BF16/eager/4096；S1 seqs1，S2 seqs8 | 166.002 ms | 121.705 ms | 113.656 ms | 16.376 @ C16 | C16 | 313.506 ms |
 | **当前优化（conv+QKV 融合 + GDN chunk128，2026-11-18 五轮复核）** | TP2/BF16/eager/4096；S1 seqs1，S2 seqs16 | **155.86 ms** | **112.98 ms** | **102.87 ms** | **17.462 @ C64** | C64 | **309.926 ms** |
 | **2026-11-24 单一常驻 TP2 + systemone A2** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 | **154.55 ms** | **109.49 ms** | **99.04 ms** | **17.193 @ C64** | C64 | **288.400 ms** |
-| **2026-11-25 Tier 2 分层缓存（最终）** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 + 32 GiB 前缀状态 | **117.8 ms** | **102.8 ms** | **99.7 ms** | **21.613 @ C64**（C16 20.060） | C64 | **129.8 ms** |
+| **2026-11-25 Tier 2 分层缓存（最终，单进程零重启）** | TP2/BF16/eager/16384/seqs16/util .85/encoder 262144 + 32 GiB 前缀状态 | **117.5 ms** | **101.8 ms** | **99.2 ms** | **21.607 @ C64**（C16 19.971–20.016） | C64 | **123.8 ms** |
 | 变化 | — | **−61.18 ms（−28.19%）** | −67.09 ms（−37.26%） | −102.16 ms（−49.83%） | **约 3.06×** | — | **−15.91 ms（−4.88%）** |
 
 - S1 为正常入口单并发端到端 P95，全量 2,352 题，2,352/2,352 成功；2026-11-18 五轮复核中位 **155.86 ms / 8.849 dec/s**（范围 155.72–157.50，mean 112.98、p50 102.87）；历史链路为 2026-11-17 `ACLNN_CACHE_LIMIT=1000000` 后 168.633 ms、**MLP BF16 NZ** 166.002 ms、**conv+QKV 融合** 165.091→160.419、**GDN chunk128** 160.419→157.745 ms / 8.652 dec/s；以上均在 host load 18–24 下测得，跨运行有 ±3–5% 机器漂移；
@@ -160,4 +160,4 @@ Tier 2 Hybrid Prefix State Cache 覆盖 16 层 Full-Attn KV、48 层 GDN `(conv,
 - **入口**：`runtime/apply_tiered_cache_patch.py` 对 `vllm_ascend/worker/v2/model_runner.py`（`e866aeb2…`→`a772213f…`）与 `vllm/…/structured_decisions/api_router.py`（`bdf11bee…`→`1875f0e1…`）做哈希门控；`inference.py` 新增 `--prefix-state-cache {on,off}`（显式 > `CLEF_PREFIX_STATE_CACHE` > 配置，s1/s2 默认 on），未传参时 `bash start.sh --config s1` 即启用，`CLEF_PREFIX_STATE_CACHE=0` 运行时关闭。
 - **官方裸启动验收**（单进程零重启，1 预热 + 2 实测）：OD S1 p95 **117.7/117.8 ms**（9.726/9.732 dec/s，两轮逐位 0.0）、S2 C16 **19.826/20.060 dec/s**（p95 1127/1120）、C64 **21.580/21.613**（p95 3962/3964）；质量 Cap 74.2394–74.2563、acc 1904–1905、0 失败、2PP。ERQA（独立官方进程）S1 mean **118.4/119.3 ms**（p95 130.5/129.8，218/400×2）、S2 C16 **21.628/21.809 dec/s**（p95 785/776，216/400×2），`--verify-requests` 四轮 400/400、0 mismatch；存储 389 条/25.03 GB、0 淘汰。
 - **场景**：20×4 同 STATE 多 SCHEMA 三轮 80/80、R2==R3 逐位 0.0；4 GiB 紧预算 C16 0 失败、125 次淘汰、Cap 74.064–74.068。
-- **限制**：32 GiB/rank 装不下 OD（≈25.7 GB）+ ERQA（≈25.0 GB）两个工作集；同进程跨数据集会触发淘汰并把后者打回接近冷态（ERQA C16 8.08 dec/s，399 次淘汰）。S1/S2 提交口径按数据集分别用官方入口起服务测量。完整证据见 [Tier 2 报告](../docs/tiered-cache-stage0-2026-11-25.md) §11 与 `logs/tiered-cache-20261124/`。
+- **单进程跨数据集**：32 GiB/rank 装不下 OD（≈25.7 GB）+ ERQA（≈25.0 GB）两个工作集，但老化窗口 500（`CLEF_TIER2_ACTIVE_WINDOW` 可覆盖）让旧数据集在下一个数据集的首轮内变 stale、优先换出。同一进程 `OD → ERQA` 复测：ERQA C16 **21.355/22.302 dec/s**（p95 797/767 ms）、末态 0 miss，OD 各项不变。完整证据见 [Tier 2 报告](../docs/tiered-cache-stage0-2026-11-25.md) §11 与 `logs/tiered-cache-20261124/`。

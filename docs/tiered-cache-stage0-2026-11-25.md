@@ -442,12 +442,13 @@ ERQA S2 C16（400，400/400 覆盖，`tap-m2a11-20261125`）：
 - `erqa_score.py --verify-requests`：四轮全部 400/400 通过、**0 mismatch**，离线准确率与 summary 一致；相对 baseline 219/400 偏差 ≤1 题（0.75 PP，2PP）。
 - ERQA S2 C16 21.6–21.8 dec/s、p95 ≈780 ms，优于既有主线暖态 8.627 dec/s 与 M2a11 实验值 19.849。
 
-**单进程混布限制（重要）**：32 GiB/rank 装不下 OD（≈25.7 GB）+ ERQA（≈25.0 GB）两个工作集。同一进程先跑完 OD 再跑 ERQA 时，ERQA 预热与命中过程中发生 **399 次淘汰**、batch admit 大量 `bypass`，ERQA C16 实测只有 8.08 dec/s（`tap-bare3`）。因此：**提交口径的 S1/S2 按数据集分别用官方入口起服务测量**（与主线历次口径一致）；同一进程的跨数据集复用受存储预算限制，不作为性能承诺。
+**单进程混布（已解决）**：32 GiB/rank 装不下 OD（≈25.7 GB）+ ERQA（≈25.0 GB）两个工作集。旧 `ACTIVE_WINDOW=3000` 下同一进程先跑 OD 再跑 ERQA 时，OD 池在 ERQA 的 2,000 次观测内不会老化，ERQA C16 只有 8.08 dec/s（`tap-bare3`，399 次淘汰）。窗口改为 500 后（§11.10），同一进程 `OD → ERQA` 实测 ERQA C16 **21.355/22.302 dec/s（p95 797/767 ms，216/400×2）**、ERQA S1 mean 116.2/118.5 ms、OD 各项不变（`tap-bare4-20261125`，末态 0 miss、294 次交接淘汰）。因此提交口径可直接采用单进程零重启全量：`metrics.csv`/`results.csv` 已按该轮回填。
 
-**步骤 3 结论**：安装器/披露/`--prefix-state-cache` 默认 on 可提交；OD S1 p95 **117.7 ms**（主线 varlen 154.1，−23.7%）、OD S2 C16 **20.06 dec/s**（主线 16.97，+18.2%）、C64 **21.61**（主线 18.04，+19.8%）；ERQA S1 mean **118–119 ms**（主线暖 165.4，−28.2%）、ERQA S2 C16 **21.8 dec/s**（主线暖 8.63，+152.7%）。全部质量门 2PP。
+**步骤 3 结论**：安装器/披露/`--prefix-state-cache` 默认 on 可提交；单进程零重启（window=500，`tap-bare4`）OD S1 p95 **117.5–117.9 ms**（主线 varlen 154.1，−23.6%）、OD S2 C16 **19.97–20.02 dec/s**（主线 16.97，+18.1%）、C64 **21.57–21.61**（主线 18.04，+19.8%）；ERQA S1 mean **116.2–118.5 ms**（主线暖 165.4，−28.4%）、ERQA S2 C16 **21.36–22.30 dec/s**（主线暖 8.63，+152%）。全部质量门 2PP：OD Cap 74.2173–74.2563、acc 1904–1905、0 失败；ERQA 218/400（S1）/216/400（C16），`--verify-requests` 0 mismatch。
 
 ### 11.10 老化窗口从 3000 调到 500（2026-11-25 复核）
 
 - **问题**：`store.observe()` 只对切分成功的 eligible 请求调用，一轮 OD 只有 418 次、ERQA 只有 400 次。旧 `ACTIVE_WINDOW=3000` 大于两轮观测数，OD（25.77 GB）跑完后在 ERQA 的 5 轮（2,000 次观测）内**永远不会变 stale**，32 GiB 池无法为 ERQA 腾挪，短前缀被拒、长前缀互踩，产生 399 次淘汰与 8.08 dec/s。
 - **修复**：`engine_hooks.ACTIVE_WINDOW = 500`（`host_store.DEFAULT_ACTIVE_WINDOW` 同步），并支持 `CLEF_TIER2_ACTIVE_WINDOW`（兼容原 `CLEF_PREFIX_ACTIVE_WINDOW`）覆盖。500 > 单轮最大 418，单数据集任意多轮仍 0 老化、0 淘汰；跨数据集时旧池在新数据集第 1–2 轮内全部 stale，被优先换出。
 - **单测**：新增 `CrossDatasetHandoverTests`（`test_tiered_prefix_cache.py`）：418 条 OD（6 KiB）→ 400 条混合长短 ERQA（8/5 KiB）三轮；window=500 时第 3 轮 400/400 命中、0 miss；window=3000 时短前缀持续 miss。离线 43/43 通过（10 个 NPU-only 跳过）。
+- **真机同进程复测**（`SUITES=both`，官方 `bash start.sh --config s1`，`tap-bare4-20261125`）：OD 预热 8.835 dec/s → S1 9.769/9.824（p95 117.9/117.5，逐位 0.0）→ C16 20.016/19.971（p95 1125.8/1122.0）→ C64 21.573/21.607（p95 3961.0/3961.8）；ERQA 预热 216/400 → S1 8.152/8.300 dec/s（mean 118.46/116.21，p95 128.15/123.79，218/400×2）→ **C16 21.355/22.302 dec/s（p95 797.2/766.8，216/400×2）**。末态 entries 510 / 32.59 GB、**misses 0**、hits 3,785、交接淘汰 294、0 失败；OD 质量 Cap 74.2173–74.2563/acc 1904–1905、ERQA `--verify-requests` 400/400、0 mismatch，全部 2PP。曲线与独立进程版（21.63/21.81）一致，确认窗口修复生效。
