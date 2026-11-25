@@ -236,8 +236,22 @@ def check_extensions(model_dir):
         (vllm_ascend, "89eb8a5e7a76d085b453a1aeadb6883e12d5ea2d"),
     ):
         root = Path(module.__file__).resolve().parents[1]
-        head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
-        sources[module.__name__] = {"path": str(root), "head": head, "expected_head": expected, "passed": head == expected}
+        marker = root / ".clef-source-commit"
+        if (root / ".git").exists():
+            head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
+            head_source = "git"
+        elif marker.is_file():
+            # scripts/setup_env.sh archive 回退：固定提交 tarball 无 .git，
+            # 以提取时写入的 marker 为准；不能向父仓库误读 HEAD。
+            head = marker.read_text(encoding="utf-8").strip()
+            head_source = "marker"
+        else:
+            head = None
+            head_source = "missing"
+        sources[module.__name__] = {
+            "path": str(root), "head": head, "head_source": head_source,
+            "expected_head": expected, "passed": head == expected,
+        }
     return {
         "platform": f"{type(current_platform).__module__}.{type(current_platform).__name__}",
         "architecture": architecture,
