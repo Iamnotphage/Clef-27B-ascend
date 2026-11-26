@@ -11,8 +11,8 @@
 - 调度：`TASK_QUEUE_ENABLE=2`、`OMP_NUM_THREADS=1`、`ACLNN_CACHE_LIMIT=1000000`；
 - 缓存：vLLM 原生 prefix caching 关闭；Tier 2 prefix-state cache 开启
   （32 GiB/rank、8 slots、`CLEF_TIER2_ACTIVE_WINDOW=500`）；
-- 工作负载：`/tmp/all2352.json`（2,352 条，SHA-256
-  `74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141`）；
+- 工作负载：`logs/final-eval/od-s1/all2352.json`（2,352 条，SHA-256
+  `74ce0f4fde81c1fa1f125dc6b51db2f46fb6d358a37d9faf9c54b362884a2141`；随本目录归档）；
 - 统计：**warmup 1 次（不计入）+ 正式 3 次**；S1 指标为正式三次的 p95
   算术平均，同时保留每轮与汇总。
 
@@ -38,9 +38,10 @@
 | `od-s1-500-r1.json.gz` / `r2` / `r3` | 正式三轮原始逐请求报告（gzip） |
 | `od-s1-500-warmup.log` / `r1` / `r2` / `r3.log` | 客户端逐轮日志 |
 | `od-s1-500-loop.log` | 运行时间线 |
-| `od-s1-500-summary.json` / `.csv` | 正式三轮汇总（canonical） |
+| `od-s1-500-summary.json.gz` / `.csv` | 正式三轮汇总（canonical，JSON 为 gzip） |
 | `od-s1-500-summary-2run.*` | 早期两轮汇总，保留备查 |
 | `od-s1-500-summary-r3.*` | 与 3 轮 canonical 汇总内容相同的别名副本 |
+| `all2352.json` | 本次 2,352 条请求序列（S1/S2 共用） |
 | `SOURCE_SHA256SUMS` | 服务器原始文件 SHA-256 |
 | `SHA256SUMS` | 本目录归档文件 SHA-256 |
 
