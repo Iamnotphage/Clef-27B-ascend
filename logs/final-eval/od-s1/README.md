@@ -39,6 +39,7 @@
 | `od-s1-500-warmup.log` / `r1` / `r2` / `r3.log` | 客户端逐轮日志 |
 | `od-s1-500-loop.log` | 运行时间线 |
 | `od-s1-500-summary.json.gz` / `.csv` | 正式三轮汇总（canonical，JSON 为 gzip） |
+| `od-s1-500-runs.csv` | warmup + R1/R2/R3 + 正式平均的逐轮明细 |
 | `od-s1-500-summary-2run.*` | 早期两轮汇总，保留备查 |
 | `od-s1-500-summary-r3.*` | 与 3 轮 canonical 汇总内容相同的别名副本 |
 | `all2352.json` | 本次 2,352 条请求序列（S1/S2 共用） |
