@@ -1,0 +1,245 @@
+{
+  "created_at": "2026-11-26T03:53:12.571292+00:00",
+  "base_url": "http://127.0.0.1:18243",
+  "trace_root": "/tmp/profile-tier2-traces",
+  "expected_ranks": 2,
+  "concurrency": 1,
+  "passed": true,
+  "collection_control_passed": true,
+  "trace_completeness_passed": true,
+  "acceptance_scope": "HTTP control and exported rank structure; request-window alignment, rank clocks and service logs also require review",
+  "throughput_scope": "Profiled requests measure instrumentation overhead; use separate unprofiled rounds for performance.",
+  "sample": {
+    "path": "/tmp/profile-tier2-samples/w3-cold.json",
+    "sha256": "b6bd81c57c30dda3e95cca7cdc5694f3a16ebe865074bfbbde8fa92351766c64"
+  },
+  "warmup_sample": {
+    "path": "/tmp/profile-tier2-samples/w3-warmup.json",
+    "sha256": "1e45cf53b6d65c217f1ad5f0ef5cca170eff7a244031ba0afaa6e88604e6c56a"
+  },
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "warmup": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18243",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/tmp/profile-tier2-samples/w3-warmup.json",
+      "--requests",
+      "10",
+      "--report",
+      "/tmp/profile-tier2-out/w3-erqa-cold/warmup.json"
+    ],
+    "started_at": "2026-11-26T03:53:12.585400+00:00",
+    "log": "/tmp/profile-tier2-out/w3-erqa-cold/warmup.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T03:53:14.122012+00:00"
+  },
+  "start": {
+    "url": "http://127.0.0.1:18243/start_profile",
+    "started_at": "2026-11-26T03:53:14.122037+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-26T03:53:14.199052+00:00",
+    "elapsed_seconds": 0.07702117040753365
+  },
+  "request_window_started_at": "2026-11-26T03:53:14.199623+00:00",
+  "requests": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18243",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/tmp/profile-tier2-samples/w3-cold.json",
+      "--requests",
+      "5",
+      "--report",
+      "/tmp/profile-tier2-out/w3-erqa-cold/profile-requests.json"
+    ],
+    "started_at": "2026-11-26T03:53:14.199660+00:00",
+    "log": "/tmp/profile-tier2-out/w3-erqa-cold/profile-requests.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T03:53:15.797811+00:00"
+  },
+  "request_window_finished_at": "2026-11-26T03:53:15.797834+00:00",
+  "stop": {
+    "url": "http://127.0.0.1:18243/stop_profile",
+    "started_at": "2026-11-26T03:53:15.797840+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-26T03:53:16.334815+00:00",
+    "elapsed_seconds": 0.5369813097640872
+  },
+  "new_rank_directories": [
+    "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt",
+    "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt"
+  ],
+  "analysis": [
+    {
+      "argv": [
+        "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+        "-c",
+        "from torch_npu.profiler.profiler import analyse; import sys; analyse(sys.argv[1], max_process_number=8)",
+        "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt"
+      ],
+      "started_at": "2026-11-26T03:53:16.337368+00:00",
+      "log": "/tmp/profile-tier2-out/w3-erqa-cold/analyse-rank-0.log",
+      "returncode": 0,
+      "finished_at": "2026-11-26T03:53:29.471802+00:00"
+    },
+    {
+      "argv": [
+        "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+        "-c",
+        "from torch_npu.profiler.profiler import analyse; import sys; analyse(sys.argv[1], max_process_number=8)",
+        "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt"
+      ],
+      "started_at": "2026-11-26T03:53:29.471838+00:00",
+      "log": "/tmp/profile-tier2-out/w3-erqa-cold/analyse-rank-1.log",
+      "returncode": 0,
+      "finished_at": "2026-11-26T03:53:42.501460+00:00"
+    }
+  ],
+  "export_files": {
+    "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt": [
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+        "bytes": 0
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+        "bytes": 339968
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+        "bytes": 6414
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_0.db",
+        "bytes": 37347328
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+        "bytes": 1119104
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+        "bytes": 2263
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "bytes": 5677137
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+        "bytes": 4663
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+        "bytes": 4301144
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+        "bytes": 280
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+        "bytes": 6490502
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "bytes": 117385195
+      }
+    ],
+    "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt": [
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+        "bytes": 0
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+        "bytes": 339968
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+        "bytes": 6426
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_1.db",
+        "bytes": 37015552
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+        "bytes": 1119105
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+        "bytes": 2260
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "bytes": 5594359
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+        "bytes": 4605
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+        "bytes": 4260974
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+        "bytes": 282
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+        "bytes": 6452511
+      },
+      {
+        "path": "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "bytes": 116762979
+      }
+    ]
+  },
+  "trace_completeness": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+      "/tmp/profile-tier2-traces",
+      "--expected-ranks",
+      "2",
+      "--output-dir",
+      "/tmp/profile-tier2-out/w3-erqa-cold/trace-analysis",
+      "--strict",
+      "--trace-dir",
+      "/tmp/profile-tier2-traces/rank0_743847_20261126035314123_ascend_pt",
+      "--trace-dir",
+      "/tmp/profile-tier2-traces/rank1_743848_20261126035314123_ascend_pt"
+    ],
+    "started_at": "2026-11-26T03:53:42.502089+00:00",
+    "log": "/tmp/profile-tier2-out/w3-erqa-cold/trace-completeness.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T03:54:31.608827+00:00"
+  },
+  "finished_at": "2026-11-26T03:54:31.608849+00:00"
+}

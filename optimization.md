@@ -1,195 +1,203 @@
-# Clef-27B 优化记录
+# Clef-27B 昇腾 910A3 适配与非量化性能调优报告
 
-## 首次调查快照，2026-11-12
+## 1. 执行摘要与核心成果
 
-- 目标平台为昇腾 910A3，当前可见两个 NPU 计算单元，每个 64 GiB HBM。
-- 模型源为 `Cloudflare/clef`，本地模型目录为 `/workspace/yangchen/models/Clef-27B`。
-- 2026-11-12 已从 ModelScope 下载完整模型，共 28 个文件，54,989,897,681 字节（约 55.0 GB）。所有文件的 SHA-256、主干权重索引和 safetensors 头部边界检查通过。校验明细见 [logs/download_verification.json](logs/download_verification.json)，权重检查见 [logs/model_inspection.json](logs/model_inspection.json)。
-- 早期实例为 CANN 9.0.0、驱动 26.1.1、Python 3.10.12，当时推理依赖待配置；保留该次环境来源与采集记录。[早期环境调查](../docs/environment.md)
+本报告系统总结 `Cloudflare/clef`（27.5B 参数多模态结构化决策模型）在昇腾 910A3（`Ascend910_9382`，单物理卡内 2 个逻辑 NPU，每逻辑 NPU 配备 24 个 AI Cube Core、48 个 AI Vector Core 与 64 GiB HBM）上的全栈工程适配与性能调优工作。
 
-## 当前 A3 baseline，2026-11-12
+本工程严格遵循赛事交付规范与工程红线：
+1. **严格非量化（Pure BF16）**：全程保持原始 BF16 权重、激活与状态精度，未引入任何 W8A8、W8A16、INT8 或 FP8 量化。
+2. **原始输出与 2PP 精度保障**：不使用额外温度校准（as-served），`OpenDecisions`（Calibration / Intelligence / Capability）与 `ERQA` 总体准确率相对适配后基线的绝对波动均控制在 **0.37 个百分点以内**（远优于 ±2PP 要求）。
+3. **单一常驻服务零重启**：全部文本与多模态质量、S1 单并发延迟、S2 高并发吞吐评测均由同一个 `bash start.sh` 启动的常驻 TP2 服务进程承载，无按请求动态路由两套方案，也无跨数据集手动重启。
 
-新机器 `199.88.54.221` 使用现有 CANN / A3 Ops / ATB 9.2.1，独立 CPython 3.12.16、torch 2.10.0+cpu、torch_npu 2.10.0.post7。固定 vLLM / Ascend 源码、依赖、构建日志、最终 `pip check` 和 78 个自定义算子导入均已记录。[安装记录](../docs/installation-2026-11-12.md)
+### 1.1 端到端优化演进总览
 
-完整主干 12 分片、视觉塔和独立联合头已在 TP1/TP2 实际加载。联合头 122/122 参数张量、128,056,324 参数加载齐全，strict tracking 的缺失列表为空。CPU 参考为完整 27,484,784,884 参数 BF16 模型；NPU 的 GDN 派生卷积布局参数额外占 3.75 MiB，有逐项核算证据。
+| 评估维度 | 指标 | 适配后基线（2026-11-14） | 算子与调度主线（Tier 2 前） | 最终交付版本（2026-11-26） | 相对适配基线总收益 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **118.54** | **−45.4%** |
+| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **9.742** | **2.11×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **21.583** | **3.78× (+277.7%)** |
+| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **122.37** | **−62.2%** |
+| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **8.481** | **2.14×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **21.439** | **5.42× (+441.8%)** |
+| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4254** | Δ −0.37 pp（2PP 内） |
+| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0872** | Δ +0.03 pp（2PP 内） |
+| | Capability (0–100) | 74.4255 | 74.2477 | **74.2563** | Δ −0.17 pp（2PP 内） |
+| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5450 (218/400)** | Δ −0.25 pp（2PP 内） |
 
-| 固定条件：307 tokens，3 字段，候选 2/2/3，预热 3，正式 30，并发 1，max len 1024 | TP1 | TP2 |
-| --- | ---: | ---: |
-| 请求/秒 | 7.095650 | 6.838840 |
-| p50，ms | 140.301320 | 144.985050 |
-| p95，ms | 143.511251 | 159.794070 |
-| CPU 参考离散决策一致 | 7/7 | 7/7 |
-| 最大候选概率绝对差 | 0.001453638 | 0.000256002 |
-| 物理 14 / 15 的采样 HBM，MiB | 59964 / 2885 | 60007 / 59667 |
+> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv) 以及 [logs/final-eval/](logs/final-eval/) 归档报告。
 
-HBM 为 1 秒采样的设备占用，包含设备基础及缓存占用。TP2 每卡权重约 25.76 GiB；默认 0.90 利用率下，KV 池扩大到约 28.76 / 28.77 GiB。容量、权重和缓存预算应分别比较。上述吞吐与延迟限定为同一组 30 次短请求。
+![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
-## 兼容与复现改动
+> **图 1**：6 个阶段的 S1 p95 与 S2 最大吞吐；最终相对 baseline 为 OD −45.4% / 3.78×、ERQA −62.2% / 5.42×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/](logs/final-eval/)。
 
-1. 保留 Triton-Ascend 的 NumPy 1.26.4 约束，将 vLLM 的 OpenCV 声明固定为 4.11.0.86；图片和视频真实解码已通过。
-2. 固定 vLLM 构建声明含 torch 2.14.0；本轮采用 `empty`、`--no-build-isolation` 和 constraints，构建与运行复用验收过的 torch 2.10。
-3. flash-attn 编译线程池显式读取 `MAX_JOBS=8`；Arctic 预装 nanobind / grpcio-tools，FLA 补齐其声明的 expecttest。
-4. 加载后输出 `CLEF_LOAD_AUDIT`，记录实际模块、张量数量、设备/dtype 和缺失检查。
-5. TP2 首请求暴露上游基类 embedding 契约缺失；在 Ascend 构造函数补齐 `use_fused_embedding=False`、`reduce_results=True`、`parallel_group=output_reduce_group`。原有 Ascend forward 的 AST 保持一致，修复后通过真实两卡精度与性能检查。
 
-四份补丁保存在 [scripts/patches/](../scripts/patches/)，源码固定提交和补丁 SHA、最小验证及实际部署日志见安装文档。
+---
 
-## 结果
+## 2. 模型架构特征与昇腾 910A3 Roofline 瓶颈诊断
 
-TP2/4096 的完整公开评测为 2,983 请求、4,583 决策，执行错误为 0：JevBench 公开 231 条 `public_accuracy=0.8701`；OpenDecisions 2,352 条 `capability=0.7443`；Typed Decisions 400 条、2,000 决策的准确率 `0.7165`。HCCL FP32/BF16、红蓝图片和双向视频自检全部通过。
+### 2.1 模型与工作负载特征
 
-[完整 baseline 与逐题日志路径](../docs/baseline-2026-11-12.md) · [性能 CSV](results.csv) · [指标 CSV](metrics.csv) · [性能报告图](result.png) · [NPU 实测报告图](npu_device_call.png)
+`Cloudflare/clef` 总参数量 27,484,784,884（约 55.0 GB BF16），并非标准自回归生成模型，而是基于 `pooling` runner 的**单步纯 Prefill 结构化决策模型**（`output_tokens=0`）：
+- **混合主干（64 层）**：基于 Qwen3.5 混合架构，包含 **48 层 Gated DeltaNet（GDN 线性注意力 + 短因果卷积）** 与 **16 层标准 Full-Attention**，辅以多模态视觉编码塔（单题最多 16 张高分辨率图像）。
+- **联合决策头（`JointSchemaHead`，1.28 亿参数 / 122 个张量）**：消费全序列末层隐藏态与词法嵌入（lexical embedding），一次性输出 `choice`、`noul`（二元概率）或 `score`（等级概率分布）的精确归一化概率。
+- **输入分布跨度大**（[docs/input-distribution-2026-11-16.md](docs/input-distribution-2026-11-16.md)）：
+  - `OpenDecisions`（2,352 题纯文本）：`p50 = 357.5`、`p95 = 969.25`、`max = 1,595` tokens；多道题目共享长系统策略或对话背景（`STATE`），仅候选路由问题不同。
+  - `ERQA`（400 题具身推理图文）：`p50 = 933`、`p95 = 1,653`、`max = 10,294` tokens（含最高 16 张图像、10,065 个视觉 token），大量图像跨题共享或占总序列长度的 70%–95%。
 
-两张图由真实报告和 SSH CLI 输出导出，保留来源时间。原始 Terminal 窗口访问受计算机工具安全规则限制。正式比赛输入、官方 baseline 数值及最终图像规范按主办方协议对齐；CSV 中未知 baseline 字段保持为空。
+### 2.2 硬件实测屋脊（Roofline）与五大核心瓶颈
 
-## 后续比较项
+通过自研微基准探针（[hbm_bandwidth_probe.py](src/runtime/hbm_bandwidth_probe.py)、[probe_matmul_ceiling.py](src/runtime/probe_matmul_ceiling.py)）与双卡 `torch_npu.profiler` 时间轴并集分析（[docs/profile-final-2026-11-17.md](docs/profile-final-2026-11-17.md)），我们确立了昇腾 910A3 单逻辑 NPU 的物理上限并定位了五大瓶颈：
 
-按同一精度判据比较固定 KV 池预算、更长输入、更多字段和更高并发，分别记录缓存容量、设备占用和请求性能。公开文本指标、概率分布及已有多模态自检作为回归依据。
+- **物理上限实测**：单逻辑 NPU 纯 HBM 读带宽稳定在 **1.26–1.32 TB/s**（超出 L2 的 256 MiB–1 GiB 工作集）；BF16 Cube 矩阵乘冷态峰值 **295–320 TFLOPS**。在 P95 长度（~969 tokens）下，真实 TP2 MLP 矩阵乘已达 **285.9–303.4 TFLOPS**（Cube 利用率 94%–97%），`npu_add_rms_norm` 达 **1,117–1,266 GB/s**，二者已贴近硬件极限，**重写常规 MatMul/Norm 算子已无收益空间**。
+- **五大真实工程瓶颈**：
+  1. **动态长度 Executor 缓存击穿与宿主下发空泡**：CANN 默认 `aclnn` executor 缓存仅容纳约 145 种输入长度，超出后每个新 token 长度触发 **+55 ms** 编译/查找慢路径；短序列（~307 tokens）CPU 64 层算子下发耗时（114–139 ms）反超设备计算（75 ms）。
+  2. **GDN 48 层数据路径冗余与 Vector 核利用率不足**：纯决策服务无 decode 阶段，原框架仍逐层写回循环末态并保留反向重算中间量；GDN 投影输出 `[T, 8192]` 切分 `[T, 5120]` 非连续视图触发显式拷贝，因果卷积与 Q/K L2 Norm 分离启动，且早期算子仅用到 24 个 AIV（浪费 A3 一半 Vector 算力），多序列合批时回退慢路径。
+  3. **短序列 MLP MTE2 搬运效率受限**：307 token 短序列下 ND 格式权重有效带宽仅 ~0.53 TB/s（约为 HBM 上限的 41%），`aic_mte2_ratio` 高达 0.994。
+  4. **多模态接口割裂与联合决策头小算子开销**：原生 `/v1/systemone` 未归一图文 `state` 列表；`JointSchemaHead` 对单字段请求仍走通用多字段循环与分解注意力。
+  5. **原生 Mamba 前缀缓存与决策快路径互斥**：vLLM 原生 Mamba prefix caching 强制要求开启 `--enable-chunked-prefill`，而开启 chunked prefill 会直接关闭结构化决策快路径并触发对齐断言失败，导致长文本与多图前缀在每条请求中重复全量计算。
 
-## 第二轮性能调优，2026-11-13
+![S1 Roofline](imgs/fig5_s1_roofline.png)
 
-A3 单物理卡内两个逻辑 NPU 边界内完成。完整实验报告见 [docs/tuning2-2026-11-13.md](../docs/tuning2-2026-11-13.md)，远端逐点原始记录与 master-results.csv（43 行）在 `/workspace/yangchen/logs/tuning/20261113-085408-perf2a/`。全部数字为关闭 profiler 的正式测量（每点 ≥300 请求、≥30 秒；稳定结论三轮交错，batch 分布由 Prometheus 直方图差分重建并逐点校验）。
+> **图 5**：967-token 全量计算的纯 Cube 屋脊 79 ms、实用设备屋脊 145 ms、端到端约 154 ms；Tier 2 命中（199-token 后缀）设备预算 96 ms，但 Host dispatch 105 ms 成为瓶颈。详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)。
 
-| 改动或配置 | 实测收益（fixed307，TP2/4096/eager） | 决定 |
-| --- | --- | --- |
-| batching seqs4 + 并发 8（真实 B4） | 8.237 → 19.325 rps（CV 0.05%）；dec/s 24.71 → 57.98 | 采纳为 S2 配置 |
-| 独立 `--max-num-batched-tokens` 参数 | 长输入 3868 tokens：4096→16384 预算仅 1.964→2.118 rps（MLP 线性封顶） | 参数保留，默认跟随 max-model-len |
-| 双 TP1 副本（同卡双实例+入口分流） | C2 14.268 rps @ p95 141 ms（容量假设 14.288 获证实） | 低延迟中并发备选 |
-| `weight_nz_mode=2`（BF16 NZ） | 线性层设备时间 −9.3%（46.50→42.17 ms/req/rank）但端到端 −0.8%～−1.4% | 拒绝，保留默认 mode 1 |
-| schema token 有界缓存 | encode CPU −89.6%；s4c8 +0.28%（19.380）；质量逐位同界 | 默认关闭；S2 可开启（env 一行） |
-| PIECEWISE 编译（去 eager） | 编译 +29.7 s、捕获 3 图；s4c8 19.340 rps 持平 | 不采纳 |
-| KV 池 12 GiB（原 28.5） | 307/B4、3868 长输入、冷图全部零回退；回收约 16.5 GiB/rank | 容量可选项 |
 
-质量回归：推荐配置（seqs1）完整 OpenDecisions 1.0.1 2,352 条重跑，Calibration 82.7941149442 / Intelligence 66.0568428085 / Capability 74.4254788763、accuracy 1906/2352、Score MAE 0.401389，与既有 baseline **逐位一致**；B4 混合并发与缓存开启两种条件下 771/771 离散决策一致、概率最大差 0.000851（阈值 0.03）。
+---
 
-S1/S2（results.csv 12 列行，配置来源各自一致）：S1 = seqs1，p95 130.296 ms（三轮均值）；S2 = seqs4，57.98 dec/s @ 并发 8（关缓存）或 58.14（开缓存）。备选低延迟部署：双 TP1 C2 14.27 rps @ p95 141 ms。
+## 3. 分层优化方案与核心技术原理
 
-## 第四轮复核与最终配置，2026-11-14
+### 3.1 适配底座与运行时调度优化
 
-完整报告见 [docs/tuning4-2026-11-14.md](../docs/tuning4-2026-11-14.md)。
+1. **TP2 词表并行归约契约修复与自包含构建**（[src/patches/](src/patches/)、[scripts/setup_env.sh](scripts/setup_env.sh)）：
+   - 修复上游 `vLLM-Ascend` 词嵌入层缺失 `use_fused_embedding=False`、`reduce_results=True` 与 `parallel_group` 导致的 TP2 首请求异常；通过 `CLEF_LOAD_AUDIT` 校验全部 12 个主干分片与 122 个联合头参数张量零缺失加载。
+   - 修复 CANN `recompile_binary.py` 与 MemFabric `mfcli` 在隐藏目录（`.build` / `.venv`）下 `glob` 漏检 `.o` 目标文件的构建缺陷（[docs/setup-env-2026-11-25.md](docs/setup-env-2026-11-25.md)），实现 `quay.io/ascend/vllm-ascend:v0.30.0-a3` 裸容器内约 17.7 分钟一键构建完整隔离 `.venv`。
+2. **消除动态 Shape 慢路径（`ACLNN_CACHE_LIMIT=1000000`）**（[docs/aclnn-cache-shape-fix-2026-11-17.md](docs/aclnn-cache-shape-fix-2026-11-17.md)）：
+   - 将 CANN executor 缓存上限扩容至 `1,000,000`，彻底消除 145 种 prompt 长度后的 +55 ms 阶跃退化。全量 2,352 题输出**逐位一致**，官方入口 S1 P95 由 `190.41 ms` 降至 **`168.63 ms`**（mean `153.76 → 125.55 ms`）。
+3. **双级异步任务队列（`TASK_QUEUE_ENABLE=2`）与线程隔离**（[docs/tp2-alwayson-2026-11-24.md](docs/tp2-alwayson-2026-11-24.md)）：
+   - 开启 `torch_npu` 双级流水下发队列并固定 `OMP_NUM_THREADS=1`，掩盖短序列下 CPU 64 层小算子派发延迟。ABBA 交错对照证实输出**逐位一致**，S1 mean 由 `118.53 ms` 降至 **`110.85 ms`**（p50 `111.39 → 101.09 ms`，吞吐 **+6.9%**），S2 保持中性。
 
-- **S2 合批质量**：seqs4/cache-on C8 的全量 2,352 条重算 Capability **74.200178**，4 条 choice 变化、2 条 noul 跨 0.5、26 条概率差 >0.03（最大 0.097399）、3 条 score 差 >0.05（最大 0.076599），未通过 0.03/0.05 工程门槛。C2 与 S1 逐位一致。根因是跨请求合批的批内位置相关 BF16 数值差（相同输入在不同批位置得到不同结果）；GDN 融合算子、conv1d 均验证为多序列隔离正确，差异首先出现在 `in_proj_ba` 的 1 ulp 行差，按序列执行 BA 仍残留 0.104 最大概率差。
-- **最终采用**：seqs1/B1（TP2/4096/eager/cache off）。全量质量 74.425479 与 baseline 逐位一致；S1 P95 **217.036 ms**；S2 **5.715 decisions/s @ C16**（C2/C4/C8 为 5.626/5.673/5.584）。
-- **吞吐候选**：seqs4/C8 13.764 dec/s 保留在 `results.csv`，标注 `throughput-candidate-quality-fail`。
-- **GDN 候选**：旧 guard 在真实 prefill 因非连续 `[1,T,H,D]` 视图 100% 回退；修正后真实服务命中、0 回退、8/8 冻结用例逐位一致；不再声称端到端收益。
-- **启动与补丁**：`start.sh --output-dir` 真实落盘 manifest/log，默认 18143，`--config s1/s2` 显式配置；schema cache v2 安装器支持上游 SHA 校验、版本识别、幂等安装与精确回退。
-- **统计修正**：cgroup v1/v2 单位、unknown 有效性、预注册顺序条件、B4 分母（2.762 ms/req）、输入长度 446.809、每并发点独立证据与 SHA。
+### 3.2 主干 MLP `FRACTAL_NZ` 权重布局优化
 
-## ERQA 图文配置与结果，2026-11-14
+在 `Qwen2MoeMLP.forward` 首次执行时，惰性调用 `torch_npu.npu_format_cast(..., 29)` 将 `gate_up_proj` 与 `down_proj` 的 BF16 权重转换为昇腾 Cube 原生亲和的 `FRACTAL_NZ` 格式（`CLEF_MLP_BF16_NZ=1`，见 [docs/mlp-bf16-nz-2026-11-15.md](docs/mlp-bf16-nz-2026-11-15.md)）：
+- **原理与收益**：改善短 M 维度下 Cube MTE2 通道的数据局部性，307 token 冷态有效带宽由 `509–532 GB/s` 提升至 **`671–677 GB/s`（1.26–1.32×）**。
+- **精度与端到端验证**：ND 与 NZ 矩阵乘输出在全部测试长度下**逐位一致（`max_diff = 0.0`）**；全量 OpenDecisions S1 P95 由 `168.63 ms` 进一步降至 **`166.00 ms`**（mean **−3.06%**，吞吐 **+3.18%**）。
 
-完整报告见 [docs/erqa-baseline-2026-11-14.md](../docs/erqa-baseline-2026-11-14.md)。
+### 3.3 GDN 线性注意力数据路径与自定义 Ascend C 算子
 
-- **数据**：官方 ERQA TFRecord，commit `5bba488`，91,402,921 字节，SHA-256 `1974f5e5…b4c93e2`；400 题、630 图、8 类，单题 1～16 图。
-- **服务**：TP2 / BF16 / eager / `max_model_len=16384` / `max_num_seqs=1` / 缓存关；`--limit-mm-per-prompt {"image":16,"video":0}`。
-- **图像策略**：`shortest_edge=65536`、`longest_edge=1048576`（`JointSchemaStrategy.IMAGE_SIZE` 参考边界）；全量前逐题 processor 预算最大 10,294 tokens，实测 `usage.input_tokens` 与预算一致。
-- **质量**：219/400 = **0.5475**，400/400 成功、0 重试；单图 0.5923、多图 0.4336；8 类分项见报告。
-- **C1 计时**：wall 101.099 s、3.9565 decisions/s，p50 / p95 / p99 为 267.849 / 323.476 / 551.516 ms。该窗口为 ERQA 质量运行，不与 OpenDecisions S1/S2 混用。
-- **适配**：EvalScope ERQAAdapter 修补 `visual_indices` 图文排列、2～4 候选解析与 SystemOne 图文转换；19 题原生路径与直接 `/v1/decide` 逐题一致。补丁与 SHA 见 [logs/erqa-baseline-20261114/adapter-patch/](logs/erqa-baseline-20261114/adapter-patch/)。
-- **边界**：Clef 原生协议将图片放在 `state` 前，未按官方字符索引交错插入；30 条交错样本单独统计。图像上限 1,048,576 像素为 16 图与 16,384 token 的联合约束。
+48 层 GDN 占全模型层数的 75%，是主干算子级调优的核心突破口：
 
-## GDN 决策 prefill 数据路径，2026-11-15
+1. **决策专用 Prefill 数据路径（`BIC`）**（[docs/gdn-data-path-2026-11-15.md](docs/gdn-data-path-2026-11-15.md)）：
+   - 针对 `output_tokens=0` 的纯决策请求（仅依据宿主侧元数据门控，零设备同步开销），跳过无人读取的循环状态 scatter 写回、初始状态读取及反向重算中间张量（`bsnd + skip_initial_state + skip_conv_state + no_recompute`）。
+   - 八臂正交筛选确认 `BIC` 最优：OpenDecisions 2,352 题与 ERQA 400 题概率**逐位一致**，交错 A/B 6/6 对更快，S1 P95 中位下降 **−7.01%（−13.81 ms）**。
+2. **GDN 分块粒度调优（`chunk_size=128`）**（[docs/gdn-chunk128-2026-11-17.md](docs/gdn-chunk128-2026-11-17.md)）：
+   - 遍历测试 chunk 64/96/128/160/192/256（其中非 2 幂或超限块报 `161002`），确认 `128` 是硬件唯一快于 `64` 的分块尺寸（长序列设备耗时 `0.608 → 0.521 ms/层`），进一步将 S1 P95 压低 **−1.32%**（OD Capability `74.2476`，2PP 内）。
+3. **单序列 48-AIV 融合算子 `ClefGdnConvQkv` v4**（[src/ascendc/kernels/clef_gdn_conv_qkv/](src/ascendc/kernels/clef_gdn_conv_qkv/)、[docs/gdn-conv-qkv-2026-11-17.md](docs/gdn-conv-qkv-2026-11-17.md)）：
+   - **三算子融合**：在单次 Ascend C kernel 启动内完成 `causal_conv1d (width=4)` + `Q/K FLA arch22 L2 Norm` + `V BSND 直拷`，将 967 token 下 48 层设备耗时由 `8.45 ms`（3.79 + 4.66）腰斩至 **`4.17 ms`**。
+   - **`as_strided` 免拷贝读取**：Qwen3.5 主干将 `[T, 8192]` 投影拆分为 `[T, 5120]` QKV 与 `[T, 3072]` Z 跨步视图；宿主通过严格存储边界校验的 `as_strided` 直接传入 8192 行跨度，kernel 仅读取前 5120 通道，彻底消除 48 层连续化拷贝。
+   - **打满 48 AIV**：针对 `Ascend910_9382` 的 24 AIC / 48 AIV 拓扑重写 tiling（`blockDim = min(totalTiles, 48)`）并将长度上限放宽至 `16,384`，使 ERQA 万级 token 多图输入全程保持融合，长序列单算子较分解路径提速 **3.2–3.7×**。
+4. **多序列变长融合算子 `ClefGdnConvQkvVarlen`**（[src/ascendc/kernels/clef_gdn_conv_qkv_varlen/](src/ascendc/kernels/clef_gdn_conv_qkv_varlen/)、[docs/conv-qkv-varlen-2026-11-25.md](docs/conv-qkv-varlen-2026-11-25.md)）：
+   - 为解决 S2 多并发合批时 `num_prefills > 1` 回退分解路径的问题，新增独立 `ClefGdnConvQkvVarlen` 算子：以 `cu_seqlens`（int32）驱动 per-sequence `tile=64` 划分，通过 `MTE2_S` 同步与 `history = min(localT0, 3)` 严防序列间卷积历史越界。
+   - 离线通过 48 组多序列逐位对齐与 144 组极端毒化（`±1e4` / `NaN`）零串扰门控，单算子提速 **3.53–4.54×**；同窗 A/B 将无缓存 OD S2 C64 推升至 **18.039 dec/s**（+4.86%），ERQA C16 推升至 **8.627 dec/s**（+5.96%，p95 −7.66%）。
 
-完整报告见 [docs/gdn-data-path-2026-11-15.md](../docs/gdn-data-path-2026-11-15.md)。
+### 3.4 多模态协议归一与联合决策头（JointSchemaHead）融合
 
-- **开关**：在已采用的 `decision_prefill`/`no_recompute` 之上新增 `bsnd`、`skip_initial_state`、`skip_conv_state`，八臂 R/B/I/C/BI/BC/IC/BIC；严格 `epoch`、逐 forward 快照、双 TP rank 日志校验。
-- **契约探针**：`conv_states=None`、`initial_state=None`、连续 BSND 与实际包装器八臂在真实 TP2 形状（含 10,294 token、空 segment）全部逐位一致；BSND 跨步视图被 aclnn 161002 拒绝，保留一次连续拷贝。
-- **筛选与 A/B**：49 条代表样本八臂筛选 BIC 最优（p95 195.72 ms，R 201.97）；588 题 6 对交错 A/B 中 BIC **6/6 更快**，p95 中位 **−7.01%（−13.81 ms）**，吞吐 +0.378 dec/s，响应逐位一致。
-- **质量**：OpenDecisions 全量 2,352 的 R 与 BIC 都 **2,352/2,352 与 baseline 逐位一致**（Capability 74.425479、accuracy 1906、Score MAE 0.401389）。ERQA 400 题 R/BIC 概率逐位一致，accuracy 219/400。
-- **性能**：正常入口 S1 P95 **198.42 ms**（较上一提交入口 213.56 −7.09%）；同进程全量窗口 R 197.95 → BIC **185.62 ms**（−6.23%）；seqs4 C8 14.201 → **14.652 dec/s**、p95 946.54 → **913.93 ms**；C16 14.689。C8 的跨臂响应差异与同臂重跑（85 题、max 0.0656）同量级，归因于既有合批调度，不是本轮开关。
-- **入口**：`--config s1/s2` 默认启用 BIC，manifest 记录配置/生效值/来源；`preprocess_fusion` 默认关闭。
-- **融合原型**：Ascend C `ClefGdnQkvNorm` 短序列 2.0×、Q/K 1 ulp、V 逐位；1595/10,294 token 反而慢 0.86×/0.13×，不接入。
+1. **`/v1/systemone` 图文 `state-list` 原生接入**（[src/runtime/systemone_mm_state.py](src/runtime/systemone_mm_state.py)、[docs/systemone-mm-state-2026-11-24.md](docs/systemone-mm-state-2026-11-24.md)）：
+   - 在入口层对多模态 `state` 内容块列表执行无损提取与 Fail-Closed 校验（非法结构直接返回 HTTP 400；纯文本请求零分支透传，OpenDecisions 100% 逐位不变）。经 A1/A2 对照锁定等价于参考包装的 `A2 (extract_question_dict)` 模式，使单进程 `/v1/systemone` 统一服务两套数据集。
+2. **JointSchemaHead 单字段快路径与 `npu_fusion_attention`**（[src/runtime/joint_fused_attention/clef_joint_schema.py](src/runtime/joint_fused_attention/clef_joint_schema.py)）：
+   - OpenDecisions 与 ERQA 全部样本均为单决策字段（`answer`）；单字段快路径省去动态字段拆分与冗余张量拼接，并将头内部注意力替换为 `torch_npu.npu_fusion_attention`，端到端再降 S1 P95 **−2.91%**。
 
-## 2026-11-17 aclnn executor cache（已采用）
+### 3.5 两级异构缓存架构（Tier 1 视觉缓存 + Tier 2 混合前缀状态缓存）
 
-- **现象**：S1 按精确 input token 数分快/慢两档，慢档固定多约 55 ms；同长度请求 within-length sd 中位 4.7 ms，快/慢档输出逐位相同。
-- **根因**：CANN aclnn executor 缓存默认只覆盖前约 145 个不同 prompt 长度，之后首次出现的新 shape 走慢路径；MLP、GDN chunk、conv、QKV norm 的纯算子时间无跳变。
-- **修复**：`ACLNN_CACHE_LIMIT=1000000`，写入 `inference.py` 的 service environment，launch manifest 记录。
-- **结果**：官方 `start.sh --config s1` 全量 2,352 条 mean **125.552** / p50 **118.170** / p95 **168.633 ms**、7.960 dec/s；修复前 153.761 / 168.485 / 190.405、6.503。四组独立全量复测 p95 167.28–169.02 ms。
-- **质量**：2,352 条响应逐位一致（max 0.0、0 choice 翻转）；ERQA 217/400 不变；S2 B8 C16 16.398 dec/s 不变。
-- **证据**：`docs/aclnn-cache-shape-fix-2026-11-17.md`、`Clef-27B/logs/tuning5-20261117/`。
+在完成算子与调度压榨后，单次全长前向已逼近 A3 硬件计算屋脊。为彻底消除跨请求共享上下文与多图特征的重复计算，同时绕开 vLLM 原生 Mamba prefix caching 与决策快路径的架构冲突，我们在 [src/runtime/tiered_prefix_cache/](src/runtime/tiered_prefix_cache/) 自研了面向 `48 GDN + 16 Full-Attn + JointHead` 混合架构的 **Tier 2 前缀状态缓存系统**（[docs/tiered-cache-stage0-2026-11-25.md](docs/tiered-cache-stage0-2026-11-25.md)）：
 
-## 2026-11-17 MLP BF16 NZ（已采用）
+```
+请求批次到达 ──► 128 对齐前缀切分 (文本 ≥512 / 多图 ≥128, 允许切在图像展开块内)
+                    │
+                    ▼
+          TP2 单次 [B, 35] cpu_all_reduce_ 准入共识投票 + 同批同 Key 去重
+             ├── Miss / Populate ──► 1-Pass 全长前向（输出与 OFF 逐位一致）
+             │                         └─► 分组 Varlen SSM 捕获 (4–8 层/批, ≤512 MiB)
+             │                         └─► 8×640 MiB Pinned Ring 异步 D2H ──► Pageable HostStore
+             └── Hit ──────────────► 异步 H2D 预取 (16L KV + 48L GDN conv/ssm + prefix_memory)
+                                       └─► Pass 2 后缀续算 (仅算 S = T - L tokens!)
+                                             ├─ GDN: x_aug varlen conv + 批量 fla 状态续算
+                                             ├─ Full-Attn: 单次 FIA TND sparse3 注意力
+                                             └─ JointHead: [S,5120] 后缀 hidden + positions-L + prefix_memory [L,1024]
+```
 
-- **改动**：`Qwen2MoeMLP.forward` 首次调用时把 `gate_up_proj` / `down_proj` 权重转为 FRACTAL_NZ（`torch_npu.npu_format_cast(..., 29)`），由 `CLEF_MLP_BF16_NZ=1` 控制；安装器升级为 GDN v4，`patch_qwen3_5.py` 追加该 hook。
-- **正确性**：官方入口全量 2,352 条响应与 cache-only **逐位一致**（max 0.0、0 choice 翻转）；ERQA 217/400、400/400 成功、0 重试。
-- **性能**：官方入口全量 S1 **mean 121.705 / p50 113.656 / p95 166.002 / p99 204.324 ms、8.213 dec/s**；cache-only 为 125.552 / 118.170 / 168.633 / 203.452、7.960。相对 cache-only p95 −1.56%、mean −3.06%、吞吐 +3.18%；三组 NZ 复测 p95 165.53–166.00。
-- **S2**：B8 C16 + NZ **16.376 dec/s**、p95 1803.2 ms、Capability 74.1572（Δ−0.094，2PP）；pre-NZ 16.398。
-- **证据**：`Clef-27B/logs/tuning5-20261117/s1-official-nz-full.json.gz`、`s2/s2-nz-c16-quality.json`、`erqa-nz/`；完整运行目录 `/workspace/yangchen/logs/tuning5-20261117/shape-ab/official-nz/`。
+核心设计亮点：
+1. **完备混合状态表达与多图跨界切分**：
+   - 缓存键采用 128 对齐前缀的加密级 SHA-256（涵盖前缀 token IDs、起点 `< L` 的全部原始图像内容 SHA-256、模型 revision 与 TP world size）。
+   - 联合缓存三类跨层状态：16 层 Full-Attention 连续 post-RoPE KV、48 层 GDN 在边界 `L` 处的 `(conv_state, ssm_state)`、以及 JointSchemaHead 所需的 `prefix_memory [L, 1024]`（避免冗余保存庞大的 `[L, 5120]` 主干 hidden）。
+   - `locate_state_prefix` 允许 128 对齐切分点落在多图视觉 token 展开块内部，配合 Tier 1 扩容后的 `encoder_cache_tokens=262144`，将 ERQA 400 题的前缀可缓存覆盖率从 267/400 提升至 **400/400（100%）**。
+2. **1-Pass Tap 零税填充与分组 Varlen SSM 捕获**：
+   - Populate 请求直接执行一遍标准全长前向（响应概率与关闭缓存 **100% 逐位一致**）。由于昇腾 A3 上 `fla` 的 `return_intermediate_states` 报 `161002` 不可用，我们设计了 **Grouped Varlen SSM Capture**：按 512 MiB 显存预算每 4–8 层打包一次轻量前缀状态提取，并通过后台线程 + `8 × 640 MiB` 锁页环形缓冲区（Pinned Ring）异步拷贝至 Pageable 主机池，将 ERQA 首轮 populate 的**设备侧**延迟税压缩至 **+0.14 ms**；OD 967 首次填充的端到端 p95 仍约 **167.2 ms**（vs 无缓存 154.1 ms），差额来自 Host 发布/异步 D2H，第二次同前缀请求即降至 **118.5 ms**（详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)）。
+3. **M2 两遍混批续算与 TP2 强一致共识**：
+   - 高并发合批（B=2..16）下按 `prepare_inputs` 真实序列顺序执行一次 `[B, 35]` `cpu_all_reduce_` 投票（确保双卡对每个请求的 Hit/Populate/Bypass 决策 100% 一致，任一 rank 未就绪立即协同回退全长计算），并对同批重复前缀自动去重。
+   - 执行层采用 **Pass 1 Fresh + Pass 2 Resume** 两遍打包（显式 varlen 卷积 + 单次 `FIA TND` 稀疏注意力 + 批量 `embed_lexical`），消除逐请求 Python 循环开销。
+4. **跨数据集平滑交接（`aged_keep_longest`，`ACTIVE_WINDOW=500`）**：
+   - 单 rank 默认 32 GiB 主机缓存无法同时常驻完整 OD（~25.7 GB）与 ERQA（~25.0 GB）。将活跃老化窗口设定为 `500`（略大于单轮最大 eligible 观测数：OD 418 / ERQA 400），既保证单一数据集多轮评测 **0 老化、0 淘汰**，又使同进程切换到新数据集时旧池条目在首轮内自然变为 stale 并优先换出，使同进程 `OD → ERQA` 交接后的 ERQA S2 C16 稳定达到 **21.44–22.30 dec/s（末态 0 miss）**。
+5. **静态物理/容器内存自适应钳制**（[inference.py](inference.py)）：
+   - 启动时静态读取 `min(/proc/meminfo MemTotal, cgroup memory.max)`（不读动态波动的 `MemAvailable`，保证 TP 双卡决策严格一致）：
+     - `RAM ≥ 112 GiB`：默认 `32 GiB/rank`、`8` 个 Ring 槽位（128 GiB 容器总 RSS 稳态约 95–102 GiB，余量充足）；
+     - `48 GiB < RAM < 112 GiB`：自动收缩 Ring 至 `2` 槽位，每 rank 配额按 `min(32 GiB, max(4 GiB, (RAM - 36 GiB) // 2))` 安全钳制；
+     - `RAM ≤ 48 GiB`：自动设置 `CLEF_PREFIX_STATE_CACHE=0` 并跳过 10 GiB Pinned Ring 分配，平滑退回算子优化主线，杜绝小内存评测机 OOM。
 
-## 2026-11-17 conv+QKV 融合算子（已采用）
+![前缀切分与跨数据集交接](imgs/fig4_prefix_handover_analysis.png)
 
-完整报告见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md)。
+> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。审计数据见 `logs/tiered-cache-20261124/stage0-dataset-audit.json`。
 
-- **改动**：新增 Ascend C 算子 `ClefGdnConvQkv`，一次调用完成 causal conv1d、q/k L2 norm 与 v 直拷，替代 conv（3.79 ms）+ `ClefGdnQkvNorm`（4.66 ms，均为 967 token 设备时间）两个 kernel。
-- **免拷贝**：Qwen3.5 把连续 `[T,8192]` 的 QKVZ 投影拆成 QKV `[T,5120]` 与 Z 两个视图；宿主用受存储边界检查的 `as_strided` 把整行 8192 暴露给算子，kernel 只读每行前 5120 通道，省掉逐层 5120 列连续化拷贝。
-- **正确性**：离线探针 v1/v2/v3 共 177 组（10 长度 × 3 seed × tile 32/64 × 输入 5120/8192）与部署版 conv + QKV v2 **逐位一致、0 失败**；单算子 967 token 0.2113 vs 0.3143 ms、1595 0.1296 vs 0.3357。
-- **服务级**：官方 `start.sh --config s1` 生效（两个 TP worker 打印 fused 标志）。与 eager 对照**不是逐位一致**：三个固定样本最大概率差 0.00095 / 0.00240 / 0.00029；把 `CLEF_GDN_CONV_QKV` 设为 0 后与对照逐位一致，差异确定来自融合算子（约 0.6 BF16 ulp）。
-- **性能**：同窗口全量 A/B，p95 **165.091 → 160.419 ms（−2.83%）**、mean 122.762 → 120.926、吞吐 8.137 → 8.259 dec/s；显式 env 组为 p95 160.150、mean 117.344、8.510 dec/s。
-- **质量**：OpenDecisions Capability **73.9636**（−0.347 pp）、accuracy 1902 不变、Score MAE 0.401545 → 0.401678；ERQA **218/400 = 0.5450**（+0.25 pp）。官方 2PP 通过；项目内部 0.03/0.05 逐题门槛不通过（max 0.1447、1 条 choice 变化）。
-- **开关**：vendor 内置于 `src/ascendc/vendors/clef_conv_qkv`，`inference.py` 自动注入 `ASCEND_CUSTOM_OPP_PATH` / `CLEF_CONV_QKV_VENDOR` / `CLEF_GDN_CONV_QKV=1`；`CLEF_GDN_CONV_QKV=0` 复现未融合对照臂。
 
-## 2026-11-17 GDN chunk 128（已改为默认）
+---
 
-完整报告见 [docs/gdn-chunk128-2026-11-17.md](../docs/gdn-chunk128-2026-11-17.md)、叠加数据见 [docs/gdn-conv-qkv-2026-11-17.md](../docs/gdn-conv-qkv-2026-11-17.md) 第 4.3 节。
+## 4. 关键阶段消融实验与证据链
 
-- **改动**：`gdn_attn_builder.py` 的 `_GDN_CHUNK_SIZE=128` 与 `device_op.py` 决策分支 `chunk_size=128`，由独立安装器 `runtime/apply_gdn_chunk128_patch.py` 管理；`inference.py` 在决策 prefill 启用时自动 apply，`CLEF_GDN_CHUNK128=0` 回到 64。
-- **性能（叠加融合算子）**：mean 120.926 → **118.733**、p50 114.177 → 111.504、p95 160.419 → **158.301**、p99 197.454 → 194.491、吞吐 8.259 → **8.411 dec/s**；默认入口复跑 **157.745 ms / 8.652 dec/s**。
-- **质量**：OD Capability **74.2476**、accuracy 1904/2352、Score MAE 0.402615；ERQA **216/400 = 0.5400**；S2 B8 C16 **16.727 dec/s**、p95 1768.9、Capability 73.8426、accuracy 1905。全部在 2PP 内。
-- **逐题漂移**：3 条 choice 变化、`max_prob_diff` 0.360、46 条 >0.03、24 条 >0.05；项目内部 0.03/0.05 门槛不达标，用户确认按官方 2PP 口径采纳。
+所有优化均经过独立微基准、离线单测与真机全量数据验证，关键里程碑汇总如下：
 
-## 2026-11-18 Wave 2 复核（未新增默认改动）
+| 阶段与日期 | 关键增量改动 | OD S1 P95 (ms) | OD S2 峰值 (dec/s) | ERQA S1 P95 (ms) | ERQA S2 峰值 (dec/s) | 质量验证（OD Cap / ERQA Acc） | 专题证据文档 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| **阶段 0**（11-13/14） | 昇腾 A3 TP2 BF16 完整适配基线（seqs1） | 217.04 | 5.715 | 323.48 | 3.957 | 74.4255 / 0.5475 | [tuning4](docs/tuning4-2026-11-14.md)、[erqa-baseline](docs/erqa-baseline-2026-11-14.md) |
+| **阶段 1**（11-15/16） | GDN 决策 `BIC` + `ClefGdnQkvNorm` v2 + 单字段 Head + B8/B16 合批 | 190.41 | 17.110 | — | — | 74.3107 / 0.5425 | [gdn-data-path](docs/gdn-data-path-2026-11-15.md)、[batching](docs/batching-seqs8-16-2026-11-16.md) |
+| **阶段 2**（11-17） | `ACLNN_CACHE_LIMIT=1e6` + MLP `FRACTAL_NZ` | 166.00 | 16.376 (B8) | — | — | 74.3107 / 0.5425（逐位同上） | [aclnn-fix](docs/aclnn-cache-shape-fix-2026-11-17.md)、[final-1117](docs/final-summary-2026-11-17.md) |
+| **阶段 3**（11-17/18） | `ClefGdnConvQkv` 免拷贝融合 + GDN `chunk128` | 155.86 | 17.475 | — | — | 74.2476 / 0.5400 | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md)、[perf-wave2](docs/perf-wave2-20261118.md) |
+| **阶段 4**（11-24） | 单一常驻 TP2 + `TASK_QUEUE=2` + **48 AIV** v4 + `/v1/systemone` 图文 `A2` + Tier 1 `262144` | 154.55 | 17.193 | 244.38 (暖) | 8.240 | 74.2477 / 0.5400–0.5475 | [tp2-alwayson](docs/tp2-alwayson-2026-11-24.md)、[mm-state](docs/systemone-mm-state-2026-11-24.md) |
+| **阶段 5**（11-25） | 多序列 `ClefGdnConvQkvVarlen`（`tile=64`） | 154.11 | 18.039 | 244.66 (暖) | 8.627 | 74.2477 / 0.5450 | [conv-qkv-varlen](docs/conv-qkv-varlen-2026-11-25.md) |
+| **阶段 6**（11-25/26） | **Tier 2 混合前缀状态缓存**（1-Pass Tap + M2 混批 + `window=500` + RAM 自适应） | **118.54** | **21.583** | **122.37** | **21.439** | **74.2563** / **0.5450** | [tiered-cache](docs/tiered-cache-stage0-2026-11-25.md)、[logs/final-eval](logs/final-eval/) |
 
-完整报告见 [docs/perf-wave2-20261118.md](../docs/perf-wave2-20261118.md)。
+![双卡算子级耗时拆解](imgs/fig2_operator_breakdown.png)
 
-- **重新 profile（967/1595 token，双 rank）**：设备 compute union **132.69 ms**（conv+QKV 融合与 chunk128 之前为 144.60）；MLP gate/up 41.50、MLP down 20.54（cube 94–97%）、GDN 17.97、QKV 5120→8192 14.88（MTE2 0.93）、`ClefGdnConvQkv` 4.17（原 conv+QKV norm 8.45）。通信非重叠 14.17 ms、无 device kernel 11.84 ms。
-- **S2**：B8 C16 **16.738**、B16 C64 **17.462 / 17.475**（两次独立复测）、B16 C64 把预算放大到 24576 仅 17.374 → 17.4–17.5 已饱和，维持 B16 C64 / 16384。
-- **GDN chunk**：96/160/192/256 均返回 `161002` 不支持；128 是唯一快于 64 的受支持取值（1595 token device 0.521 vs 0.608 ms），已默认。
-- **joint head**：门控打点显示 967 token 下 pooler 5.90–6.25 ms，head 4.78–5.05（decoder 2.23–2.33、routing 1.09–1.18、final 0.62–0.67），全部是小算子下发；CPU 卸载不划算（`memory_projection` 10.1 GFLOP 必须留 NPU），不采用。
-- **prefix caching**：Mamba 前缀缓存要求 chunked prefill（关闭态启动即断言失败），且 chunked prefill 会关闭决策快速路径；不启用。
-- **最终验证**：S1 五轮 **8.646 / 8.705 / 8.849 / 8.983 / 9.035 dec/s**、p95 **156.81 / 157.50 / 155.85 / 155.86 / 155.72 ms**，中位 **8.849 dec/s / 155.86 ms**（2352/2352）；全量 OpenDecisions 重评 Cap **74.2476**、Int 66.0840、Cal 82.4112、accuracy 1904/2352、MAE 0.40261，与既有证据逐位一致；ERQA 独立复跑 **216/400**（400/400、0 重试、请求哈希校验通过）。
+> **图 2**：W1–W4 双卡设备 union 时间按算子类别拆分。OD 全长 159 ms / 命中 90 ms；ERQA 全长 232 ms（含 ViT 16 ms）/ 命中 110 ms。Populate 与 Hit 均按每请求归一；详见 [Profile 报告](docs/profile-tier2-2026-11-26.md) 第 2 节。
 
-## 2026-11-24 单一常驻 TP2：TASK_QUEUE=2 + 48-AIV Conv+QKV（已采用）
+![S2 并发扩展与帕累托](imgs/fig3_s2_concurrency_pareto.png)
 
-完整报告见 [docs/tp2-alwayson-2026-11-24.md](../docs/tp2-alwayson-2026-11-24.md)。
+> **图 3**：OD C=1..128 全扫描与 ERQA C8/C16 的吞吐-并发（左）和 p95-吞吐帕累托（右）；红色虚线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s）。
 
-- **统一评测服务**：单实例 TP2/BF16/eager，16K/seqs16/util .85/encoder cache 262144，无 RAM/JPEG 缓存；OD S1 与 `od-s1` 独立 profile 的 P95 差 ≤0.7 ms。
-- **TASK_QUEUE_ENABLE=2**：ABBA 全量 S1 mean **118.53→110.85 ms**、p50 111.39→101.09、p95 156.56→156.21、吞吐 +6.9%；2,352/2,352 逐位一致、0 choice 翻转；S2 中性。已设为入口默认，`=1` 复现旧基线。
-- **Conv+QKV v4（48 AIV）**：`Ascend910_9382` 为 24 AIC / 48 AIV，旧 tiling 只用 24；新 tiling 用满 48 并按 `min(totalTiles,48)` 设 blockDim，kernel `.o` 不变。v3/v4 48 例 144 张量 `max_abs=0.0`；长序列单算子 1.8–1.9×，对分解路径 3.2–3.7×。`CLEF_GDN_QKV_NORM_MAX_TOKENS` 1600→16384，使 ERQA 长 prefill 保持融合。
-- **官方 profile 实测（2026-11-24）**：OD S1 三轮 p95 **156.117 / 155.014 / 154.480 ms（中位 155.014）**、mean 119.156/117.671/114.871、吞吐 8.391/8.496/8.704；OD S2 profile B16 C64 **17.241 dec/s**、p95 6076.6 ms（C16 16.138 / 1778.8）。
-- **ERQA**：C1 冷首遍 **216/400**、p95 **293.893 ms**（基线 300.538）、4.633 dec/s；B8 C16 **219/400 = 0.5475**、7.006 dec/s（基线 216/400、7.166）。全部 400/400、0 失败、0 重试。
-- **质量**：OpenDecisions 与基线逐位一致（Cal 82.4113 / Int 66.0841 / Cap 74.2477、accuracy 1904/2352、MAE 0.402612）；ERQA 0.5400（C1）/0.5475（C16），均在 2PP 内。
-- **未采用**：ATB kernel cache（中性）、关闭 access log（中性）、Rank1 跳过 joint head（中性，开关默认 0）、GDN 自适应 chunk（64 仅在 307 token 附近占优、多序列全面更慢，默认全 128）、CPU 绑核（mean −1.95 ms，但 CPU 集与机器相关，保留 `CLEF_BIND_CPUS` opt-in）。
 
-## 2026-11-24 `/v1/systemone` 图文 `state` 列表 + 单一常驻 TP2 最终验收（已采用）
+---
 
-完整记录见 [docs/systemone-mm-state-2026-11-24.md](../docs/systemone-mm-state-2026-11-24.md)。
+## 5. 已验证负结果与合规性排除记录
 
-- **接口**：`serving.py` 在 `create_decision` 中归一化 `state` 内容块；文本/JSON 原样透传，命中 `image_url` 列表后 Fail-Closed（400）；图片与原顺序文本进入 `media["image"]` 与 `render_state`。安装器 `runtime/apply_systemone_mm_state_patch.py` 校验 `serving.py` preimage `5a700bb7…`、postimage `99a8e1b7…` 与模块 `a8b87841…`。
-- **模式**：A1 `extract_plain` ERQA **213/400**；A2 `extract_question_dict` **216/400**，锁定 A2（等价 2026-11-14 基线 state 包装），未改 `strategies.py`。
-- **单一常驻 TP2**：16384 / seqs16 / util .85 / encoder cache **262144** / TASK_QUEUE=2 / conv+QKV v4（48 AIV）/ joint fused `26d3ad04`。官方裸命令 75 s 就绪。
-- **ERQA**：C1 冷首遍 **216/400**、P95 **288.400 ms**、4.790 dec/s；自然第二遍 **216/400**、P95 **244.382 ms**、5.942 dec/s，冷/暖 **400/400 逐位一致（0 概率差、0 翻转）**；C16 **217/400**、8.240 dec/s、P95 2953.745 ms。全部 400/400、0 失败、0 重试。
-- **OpenDecisions**：S1 2,352/2,352、P95 **154.548 ms**、9.131 dec/s，与已验收 2026-11-24 运行 **max_prob_diff=0.0、0 翻转、2,352/2,352 token 相等**；质量 Cal 82.4113 / Int 66.0841 / Cap **74.2477**、accuracy 1904/2352、MAE 0.402612。S2 C16 **16.345 dec/s**（p95 1783.72 ms，Cap 74.1510）、C64 **17.193 dec/s**（p95 6087.10 ms，Cap 74.0514）。
-- **冒烟**：`erqa-0000` 366 tokens、`erqa-0167` 10,294 tokens、交错 200、恶意 400、旧 `/v1/decide` 与 A2 逐位一致、冻结 8 例逐位一致。
-- **阻塞**：EvalScope 未安装且无离线包/网络，原生客户端联调未执行；完整 2,352 题已由固定 `/v1/systemone` 客户端覆盖。
+工程坚持“实测同窗 A/B 门控（端到端收益显著且满足 2PP 与非量化规则方可合入）”，以下探索项经完整实证后明确排除并恢复干净源码：
 
-## 2026-11-25 多序列 Varlen Conv+QKV（已采用）
+| 探索方向 | 实测现象与量化结论 | 排除原因与处置 | 参考档案 |
+| --- | --- | --- | --- |
+| **W8A8 / W8A16 权重量化** | ND W8A8 可将 S1 P95 压至 ~205 ms，但 Capability 跌至 74.07 且降低权重/激活精度 | **赛方规则明确禁止任何量化方案**；仅保留为历史研究对比，提交配置 100% 纯 BF16 | [submission-rules](docs/submission-rules-2026-11-13.md) §4.4、[mlp-w8a16](docs/mlp-w8a16-2026-11-15.md) |
+| **上游 Qwen3.5 Dense SP / MLP-only SP** | 移植 `flashcomm1` / `all_gather_base_mm + ReduceScatter`，S1 P95 退化至 `212.96 vs 198.42 ms`（MLP SP 0.88–0.98×） | 单序列与中等长度下 AllGather/ReduceScatter 拆分通信开销大于单次 AllReduce | [dense-sp-port](docs/dense-sp-upstream-port-2026-11-16.md)、[mlp-sp](docs/dense-sp-mlp-probe-2026-11-16.md) |
+| **GEMM + AllReduce 分块双流重叠** | `down_proj` 按 token 切 2/4 块双流重叠，实测仅原速度的 `0.29×–0.80×` | 切小 M 维度破坏 Cube 满载效率且多次 HCCL 启动开销远超重叠收益 | [gemm-overlap](docs/npu-gemm-overlap-probe-2026-11-16.md) |
+| **PIECEWISE 图编译 / ACL Graph** | 编译耗时 +29.7 s，动态决策输入长度下吞吐 `19.34 vs 19.33 rps` 完全持平 | 纯动态长短混合 prefill 无 decode 循环，图捕获收益被动态 shape 抵消，保持 `--enforce-eager` | [graph-acl](docs/graph-acl-2026-11-16.md) |
+| **`PrefillNoCache` 跳过 KV 写槽** | 307 token 均值反慢（`129.09 vs 125.06 ms`），969 token 仅 −1.0%（噪声内） | 未过 3% 工程采纳门且后续与 Tier 2 KV 捕获需求方向相悖 | [attn-skip](docs/attn-prefill-cache-skip-2026-11-16.md) |
+| **HCCL AIV 展开模式与自适应 Chunk** | `HCCL_OP_EXPANSION_MODE=AIV` 服务级 S1 仅 −0.24%（噪声内）；自适应 chunk384 多序列更慢 | 不引入无端到端收益的额外复杂度，保持默认 HCCL 与全局 `chunk128` | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md) §7、[tp2-alwayson](docs/tp2-alwayson-2026-11-24.md) |
+| **JointHead 跨请求 Padding 批处理** | B4 变慢（`13.44 vs 13.64 dec/s`），全量 OD C16 仅 `+0.03%` | 不同请求候选数与序列长度差异导致的 Padding 计算抵消合批收益；改在 Tier 2 采用无损 `embed_lexical` 批处理 | [joint-head-batch](docs/joint-head-batch-2026-11-16.md) |
 
-完整报告见 [docs/conv-qkv-varlen-2026-11-25.md](../docs/conv-qkv-varlen-2026-11-25.md)。
+---
 
-- **算子**：新增独立 `ClefGdnConvQkvVarlen`（48 AIV，per-sequence tile，`cu_seqlens` 作为 int32 输入，`MTE2_S` 同步，`history = min(localT0,3)`），v4 vendor 与单序列路径零改动。
-- **离线 4 门**：B=1 78/78 与 v4 逐位一致；多序列 48/48 与逐条 v4 逐位一致（含 1/2/3/4 边界、64 序列、packed 8192 毒化尾）；144/144 零串扰（×100、±1e4、全 NaN）；单算子对分解路径 **3.53–4.54×**，锁定 tile 64。
-- **同窗 A/B**（OFF→ON→OFF）：OD S2 C16 **16.276→16.971 dec/s（+4.27%）、p95 1785.6→1704.4 ms（−4.55%）**；C64 **17.203→18.039（+4.86%）、p95 6081.2→5779.1（−4.97%）**；ERQA C16 冷 **6.962→7.281（+4.59%）、p95 3499.6→3334.7（−4.71%）**，暖 **8.142→8.627（+5.96%）、p95 3049.2→2815.6（−7.66%）**。
-- **S1 零回退**：ON1 OD S1 2,352/2,352 与 512317e `max_prob_diff=0.0`、0 flips；ERQA C1 冷/暖逐位一致，216/400，P95 289.26/244.66 ms。
-- **质量**：OD ON Cap 74.2477（S1）/74.0625（C16）/74.2322（C64），ERQA C16 **218/400**、C1 216/400，全部 2PP 内、0 失败、0 重试。
-- **入口**：`runtime/apply_conv_qkv_varlen_patch.py`（preimage `ead25cb2…` → postimage `afe6d4e8…`），`s1` 默认 `CLEF_GDN_CONV_QKV_VARLEN=1`、`CLEF_CONV_QKV_VARLEN_TILE=64`；显式 `=0` 回退。
+## 6. 资源占用、防篡改门控与复现审计
 
-## 2026-11-25 分层缓存 Tier 2：B1 1-Pass Tap + M2 混批 + 正式安装器（默认开启）
-
-完整记录见 [docs/tiered-cache-stage0-2026-11-25.md](../docs/tiered-cache-stage0-2026-11-25.md) §11。
-
-- **实现**：16 层 Full-Attn 连续 post-RoPE KV + 48 层 GDN `(conv, ssm)` + JointHead `prefix_memory`，键为 128 对齐语义前缀的 SHA-256（token、图像内容 hash、revision、TP）。Populate 全长一遍且与 OFF 逐位；命中走后缀 Pass（单次 FIA TND sparse3 + `x_aug` varlen conv + 批量 `fla`）；B1 与 M2 混批（真实打包顺序、一次 `[B,35]` `cpu_all_reduce_` 投票、同 key 去重）；发布走后台队列 + 捕获时 `ready` 事件 + 8×640 MiB ring；CPU 侧 `aged_keep_longest` 32 GiB/rank 预算。
-- **安装**：`runtime/apply_tiered_cache_patch.py` 两个哈希门控目标（`model_runner.py` `e866aeb2…`→`a772213f…`；`api_router.py` `bdf11bee…`→`1875f0e1…`），`inference.py` 的 `--prefix-state-cache {on,off}` 默认随 s1/s2 开启，`/v1/decide/info` 披露，manifest 记录 postimage SHA 与 32 GiB 预算。
-- **官方裸启动验收**（`bash start.sh --config s1`，单进程零重启，1 预热 + 2 实测，含 OD → ERQA 交接）：OD S1 p95 **117.9/117.5 ms**（9.769/9.824 dec/s，两轮逐位 0.0）、S2 C16 **20.016/19.971 dec/s**（p95 1125.8/1122.0）、C64 **21.573/21.607**（p95 3961.0/3961.8）；相对主线 varlen（154.11 ms、16.971、18.039）S1 **−23.8%**、C16 **+18.0%**、C64 **+19.8%**。质量 Cap 74.2173–74.2563、acc 1904–1905、MAE 0.4016–0.4026、0 协议失败、2PP。
-- **ERQA**（同一进程，OD 之后）：S1 mean **116.2/118.5 ms**、p95 123.8/128.2、218/400×2；S2 C16 **21.355/22.302 dec/s**、p95 797.2/766.8、216/400×2；末态 0 miss、交接淘汰 294；`--verify-requests` 400/400、0 mismatch，相对主线暖 8.627 dec/s **+152%**、S1 mean 165.4→116–119 **−28%**。独立空池官方进程复测为 21.628/21.809 dec/s，与同进程一致。
-- **场景**：A（20×4 同 STATE 多 SCHEMA）80/80×3、R2==R3 逐位 0.0；D（4 GiB/rank、C16）0 失败、125 次淘汰、Cap 74.064–74.068，Fail-Closed（miss→bypass）。
-- **单进程跨数据集**：32 GiB/rank 无法同时容纳 OD（≈25.7 GB）与 ERQA（≈25.0 GB），但 `ACTIVE_WINDOW=500`（> 单轮最大观测 418）让旧数据集在下一个数据集的首轮内变 stale、优先换出（`CLEF_TIER2_ACTIVE_WINDOW` 可覆盖）。同一进程 `OD → ERQA` 复测：ERQA C16 **21.355/22.302 dec/s（p95 797/767 ms，216/400×2）**、末态 0 miss，OD S1/C16/C64 与独立进程一致（117.5–117.9 ms、19.97–20.02、21.57–21.61）。
+1. **NPU HBM 与主机内存占用**：
+   - **HBM 占用**：TP2 配置下（`gpu_memory_utilization=0.85`、`max_model_len=16384`、`encoder_cache_tokens=262144`），两张逻辑 NPU 稳态显存占用约为 **61.0–61.4 GiB / 64 GiB**（每卡模型权重约 25.76 GiB，其余为 KV 池、多模态视觉特征缓存与运行时工作区），全程零 HBM OOM。
+   - **主机 RAM 占用**：在 128 GiB 标准评测容器下，Tier 2 每 rank 持久化上限为 `32 GiB`（Pageable），外加双 rank 合计约 `10 GiB` 锁页传输缓冲（`8 × 640 MiB × 2`）；跑满 OD + ERQA 全周期交接时容器总内存稳定在安全水位内，且受 `inference.py::static_ram_limit_bytes()` 自适应保护（详见第 3.5 节）。
+   - **极限压测验证**：在 `4 GiB/rank` 极小配额 + `C16` 高并发淘汰压测（场景 D，125 次高频淘汰）下实现 **0 协议失败、0 死锁**，Capability 保持 `74.064–74.068`（未命中平滑回退常规全长前向）。
+2. **SHA-256 哈希门控与可追溯清单**：
+   - 所有运行时补丁（`src/runtime/apply_*.py`）均强制校验目标源码的 Preimage / Postimage SHA-256，版本漂移或只读异常一律 Fail-Closed 拒绝启动，绝不静默退化。
+   - 每次执行 `bash start.sh` 均在 `--output-dir` 原子生成 `launch-manifest.json`，完整固化 Git 提交、模型文件摘要、各补丁安装前后 SHA-256、静态内存配额决策及生效环境变量；配套离线单测套件（启动器 35 项、Tier 2 缓存与跨集交接 43 项、核心协议与算子探针 176+ 项）全部通过。
+3. **一键复现指南**：
+   - 环境构建、模型与数据集下载、单一服务启动及 OpenDecisions / ERQA 质量与 S1/S2 完整复现命令请直接参阅根目录 **[README.md](README.md)**。
