@@ -24,7 +24,7 @@
 | | Capability (0–100) | 74.4255 | 74.2477 | **74.2563** | **74.2477** | Δ −0.18 pp（2PP 内） |
 | **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5450 (218/400)** | **0.5400 (216/400)** | Δ −0.75 pp（2PP 内） |
 
-> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv) 以及 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/) 归档报告。S1 为正式 3 轮平均；S2 为峰值点 3 次平均（OD C64、ERQA C8）。
+> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv)、[logs/final-eval/](logs/final-eval/) 与 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/) 归档报告。S1 为正式 3 轮平均；S2 为峰值点 3 次平均：Tier 2B-only 列为 OD C64 / ERQA C16，最终 Tier 2A+2B 列为 OD C64 / ERQA C8。
 
 ![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
