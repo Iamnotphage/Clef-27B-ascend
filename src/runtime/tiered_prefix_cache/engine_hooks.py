@@ -758,9 +758,21 @@ def _wait_repr(ctx: RepresentationContext) -> None:
 
 def _submit_publish_repr(key: bytes, rank: int, length: int,
                          hidden, residual) -> None:
-    """Slice one request's boundary state into the async D2H ring."""
-    payload = {"hidden": hidden, "residual": residual}
+    """Record the boundary event, then hand the package to a publisher.
 
+    The D2H ring is intentionally small; a C8/C16 step submits every row of
+    the batch at layer 55 in one burst.  A dedicated thread waits for a slot
+    instead of dropping the tail, while the model thread continues into
+    layers 56..63.
+    """
+    ready = torch.npu.Event()
+    ready.record(torch.npu.current_stream())
+    payload = {"hidden": hidden, "residual": residual}
+    if not _repr_queue().submit(ready, key, rank, length, payload):
+        _trace(f"repr queue full T={length} rank={rank}")
+
+
+def _publish_repr_now(ready, key, rank, length, payload) -> None:
     def on_ready(host: dict) -> None:
         try:
             ok = _store2a().publish(
@@ -772,14 +784,53 @@ def _submit_publish_repr(key: bytes, rank: int, length: int,
             import traceback
             _debug("repr publish error:\n" + traceback.format_exc())
 
-    try:
-        ticket = _capture2a().submit(payload, on_ready)
-    except Exception:  # noqa: BLE001
-        import traceback
-        _debug("repr capture submit error:\n" + traceback.format_exc())
-        return
+    started = time.perf_counter()
+    ticket = _capture2a().submit(
+        payload, on_ready, ready_event=ready, ring_timeout=None)
     _trace(
-        f"repr submitted T={length} rank={rank} dropped={ticket is None}")
+        f"repr submitted T={length} rank={rank} dropped={ticket is None} "
+        f"wait_ms={(time.perf_counter() - started) * 1000.0:.2f}")
+
+
+class _ReprPublishQueue:
+    """Serialize Tier 2A publishes off both the model and D2H ring threads."""
+
+    def __init__(self, capacity: int = 512):
+        self._queue: "queue.Queue" = queue.Queue(maxsize=max(1, capacity))
+        self._thread = threading.Thread(
+            target=self._run, name="clef-tier2a-publish", daemon=True)
+        self._thread.start()
+
+    def submit(self, ready, key, rank, length, payload) -> bool:
+        try:
+            self._queue.put_nowait((ready, key, rank, length, payload))
+            return True
+        except queue.Full:
+            return False
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            try:
+                if item is None:
+                    return
+                _publish_repr_now(*item)
+            except Exception:  # noqa: BLE001
+                import traceback
+                _debug("repr queue error:\n" + traceback.format_exc())
+            finally:
+                self._queue.task_done()
+
+
+_REPR_QUEUE: "_ReprPublishQueue | None" = None
+
+
+def _repr_queue() -> "_ReprPublishQueue":
+    global _REPR_QUEUE
+    if _REPR_QUEUE is None:
+        _REPR_QUEUE = _ReprPublishQueue(
+            capacity=int(os.environ.get("CLEF_TIER2A_QUEUE", "512")))
+    return _REPR_QUEUE
 
 
 def _plan_capture(entries, offsets, runner=None) -> dict | None:
@@ -2935,6 +2986,12 @@ def install() -> None:
             f"files={report.files} bytes={report.bytes} "
             f"skipped={report.skipped} errors={report.errors}",
             flush=True)
+    if _repr_enabled():
+        # Allocate the Tier 2A ring and publisher in the main thread so the
+        # first capture never pays a lazy allocation on the model path.
+        _store2a()
+        _capture2a()
+        _repr_queue()
     print(
         f"[tier2-engine] hooks installed policy=aged_keep_longest "
         f"window={_store().active_window} rank0_only={_joint_rank0_only()} "
