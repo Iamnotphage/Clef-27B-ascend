@@ -1,33 +1,53 @@
-"""Tier 2 engine hooks: B=1 continuous-KV / GDN / joint-memory reuse.
+"""Multi-granularity Tier 2 engine hooks.
 
-This module is a probe-grade implementation installed by
-``probe_engine/sitecustomize.py``.  It patches four points:
+The cache has two host-resident tiers that cooperate under one resident TP2
+service:
 
-- ``NPUModelRunner.execute_model``: build the prefix split/key, run the TP2
-  consensus vote, and bind/publish HostStore state around the model call;
+* **Tier 2A — Stage-Boundary Representation Cache (boundary 56).**  For an
+  exact repeated decision prompt (all tokens plus every image/video content
+  hash), the continuous BF16 ``(hidden, residual)`` entering layer 56 is
+  restored and the native ``core.layers[56:64]`` + ``core.norm`` +
+  ``JointSchemaPooler`` run unchanged.  The key is the complete prompt, so
+  this path also covers short prompts and multimodal requests that have no
+  128-aligned Tier 2B split.  A whole packed batch must hit; otherwise the
+  step falls back to the Tier 2B cascade and captures only the requests that
+  run the full-length backbone.
+* **Tier 2B — Prefix Recurrent/KV State Cache.**  The 128-aligned prefix's
+  full-attention K/V, GDN conv/ssm and joint ``prefix_memory`` are captured
+  on a full pass and resumed on a suffix-only pass.  This is what answers a
+  new SCHEMA over the same STATE (dynamic new questions) without paying for
+  the shared context again.
+
+The module patches six points:
+
+- ``NPUModelRunner.execute_model``: build the Tier 2A/2B keys, run the TP2
+  CPU consensus vote, and bind/publish HostStore state around the model call;
 - ``ClefFlashForJointSchema.forward``: one full-length tap pass on populate,
-  or the suffix-only resume pass on a hit;
+  the Tier 2A boundary resume, or the Tier 2B suffix-only resume;
 - ``AscendAttentionBackendImpl.forward``: tap post-RoPE K/V; resume with
   ``cat([K_prefix, K_suffix])`` + FIA ``TND``/``sparse_mode=3``;
 - ``QwenGatedDeltaNetAttention._forward_core`` / ``DeviceOperator.fla_gdn_prefill``:
   tap conv/ssm at ``L``; resume through the reference conv and
   ``fla_gdn_prefill(initial_state=...)``;
+- ``Qwen3NextDecoderLayer.forward``: at layer 55 exit, slice each full-pass
+  request's ``(hidden, residual)`` into the Tier 2A asynchronous D2H queue;
 - ``JointSchemaPooler``/``JointSchemaHead``: tap ``prefix_memory`` while the
-  stock pooler runs; consume it on hits without the ``AllPool`` truncation.
+  stock pooler runs; consume it on Tier 2B hits without the ``AllPool``
+  truncation.
 
 Populate is a **single** full-length pass: the whole prompt runs the stock
 decoupled path, so the warm-up round is bitwise equal to the OFF service, and
-the layer hooks only slice the states that are already materialised.  The one
+the layer hooks only slice states that are already materialised.  The one
 extra cost is the GDN state at ``L``, which the fused prefill kernel can only
 return for a whole call, so each GDN layer re-runs its prefix slice once.
 
-The captured package travels a two-slot pinned D2H ring into the pageable
-HostStore; hits restore through the pinned ``Prefetcher`` staging pool.  The
-only admission of ``miss`` (no populate) is the aged keep-longest rule.
+Tier 2A packages travel a dedicated pinned D2H ring through a blocking
+publisher; Tier 2B packages travel the original two-slot pinned ring.  Hits
+restore through the pinned ``Prefetcher`` staging pool.  The only admission of
+``miss`` (no populate) is the Tier 2B aged keep-longest rule; Tier 2A is a
+pageable LRU sized to keep the full OD + ERQA working set resident.
 
-Only one fresh request per step is admitted in this milestone; anything else
-falls back to the stock path.  It never touches vLLM's prefix-caching or KV
-cache manager.
+It never touches vLLM's prefix-caching or KV cache manager.
 """
 
 from __future__ import annotations
@@ -2052,6 +2072,8 @@ def _run_batch_2a(self, positions, batch):
         raise RuntimeError(
             f"tier2a: representation rows {hidden.shape[0]}/"
             f"{residual.shape[0]} != {batch.T_total}")
+    if positions.shape[-1] != batch.T_total:
+        positions = positions[..., :batch.T_total]
     core = self.language_model.model
     output = _run_layers_range(
         core, hidden, residual, positions, start=_repr_boundary())

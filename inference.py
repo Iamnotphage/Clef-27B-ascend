@@ -927,6 +927,8 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
         policy["representation_bytes"] = (
             int(repr_env) if repr_env is not None
             else int(TIERED2A_RANK_BYTES_DEFAULT))
+        if slots_env is not None:
+            policy["ring_slots"] = int(slots_env)
         policy["reason"] = "explicit_rank_bytes"
         return policy
     if ram_limit is None:
