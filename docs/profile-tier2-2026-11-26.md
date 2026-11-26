@@ -140,6 +140,8 @@ W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1
 
 ## 6. 证据与清理
 
+- `category_breakdown.csv` 的 `hccl_union_ms_per_req` 是 HCCL 父区间的并集（可与计算重叠）；
+  图表使用 `communication_nonoverlapped_ms_per_req`。
 - 轻量汇总：`logs/profile-tier2-20261126/`（`aggregate.json`、`category_breakdown.csv`、
   `roofline.json`、`fig4_data.json`、`unprofiled_od_cold.json`、四个窗口的 manifest 与
   compact evidence）。
