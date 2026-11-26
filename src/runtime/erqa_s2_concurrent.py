@@ -78,7 +78,7 @@ def main():
     p.add_argument("--wire-format",choices=base.WIRE_FORMATS,
                    default=base.DEFAULT_WIRE_FORMAT)
     p.add_argument("--endpoint",choices=("/decide","/systemone"),default="/decide")
-    p.add_argument("--concurrency",type=int,choices=(8,16),required=True)
+    p.add_argument("--concurrency",type=int,choices=(8,16,32),required=True)
     p.add_argument("--timeout",type=float,default=600)
     args=p.parse_args()
     args.started_at=base.now()
