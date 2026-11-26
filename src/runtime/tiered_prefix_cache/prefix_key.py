@@ -21,6 +21,11 @@ ALIGN = 128
 MIN_PREFIX_TOKENS = 128
 KEY_SCHEMA = b"clef-prefix-state-key/1"
 MM_SCHEMA = b"clef-prefix-mm/1"
+#: Tier 2A caches the continuous ``(hidden, residual)`` representation that
+#: enters layer ``REPRESENTATION_BOUNDARY``.  A different boundary is a
+#: different package layout, so it is part of the key.
+REPRESENTATION_SCHEMA = b"clef-representation-key/1"
+REPRESENTATION_BOUNDARY = 56
 
 
 @dataclass(frozen=True)
@@ -177,6 +182,49 @@ def compute_prefix_key(
             f"<{token_count}i", *split.prefix_token_ids))
     digest.update(len(split.mm_items).to_bytes(4, "little"))
     for item in split.mm_items:
+        digest.update(MM_SCHEMA)
+        _update_text(digest, item.modality)
+        _update_text(digest, item.mm_hash)
+        digest.update(struct.pack("<QQQQ", int(item.placeholder_offset),
+                                  int(item.placeholder_length),
+                                  int(item.expanded_offset),
+                                  int(item.expanded_length)))
+    return digest.digest()
+
+
+def compute_representation_key(
+    namespace: str,
+    token_ids: Sequence[int],
+    mm_items: Sequence[MmItem] = (),
+    *,
+    model_revision: str | None = None,
+    tp_size: int = 2,
+    boundary: int = REPRESENTATION_BOUNDARY,
+) -> bytes:
+    """A 32-byte identity of one *complete* decision prompt.
+
+    Tier 2A resumes in the middle of the backbone, so it cannot share Tier
+    2B's prefix-aligned key: the representation at layer ``boundary`` depends
+    on every prompt token and on every image/video content hash, including
+    the schema and option text after the delimiter.  The key therefore covers
+    the namespace, model revision, TP partition, boundary, the complete token
+    id sequence, and every multimodal item's modality, content hash and both
+    span descriptions.
+    """
+    if not isinstance(namespace, str) or not namespace:
+        raise ValueError("representation key requires a non-empty namespace")
+    if boundary < 1:
+        raise ValueError("representation boundary must be positive")
+    digest = hashlib.sha256()
+    digest.update(REPRESENTATION_SCHEMA)
+    _update_text(digest, namespace)
+    _update_text(digest, model_revision or "")
+    digest.update(struct.pack("<III", int(boundary), int(tp_size), len(mm_items)))
+    token_count = len(token_ids)
+    digest.update(token_count.to_bytes(8, "little"))
+    if token_count:
+        digest.update(struct.pack(f"<{token_count}i", *token_ids))
+    for item in mm_items:
         digest.update(MM_SCHEMA)
         _update_text(digest, item.modality)
         _update_text(digest, item.mm_hash)
