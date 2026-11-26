@@ -1086,6 +1086,7 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
                 request.lease2a.release()
                 request.lease2a = None
         plan = plan_batch(repr_modes)
+        _trace(f"batch repr modes={repr_modes} path={plan.path}")
         if plan.path == PATH_REPRESENTATION:
             bound = True
             for request in requests:
