@@ -144,7 +144,7 @@
 
 ![前缀切分与跨数据集交接](imgs/fig4_prefix_handover_analysis.png)
 
-> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。审计数据见 `logs/tiered-cache-20261124/stage0-dataset-audit.json`。
+> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。代表点由远端完整审计 `stage0-dataset-audit.json` 计算，仓库保留其汇总 `logs/tiered-cache-20261124/stage0-dataset-audit-summary.json`。
 
 
 ---
