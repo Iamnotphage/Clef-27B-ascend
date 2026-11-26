@@ -117,7 +117,9 @@ TIERED_API_ROUTER_TARGET = Path(
     "vllm/entrypoints/generate/structured_decisions/api_router.py")
 TIERED_API_ROUTER_PREIMAGE = "bdf11bee92c92a7caf6070321eb2294b833f0e19be6ca9f3e90b7790c34ddc9f"
 TIERED_API_ROUTER_POSTIMAGE = "1875f0e1ff4ffa5e587b82e5755e743a72c148d53581a576b34ee1fc5cfd1b42"
-TIERED_RANK_BYTES_DEFAULT = str(32 << 30)
+TIERED_RANK_BYTES_DEFAULT = str(10 << 30)
+TIERED2A_RANK_BYTES_DEFAULT = str(28 << 30)
+TIERED_MULTI_RANK_BYTES = 38 << 30
 TIERED_RING_SLOTS_DEFAULT = 8
 TIERED_RAM_FULL = 112 << 30
 TIERED_RAM_DISABLE = 48 << 30
@@ -881,21 +883,31 @@ def static_ram_limit_bytes():
 
 
 def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
-                         slots_env=None):
-    """Clamp Tier 2 memory to the container's static RAM limit.
+                         slots_env=None, repr_env=None):
+    """Clamp the multi-granularity Tier 2 budgets to static container RAM.
 
-    * unreadable or >= 112 GiB: keep the measured defaults untouched
-      (32 GiB/rank, 8 ring slots) — the 128 GiB acceptance host;
-    * <= 48 GiB: disable the cache so no PinnedRing is allocated and the
-      stock path always runs;
-    * 48..112 GiB: 2 ring slots and ``min(32 GiB, max(4 GiB,
-      (ram-36 GiB)//2))`` per rank (a 64 GiB container gets 14 GiB/rank).
+    The cache has two host-resident tiers per TP rank:
 
-    An explicit ``CLEF_PREFIX_CACHE_RANK_BYTES`` always wins and skips the
-    clamp, including the small-RAM disable.
+    * **Tier 2A** (continuous layer-56 representation): 28 GiB pageable,
+      enough for the full 2,291-prompt OD set (~19.5 GiB) plus the 400-question
+      ERQA set (~7.1 GiB);
+    * **Tier 2B** (aligned recurrent/KV prefix state): 10 GiB with
+      ``aged_keep_longest`` and the 500-sighting active window.
+
+    Policy:
+
+    * unreadable or >= 112 GiB: keep the measured 28 + 10 GiB defaults;
+    * <= 48 GiB: disable the cache so no ring or pool is allocated;
+    * 48..112 GiB: split ``min(38 GiB, max(4 GiB, (ram-36 GiB)//2))`` per rank
+      in the 28:10 ratio (a 64 GiB container gets 10 GiB + 4 GiB per rank).
+
+    An explicit ``CLEF_PREFIX_CACHE_RANK_BYTES`` (Tier 2B) or
+    ``CLEF_TIER2A_RANK_BYTES`` (Tier 2A) always wins and skips the clamp.
     """
     if rank_env is None:
         rank_env = os.environ.get("CLEF_PREFIX_CACHE_RANK_BYTES")
+    if repr_env is None:
+        repr_env = os.environ.get("CLEF_TIER2A_RANK_BYTES")
     if slots_env is None:
         slots_env = os.environ.get("CLEF_TIER2_RING_SLOTS")
     policy = {
@@ -903,13 +915,18 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
         "enabled": bool(requested),
         "ram_limit_bytes": None,
         "rank_bytes": None,
+        "representation_bytes": None,
         "ring_slots": None,
         "reason": "requested" if requested else "requested-off",
     }
     if not requested:
         return policy
-    if rank_env is not None:
-        policy["rank_bytes"] = int(rank_env)
+    if rank_env is not None or repr_env is not None:
+        policy["rank_bytes"] = (int(rank_env) if rank_env is not None
+                                else int(TIERED_RANK_BYTES_DEFAULT))
+        policy["representation_bytes"] = (
+            int(repr_env) if repr_env is not None
+            else int(TIERED2A_RANK_BYTES_DEFAULT))
         if slots_env is not None:
             policy["ring_slots"] = int(slots_env)
         policy["reason"] = "explicit_rank_bytes"
@@ -927,8 +944,13 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
         policy["enabled"] = False
         policy["reason"] = "ram<=48GiB"
         return policy
-    rank_bytes = min(32 << 30, max(4 << 30, (ram_limit - (36 << 30)) // 2))
-    policy["rank_bytes"] = rank_bytes
+    total = min(TIERED_MULTI_RANK_BYTES,
+                max(4 << 30, (ram_limit - (36 << 30)) // 2))
+    # Keep both shares whole GiB so the manifest and the two TP workers see
+    # exactly the same budgets.
+    representation = (total * 28 // 38) & ~((1 << 30) - 1)
+    policy["representation_bytes"] = representation
+    policy["rank_bytes"] = total - representation
     policy["ring_slots"] = int(slots_env) if slots_env is not None else 2
     policy["reason"] = f"clamped:{ram_limit >> 30}GiB"
     return policy
@@ -1760,6 +1782,7 @@ def build_launch(args):
     tiered_patch["memory"] = {
         "ram_limit_bytes": tiered_memory["ram_limit_bytes"],
         "rank_bytes": tiered_memory["rank_bytes"],
+        "representation_bytes": tiered_memory["representation_bytes"],
         "ring_slots": tiered_memory["ring_slots"],
         "enabled": tiered_memory["enabled"],
         "reason": tiered_memory["reason"],
@@ -1786,10 +1809,25 @@ def build_launch(args):
     if rank_bytes is None:
         rank_bytes = int(os.environ.get(
             "CLEF_PREFIX_CACHE_RANK_BYTES", TIERED_RANK_BYTES_DEFAULT))
+    repr_bytes = tiered_memory["representation_bytes"]
+    if repr_bytes is None:
+        repr_bytes = int(os.environ.get(
+            "CLEF_TIER2A_RANK_BYTES", TIERED2A_RANK_BYTES_DEFAULT))
     environment["CLEF_PREFIX_CACHE_RANK_BYTES"] = str(rank_bytes)
+    environment["CLEF_TIER2A_RANK_BYTES"] = str(repr_bytes)
+    tier2a_env = os.environ.get("CLEF_TIER2A")
+    if tier2a_env is not None:
+        # An explicit environment switch wins for A/B runs.
+        environment["CLEF_TIER2A"] = (
+            "1" if tier2a_env.strip().lower() not in
+            ("0", "false", "no", "off") else "0")
+    else:
+        environment["CLEF_TIER2A"] = (
+            "1" if tiered_patch["ready"] and repr_bytes > 0 else "0")
     if tiered_memory["ring_slots"] is not None:
         environment["CLEF_TIER2_RING_SLOTS"] = str(tiered_memory["ring_slots"])
     tiered_patch["memory"]["effective_rank_bytes"] = rank_bytes
+    tiered_patch["memory"]["effective_representation_bytes"] = repr_bytes
     tiered_patch["memory"]["effective_ring_slots"] = (
         tiered_memory["ring_slots"] if tiered_memory["ring_slots"] is not None
         else TIERED_RING_SLOTS_DEFAULT)
@@ -1864,8 +1902,10 @@ def main():
     parser.add_argument("--schema-token-cache", choices=("off", "on"), default=None,
                         help="显式覆盖 schema token 缓存；on 要求已安装 v2 补丁。")
     parser.add_argument("--prefix-state-cache", choices=("on", "off"), default=None,
-                        help="Tier 2 前缀状态缓存；on 要求已安装 src/runtime/apply_tiered_cache_patch.py，"
-                             "CLEF_PREFIX_STATE_CACHE=0 可运行时关闭。")
+                        help="多粒度 Tier 2 缓存（Tier 2A 第 56 层表征 + Tier 2B 前缀状态）；"
+                             "on 要求已安装 src/runtime/apply_tiered_cache_patch.py，"
+                             "CLEF_PREFIX_STATE_CACHE=0 可运行时关闭，"
+                             "CLEF_TIER2A=0 仅关闭 Tier 2A。")
     parser.add_argument("--distributed-executor-backend", default=None)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)

@@ -1,21 +1,24 @@
-# 当前版本（Tier 2 常驻 TP2）Profile 与 S1 Roofline（2026-11-26）
+# 当前版本（多粒度 Tier 2 常驻 TP2）Profile 与 S1 Roofline（2026-11-26）
 
-> 基准：`main` @ `5e7352d`（远端 `/workspace/final-test/Clef-27B-ascend`）。
+> 基准：`main` @ `66d3c7b`（W1–W4）与 `feat/multi-tier-cache-20261126` @ `91dbe02`
+> （W5–W6，Tier 2A 命中）；远端 `/workspace/final-test/Clef-27B-ascend`。
 > 采集服务：`bash start.sh --config s1`，端口 `18243`，`--profiler-config` 仅用于本报告；
-> 所有端到端性能口径仍以 `results.csv` 与 `logs/final-eval/` 的无 Profiler 正式轮次为准。
-> 原始 trace 在采集后已清理，仓库只保存轻量汇总
-> `logs/profile-tier2-20261126/`（约 620 KiB）。
+> 所有端到端性能口径仍以 `results.csv` 与 `logs/final-eval/multi-tier-20261126/` 的
+> 无 Profiler 正式轮次为准。原始 trace 在采集后已清理，仓库只保存轻量汇总
+> `logs/profile-tier2-20261126/`（约 700 KiB）。
 
 ## 1. 采集方法
 
-### 1.1 四个窗口
+### 1.1 六个窗口
 
 | 窗口 | 场景 | 样本 | 采集方式 |
 | --- | --- | --- | --- |
 | W1 | OD 全长 967 token（Populate） | 5 条不同前缀，统一 967 token | 先用另一条 967-token 样本预热 10 次，再在 Profiler 窗口内各发送 1 次 |
-| W2 | OD Tier 2 命中（后缀 199 token） | 同一条 967-token 样本 | 预热 10 次（首次 populate，其余命中），再发送 5 次 |
+| W2 | OD Tier 2B 命中（后缀 199 token） | 同一条 967-token 样本 | 预热 10 次（首次 populate，其余命中），再发送 5 次 |
 | W3 | ERQA 多图全长 1,260 token（Populate） | `erqa-0382`（4 图）的 5 个像素微扰副本 | 另一扰动副本预热 10 次，再发送 5 个互不相同的冷副本 |
-| W4 | ERQA Tier 2 命中（后缀 236 token） | 原始 `erqa-0382` | 预热 10 次，再发送 5 次 |
+| W4 | ERQA Tier 2B 命中（后缀 236 token） | 原始 `erqa-0382` | 预热 10 次，再发送 5 次 |
+| **W5** | **OD Tier 2A 命中（boundary=56，完整 967 token）** | **同一条 967-token 样本** | **预热 10 次（首次填充 2A，其余 2A 命中），再发送 5 次** |
+| **W6** | **ERQA Tier 2A 命中（boundary=56，完整 1,260 token）** | **原始 `erqa-0382`** | **预热 10 次，再发送 5 次** |
 
 OD 样本在 state 末尾追加 filler，使 5 条请求的 `usage.input_tokens` 均为 **967**；filler 位于
 128 对齐前缀之后，不改变缓存键。ERQA 副本只修改每张图 (0,0) 像素的 G 通道并转存 PNG，
@@ -32,7 +35,9 @@ kernel duration 直接相加**；算子分类按 `operations.csv` 的 `interval_
 209.1 vs 209.2）。ViT 按权重/激活维度（1152/2152/1728/576/2304/4608）与 `aclnnConvolution`
 单独归组。
 
-## 2. W1–W4 双卡算子级拆解（每请求，rank0）
+## 2. W1–W6 双卡算子级拆解（每请求，rank0）
+
+### 2.1 W1–W4：全长 / Tier 2B 后缀
 
 | 指标 | W1 OD Populate | W2 OD Hit | W3 ERQA Populate | W4 ERQA Hit |
 | --- | ---: | ---: | ---: | ---: |
@@ -54,6 +59,29 @@ rank1 的 compute union 为 141.2 / 66.7 / 208.6 / 67.1 ms，与 rank0 一致；
 HCCL 非重叠（W2 36.0 ms、W4 25.0 ms），说明命中路径的预取/通信在 rank 间并不完全对称。
 W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1,260-token 混合主干。
 
+### 2.2 W5–W6：Tier 2A 边界 56 命中
+
+| 指标 | W5 OD Tier 2A | W6 ERQA Tier 2A |
+| --- | ---: | ---: |
+| 输入 token | 967（完整 prompt） | 1,260（完整 prompt） |
+| **设备 compute union** | **17.9 ms** | **22.6 ms** |
+| MatMul (Cube) | 12.0 | 15.6 |
+| GDN Core (FLA) | 2.6 | 3.0 |
+| Fused Conv+QKV | 0.3 | 0.4 |
+| Full-Attn (FIA) | 0.2 | 0.3 |
+| Norm | 1.2 | 1.5 |
+| Elementwise | 0.9 | 1.1 |
+| Other | 0.6 | 0.7 |
+| ViT Vision | 0.0（Tier 1 命中） | 0.0（Tier 1 命中） |
+| **HCCL/传输非重叠** | **2.2 ms** | **2.9 ms** |
+| **设备总预算** | **20.1 ms** | **25.4 ms** |
+| 客户端 p50 / p95（含 Profiler） | 37.4 / 42.2 | 48.8 / 53.6 |
+
+追踪确认窗口内 56 次 `tier2a decision=hit2a`（两 rank），5 次测量请求全部走
+`core.layers[56:64] + norm + 原生 JointSchemaPooler`；`repr resume_ms` 约 11–15 ms。
+W5/W6 的 ViT 分类约 0.02 ms，说明 Tier 1 视觉缓存命中、没有重新编码。
+设备 union 相对 W2/W4 再降 **73.3% / 66.6%**。
+
 ## 3. 结果解读
 
 1. **1-Pass Tap Populate 的设备侧几乎零额外开销，但端到端首次填充仍有约 +12 ms 税。**
@@ -70,7 +98,13 @@ W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1
    并不能按 token 数线性缩短设备时间。
 3. **ERQA 命中同时消除 ViT 与长图前缀。** W3 → W4 设备总预算 232.2 → 109.5 ms（−52.8%），
    其中 ViT 16.0 ms 完全消失、MatMul 120.1 → 41.9 ms；Profiler 内客户端 p95 280.5 →
-   157.7 ms（−43.8%），与生产口径 ERQA S1 p95 244.7 → 122.4 ms（−50.0%）方向一致。
+   157.7 ms（−43.8%），与 Tier 2B-only 生产口径 ERQA S1 p95 244.7 → 122.4 ms（−50.0%）方向一致。
+4. **Tier 2A 把 2B 仍保留的 64 层后缀固定开销也移出关键路径。** W2 → W5 设备 union
+   67.0 → 17.9 ms（−73.3%）、客户端 p95 139.7 → 42.2 ms；W4 → W6 67.6 → 22.6 ms
+   （−66.6%）、p95 157.7 → 53.6 ms。W5 的 MatMul 12.0 ms 约为 W1 91.2 ms 的 13.2%，
+   与 8/64 层数比接近；HCCL 非重叠从 22.8/42.0 ms 降到 2.2/2.9 ms。多粒度生产口径
+   的 OD/ERQA S1 p95 为 **32.27 / 58.70 ms**，与 Profiler 窗口的方向一致（Profiler 自身
+   增加约 5–10 ms 开销）。
 
 ## 4. S1 Roofline：如果 967 个 token 全部参与计算
 
@@ -98,7 +132,8 @@ W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1
 | **S1 端到端屋脊** | **≈ 154 ms** | `max(145, 105) + 前端/联合头 ≈ 9 ms` |
 | 实测全长 S1 p95（Tier 2 前） | **154.11 ms** | `optimization.md` 阶段 5 |
 | 实测当前版本 Populate p95（n=5，无 Profiler） | **167.2 ms** | 5 条全新 967-token 前缀；设备 159.5 ms + 约 8 ms Host 发布/前端 |
-| 实测 Tier 2 命中 S1 p95 | **118.54 ms** | `results.csv` / `logs/final-eval/od-s1` |
+| 实测 Tier 2 命中 S1 p95 | **118.54 ms** | `results.csv` / `logs/final-eval/od-s1`（Tier 2B-only 历史） |
+| 实测 Tier 2A 命中 S1 p95 | **32.269 ms** | `results.csv` / `logs/final-eval/multi-tier-20261126/od-s1` |
 
 ### 4.3 解读
 
@@ -116,34 +151,57 @@ W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1
    19 ms 是 199-token 的线性部分、约 24 ms 是 64 层固定部分——这部分只能靠减少层内
    小算子数量或更激进的图捕获来削。
 
+### 4.4 Tier 2A 边界 56 的分层预算
+
+| 层级 | 数值 | 说明 |
+| --- | ---: | --- |
+| 8/64 层 Cube 理论 | 9.9 ms | 79.0 × 8/64 |
+| 实测 MatMul（W5） | 12.0 ms | 固定 tiling/启动开销使略高于理论 |
+| + 非 Cube 实测 | +5.9 ms | 17.9 − 12.0 |
+| + HCCL 非重叠 | +2.2 ms | W5 双 rank 平均（2.19 / 3.23） |
+| **设备总预算** | **20.1 ms** | 17.9 compute + 2.2 HCCL |
+| Host 8 层 dispatch + pooler/schema | ≈ 24 ms | 8 × ~1.7 ms + ~10 ms |
+| **实测 S1 p95** | **32.269 ms** | 正式 3 轮平均；p50 25.45 ms |
+
+Tier 2A 命中已把设备侧压到 20 ms 量级，Host 的 8 层 dispatch、joint pooler 与 schema
+处理成为新的主要成本；这也解释了为什么 p50（25.45 ms）与设备预算（20.1 ms）只差约
+5 ms，而 p95 的尾部（32.27 ms）主要来自较长的 pooler/attention 形状。
+
 ## 5. 图表
 
 - `imgs/fig1_optimization_ablation.{png,pdf}`：全栈渐进优化消融（S1 p95 / S2 吞吐）。
-- `imgs/fig2_operator_breakdown.{png,pdf}`：W1–W4 双卡算子级耗时拆解。
+- `imgs/fig2_operator_breakdown.{png,pdf}`：W1–W6 双卡算子级耗时拆解（全长 / 2B / 2A）。
 - `imgs/fig3_s2_concurrency_pareto.{png,pdf}`：S2 并发扫描与吞吐-延迟帕累托。
 - `imgs/fig4_prefix_handover_analysis.{png,pdf}`：前缀切分收益与跨数据集交接。
-- `imgs/fig5_s1_roofline.{png,pdf}`：S1 全长与 Tier 2 命中的分层 roofline。
+- `imgs/fig5_s1_roofline.{png,pdf}`：S1 全长、Tier 2B 命中与 Tier 2A 命中的分层 roofline。
 
 图注：
 
 - **图 1**：6 个阶段的 S1 p95（左）与 S2 最大吞吐（右）；ERQA 仅在有实测的阶段绘制斜线柱，
-  阶段 2–3 未单独测 ERQA。最终相对 baseline：OD −45.4% / 3.78×，ERQA −62.2% / 5.42×。
-- **图 2**：设备 union 时间按算子类别拆分。Populate 为全长前向，Hit 为后缀续算；ERQA
-  Populate 的紫色段为 ViT。图中数值与第 2 节表格一致。
-- **图 3**：OD 为 C=1..128 全扫描，ERQA 为 C8/C16；红点为 Tier 2 前基线（OD 18.04、
-  ERQA 8.63 dec/s）。右图标注 OD C32/C64 与 ERQA C16。
+  阶段 2–3 未单独测 ERQA。最终相对 baseline：OD −85.1% / 17.9×，ERQA −81.9% / 8.6×。
+- **图 2**：设备 union 时间按算子类别拆分。Populate 为全长前向，Tier 2B 为后缀续算，
+  Tier 2A 为 boundary=56 的完整 prompt 续算；ERQA Populate 的紫色段为 ViT。图中数值与
+  第 2 节表格一致。
+- **图 3**：OD 为 C=1..128 全扫描，ERQA 为 C8/C16/C32；点线为 Tier 2 前基线
+  （OD 18.04、ERQA 8.63 dec/s），虚线为 Tier 2B-only（OD 21.58、ERQA 21.44 dec/s）。
+  右图标注 OD C64 与 ERQA C8。
 - **图 4**：左图为前缀审计的 128 对齐 `L` 与后缀 `S=T−L`（P50/P95 代表点）；右图为同进程
   `OD → ERQA` 交接，`window=3000` 旧池锁死 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s。
-- **图 5**：以 967-token 全长计算（左）与 199-token 后缀命中（右）的分层预算；绿色虚线
-  为 Host dispatch 下限，黑色点线为正式 S1 p95。左图设备预算 145 ms 已接近实测 154.1 ms；
-  右图 Host 105 ms 高于设备 96 ms，说明命中路径转为 Host 受限。
+- **图 5**：以 967-token 全长（左）、199-token 后缀命中（中）与 Tier 2A 边界 56 命中（右）
+  的分层预算；绿色虚线为 Host dispatch 下限，黑色点线为正式 S1 p95。全长设备预算 145 ms
+  接近实测 154.1 ms；Tier 2B 受 Host 105 ms 限制（实测 118.5 ms）；Tier 2A 设备预算
+ 约 20 ms、Host 约 24 ms，实测 32.3 ms。
 
 ## 6. 证据与清理
 
 - `category_breakdown.csv` 的 `hccl_union_ms_per_req` 是 HCCL 父区间的并集（可与计算重叠）；
   图表使用 `communication_nonoverlapped_ms_per_req`。
 - 轻量汇总：`logs/profile-tier2-20261126/`（`aggregate.json`、`category_breakdown.csv`、
-  `roofline.json`、`fig4_data.json`、`unprofiled_od_cold.json`、四个窗口的 manifest 与
-  compact evidence）。
-- 原始 trace 在采集后已从远端清理（曾位于 `/tmp/profile-tier2-traces`），不进入 Git。
-- 采集完成后关闭临时 Profiler 服务并确认 `npu-smi info` 无残留进程。
+  `roofline.json`、`fig4_data.json`、`unprofiled_od_cold.json`、W1–W6 六个窗口的 manifest
+  与 compact evidence）。
+- W5/W6 采集服务：端口 18243、`--profiler-config`、`CLEF_TIER2_TRACE=1`；追踪确认窗口内
+  全部走 `tier2a decision=hit2a`。原始 trace 在采集后已从远端清理（曾位于
+  `/tmp/profile-tier2-traces`），不进入 Git。
+- 采集完成后关闭临时 Profiler 服务并确认 `npu-smi info` 与 `ps` 无残留进程。
+- 正式性能/质量证据：[logs/final-eval/multi-tier-20261126/](../logs/final-eval/multi-tier-20261126/)；
+  专题报告：[docs/multi-tier-cache-2026-11-26.md](multi-tier-cache-2026-11-26.md)。

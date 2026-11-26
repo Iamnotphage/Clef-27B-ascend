@@ -1,0 +1,241 @@
+{
+  "created_at": "2026-11-26T05:33:53.860285+00:00",
+  "base_url": "http://127.0.0.1:18243",
+  "trace_root": "/tmp/profile-tier2a-traces",
+  "expected_ranks": 2,
+  "concurrency": 1,
+  "passed": true,
+  "collection_control_passed": true,
+  "trace_completeness_passed": true,
+  "acceptance_scope": "HTTP control and exported rank structure; request-window alignment, rank clocks and service logs also require review",
+  "throughput_scope": "Profiled requests measure instrumentation overhead; use separate unprofiled rounds for performance.",
+  "sample": {
+    "path": "/tmp/profile-tier2-samples/w2-hit.json",
+    "sha256": "b83be69df1de7b73756fa97d1f6d89cb77de3e89b02c431a3f9c86cf234190d7"
+  },
+  "health": {
+    "passed": true,
+    "status": 200
+  },
+  "warmup": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18243",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/tmp/profile-tier2-samples/w2-hit.json",
+      "--requests",
+      "10",
+      "--report",
+      "/tmp/profile-tier2a-out/w5-od-repr-hit/warmup.json"
+    ],
+    "started_at": "2026-11-26T05:33:53.864144+00:00",
+    "log": "/tmp/profile-tier2a-out/w5-od-repr-hit/warmup.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T05:33:57.048741+00:00"
+  },
+  "start": {
+    "url": "http://127.0.0.1:18243/start_profile",
+    "started_at": "2026-11-26T05:33:57.048765+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-26T05:33:57.130371+00:00",
+    "elapsed_seconds": 0.08161100000143051
+  },
+  "request_window_started_at": "2026-11-26T05:33:57.130998+00:00",
+  "requests": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/benchmark_systemone.py",
+      "--base-url",
+      "http://127.0.0.1:18243",
+      "--warmup",
+      "0",
+      "--concurrency",
+      "1",
+      "--timeout",
+      "300",
+      "--sample-file",
+      "/tmp/profile-tier2-samples/w2-hit.json",
+      "--requests",
+      "5",
+      "--report",
+      "/tmp/profile-tier2a-out/w5-od-repr-hit/profile-requests.json"
+    ],
+    "started_at": "2026-11-26T05:33:57.131030+00:00",
+    "log": "/tmp/profile-tier2a-out/w5-od-repr-hit/profile-requests.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T05:33:57.398962+00:00"
+  },
+  "request_window_finished_at": "2026-11-26T05:33:57.398976+00:00",
+  "stop": {
+    "url": "http://127.0.0.1:18243/stop_profile",
+    "started_at": "2026-11-26T05:33:57.398982+00:00",
+    "http_status": 200,
+    "body": "",
+    "passed": true,
+    "finished_at": "2026-11-26T05:33:57.911637+00:00",
+    "elapsed_seconds": 0.5126610901206732
+  },
+  "new_rank_directories": [
+    "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt",
+    "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt"
+  ],
+  "analysis": [
+    {
+      "argv": [
+        "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+        "-c",
+        "from torch_npu.profiler.profiler import analyse; import sys; analyse(sys.argv[1], max_process_number=8)",
+        "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt"
+      ],
+      "started_at": "2026-11-26T05:33:57.912819+00:00",
+      "log": "/tmp/profile-tier2a-out/w5-od-repr-hit/analyse-rank-0.log",
+      "returncode": 0,
+      "finished_at": "2026-11-26T05:34:05.951580+00:00"
+    },
+    {
+      "argv": [
+        "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+        "-c",
+        "from torch_npu.profiler.profiler import analyse; import sys; analyse(sys.argv[1], max_process_number=8)",
+        "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt"
+      ],
+      "started_at": "2026-11-26T05:34:05.951624+00:00",
+      "log": "/tmp/profile-tier2a-out/w5-od-repr-hit/analyse-rank-1.log",
+      "returncode": 0,
+      "finished_at": "2026-11-26T05:34:12.959708+00:00"
+    }
+  ],
+  "export_files": {
+    "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt": [
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+        "bytes": 0
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+        "bytes": 53248
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+        "bytes": 5179
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_0.db",
+        "bytes": 5353472
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+        "bytes": 110555
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+        "bytes": 2276
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "bytes": 820297
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+        "bytes": 3816
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+        "bytes": 701464
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+        "bytes": 279
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+        "bytes": 755280
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "bytes": 15621959
+      }
+    ],
+    "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt": [
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+        "bytes": 0
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+        "bytes": 53248
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+        "bytes": 5188
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_1.db",
+        "bytes": 5357568
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+        "bytes": 110615
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+        "bytes": 2298
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+        "bytes": 820081
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+        "bytes": 3751
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+        "bytes": 694593
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+        "bytes": 279
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+        "bytes": 755550
+      },
+      {
+        "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+        "bytes": 15663512
+      }
+    ]
+  },
+  "trace_completeness": {
+    "argv": [
+      "/workspace/final-test/Clef-27B-ascend/.venv/bin/python",
+      "/workspace/final-test/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+      "/tmp/profile-tier2a-traces",
+      "--expected-ranks",
+      "2",
+      "--output-dir",
+      "/tmp/profile-tier2a-out/w5-od-repr-hit/trace-analysis",
+      "--strict",
+      "--trace-dir",
+      "/tmp/profile-tier2a-traces/rank0_757504_20261126053357051_ascend_pt",
+      "--trace-dir",
+      "/tmp/profile-tier2a-traces/rank1_757505_20261126053357051_ascend_pt"
+    ],
+    "started_at": "2026-11-26T05:34:12.960389+00:00",
+    "log": "/tmp/profile-tier2a-out/w5-od-repr-hit/trace-completeness.log",
+    "returncode": 0,
+    "finished_at": "2026-11-26T05:34:20.049616+00:00"
+  },
+  "finished_at": "2026-11-26T05:34:20.049636+00:00"
+}

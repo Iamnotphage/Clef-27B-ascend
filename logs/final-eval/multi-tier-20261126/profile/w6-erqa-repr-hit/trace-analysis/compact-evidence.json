@@ -1,0 +1,3307 @@
+{
+  "created_at": "2026-11-26T05:34:39.947290+00:00",
+  "profile_root": "/tmp/profile-tier2a-traces",
+  "analysis_script": {
+    "path": "/workspace/final-test/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+    "sha256": "5d4d2ef7e69622e8106b22e8ccfd68047d9859f7854f35eb197bce6c5f4e2334"
+  },
+  "analysis_argv": [
+    "/workspace/final-test/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+    "/tmp/profile-tier2a-traces",
+    "--expected-ranks",
+    "2",
+    "--output-dir",
+    "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis",
+    "--strict",
+    "--trace-dir",
+    "/tmp/profile-tier2a-traces/rank0_757504_20261126053424921_ascend_pt",
+    "--trace-dir",
+    "/tmp/profile-tier2a-traces/rank1_757505_20261126053424921_ascend_pt"
+  ],
+  "expected_rank_count": 2,
+  "errors": [],
+  "timing_unit": "us",
+  "critical_path_method": "Requires request markers and dependencies; cumulative time is reported separately",
+  "discovered_trace_count": 2,
+  "identified_rank_ids": [
+    0,
+    1
+  ],
+  "duplicate_rank_ids": [],
+  "passed": true,
+  "cross_rank_alignment": {
+    "status": "Clock-aligned comparison requires profiler metadata establishing a common clock; rank spans retained separately",
+    "rank_windows": [
+      {
+        "rank": 0,
+        "window_us": [
+          1795671265061206.5,
+          1795671265295759.8
+        ]
+      },
+      {
+        "rank": 1,
+        "window_us": [
+          1795671265061024.8,
+          1795671265295895.2
+        ]
+      }
+    ]
+  },
+  "compact_authoring_script": {
+    "path": "/workspace/final-test/Clef-27B-ascend/scripts/analyze_systemone_profile.py",
+    "sha256": "5d4d2ef7e69622e8106b22e8ccfd68047d9859f7854f35eb197bce6c5f4e2334"
+  },
+  "ranks": [
+    {
+      "rank": 0,
+      "rank_identity": {
+        "rank": 0,
+        "source": "profiler metadata",
+        "file": "/tmp/profile-tier2a-traces/rank0_757504_20261126053424921_ascend_pt/profiler_info_0.json",
+        "json_path": [
+          "rank_id"
+        ]
+      },
+      "profiler_metadata": [
+        {
+          "path": "/tmp/profile-tier2a-traces/rank0_757504_20261126053424921_ascend_pt/profiler_info_0.json",
+          "sha256": "c36716190f4bc3081f8ab5c96a204d4252338ca79aa1b168c60415fe46c94558",
+          "data": {
+            "config": {
+              "common_config": {
+                "activities": [
+                  "ProfilerActivity.CPU",
+                  "ProfilerActivity.NPU"
+                ],
+                "schedule": {},
+                "record_shapes": false,
+                "profile_memory": false,
+                "with_stack": false,
+                "with_flops": false,
+                "with_modules": false
+              },
+              "experimental_config": {
+                "_profiler_level": "Level1",
+                "_aic_metrics": "ACL_AICORE_PIPE_UTILIZATION",
+                "_l2_cache": false,
+                "_msprof_tx": false,
+                "_mstx": false,
+                "_data_simplification": true,
+                "record_op_args": false,
+                "_export_type": [
+                  "text"
+                ],
+                "_host_sys": [],
+                "_op_attr": false,
+                "_gc_detect_threshold": null,
+                "_mstx_domain_include": [],
+                "_mstx_domain_exclude": [],
+                "_sys_io": false,
+                "_sys_interconnection": false
+              }
+            },
+            "start_info": {
+              "syscnt_enable": true,
+              "freq": 100,
+              "start_cnt": 458835034534471,
+              "start_monotonic": 4588244920312650
+            },
+            "end_info": {
+              "collectionTimeEnd": 1795671265607224150,
+              "MonotonicTimeEnd": 4588245593875180
+            },
+            "torch_npu_version": "2.10.0.post7",
+            "cann_version": "9.2.1",
+            "rank_id": 0
+          }
+        }
+      ],
+      "directory": "/tmp/profile-tier2a-traces/rank0_757504_20261126053424921_ascend_pt",
+      "relative_directory": "rank0_757504_20261126053424921_ascend_pt",
+      "completeness": {
+        "raw_ascend_pt_directory": true,
+        "raw_framework_or_prof_directory": true,
+        "export_directory": true,
+        "timed_kernel_count": 2520,
+        "valid_device_timeline": true,
+        "valid": true
+      },
+      "raw_file_count": 87,
+      "total_bytes": 30768759,
+      "exported_file_index": [
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+          "bytes": 53248,
+          "sha256": "3874998dbd9f8371d67d29b2f39ec248eb96cf4469e11cfa5b7e2d859d0acb35"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+          "bytes": 5519,
+          "sha256": "df8897af2ebf4d64a001685082b2f79d5eb4990d5f71c861f10c518510e2cdba"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_0.db",
+          "bytes": 5459968,
+          "sha256": "ce9ae8ea5e2a0de1797a4a468bf6900a37e93d05d7712f7f262d6250f1f0c64a"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "bytes": 110206,
+          "sha256": "c8123a5194de6119277768416611cfb879e659e59458f439a0affa73cdbba467"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+          "bytes": 2262,
+          "sha256": "b250bc9bb8d9c6216680be9878c0c6263ad4f304dbfd5e6827b1813414be3f87"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "bytes": 831811,
+          "sha256": "cf525fb24b71bd06d34b71a4f545ca37b97eacba731317747e1488d9a661bd44"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+          "bytes": 4018,
+          "sha256": "0002ccdc02d535afa6d644fc579ba36c945b644d8555d1150a1c509b5b62f4dc"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+          "bytes": 718684,
+          "sha256": "9adbf045392e14dcbcb5bb9f33ebdcefd14bb86b345ad2b5f54747b3c1a0b4eb"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+          "bytes": 280,
+          "sha256": "02d916414484f67d72ace0df09d809e67ed74a87561099725865cb4b8e1505fb"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+          "bytes": 763401,
+          "sha256": "3409240d189a18acddcdd003df5a0757c79850ebd85096f8f4b932f381b07e36"
+        },
+        {
+          "path": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "bytes": 15992108,
+          "sha256": "16bdb9184a6c2aa0e2c803ca66fd75b069e03a2ff160a209b5c0cda17aaa73a5"
+        }
+      ],
+      "kernel_source": "kernel CSV",
+      "shape_status": "present in exported kernel rows",
+      "kernel_window_ns": [
+        1795671265061206558,
+        1795671265295759669
+      ],
+      "kernel_window_span_us": 234553.111,
+      "kernel_cumulative_us": 143339.206,
+      "kernel_union_us": 127143.609,
+      "compute_kernel_union_us": 112807.872,
+      "communication_union_us": 27636.342,
+      "compute_communication_overlap_us": 13300.605,
+      "synchronization_union_us": 0.0,
+      "sync_wait_union_us": 0.0,
+      "communication_nonoverlapped_us": 14335.737000000001,
+      "no_device_kernel_within_window_us": 107409.50200000001,
+      "kernel_count": 2520,
+      "communication_kernel_count": 180,
+      "warnings": [],
+      "request_device_window_count": 0,
+      "top_operations": [
+        {
+          "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;320,1088,16,16\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 34165.997,
+          "mean_us": 854.149925,
+          "interval_union_us": 34165.997,
+          "nonoverlapped_device_coverage_us": 30052.292,
+          "active_compute_unique_coverage_us": 34165.997,
+          "active_compute_time_removal_upper_bound_us": 34165.997,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.30286890794287835,
+          "device_time_removal_upper_bound_us": 34165.997,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.11278
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.000754
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.786869
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.665536
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.820572
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.429705
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 72,
+              "start_us": 1795671265072720.2,
+              "end_us": 1795671265073568.0,
+              "start_ns": 1795671265072720351,
+              "end_ns": 1795671265073568058,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,8704;544,320,16,16\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 16487.947,
+          "mean_us": 412.198675,
+          "interval_union_us": 16487.947,
+          "nonoverlapped_device_coverage_us": 14264.519,
+          "active_compute_unique_coverage_us": 16487.947,
+          "active_compute_time_removal_upper_bound_us": 16487.947,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.14615954283757784,
+          "device_time_removal_upper_bound_us": 16487.947,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.068287
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.861669
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.730166
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.792535
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.119029
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 75,
+              "start_us": 1795671265073614.2,
+              "end_us": 1795671265074033.8,
+              "start_ns": 1795671265073614168,
+              "end_ns": 1795671265074033660,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "allreduceAicpuKernel",
+          "op_type": "allreduceAicpuKernel",
+          "shape": null,
+          "dtype": null,
+          "count": 90,
+          "cumulative_us": 16266.501,
+          "mean_us": 180.7389,
+          "interval_union_us": 16266.501,
+          "nonoverlapped_device_coverage_us": 70.904,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 16266.501,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "allreduceAicpuKernel",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 44,
+              "start_us": 1795671265068477.2,
+              "end_us": 1795671265068876.5,
+              "start_ns": 1795671265068477198,
+              "end_ns": 1795671265068876406,
+              "stream": "10"
+            }
+          ]
+        },
+        {
+          "name": "hcom_allReduce",
+          "op_type": "hcom_allReduce_",
+          "shape": null,
+          "dtype": null,
+          "count": 90,
+          "cumulative_us": 14264.833,
+          "mean_us": 158.49814444444445,
+          "interval_union_us": 14264.833,
+          "nonoverlapped_device_coverage_us": 11369.841,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 14264.833,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "hcom_allReduce__503_0_1",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 43,
+              "start_us": 1795671265068405.2,
+              "end_us": 1795671265068816.8,
+              "start_ns": 1795671265068405162,
+              "end_ns": 1795671265068816692,
+              "stream": null
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+          "op_type": "ChunkGatedDeltaRuleFwd",
+          "shape": "\"1,1260,8,128;1,1260,8,128;1,1260,24,128;1,24,1260;1,24,1260,128;1,1260,24;2;20\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;FLOAT;DT_BF16;FLOAT;INT64;INT64",
+          "count": 30,
+          "cumulative_us": 12538.159,
+          "mean_us": 417.9386333333333,
+          "interval_union_us": 12538.159,
+          "nonoverlapped_device_coverage_us": 10764.868,
+          "active_compute_unique_coverage_us": 12538.159,
+          "active_compute_time_removal_upper_bound_us": 12538.159,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.11114613526261713,
+          "device_time_removal_upper_bound_us": 12538.159,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.325829
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.021065
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.079023
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.077023
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.230038
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.016899
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.160237
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.100306
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.245871
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 99.011672
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 63,
+              "start_us": 1795671265071614.0,
+              "end_us": 1795671265072033.8,
+              "start_ns": 1795671265071614088,
+              "end_ns": 1795671265072033640,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;8192,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 12522.817,
+          "mean_us": 417.4272333333333,
+          "interval_union_us": 12522.817,
+          "nonoverlapped_device_coverage_us": 10679.928,
+          "active_compute_unique_coverage_us": 12522.817,
+          "active_compute_time_removal_upper_bound_us": 12522.817,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.11101013411546314,
+          "device_time_removal_upper_bound_us": 12522.817,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.114657
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.000328
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.788077
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.675158
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.885729
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.855795
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 54,
+              "start_us": 1795671265070261.8,
+              "end_us": 1795671265070675.2,
+              "start_ns": 1795671265070261830,
+              "end_ns": 1795671265070675301,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,3072;5120,3072\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 6512.453,
+          "mean_us": 162.811325,
+          "interval_union_us": 6512.453,
+          "nonoverlapped_device_coverage_us": 5990.538,
+          "active_compute_unique_coverage_us": 6512.453,
+          "active_compute_time_removal_upper_bound_us": 6512.453,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.05773048356057989,
+          "device_time_removal_upper_bound_us": 6512.453,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.184013
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.003154
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.764519
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.652067
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.848844
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.019282
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 67,
+              "start_us": 1795671265072168.0,
+              "end_us": 1795671265072328.0,
+              "start_ns": 1795671265072167910,
+              "end_ns": 1795671265072327985,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+          "op_type": "AddRmsNorm",
+          "shape": "\"1260,5120;1260,5120;5120\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 85,
+          "cumulative_us": 5025.602,
+          "mean_us": 59.124729411764704,
+          "interval_union_us": 5025.602,
+          "nonoverlapped_device_coverage_us": 4227.768,
+          "active_compute_unique_coverage_us": 5025.602,
+          "active_compute_time_removal_upper_bound_us": 5025.602,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.04455010019158946,
+          "device_time_removal_upper_bound_us": 5025.602,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.013368
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.338389
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.234321
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.50885
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 53,
+              "start_us": 1795671265070116.8,
+              "end_us": 1795671265070175.0,
+              "start_ns": 1795671265070116858,
+              "end_ns": 1795671265070174971,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;7168,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 10,
+          "cumulative_us": 3690.233,
+          "mean_us": 369.0233,
+          "interval_union_us": 3690.233,
+          "nonoverlapped_device_coverage_us": 3094.462,
+          "active_compute_unique_coverage_us": 3690.233,
+          "active_compute_time_removal_upper_bound_us": 3690.233,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.03271254864199548,
+          "device_time_removal_upper_bound_us": 3690.233,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.112898
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.768593
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.658094
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.890408
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 94.204684
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 131,
+              "start_us": 1795671265080000.8,
+              "end_us": 1795671265080371.0,
+              "start_ns": 1795671265080000673,
+              "end_ns": 1795671265080370875,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "ClefGdnConvQkv",
+          "op_type": "ClefGdnConvQkv",
+          "shape": "\"1260,8192;4,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 1988.857,
+          "mean_us": 66.29523333333333,
+          "interval_union_us": 1988.857,
+          "nonoverlapped_device_coverage_us": 1763.507,
+          "active_compute_unique_coverage_us": 1988.857,
+          "active_compute_time_removal_upper_bound_us": 1988.857,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.017630480610431157,
+          "device_time_removal_upper_bound_us": 1988.857,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "AscendCL@aclnnClefGdnConvQkv"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.012964
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.18395
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.137161
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.81383
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "ClefGdnConvQkv",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 59,
+              "start_us": 1795671265071164.8,
+              "end_us": 1795671265071232.0,
+              "start_ns": 1795671265071164849,
+              "end_ns": 1795671265071232104,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "SwiGlu",
+          "op_type": "SwiGlu",
+          "shape": "\"1260,17408\"",
+          "dtype": "DT_BF16",
+          "count": 40,
+          "cumulative_us": 1863.267,
+          "mean_us": 46.581675000000004,
+          "interval_union_us": 1863.267,
+          "nonoverlapped_device_coverage_us": 1625.294,
+          "active_compute_unique_coverage_us": 1863.267,
+          "active_compute_time_removal_upper_bound_us": 1863.267,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.01651717178035235,
+          "device_time_removal_upper_bound_us": 1863.267,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.022473
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.42379
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.190248
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.667485
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "SwiGlu",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 74,
+              "start_us": 1795671265073568.0,
+              "end_us": 1795671265073614.2,
+              "start_ns": 1795671265073568078,
+              "end_ns": 1795671265073614148,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1260,1024;1024,1024;1024\"",
+          "dtype": "DT_BF16;DT_BF16;FLOAT",
+          "count": 60,
+          "cumulative_us": 1306.27,
+          "mean_us": 21.771166666666666,
+          "interval_union_us": 1306.27,
+          "nonoverlapped_device_coverage_us": 1306.27,
+          "active_compute_unique_coverage_us": 1306.27,
+          "active_compute_time_removal_upper_bound_us": 1306.27,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.011579599693184532,
+          "device_time_removal_upper_bound_us": 1306.27,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.094159
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.00018
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.463772
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.405951
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.680796
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 77.467035
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 307,
+              "start_us": 1795671265094187.5,
+              "end_us": 1795671265094211.0,
+              "start_ns": 1795671265094187595,
+              "end_ns": 1795671265094211100,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+          "op_type": "FusedInferAttentionScore",
+          "shape": "\"1260,12,256;6196,128,512;6196,128,512;2048,2048;1;1;1,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;BOOL;INT64;INT64;INT32",
+          "count": 10,
+          "cumulative_us": 1236.231,
+          "mean_us": 123.6231,
+          "interval_union_us": 1236.231,
+          "nonoverlapped_device_coverage_us": 1121.145,
+          "active_compute_unique_coverage_us": 1236.231,
+          "active_compute_time_removal_upper_bound_us": 1236.231,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.010958729901402625,
+          "device_time_removal_upper_bound_us": 1236.231,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.285213
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.008
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.278155
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.269356
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.536781
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.060026
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.264183
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.138049
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.27056
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 93.481608
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 140,
+              "start_us": 1795671265080528.5,
+              "end_us": 1795671265080644.8,
+              "start_ns": 1795671265080528430,
+              "end_ns": 1795671265080644735,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "_layer_norm_fwd_1pass_kernel_npu",
+          "op_type": "_layer_norm_fwd_1pass_kernel_npu",
+          "shape": "\"30240,128;128;30240,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 1006.12,
+          "mean_us": 33.537333333333336,
+          "interval_union_us": 1006.12,
+          "nonoverlapped_device_coverage_us": 851.527,
+          "active_compute_unique_coverage_us": 1006.12,
+          "active_compute_time_removal_upper_bound_us": 1006.12,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.008918881122055028,
+          "device_time_removal_upper_bound_us": 1006.12,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.035594
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.206065
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.122231
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.707484
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "_layer_norm_fwd_1pass_kernel_npu",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 66,
+              "start_us": 1795671265072055.0,
+              "end_us": 1795671265072087.5,
+              "start_ns": 1795671265072054885,
+              "end_ns": 1795671265072087432,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+          "op_type": "FlashAttentionScore",
+          "shape": "\"1,1,1024;1,1260,1024;1,1260,1024;\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;INT64",
+          "count": 20,
+          "cumulative_us": 800.834,
+          "mean_us": 40.0417,
+          "interval_union_us": 800.834,
+          "nonoverlapped_device_coverage_us": 800.834,
+          "active_compute_unique_coverage_us": 800.834,
+          "active_compute_time_removal_upper_bound_us": 800.834,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.007099096772253624,
+          "device_time_removal_upper_bound_us": 800.834,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.264547
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.028603
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.035834
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.098456
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.291935
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.101095
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.036735
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.074271
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.021542
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 31.068742
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 371,
+              "start_us": 1795671265094716.2,
+              "end_us": 1795671265094758.0,
+              "start_ns": 1795671265094716191,
+              "end_ns": 1795671265094758020,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "split_qkv_rmsnorm_mrope_kernel",
+          "op_type": "split_qkv_rmsnorm_mrope_kernel",
+          "shape": "\"1260,7168;256;256;3,1260,64\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;DT_BF16",
+          "count": 10,
+          "cumulative_us": 708.153,
+          "mean_us": 70.81530000000001,
+          "interval_union_us": 708.153,
+          "nonoverlapped_device_coverage_us": 587.987,
+          "active_compute_unique_coverage_us": 708.153,
+          "active_compute_time_removal_upper_bound_us": 708.153,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.006277514037318247,
+          "device_time_removal_upper_bound_us": 708.153,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.011
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.310196
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.090796
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.575794
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "split_qkv_rmsnorm_mrope_kernel",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 138,
+              "start_us": 1795671265080435.2,
+              "end_us": 1795671265080506.2,
+              "start_ns": 1795671265080435269,
+              "end_ns": 1795671265080506245,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1,1024;1024,1024;1024\"",
+          "dtype": "DT_BF16;DT_BF16;FLOAT",
+          "count": 80,
+          "cumulative_us": 653.146,
+          "mean_us": 8.164325,
+          "interval_union_us": 653.146,
+          "nonoverlapped_device_coverage_us": 653.146,
+          "active_compute_unique_coverage_us": 653.146,
+          "active_compute_time_removal_upper_bound_us": 653.146,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.005789897357517744,
+          "device_time_removal_upper_bound_us": 653.146,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.025909
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.001625
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.083077
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.125256
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.377903
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 69.328241
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 360,
+              "start_us": 1795671265094639.2,
+              "end_us": 1795671265094647.2,
+              "start_ns": 1795671265094639154,
+              "end_ns": 1795671265094647136,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "fused_gdn_gating_kernel",
+          "op_type": "fused_gdn_gating_kernel",
+          "shape": "\"24;1260,24;1260,24\"",
+          "dtype": "FLOAT;DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 506.252,
+          "mean_us": 16.875066666666665,
+          "interval_union_us": 506.252,
+          "nonoverlapped_device_coverage_us": 446.417,
+          "active_compute_unique_coverage_us": 506.252,
+          "active_compute_time_removal_upper_bound_us": 506.252,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.004487736458675508,
+          "device_time_removal_upper_bound_us": 506.252,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.091192
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.240262
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.177624
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.26877
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "fused_gdn_gating_kernel",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 60,
+              "start_us": 1795671265071375.8,
+              "end_us": 1795671265071393.2,
+              "start_ns": 1795671265071375856,
+              "end_ns": 1795671265071393219,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1260,5120;48,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 458.764,
+          "mean_us": 15.292133333333334,
+          "interval_union_us": 458.764,
+          "nonoverlapped_device_coverage_us": 385.469,
+          "active_compute_unique_coverage_us": 458.764,
+          "active_compute_time_removal_upper_bound_us": 458.764,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.004066772928754476,
+          "device_time_removal_upper_bound_us": 458.764,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.013624
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.016569
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.239587
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.380265
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.540474
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 72.541763
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 55,
+              "start_us": 1795671265070675.2,
+              "end_us": 1795671265070690.0,
+              "start_ns": 1795671265070675321,
+              "end_ns": 1795671265070690105,
+              "stream": "45"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+          "op_type": "Transpose",
+          "shape": "\"1,1260,24;3\"",
+          "dtype": "FLOAT;INT64",
+          "count": 30,
+          "cumulative_us": 454.06,
+          "mean_us": 15.135333333333334,
+          "interval_union_us": 454.06,
+          "nonoverlapped_device_coverage_us": 418.852,
+          "active_compute_unique_coverage_us": 454.06,
+          "active_compute_time_removal_upper_bound_us": 454.06,
+          "active_compute_union_denominator_us": 112807.872,
+          "active_compute_coverage_fraction": 0.004025073711167958,
+          "device_time_removal_upper_bound_us": 454.06,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.183277
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.314892
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.047504
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.006268
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+              "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 62,
+              "start_us": 1795671265071570.8,
+              "end_us": 1795671265071585.8,
+              "start_ns": 1795671265071570758,
+              "end_ns": 1795671265071585722,
+              "stream": "45"
+            }
+          ]
+        }
+      ],
+      "communication_export_summary": {
+        "by_collective": [
+          {
+            "collective_type": "all_reduce",
+            "operation_count": 90,
+            "reported_elapsed_us_sum": 14264.833,
+            "reported_elapsed_us_samples": 90,
+            "reported_wait_us_sum": 6575.337,
+            "reported_wait_us_samples": 90,
+            "reported_synchronization_us_sum": 4990.254,
+            "reported_synchronization_us_samples": 90,
+            "evidence_operation_paths": [
+              "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_1_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_2_1@5862276106100383503"
+            ]
+          }
+        ],
+        "aggregate_entries_excluded": 1,
+        "method": "Counts distinct non-aggregate communication.json entries; HCCL phase/kernel counts are reported separately. Elapsed sums can overlap and are not critical-path duration"
+      },
+      "communication_size_distribution": [
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400,
+          "operation_count": 85,
+          "transit_ms_sum": 7.056058000000003,
+          "elapsed_us_sum": 14167.772
+        },
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 409600,
+          "operation_count": 5,
+          "transit_ms_sum": 0.019083,
+          "elapsed_us_sum": 97.061
+        }
+      ],
+      "communication_size_scope": "One preferred transport per call (SIO first); MB converted with 1024**2. SIO/SDMA aliases are not added. Values describe reported transit bytes; tensor payload interpretation depends on collective algorithm",
+      "communication_examples": [
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_72_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 904.079,
+          "reported_wait_us": 740.583,
+          "reported_synchronization_us": 722.699,
+          "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_72_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_18_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 721.6590000000001,
+          "reported_wait_us": 569.065,
+          "reported_synchronization_us": 547.88,
+          "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_18_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_54_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 597.992,
+          "reported_wait_us": 430.33500000000004,
+          "reported_synchronization_us": 413.291,
+          "evidence_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_54_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        }
+      ],
+      "timeline_metadata": [
+        {
+          "event_count": 74738,
+          "timed_event_count": 55687,
+          "device_kernel_event_count": 7992,
+          "categories": {
+            "cpu_op": 18690,
+            "dequeue": 2895,
+            "async_task_queue": 5790,
+            "enqueue": 2895,
+            "": 31278,
+            "HostToDevice": 6630,
+            "async_npu": 6560
+          },
+          "process_names": {
+            "757504": "Python",
+            "775684576": "AI Core Freq",
+            "775684608": "Communication",
+            "775685088": "Overlap Analysis",
+            "775684544": "Ascend Hardware",
+            "775684351": "CANN"
+          },
+          "timed_event_range_us": [
+            1795671264966336.5,
+            1795671265330746.2
+          ],
+          "timed_event_range_ns": [
+            1795671264966336543,
+            1795671265330746287
+          ],
+          "file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "module_flow_correlation": {
+            "flow_endpoint_count": 18980,
+            "paired_flow_count": 9485,
+            "flow_pairs_assigned_to_modules": 30,
+            "method": "Explicit flow s/f endpoints: source lies within host marker and target within device kernel on its exact pid/tid",
+            "scope": "Module kernel totals include nested modules; totals across modules overlap and remain separate from request critical paths",
+            "evidence": [
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"29665339113472\""
+                ],
+                "source_event_index": 64961,
+                "target_event_index": 39948,
+                "kernel_event_index": 39947,
+                "source_ts_us": 1795671265071110.0,
+                "target_ts_us": 1795671265071164.8,
+                "source_ts_ns": 1795671265071109900,
+                "target_ts_ns": 1795671265071164849,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              },
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"30352533880832\""
+                ],
+                "source_event_index": 64996,
+                "target_event_index": 40118,
+                "kernel_event_index": 40117,
+                "source_ts_us": 1795671265073897.0,
+                "target_ts_us": 1795671265074668.0,
+                "source_ts_ns": 1795671265073896930,
+                "target_ts_ns": 1795671265074667940,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              },
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"31039728648192\""
+                ],
+                "source_event_index": 65031,
+                "target_event_index": 40304,
+                "kernel_event_index": 40303,
+                "source_ts_us": 1795671265076018.2,
+                "target_ts_us": 1795671265077559.8,
+                "source_ts_ns": 1795671265076018360,
+                "target_ts_ns": 1795671265077559676,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              }
+            ]
+          }
+        }
+      ],
+      "module_averages": [
+        {
+          "module": "AscendCL@aclnnClefGdnConvQkv",
+          "instances": 30,
+          "matched_request_count": 0,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.039709,
+            "device_span_ms_mean": 0.066295,
+            "compute_kernel_union_ms_mean": 0.066295,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.0,
+            "active_kernel_union_ms_mean": 0.066295
+          },
+          "evidence": [
+            {
+              "trace_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51241,
+              "request_ids": []
+            },
+            {
+              "trace_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51401,
+              "request_ids": []
+            },
+            {
+              "trace_file": "rank0_757504_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51561,
+              "request_ids": []
+            }
+          ]
+        }
+      ],
+      "memory": {
+        "status": "no memory records exported",
+        "source_files": [],
+        "component_device_peaks": [],
+        "workspace_component_present": false,
+        "observed_operator_allocation_count": 0,
+        "method": "Peak recorded values per explicit component/device; component totals may overlap. Capture can omit earlier allocations and does not classify weights/cache by itself",
+        "units": "MB/KB retained exactly as labelled by exporter; verify exporter byte conversion before unit reinterpretation",
+        "top3_operator_allocations": []
+      }
+    },
+    {
+      "rank": 1,
+      "rank_identity": {
+        "rank": 1,
+        "source": "profiler metadata",
+        "file": "/tmp/profile-tier2a-traces/rank1_757505_20261126053424921_ascend_pt/profiler_info_1.json",
+        "json_path": [
+          "rank_id"
+        ]
+      },
+      "profiler_metadata": [
+        {
+          "path": "/tmp/profile-tier2a-traces/rank1_757505_20261126053424921_ascend_pt/profiler_info_1.json",
+          "sha256": "f634d7fa0bf5311408b65373626ed6b7466befee6737f9bfdf3c326dabaf8c38",
+          "data": {
+            "config": {
+              "common_config": {
+                "activities": [
+                  "ProfilerActivity.CPU",
+                  "ProfilerActivity.NPU"
+                ],
+                "schedule": {},
+                "record_shapes": false,
+                "profile_memory": false,
+                "with_stack": false,
+                "with_flops": false,
+                "with_modules": false
+              },
+              "experimental_config": {
+                "_profiler_level": "Level1",
+                "_aic_metrics": "ACL_AICORE_PIPE_UTILIZATION",
+                "_l2_cache": false,
+                "_msprof_tx": false,
+                "_mstx": false,
+                "_data_simplification": true,
+                "record_op_args": false,
+                "_export_type": [
+                  "text"
+                ],
+                "_host_sys": [],
+                "_op_attr": false,
+                "_gc_detect_threshold": null,
+                "_mstx_domain_include": [],
+                "_mstx_domain_exclude": [],
+                "_sys_io": false,
+                "_sys_interconnection": false
+              }
+            },
+            "start_info": {
+              "syscnt_enable": true,
+              "freq": 100,
+              "start_cnt": 458835034601043,
+              "start_monotonic": 4588244920978870
+            },
+            "end_info": {
+              "collectionTimeEnd": 1795671265607105590,
+              "MonotonicTimeEnd": 4588245593756910
+            },
+            "torch_npu_version": "2.10.0.post7",
+            "cann_version": "9.2.1",
+            "rank_id": 1
+          }
+        }
+      ],
+      "directory": "/tmp/profile-tier2a-traces/rank1_757505_20261126053424921_ascend_pt",
+      "relative_directory": "rank1_757505_20261126053424921_ascend_pt",
+      "completeness": {
+        "raw_ascend_pt_directory": true,
+        "raw_framework_or_prof_directory": true,
+        "export_directory": true,
+        "timed_kernel_count": 2520,
+        "valid_device_timeline": true,
+        "valid": true
+      },
+      "raw_file_count": 87,
+      "total_bytes": 30694875,
+      "exported_file_index": [
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/analyse.done",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/analysis.db",
+          "bytes": 53248,
+          "sha256": "94af500e2f271fb6b9d0f8e14f9e44c05fb803cf3d1a683f5eb402b29fd1d3af"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/api_statistic.csv",
+          "bytes": 5464,
+          "sha256": "e16512874151aee68a1528913f4f938ccc440047b59ec15eaa4acb2287417ad1"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/ascend_pytorch_profiler_1.db",
+          "bytes": 5451776,
+          "sha256": "1073fc30fcecea5752b613285b5030adfaad5759af322360367d57ad52466493"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "bytes": 110124,
+          "sha256": "3491abb167690d2d51010b15451c645e6def57161196fbebbe7dfd12784b2de6"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication_matrix.json",
+          "bytes": 2260,
+          "sha256": "3bd76743b96d617c0760bdab9b60d9c4ec5aefb438995a8ed7a1559f23e7f85a"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+          "bytes": 831880,
+          "sha256": "2f251030cacbedb044ceab62b357cf0c140aa8d50f640fc351758b3c9c06dbb8"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/op_statistic.csv",
+          "bytes": 3933,
+          "sha256": "a70f875df714b3bec5258d8427239212600b9e9f17511e68b5fdeb91979f080e"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/operator_details.csv",
+          "bytes": 713303,
+          "sha256": "bd72499d14c5022f3225322f87867f29c3ab4f74413300a0d4471b690335aa49"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/step_trace_time.csv",
+          "bytes": 254,
+          "sha256": "24fdbfd01a757b4eaa2882cc9670a0eb197bf890bee61bd5aa0b70c9acd60288"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/task_time.csv",
+          "bytes": 763558,
+          "sha256": "23726a3c43b327111eaedff509a941803a11d8a695e7039fc7d63f5e63ddece1"
+        },
+        {
+          "path": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "bytes": 15941131,
+          "sha256": "153d738e97d5f96ec303a1fa318615fdade42653b1ebbd89fba42892f233417d"
+        }
+      ],
+      "kernel_source": "kernel CSV",
+      "shape_status": "present in exported kernel rows",
+      "kernel_window_ns": [
+        1795671265061024629,
+        1795671265295895322
+      ],
+      "kernel_window_span_us": 234870.693,
+      "kernel_cumulative_us": 143487.536,
+      "kernel_union_us": 127021.706,
+      "compute_kernel_union_us": 112802.844,
+      "communication_union_us": 27095.74,
+      "compute_communication_overlap_us": 12876.878,
+      "synchronization_union_us": 0.0,
+      "sync_wait_union_us": 0.0,
+      "communication_nonoverlapped_us": 14218.862000000001,
+      "no_device_kernel_within_window_us": 107848.987,
+      "kernel_count": 2520,
+      "communication_kernel_count": 180,
+      "warnings": [],
+      "request_device_window_count": 0,
+      "top_operations": [
+        {
+          "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;320,1088,16,16\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 34229.063,
+          "mean_us": 855.726575,
+          "interval_union_us": 34229.063,
+          "nonoverlapped_device_coverage_us": 30533.09,
+          "active_compute_unique_coverage_us": 34229.063,
+          "active_compute_time_removal_upper_bound_us": 34229.063,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.30344148947166616,
+          "device_time_removal_upper_bound_us": 34229.063,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.112931
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.000755
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.786227
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.664974
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.821679
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 97.316412
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 73,
+              "start_us": 1795671265072692.5,
+              "end_us": 1795671265073542.2,
+              "start_ns": 1795671265072692542,
+              "end_ns": 1795671265073542299,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "allreduceAicpuKernel",
+          "op_type": "allreduceAicpuKernel",
+          "shape": null,
+          "dtype": null,
+          "count": 90,
+          "cumulative_us": 16501.831,
+          "mean_us": 183.35367777777776,
+          "interval_union_us": 16501.831,
+          "nonoverlapped_device_coverage_us": 36.001,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 16501.831,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "allreduceAicpuKernel",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 44,
+              "start_us": 1795671265067315.8,
+              "end_us": 1795671265067660.2,
+              "start_ns": 1795671265067315735,
+              "end_ns": 1795671265067660142,
+              "stream": "12"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,8704;544,320,16,16\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 16490.633,
+          "mean_us": 412.26582500000006,
+          "interval_union_us": 16490.633,
+          "nonoverlapped_device_coverage_us": 13967.881,
+          "active_compute_unique_coverage_us": 16490.633,
+          "active_compute_time_removal_upper_bound_us": 16490.633,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.14618986911358373,
+          "device_time_removal_upper_bound_us": 16490.633,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.068137
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.862024
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.73055
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.792784
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.067183
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 75,
+              "start_us": 1795671265073588.8,
+              "end_us": 1795671265074008.8,
+              "start_ns": 1795671265073588720,
+              "end_ns": 1795671265074008648,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "hcom_allReduce",
+          "op_type": "hcom_allReduce_",
+          "shape": null,
+          "dtype": null,
+          "count": 90,
+          "cumulative_us": 14182.861,
+          "mean_us": 157.58734444444445,
+          "interval_union_us": 14182.861,
+          "nonoverlapped_device_coverage_us": 10593.909,
+          "active_compute_unique_coverage_us": 0.0,
+          "active_compute_time_removal_upper_bound_us": 0.0,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.0,
+          "device_time_removal_upper_bound_us": 14182.861,
+          "critical_path_contribution_us": null,
+          "communication": true,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {},
+          "evidence": [
+            {
+              "name": "hcom_allReduce__503_0_1",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 43,
+              "start_us": 1795671265067235.8,
+              "end_us": 1795671265068790.5,
+              "start_ns": 1795671265067235813,
+              "end_ns": 1795671265068790484,
+              "stream": null
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;8192,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 12545.406,
+          "mean_us": 418.1802,
+          "interval_union_us": 12545.406,
+          "nonoverlapped_device_coverage_us": 10959.756,
+          "active_compute_unique_coverage_us": 12545.406,
+          "active_compute_time_removal_upper_bound_us": 12545.406,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.11121533425167898,
+          "device_time_removal_upper_bound_us": 12545.406,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.113691
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.000329
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.786876
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.674152
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.886687
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.818847
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 54,
+              "start_us": 1795671265070052.2,
+              "end_us": 1795671265070460.0,
+              "start_ns": 1795671265070052350,
+              "end_ns": 1795671265070459958,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+          "op_type": "ChunkGatedDeltaRuleFwd",
+          "shape": "\"1,1260,8,128;1,1260,8,128;1,1260,24,128;1,24,1260;1,24,1260,128;1,1260,24;2;20\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;FLOAT;DT_BF16;FLOAT;INT64;INT64",
+          "count": 30,
+          "cumulative_us": 12511.714,
+          "mean_us": 417.05713333333335,
+          "interval_union_us": 12511.714,
+          "nonoverlapped_device_coverage_us": 10891.761,
+          "active_compute_unique_coverage_us": 12511.714,
+          "active_compute_time_removal_upper_bound_us": 12511.714,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.1109166538389759,
+          "device_time_removal_upper_bound_us": 12511.714,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.319786
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.021
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.07926
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.077228
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.229023
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.016501
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.161208
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.100169
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.246615
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 98.956251
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 63,
+              "start_us": 1795671265071113.0,
+              "end_us": 1795671265071531.5,
+              "start_ns": 1795671265071112911,
+              "end_ns": 1795671265071531459,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,3072;5120,3072\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 40,
+          "cumulative_us": 6473.548,
+          "mean_us": 161.8387,
+          "interval_union_us": 6473.548,
+          "nonoverlapped_device_coverage_us": 5804.654,
+          "active_compute_unique_coverage_us": 6473.548,
+          "active_compute_time_removal_upper_bound_us": 6473.548,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.057388163014755196,
+          "device_time_removal_upper_bound_us": 6473.548,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.184709
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.003706
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.766908
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.654063
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.850054
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 92.276397
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 67,
+              "start_us": 1795671265071584.8,
+              "end_us": 1795671265071749.5,
+              "start_ns": 1795671265071584840,
+              "end_ns": 1795671265071749423,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+          "op_type": "AddRmsNorm",
+          "shape": "\"1260,5120;1260,5120;5120\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 85,
+          "cumulative_us": 5058.49,
+          "mean_us": 59.51164705882353,
+          "interval_union_us": 5058.49,
+          "nonoverlapped_device_coverage_us": 4454.036,
+          "active_compute_unique_coverage_us": 5058.49,
+          "active_compute_time_removal_upper_bound_us": 5058.49,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.044843638871374554,
+          "device_time_removal_upper_bound_us": 5058.49,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.013673
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.333128
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.225243
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.504467
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 53,
+              "start_us": 1795671265069944.2,
+              "end_us": 1795671265070005.0,
+              "start_ns": 1795671265069944287,
+              "end_ns": 1795671265070004928,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+          "op_type": "MatMulV3",
+          "shape": "\"1260,5120;7168,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 10,
+          "cumulative_us": 3718.913,
+          "mean_us": 371.8913,
+          "interval_union_us": 3718.913,
+          "nonoverlapped_device_coverage_us": 3123.022,
+          "active_compute_unique_coverage_us": 3718.913,
+          "active_compute_time_removal_upper_bound_us": 3718.913,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.03296825565851868,
+          "device_time_removal_upper_bound_us": 3718.913,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.1133
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.76259
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.65279
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.890094
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 94.243791
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 132,
+              "start_us": 1795671265079974.2,
+              "end_us": 1795671265080346.5,
+              "start_ns": 1795671265079974168,
+              "end_ns": 1795671265080346375,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "ClefGdnConvQkv",
+          "op_type": "ClefGdnConvQkv",
+          "shape": "\"1260,8192;4,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 2011.234,
+          "mean_us": 67.04113333333333,
+          "interval_union_us": 2011.234,
+          "nonoverlapped_device_coverage_us": 1602.647,
+          "active_compute_unique_coverage_us": 2011.234,
+          "active_compute_time_removal_upper_bound_us": 2011.234,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.01782963911796408,
+          "device_time_removal_upper_bound_us": 2011.234,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [
+            "AscendCL@aclnnClefGdnConvQkv"
+          ],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.013
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.213301
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.14466
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.799619
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "ClefGdnConvQkv",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 59,
+              "start_us": 1795671265070767.0,
+              "end_us": 1795671265070834.8,
+              "start_ns": 1795671265070766924,
+              "end_ns": 1795671265070834645,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "SwiGlu",
+          "op_type": "SwiGlu",
+          "shape": "\"1260,17408\"",
+          "dtype": "DT_BF16",
+          "count": 40,
+          "cumulative_us": 1757.011,
+          "mean_us": 43.925275,
+          "interval_union_us": 1757.011,
+          "nonoverlapped_device_coverage_us": 1583.287,
+          "active_compute_unique_coverage_us": 1757.011,
+          "active_compute_time_removal_upper_bound_us": 1757.011,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.015575945939802724,
+          "device_time_removal_upper_bound_us": 1757.011,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.02203
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.440993
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.187677
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.719184
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "SwiGlu",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 74,
+              "start_us": 1795671265073542.2,
+              "end_us": 1795671265073588.8,
+              "start_ns": 1795671265073542319,
+              "end_ns": 1795671265073588680,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1260,1024;1024,1024;1024\"",
+          "dtype": "DT_BF16;DT_BF16;FLOAT",
+          "count": 60,
+          "cumulative_us": 1305.827,
+          "mean_us": 21.763783333333333,
+          "interval_union_us": 1305.827,
+          "nonoverlapped_device_coverage_us": 1305.827,
+          "active_compute_unique_coverage_us": 1305.827,
+          "active_compute_time_removal_upper_bound_us": 1305.827,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.011576188628719326,
+          "device_time_removal_upper_bound_us": 1305.827,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.095897
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.000175
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.46459
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.406907
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.682281
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 77.365475
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 307,
+              "start_us": 1795671265094166.8,
+              "end_us": 1795671265094189.2,
+              "start_ns": 1795671265094166651,
+              "end_ns": 1795671265094189232,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+          "op_type": "FusedInferAttentionScore",
+          "shape": "\"1260,12,256;6196,128,512;6196,128,512;2048,2048;1;1;1,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;BOOL;INT64;INT64;INT32",
+          "count": 10,
+          "cumulative_us": 1246.749,
+          "mean_us": 124.67490000000001,
+          "interval_union_us": 1246.749,
+          "nonoverlapped_device_coverage_us": 1113.866,
+          "active_compute_unique_coverage_us": 1246.749,
+          "active_compute_time_removal_upper_bound_us": 1246.749,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.01105246069859728,
+          "device_time_removal_upper_bound_us": 1246.749,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.269732
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.008
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.276844
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.268406
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.511544
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.058589
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.268019
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.135678
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.268648
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 93.144332
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 142,
+              "start_us": 1795671265080503.5,
+              "end_us": 1795671265080622.2,
+              "start_ns": 1795671265080503418,
+              "end_ns": 1795671265080622261,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "_layer_norm_fwd_1pass_kernel_npu",
+          "op_type": "_layer_norm_fwd_1pass_kernel_npu",
+          "shape": "\"30240,128;128;30240,128\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 958.58,
+          "mean_us": 31.95266666666667,
+          "interval_union_us": 958.58,
+          "nonoverlapped_device_coverage_us": 891.439,
+          "active_compute_unique_coverage_us": 958.58,
+          "active_compute_time_removal_upper_bound_us": 958.58,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.008497835391455202,
+          "device_time_removal_upper_bound_us": 958.58,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.035299
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.205767
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.12639
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.737064
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "_layer_norm_fwd_1pass_kernel_npu",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 66,
+              "start_us": 1795671265071553.0,
+              "end_us": 1795671265071584.8,
+              "start_ns": 1795671265071552920,
+              "end_ns": 1795671265071584820,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+          "op_type": "FlashAttentionScore",
+          "shape": "\"1,1,1024;1,1260,1024;1,1260,1024;\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;INT64",
+          "count": 20,
+          "cumulative_us": 808.675,
+          "mean_us": 40.433749999999996,
+          "interval_union_us": 808.675,
+          "nonoverlapped_device_coverage_us": 808.675,
+          "active_compute_unique_coverage_us": 808.675,
+          "active_compute_time_removal_upper_bound_us": 808.675,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.0071689238615295905,
+          "device_time_removal_upper_bound_us": 808.675,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.261972
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.029066
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.035493
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.097628
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.289582
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.10095
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.040154
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.074037
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.021445
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 31.041921
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 371,
+              "start_us": 1795671265094697.5,
+              "end_us": 1795671265094739.0,
+              "start_ns": 1795671265094697402,
+              "end_ns": 1795671265094739123,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "split_qkv_rmsnorm_mrope_kernel",
+          "op_type": "split_qkv_rmsnorm_mrope_kernel",
+          "shape": "\"1260,7168;256;256;3,1260,64\"",
+          "dtype": "DT_BF16;DT_BF16;DT_BF16;DT_BF16",
+          "count": 10,
+          "cumulative_us": 690.617,
+          "mean_us": 69.0617,
+          "interval_union_us": 690.617,
+          "nonoverlapped_device_coverage_us": 547.813,
+          "active_compute_unique_coverage_us": 690.617,
+          "active_compute_time_removal_upper_bound_us": 690.617,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.006122336773707585,
+          "device_time_removal_upper_bound_us": 690.617,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.011
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.3089
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.087802
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.588294
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "split_qkv_rmsnorm_mrope_kernel",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 140,
+              "start_us": 1795671265080411.5,
+              "end_us": 1795671265080481.5,
+              "start_ns": 1795671265080411616,
+              "end_ns": 1795671265080481398,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1,1024;1024,1024;1024\"",
+          "dtype": "DT_BF16;DT_BF16;FLOAT",
+          "count": 80,
+          "cumulative_us": 642.855,
+          "mean_us": 8.0356875,
+          "interval_union_us": 642.855,
+          "nonoverlapped_device_coverage_us": 642.855,
+          "active_compute_unique_coverage_us": 642.855,
+          "active_compute_time_removal_upper_bound_us": 642.855,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.005698925463262256,
+          "device_time_removal_upper_bound_us": 642.855,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.025312
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.001562
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.083975
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.126599
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.377369
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 69.860654
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 360,
+              "start_us": 1795671265094619.2,
+              "end_us": 1795671265094627.0,
+              "start_ns": 1795671265094619200,
+              "end_ns": 1795671265094627100,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "fused_gdn_gating_kernel",
+          "op_type": "fused_gdn_gating_kernel",
+          "shape": "\"24;1260,24;1260,24\"",
+          "dtype": "FLOAT;DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 499.557,
+          "mean_us": 16.6519,
+          "interval_union_us": 499.557,
+          "nonoverlapped_device_coverage_us": 419.394,
+          "active_compute_unique_coverage_us": 499.557,
+          "active_compute_time_removal_upper_bound_us": 499.557,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.004428585151629688,
+          "device_time_removal_upper_bound_us": 499.557,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.090524
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.250822
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.180972
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.278315
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "fused_gdn_gating_kernel",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 60,
+              "start_us": 1795671265070948.2,
+              "end_us": 1795671265070964.5,
+              "start_ns": 1795671265070948187,
+              "end_ns": 1795671265070964568,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+          "op_type": "MatMulV2",
+          "shape": "\"1260,5120;48,5120\"",
+          "dtype": "DT_BF16;DT_BF16",
+          "count": 30,
+          "cumulative_us": 479.234,
+          "mean_us": 15.974466666666666,
+          "interval_union_us": 479.234,
+          "nonoverlapped_device_coverage_us": 377.991,
+          "active_compute_unique_coverage_us": 479.234,
+          "active_compute_time_removal_upper_bound_us": 479.234,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.004248421254343552,
+          "device_time_removal_upper_bound_us": 479.234,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.013161
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.01664
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.232132
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.368675
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.527712
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 71.679261
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 55,
+              "start_us": 1795671265070460.0,
+              "end_us": 1795671265070475.8,
+              "start_ns": 1795671265070459998,
+              "end_ns": 1795671265070475698,
+              "stream": "47"
+            }
+          ]
+        },
+        {
+          "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+          "op_type": "Transpose",
+          "shape": "\"1,1260,24;3\"",
+          "dtype": "FLOAT;INT64",
+          "count": 30,
+          "cumulative_us": 457.169,
+          "mean_us": 15.238966666666666,
+          "interval_union_us": 457.169,
+          "nonoverlapped_device_coverage_us": 389.068,
+          "active_compute_unique_coverage_us": 457.169,
+          "active_compute_time_removal_upper_bound_us": 457.169,
+          "active_compute_union_denominator_us": 112802.844,
+          "active_compute_coverage_fraction": 0.004052814484003612,
+          "device_time_removal_upper_bound_us": 457.169,
+          "critical_path_contribution_us": null,
+          "communication": false,
+          "synchronization": false,
+          "flow_observed_modules": [],
+          "hardware_metrics": {
+            "aic_fixpipe_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_icache_miss_rate": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mac_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte1_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aic_mte2_ratio": {
+              "duration_weighted_mean": 0.0
+            },
+            "aiv_icache_miss_rate": {
+              "duration_weighted_mean": 0.183058
+            },
+            "aiv_mte2_ratio": {
+              "duration_weighted_mean": 0.294812
+            },
+            "aiv_mte3_ratio": {
+              "duration_weighted_mean": 0.054116
+            },
+            "aiv_vec_ratio": {
+              "duration_weighted_mean": 0.006164
+            },
+            "cube_utilization(%)": {
+              "duration_weighted_mean": 0.0
+            }
+          },
+          "evidence": [
+            {
+              "name": "aclnnChunkGatedDeltaRuleFwd_TransposeAiCore_Transpose",
+              "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/kernel_details.csv",
+              "evidence_line": 62,
+              "start_us": 1795671265071097.8,
+              "end_us": 1795671265071111.8,
+              "start_ns": 1795671265071097750,
+              "end_ns": 1795671265071111711,
+              "stream": "47"
+            }
+          ]
+        }
+      ],
+      "communication_export_summary": {
+        "by_collective": [
+          {
+            "collective_type": "all_reduce",
+            "operation_count": 90,
+            "reported_elapsed_us_sum": 14182.860999999999,
+            "reported_elapsed_us_samples": 90,
+            "reported_wait_us_sum": 6469.67,
+            "reported_wait_us_samples": 90,
+            "reported_synchronization_us_sum": 4904.975,
+            "reported_synchronization_us_samples": 90,
+            "evidence_operation_paths": [
+              "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_1_1@5862276106100383503",
+              "step/collective/hcom_allReduce__503_2_1@5862276106100383503"
+            ]
+          }
+        ],
+        "aggregate_entries_excluded": 1,
+        "method": "Counts distinct non-aggregate communication.json entries; HCCL phase/kernel counts are reported separately. Elapsed sums can overlap and are not critical-path duration"
+      },
+      "communication_size_distribution": [
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400,
+          "operation_count": 85,
+          "transit_ms_sum": 7.0684379999999996,
+          "elapsed_us_sum": 14098.200000000003
+        },
+        {
+          "collective_type": "all_reduce",
+          "transport": "SIO",
+          "reported_transit_bytes": 409600,
+          "operation_count": 5,
+          "transit_ms_sum": 0.018401,
+          "elapsed_us_sum": 84.66099999999999
+        }
+      ],
+      "communication_size_scope": "One preferred transport per call (SIO first); MB converted with 1024**2. SIO/SDMA aliases are not added. Values describe reported transit bytes; tensor payload interpretation depends on collective algorithm",
+      "communication_examples": [
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_0_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 1554.6709999999998,
+          "reported_wait_us": 1380.347,
+          "reported_synchronization_us": 1360.867,
+          "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_0_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_1_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 867.818,
+          "reported_wait_us": 743.835,
+          "reported_synchronization_us": 726.5350000000001,
+          "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_1_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        },
+        {
+          "operation_path": "step/collective/hcom_allReduce__503_72_1@5862276106100383503",
+          "collective_type": "all_reduce",
+          "reported_elapsed_us": 304.526,
+          "reported_wait_us": 149.563,
+          "reported_synchronization_us": 127.643,
+          "evidence_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/communication.json",
+          "evidence_json_path": [
+            "step",
+            "collective",
+            "hcom_allReduce__503_72_1@5862276106100383503"
+          ],
+          "transport": "SIO",
+          "reported_transit_bytes": 12902400
+        }
+      ],
+      "timeline_metadata": [
+        {
+          "event_count": 74553,
+          "timed_event_count": 55502,
+          "device_kernel_event_count": 7992,
+          "categories": {
+            "cpu_op": 18645,
+            "dequeue": 2895,
+            "async_task_queue": 5790,
+            "enqueue": 2895,
+            "": 31138,
+            "HostToDevice": 6630,
+            "async_npu": 6560
+          },
+          "process_names": {
+            "757505": "Python",
+            "775685601": "AI Core Freq",
+            "775685633": "Communication",
+            "775686113": "Overlap Analysis",
+            "775685569": "Ascend Hardware",
+            "775685375": "CANN"
+          },
+          "timed_event_range_us": [
+            1795671264970726.5,
+            1795671265330442.2
+          ],
+          "timed_event_range_ns": [
+            1795671264970726385,
+            1795671265330442152
+          ],
+          "file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+          "module_flow_correlation": {
+            "flow_endpoint_count": 18980,
+            "paired_flow_count": 9306,
+            "flow_pairs_assigned_to_modules": 30,
+            "method": "Explicit flow s/f endpoints: source lies within host marker and target within device kernel on its exact pid/tid",
+            "scope": "Module kernel totals include nested modules; totals across modules overlap and remain separate from request critical paths",
+            "evidence": [
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"29665339113472\""
+                ],
+                "source_event_index": 64776,
+                "target_event_index": 39903,
+                "kernel_event_index": 39902,
+                "source_ts_us": 1795671265070748.0,
+                "target_ts_us": 1795671265070767.0,
+                "source_ts_ns": 1795671265070747910,
+                "target_ts_ns": 1795671265070766924,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              },
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"30352533880832\""
+                ],
+                "source_event_index": 64811,
+                "target_event_index": 40089,
+                "kernel_event_index": 40088,
+                "source_ts_us": 1795671265072771.5,
+                "target_ts_us": 1795671265074637.2,
+                "source_ts_ns": 1795671265072771400,
+                "target_ts_ns": 1795671265074637141,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              },
+              {
+                "flow_key": [
+                  "HostToDevice",
+                  "\"31039728648192\""
+                ],
+                "source_event_index": 64846,
+                "target_event_index": 40265,
+                "kernel_event_index": 40264,
+                "source_ts_us": 1795671265074932.2,
+                "target_ts_us": 1795671265077533.8,
+                "source_ts_ns": 1795671265074932130,
+                "target_ts_ns": 1795671265077533699,
+                "modules": [
+                  "AscendCL@aclnnClefGdnConvQkv"
+                ],
+                "kernel": "ClefGdnConvQkv"
+              }
+            ]
+          }
+        }
+      ],
+      "module_averages": [
+        {
+          "module": "AscendCL@aclnnClefGdnConvQkv",
+          "instances": 30,
+          "matched_request_count": 0,
+          "metrics_per_instance": {
+            "cpu_inclusive_duration_ms_mean": 0.028645,
+            "device_span_ms_mean": 0.067041,
+            "compute_kernel_union_ms_mean": 0.067041,
+            "communication_union_ms_mean": 0.0,
+            "sync_wait_union_ms_mean": 0.0,
+            "active_kernel_union_ms_mean": 0.067041
+          },
+          "evidence": [
+            {
+              "trace_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51196,
+              "request_ids": []
+            },
+            {
+              "trace_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51356,
+              "request_ids": []
+            },
+            {
+              "trace_file": "rank1_757505_20261126053424921_ascend_pt/ASCEND_PROFILER_OUTPUT/trace_view.json",
+              "scope_event_index": 51516,
+              "request_ids": []
+            }
+          ]
+        }
+      ],
+      "memory": {
+        "status": "no memory records exported",
+        "source_files": [],
+        "component_device_peaks": [],
+        "workspace_component_present": false,
+        "observed_operator_allocation_count": 0,
+        "method": "Peak recorded values per explicit component/device; component totals may overlap. Capture can omit earlier allocations and does not classify weights/cache by itself",
+        "units": "MB/KB retained exactly as labelled by exporter; verify exporter byte conversion before unit reinterpretation",
+        "top3_operator_allocations": []
+      }
+    }
+  ],
+  "methods": {
+    "timing": "Integer ns arithmetic; exported durations in us. Kernel sums, interval unions and host inclusive ranges remain distinct",
+    "active_compute_unique": "Only computation tasks compete for active-only unique coverage. Sync waits/records, HCCL parent ranges and communication AICPU are excluded; denominator is active compute union in the same collection",
+    "modules": "Means over request-associated marker instances; parent and child scopes overlap. Head active compute and upstream EVENT WAIT are separate",
+    "critical_path": "Explicit flow proves provenance. Unique coverage/removal upper bounds measure occupancy; full DAG critical-path improvement requires a follow-up experiment",
+    "pipe_metrics": "Kernel-duration-weighted reported ratios (0..1), plus exporter cube_utilization(%); full min/max/samples in remote summary"
+  },
+  "analysis_file_index": [
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/communication.csv",
+      "bytes": 6089,
+      "sha256": "49ba895c49fb90e832c9070ab6e85fa005c714b28f8cc2752ee97cd4059cfff3"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/cpu_scopes.csv",
+      "bytes": 5793,
+      "sha256": "0f75f288bac677c0bccaae425b70ca609a1d0d5d322240750bf5fd6a8f3f799b"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/module_instances.csv",
+      "bytes": 16894,
+      "sha256": "0a8baf482b69ec0f73d2573e20782065d17d572dddf034e1f87d16d3742d4725"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/operations.csv",
+      "bytes": 1489283,
+      "sha256": "740fdec7d26794b79f3e21ab32f218534dd33dde39c835f71508b43ca1c504fe"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/request_device_windows.csv",
+      "bytes": 272,
+      "sha256": "663a8daf975da828692e35c54078b0875e375100076174ec4fcecc8b43ffc098"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/summary.json",
+      "bytes": 3583005,
+      "sha256": "697be8bc83aff75a6450de3289c895879dcf2edaf8c62232c49e6354c61e52ac"
+    },
+    {
+      "path": "/tmp/profile-tier2a-out/w6-erqa-repr-hit/trace-analysis/top20.csv",
+      "bytes": 171813,
+      "sha256": "d7127f93c55860484f4dd9845fa4c65e1e0eb2636078a3ddcbd6f2f3d228f832"
+    }
+  ]
+}

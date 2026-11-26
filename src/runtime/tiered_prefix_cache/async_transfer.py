@@ -157,13 +157,16 @@ class AsyncCapture:
     # ------------------------------------------------------------------
     def submit(self, payload: Mapping[str, Any],
                on_ready: Callable[[dict[str, Any]], None],
-               ready_event=None):
+               ready_event=None, *, ring_timeout: float | None = 0.05):
         """Queue one publish; returns ``None`` when the ring is full/dropped.
 
         ``ready_event`` may be recorded by the caller at capture time.  A
         background publisher must pass it: recording inside the publisher
         would place the event behind the producer's next-step backlog and
-        delay every D2H by that backlog.
+        delay every D2H by that backlog.  ``ring_timeout=None`` blocks the
+        caller (a dedicated publish thread, never the model thread) until a
+        ring slot frees, which is how a burst of per-request boundary states
+        is captured without dropping the tail of the batch.
         """
         if self.synchronous:
             try:
@@ -181,7 +184,7 @@ class AsyncCapture:
             self.dropped += 1
             self.ring.dropped += 1
             return None
-        buffer = self.ring.acquire(timeout=0.05)
+        buffer = self.ring.acquire(timeout=ring_timeout)
         if buffer is None:
             self.dropped += 1
             self.ring.dropped += 1

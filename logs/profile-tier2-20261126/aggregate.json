@@ -184,7 +184,7 @@
   },
   "W2_od_hit": {
    "dataset": "OpenDecisions",
-   "scenario": "Tier 2 hit (suffix 199 tokens)",
+   "scenario": "Tier 2B hit (suffix 199 tokens)",
    "requests": 5,
    "input_tokens": {
     "967": 5
@@ -544,7 +544,7 @@
   },
   "W4_erqa_hit": {
    "dataset": "ERQA 4-image",
-   "scenario": "Tier 2 hit (suffix 236 tokens)",
+   "scenario": "Tier 2B hit (suffix 236 tokens)",
    "requests": 5,
    "input_tokens": {
     "1260": 5
@@ -717,6 +717,368 @@
     {
      "index": 4,
      "elapsed_ms": 154.52133025974035,
+     "input_tokens": 1260
+    }
+   ]
+  },
+  "W5_od_repr": {
+   "dataset": "OpenDecisions",
+   "scenario": "Tier 2A hit (boundary 56, full prompt)",
+   "requests": 5,
+   "input_tokens": {
+    "967": 5
+   },
+   "latency_ms": {
+    "p50": 37.436739541590214,
+    "p95": 42.18686241656542,
+    "mean": 38.49963378161192,
+    "min": 36.99696995317936,
+    "max": 43.350870721042156
+   },
+   "manifest_passed": true,
+   "ranks": [
+    {
+     "rank": 0,
+     "compute_union_ms": 89.661337,
+     "communication_union_ms": 23.639302,
+     "communication_nonoverlapped_ms": 10.960934,
+     "no_device_kernel_ms": 81.924237,
+     "kernel_window_span_ms": 182.546508,
+     "category_union_ms": {
+      "matmul": 60.07837399999998,
+      "hccl": 27.297445,
+      "gdn": 14.805044,
+      "norm": 6.107158000000001,
+      "other": 2.904319000000001,
+      "attention": 1.0538720000000001,
+      "elementwise": 4.62047,
+      "vit": 0.09209999999999999
+     },
+     "top_ops": [
+      {
+       "name": "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+       "union_ms": 38.456343000000004
+      },
+      {
+       "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+       "union_ms": 18.212804
+      },
+      {
+       "name": "allreduceAicpuKernel",
+       "union_ms": 16.53392
+      },
+      {
+       "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+       "union_ms": 11.209665999999999
+      },
+      {
+       "name": "hcom_allReduce",
+       "union_ms": 10.763525
+      },
+      {
+       "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+       "union_ms": 3.817645
+      },
+      {
+       "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+       "union_ms": 3.0867699999999996
+      },
+      {
+       "name": "ClefGdnConvQkv",
+       "union_ms": 1.5957750000000002
+      },
+      {
+       "name": "SwiGlu",
+       "union_ms": 1.555921
+      },
+      {
+       "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+       "union_ms": 1.0538720000000001
+      },
+      {
+       "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+       "union_ms": 0.8838189999999999
+      },
+      {
+       "name": "_layer_norm_fwd_1pass_kernel_npu",
+       "union_ms": 0.84749
+      }
+     ]
+    },
+    {
+     "rank": 1,
+     "compute_union_ms": 89.948053,
+     "communication_union_ms": 28.730117999999997,
+     "communication_nonoverlapped_ms": 16.168644999999998,
+     "no_device_kernel_ms": 76.674514,
+     "kernel_window_span_ms": 182.791212,
+     "category_union_ms": {
+      "matmul": 60.132861000000005,
+      "hccl": 32.664636,
+      "gdn": 14.840772999999999,
+      "norm": 6.175318000000001,
+      "other": 2.847641,
+      "attention": 1.075562,
+      "elementwise": 4.776737000000003,
+      "vit": 0.099161
+     },
+     "top_ops": [
+      {
+       "name": "aclnnMatmulWeightNz_MatMulCommon_MatMulV2",
+       "union_ms": 38.473946000000005
+      },
+      {
+       "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+       "union_ms": 18.239472000000003
+      },
+      {
+       "name": "allreduceAicpuKernel",
+       "union_ms": 16.547931000000002
+      },
+      {
+       "name": "hcom_allReduce",
+       "union_ms": 16.116705
+      },
+      {
+       "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+       "union_ms": 11.244205
+      },
+      {
+       "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+       "union_ms": 3.926036
+      },
+      {
+       "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+       "union_ms": 3.098816
+      },
+      {
+       "name": "ClefGdnConvQkv",
+       "union_ms": 1.621313
+      },
+      {
+       "name": "SwiGlu",
+       "union_ms": 1.459011
+      },
+      {
+       "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+       "union_ms": 1.075562
+      },
+      {
+       "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+       "union_ms": 0.912437
+      },
+      {
+       "name": "_layer_norm_fwd_1pass_kernel_npu",
+       "union_ms": 0.8237960000000001
+      }
+     ]
+    }
+   ],
+   "per_request": [
+    {
+     "index": 0,
+     "elapsed_ms": 43.350870721042156,
+     "input_tokens": 967
+    },
+    {
+     "index": 1,
+     "elapsed_ms": 37.530829198658466,
+     "input_tokens": 967
+    },
+    {
+     "index": 2,
+     "elapsed_ms": 37.436739541590214,
+     "input_tokens": 967
+    },
+    {
+     "index": 3,
+     "elapsed_ms": 37.1827594935894,
+     "input_tokens": 967
+    },
+    {
+     "index": 4,
+     "elapsed_ms": 36.99696995317936,
+     "input_tokens": 967
+    }
+   ]
+  },
+  "W6_erqa_repr": {
+   "dataset": "ERQA 4-image",
+   "scenario": "Tier 2A hit (boundary 56, full prompt)",
+   "requests": 5,
+   "input_tokens": {
+    "1260": 5
+   },
+   "latency_ms": {
+    "p50": 48.755429685115814,
+    "p95": 53.62674221396446,
+    "mean": 50.25753378868103,
+    "min": 48.14799968153238,
+    "max": 54.1115403175354
+   },
+   "manifest_passed": true,
+   "ranks": [
+    {
+     "rank": 0,
+     "compute_union_ms": 112.807872,
+     "communication_union_ms": 27.636342,
+     "communication_nonoverlapped_ms": 14.335737000000002,
+     "no_device_kernel_ms": 107.409502,
+     "kernel_window_span_ms": 234.553111,
+     "category_union_ms": {
+      "matmul": 78.21449299999996,
+      "hccl": 30.531334,
+      "gdn": 16.877835,
+      "norm": 7.705305999999998,
+      "other": 3.309348999999999,
+      "attention": 1.236231,
+      "elementwise": 5.358275000000001,
+      "vit": 0.10638299999999999
+     },
+     "top_ops": [
+      {
+       "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+       "union_ms": 50.653944
+      },
+      {
+       "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+       "union_ms": 22.725503
+      },
+      {
+       "name": "allreduceAicpuKernel",
+       "union_ms": 16.266501
+      },
+      {
+       "name": "hcom_allReduce",
+       "union_ms": 14.264833000000001
+      },
+      {
+       "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+       "union_ms": 12.538159
+      },
+      {
+       "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+       "union_ms": 5.025602
+      },
+      {
+       "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+       "union_ms": 3.2215529999999997
+      },
+      {
+       "name": "ClefGdnConvQkv",
+       "union_ms": 1.9888569999999999
+      },
+      {
+       "name": "SwiGlu",
+       "union_ms": 1.863267
+      },
+      {
+       "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+       "union_ms": 1.291269
+      },
+      {
+       "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+       "union_ms": 1.236231
+      },
+      {
+       "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+       "union_ms": 1.2109459999999999
+      }
+     ]
+    },
+    {
+     "rank": 1,
+     "compute_union_ms": 112.802844,
+     "communication_union_ms": 27.095740000000003,
+     "communication_nonoverlapped_ms": 14.218862000000001,
+     "no_device_kernel_ms": 107.848987,
+     "kernel_window_span_ms": 234.870693,
+     "category_union_ms": {
+      "matmul": 78.30290199999997,
+      "hccl": 30.684692,
+      "gdn": 16.860099,
+      "norm": 7.674062,
+      "other": 3.2055229999999977,
+      "attention": 1.246749,
+      "elementwise": 5.410688999999998,
+      "vit": 0.10282
+     },
+     "top_ops": [
+      {
+       "name": "aclnnMatmulWeightNz_MatMulV3Common_MatMulV3",
+       "union_ms": 50.719696000000006
+      },
+      {
+       "name": "aclnnMatmul_MatMulV3Common_MatMulV3",
+       "union_ms": 22.737867
+      },
+      {
+       "name": "allreduceAicpuKernel",
+       "union_ms": 16.501831
+      },
+      {
+       "name": "hcom_allReduce",
+       "union_ms": 14.182861
+      },
+      {
+       "name": "aclnnChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd_ChunkGatedDeltaRuleFwd",
+       "union_ms": 12.511714
+      },
+      {
+       "name": "aclnnAddRmsNorm_AddRmsNorm_AddRmsNorm",
+       "union_ms": 5.05849
+      },
+      {
+       "name": "aclnnAddmm_MatMulCommon_MatMulV2",
+       "union_ms": 3.218905
+      },
+      {
+       "name": "ClefGdnConvQkv",
+       "union_ms": 2.011234
+      },
+      {
+       "name": "SwiGlu",
+       "union_ms": 1.7570109999999999
+      },
+      {
+       "name": "aclnnMatmul_MatMulCommon_MatMulV2",
+       "union_ms": 1.305828
+      },
+      {
+       "name": "aclnnFusedInferAttentionScoreV3_FusedInferAttentionScore_FusedInferAttentionScore",
+       "union_ms": 1.246749
+      },
+      {
+       "name": "aclnnFlashAttentionScore_FlashAttentionScore_FlashAttentionScore",
+       "union_ms": 1.222884
+      }
+     ]
+    }
+   ],
+   "per_request": [
+    {
+     "index": 0,
+     "elapsed_ms": 54.1115403175354,
+     "input_tokens": 1260
+    },
+    {
+     "index": 1,
+     "elapsed_ms": 48.755429685115814,
+     "input_tokens": 1260
+    },
+    {
+     "index": 2,
+     "elapsed_ms": 51.68754979968071,
+     "input_tokens": 1260
+    },
+    {
+     "index": 3,
+     "elapsed_ms": 48.14799968153238,
+     "input_tokens": 1260
+    },
+    {
+     "index": 4,
+     "elapsed_ms": 48.585149459540844,
      "input_tokens": 1260
     }
    ]

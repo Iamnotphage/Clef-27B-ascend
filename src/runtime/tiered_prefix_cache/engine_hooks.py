@@ -1,33 +1,53 @@
-"""Tier 2 engine hooks: B=1 continuous-KV / GDN / joint-memory reuse.
+"""Multi-granularity Tier 2 engine hooks.
 
-This module is a probe-grade implementation installed by
-``probe_engine/sitecustomize.py``.  It patches four points:
+The cache has two host-resident tiers that cooperate under one resident TP2
+service:
 
-- ``NPUModelRunner.execute_model``: build the prefix split/key, run the TP2
-  consensus vote, and bind/publish HostStore state around the model call;
+* **Tier 2A — Stage-Boundary Representation Cache (boundary 56).**  For an
+  exact repeated decision prompt (all tokens plus every image/video content
+  hash), the continuous BF16 ``(hidden, residual)`` entering layer 56 is
+  restored and the native ``core.layers[56:64]`` + ``core.norm`` +
+  ``JointSchemaPooler`` run unchanged.  The key is the complete prompt, so
+  this path also covers short prompts and multimodal requests that have no
+  128-aligned Tier 2B split.  A whole packed batch must hit; otherwise the
+  step falls back to the Tier 2B cascade and captures only the requests that
+  run the full-length backbone.
+* **Tier 2B — Prefix Recurrent/KV State Cache.**  The 128-aligned prefix's
+  full-attention K/V, GDN conv/ssm and joint ``prefix_memory`` are captured
+  on a full pass and resumed on a suffix-only pass.  This is what answers a
+  new SCHEMA over the same STATE (dynamic new questions) without paying for
+  the shared context again.
+
+The module patches six points:
+
+- ``NPUModelRunner.execute_model``: build the Tier 2A/2B keys, run the TP2
+  CPU consensus vote, and bind/publish HostStore state around the model call;
 - ``ClefFlashForJointSchema.forward``: one full-length tap pass on populate,
-  or the suffix-only resume pass on a hit;
+  the Tier 2A boundary resume, or the Tier 2B suffix-only resume;
 - ``AscendAttentionBackendImpl.forward``: tap post-RoPE K/V; resume with
   ``cat([K_prefix, K_suffix])`` + FIA ``TND``/``sparse_mode=3``;
 - ``QwenGatedDeltaNetAttention._forward_core`` / ``DeviceOperator.fla_gdn_prefill``:
   tap conv/ssm at ``L``; resume through the reference conv and
   ``fla_gdn_prefill(initial_state=...)``;
+- ``Qwen3NextDecoderLayer.forward``: at layer 55 exit, slice each full-pass
+  request's ``(hidden, residual)`` into the Tier 2A asynchronous D2H queue;
 - ``JointSchemaPooler``/``JointSchemaHead``: tap ``prefix_memory`` while the
-  stock pooler runs; consume it on hits without the ``AllPool`` truncation.
+  stock pooler runs; consume it on Tier 2B hits without the ``AllPool``
+  truncation.
 
 Populate is a **single** full-length pass: the whole prompt runs the stock
 decoupled path, so the warm-up round is bitwise equal to the OFF service, and
-the layer hooks only slice the states that are already materialised.  The one
+the layer hooks only slice states that are already materialised.  The one
 extra cost is the GDN state at ``L``, which the fused prefill kernel can only
 return for a whole call, so each GDN layer re-runs its prefix slice once.
 
-The captured package travels a two-slot pinned D2H ring into the pageable
-HostStore; hits restore through the pinned ``Prefetcher`` staging pool.  The
-only admission of ``miss`` (no populate) is the aged keep-longest rule.
+Tier 2A packages travel a dedicated pinned D2H ring through a blocking
+publisher; Tier 2B packages travel the original two-slot pinned ring.  Hits
+restore through the pinned ``Prefetcher`` staging pool.  The only admission of
+``miss`` (no populate) is the Tier 2B aged keep-longest rule; Tier 2A is a
+pageable LRU sized to keep the full OD + ERQA working set resident.
 
-Only one fresh request per step is admitted in this milestone; anything else
-falls back to the stock path.  It never touches vLLM's prefix-caching or KV
-cache manager.
+It never touches vLLM's prefix-caching or KV cache manager.
 """
 
 from __future__ import annotations
@@ -55,20 +75,44 @@ from runtime.tiered_prefix_cache.host_store import (
 )
 from runtime.tiered_prefix_cache.prefix_key import (
     MmItem,
+    REPRESENTATION_BOUNDARY,
     compute_prefix_key,
+    compute_representation_key,
     locate_state_prefix,
+)
+from runtime.tiered_prefix_cache.representation_plan import (
+    MODE_HIT as REPR_MODE_HIT,
+    MODE_MISS as REPR_MODE_MISS,
+    MODE_POPULATE as REPR_MODE_POPULATE,
+    PATH_REPRESENTATION,
+    PATH_STATE_RESUME,
+    choose_single_path,
+    plan_batch,
+    should_capture,
+)
+from runtime.tiered_prefix_cache.weight_pages import (
+    drop_safetensors_page_cache,
 )
 
 DELIMITER_TEXT = "\n\nSCHEMA FIELDS:\n"
 ALIGN = 128
 TEXT_MIN_PREFIX = 512
 MM_MIN_PREFIX = 128
+#: Tier 2A stores the continuous ``(hidden, residual)`` pair that enters this
+#: layer.  Both tensors are BF16 ``[T, hidden]`` on every TP rank.
+REPR_NAMESPACE = "clef-tier2a"
+REPRESENTATION_TOKEN_BYTES = 2 * 2 * 5120  # fallback when hidden_size is absent
 #: One full dataset round observes at most 418 (OD) / 400 (ERQA) eligible
 #: prefixes, so 500 sightings keep a live dataset active while a previous
 #: dataset's entries age out within the next dataset's first measured pass.
 #: Larger windows (the former 3000) let a departed 25 GB working set linger
 #: for many rounds and force the newcomer into eviction churn.
 ACTIVE_WINDOW = 500
+#: Tier 2B per-rank state package.  The multi-granularity split reserves most
+#: of the host budget for Tier 2A representations and keeps 10 GiB for the
+#: aged prefix-state pool.
+TIER2B_RANK_BYTES_DEFAULT = 10 << 30
+TIER2A_RANK_BYTES_DEFAULT = 28 << 30
 #: TP2 state package per rank: 16 full-attention layers x K/V x 2 heads x
 #: 256 elements x 2 bytes = 32 KiB/token, plus the rank-0 2 KiB/token memory
 #: projection.  Both ranks use the same estimate so the admission decision
@@ -77,6 +121,7 @@ PER_TOKEN_BYTES = 34 * 1024
 STATE_TAIL_BYTES = 40 << 20
 _STATE: dict = {
     "store": None,
+    "store2a": None,
     "tokenizer": None,
     "delimiter_ids": None,
     "mask": None,
@@ -86,6 +131,11 @@ _STATE: dict = {
     "lock": threading.RLock(),
     "capture_layer": None,
     "capture": None,
+    "capture2a": None,
+    "capture2a_ring": None,
+    "capture2a_pending": None,
+    "capture2a_stock": None,
+    "repr_boundary": None,
     "prefetcher": None,
     "batch": None,
     "batch_tap": None,
@@ -154,7 +204,7 @@ def _store() -> HostStore:
         # Deterministic per-rank budget: both TP workers must agree byte for
         # byte, so never read /proc/meminfo here.
         budget = int(os.environ.get(
-            "CLEF_PREFIX_CACHE_RANK_BYTES", str(32 << 30)))
+            "CLEF_PREFIX_CACHE_RANK_BYTES", str(TIER2B_RANK_BYTES_DEFAULT)))
         _STATE["store"] = HostStore(
             budget_bytes=budget, admission="always", use_shm=False,
             eviction_policy="aged_keep_longest",
@@ -164,6 +214,106 @@ def _store() -> HostStore:
                                   str(ACTIVE_WINDOW))),
             eviction_watermark=0.95)
     return _STATE["store"]
+
+
+def _repr_enabled() -> bool:
+    """Tier 2A is part of the multi-granularity cache and defaults on."""
+    value = os.environ.get("CLEF_TIER2A")
+    if value is not None:
+        return value.strip().lower() not in ("0", "false", "no", "off")
+    budget = os.environ.get("CLEF_TIER2A_RANK_BYTES")
+    if budget is not None:
+        try:
+            return int(budget) > 0
+        except ValueError:
+            return True
+    return True
+
+
+def _repr_boundary() -> int:
+    if _STATE["repr_boundary"] is None:
+        _STATE["repr_boundary"] = int(os.environ.get(
+            "CLEF_TIER2A_BOUNDARY", str(REPRESENTATION_BOUNDARY)))
+    return _STATE["repr_boundary"]
+
+
+def _store2a() -> HostStore:
+    if _STATE["store2a"] is None:
+        # Pageable, LRU: the full OD + ERQA working set is expected to fit, so
+        # a warm round sees zero evictions; pressure evicts the least-recently
+        # used prompt instead of rejecting short prompts.
+        budget = int(os.environ.get(
+            "CLEF_TIER2A_RANK_BYTES", str(TIER2A_RANK_BYTES_DEFAULT)))
+        _STATE["store2a"] = HostStore(
+            budget_bytes=budget, admission="always", use_shm=False,
+            eviction_policy="lru", eviction_watermark=0.98)
+    return _STATE["store2a"]
+
+
+def _capture2a() -> AsyncCapture:
+    if _STATE["capture2a_ring"] is None:
+        slot_bytes = int(os.environ.get(
+            "CLEF_TIER2A_RING_BYTES", str(640 << 20)))
+        slots = int(os.environ.get("CLEF_TIER2A_RING_SLOTS", "4"))
+        _STATE["capture2a_ring"] = AsyncCapture(
+            PinnedRing(slots=slots, slot_bytes=slot_bytes))
+    return _STATE["capture2a_ring"]
+
+
+def _hidden_size(runner=None) -> int:
+    try:
+        config = getattr(runner.model_config, "hf_text_config", None)
+        if config is None:
+            config = runner.model_config.hf_config
+        value = int(getattr(config, "hidden_size", 0))
+        if value > 0:
+            return value
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from transformers import AutoConfig  # noqa: PLC0415
+
+        path = os.environ.get("CLEF_MODEL_DIR")
+        if path:
+            config = AutoConfig.from_pretrained(path, local_files_only=True)
+            value = int(getattr(config, "hidden_size", 0))
+            if value > 0:
+                return value
+    except Exception:  # noqa: BLE001
+        pass
+    return 5120
+
+
+def _repr_estimate(length: int, runner=None) -> int:
+    return int(length) * _hidden_size(runner) * 2 * 2
+
+
+def _tp_size(runner=None) -> int:
+    try:
+        return int(runner.model_config.parallel_config.tensor_parallel_size)
+    except Exception:  # noqa: BLE001
+        return int(os.environ.get("CLEF_TENSOR_PARALLEL_SIZE", "2"))
+
+
+def _request_mm_items(req) -> tuple[MmItem, ...]:
+    return tuple(
+        MmItem(
+            mm_hash=str(f.identifier or f.mm_hash or ""),
+            placeholder_offset=int(f.mm_position.offset),
+            placeholder_length=int(f.mm_position.length),
+            expanded_offset=int(f.mm_position.offset),
+            expanded_length=int(f.mm_position.length),
+            modality=str(f.modality),
+        )
+        for f in (getattr(req, "mm_features", ()) or ())
+    )
+
+
+def _repr_key(tokens, mm_items, runner) -> bytes:
+    return compute_representation_key(
+        REPR_NAMESPACE, tuple(tokens), tuple(mm_items),
+        model_revision=str(getattr(runner.model_config, "revision", "") or ""),
+        tp_size=_tp_size(runner), boundary=_repr_boundary())
 
 
 def _capture() -> AsyncCapture:
@@ -234,6 +384,34 @@ class Context:
         self.ssm_scale = None
         self.ssm_fused = None
         self.ssm_original = None
+
+
+class RepresentationContext:
+    """A B1 Tier 2A hit: restore and resume at the layer boundary."""
+
+    def __init__(self, key, total, rank):
+        self.key = key
+        self.T = total
+        self.rank = rank
+        self.mode = "hit2a"
+        self.phase = "resume"
+        self.lease = None
+        self.restored = None
+        self.hidden = None
+        self.residual = None
+        self.model_done = False
+        self.pool_done = False
+
+
+class ReprCapture:
+    """One B1 pending representation capture."""
+
+    __slots__ = ("key", "length", "rank")
+
+    def __init__(self, key, length, rank):
+        self.key = key
+        self.length = int(length)
+        self.rank = int(rank)
 
 
 def current():
@@ -315,9 +493,27 @@ def _log_store(decision: str, ctx: Context | None, key: bytes | None = None,
         f"misses={counters['misses']}")
 
 
+def _log_store2a(decision: str, key: bytes, total: int) -> None:
+    if not _trace_on():
+        return
+    snapshot = _store2a().snapshot()
+    counters = snapshot["counters"]
+    _trace(
+        f"tier2a decision={decision} key={key.hex()[:12]} T={total} "
+        f"obs={snapshot['obs_seq']} entries={snapshot['entries']} "
+        f"bytes={snapshot['bytes']} populates={counters['populates']} "
+        f"publications={counters['publications']} "
+        f"evictions={counters['evictions']} "
+        f"rejections={counters['rejections']} hits={counters['hits']} "
+        f"misses={counters['misses']}")
+
+
 def prepare_execute(scheduler_output, runner) -> None:
     """Set the Tier 2 context (B1 or batch) before the model runs."""
     _STATE["ctx"] = None
+    _STATE["capture2a_pending"] = None
+    _STATE["capture2a_stock"] = None
+    _clear_capture(clear_pending=False)
     old_batch = _STATE.get("batch")
     if old_batch is not None:
         _STATE["batch"] = None
@@ -355,6 +551,7 @@ def prepare_execute(scheduler_output, runner) -> None:
         _STATE["batch"] = None
         return
     lease = None
+    lease2a = None
     try:
         fresh = _fresh_b1(scheduler_output)
         if fresh is None:
@@ -364,19 +561,65 @@ def prepare_execute(scheduler_output, runner) -> None:
                 f"cached={len(scheduler_output.scheduled_cached_reqs.req_ids)}")
             return
         req, tokens = fresh
-        delimiter = _delimiter_ids(runner.model_config)
-        mm_items = tuple(
-            MmItem(
-                mm_hash=str(f.identifier or f.mm_hash or ""),
-                placeholder_offset=int(f.mm_position.offset),
-                placeholder_length=int(f.mm_position.length),
-                expanded_offset=int(f.mm_position.offset),
-                expanded_length=int(f.mm_position.length),
-                modality=str(f.modality),
-            )
-            for f in req.mm_features)
+        mm_items = _request_mm_items(req)
+        rank = _tp_rank()
+        revision = str(getattr(runner.model_config, "revision", "") or "")
+        # Tier 2A is checked first: a complete-prompt representation hit
+        # resumes at the boundary and never enters the Tier 2B suffix hooks.
+        if _repr_enabled() and not any(not item.mm_hash for item in mm_items):
+            try:
+                key2a = _repr_key(tokens, mm_items, runner)
+                decision2a = _store2a().observe(
+                    key2a, len(tokens), _repr_estimate(len(tokens), runner))
+                load_ok2a = True
+                if decision2a == "hit":
+                    lease2a = _store2a().acquire(key2a)
+                    entry = lease2a.entry if lease2a is not None else None
+                    problem = (None if entry is not None
+                               else "entry vanished after acquire")
+                    if entry is not None:
+                        problem = _repr_shard_problem(entry, rank)
+                    load_ok2a = problem is None
+                    if not load_ok2a:
+                        _trace(f"repr hit unusable rank={rank} "
+                               f"problem={problem}")
+                if _vote_decision(key2a, decision2a, load_ok2a):
+                    if decision2a == "hit":
+                        ctx = RepresentationContext(
+                            key2a, len(tokens), rank)
+                        entry = (lease2a.entry if lease2a is not None
+                                 else None)
+                        if entry is not None and _bind_repr(ctx, entry, rank):
+                            ctx.lease = lease2a
+                            lease2a = None
+                            _STATE["ctx"] = ctx
+                            _log_store2a("hit2a", key2a, len(tokens))
+                            return
+                        _trace("repr bind failed; falling back to Tier 2B")
+                        if lease2a is not None:
+                            lease2a.release()
+                            lease2a = None
+                    else:
+                        _STATE["capture2a_pending"] = ReprCapture(
+                            key2a, len(tokens), rank)
+                else:
+                    _trace(f"repr vote failed decision={decision2a} "
+                           f"load_ok={load_ok2a}")
+                    if lease2a is not None:
+                        lease2a.release()
+                        lease2a = None
+                    if decision2a != "hit":
+                        _STATE["capture2a_pending"] = ReprCapture(
+                            key2a, len(tokens), rank)
+            except Exception:  # noqa: BLE001 - never poison Tier 2B
+                import traceback
+                _debug("repr prepare error:\n" + traceback.format_exc())
+                if lease2a is not None:
+                    lease2a.release()
+                    lease2a = None
         if any(not item.mm_hash for item in mm_items):
             return
+        delimiter = _delimiter_ids(runner.model_config)
         min_prefix = MM_MIN_PREFIX if mm_items else TEXT_MIN_PREFIX
         split = locate_state_prefix(
             tokens, delimiter, align=ALIGN, min_prefix=min_prefix,
@@ -386,10 +629,9 @@ def prepare_execute(scheduler_output, runner) -> None:
                 f"bypass split T={len(tokens)} "
                 f"mm={[(item.placeholder_offset, item.placeholder_length) for item in mm_items]}")
             return
-        revision = str(getattr(runner.model_config, "revision", "") or "")
         key = compute_prefix_key(
-            "clef-tier2", split, model_revision=revision, align=ALIGN, tp_size=2)
-        rank = _tp_rank()
+            "clef-tier2", split, model_revision=revision, align=ALIGN,
+            tp_size=_tp_size(runner))
         store = _store()
         decision = store.observe(
             key, split.l_aligned, _estimate_package_bytes(split.l_aligned))
@@ -426,6 +668,8 @@ def prepare_execute(scheduler_output, runner) -> None:
     finally:
         if lease is not None:
             lease.release()
+        if lease2a is not None:
+            lease2a.release()
 
 
 def _shard_problem(entry, rank: int) -> str | None:
@@ -483,6 +727,193 @@ def _wait_restored(ctx: Context) -> None:
     restored.wait(groups)
 
 
+# ----------------------------------------------------------------------
+# Tier 2A: continuous representation at the layer boundary
+def _repr_shard_problem(entry, rank: int) -> str | None:
+    shard = entry.shards.get(rank) or {}
+    missing = [name for name in ("hidden", "residual") if name not in shard]
+    if missing:
+        return f"missing={missing} keys={sorted(shard)}"
+    return None
+
+
+def _bind_repr(ctx: RepresentationContext, entry, rank: int) -> bool:
+    shard = entry.shards.get(rank) or {}
+    if _repr_shard_problem(entry, rank) is not None:
+        return False
+    try:
+        restored = _prefetcher().load(
+            {"hidden": shard["hidden"], "residual": shard["residual"]},
+            device=_device())
+    except Exception:  # noqa: BLE001 - fail closed to the stock path
+        import traceback
+        _debug("repr prefetch error:\n" + traceback.format_exc())
+        return False
+    ctx.restored = restored
+    ctx.hidden = restored.tensors["hidden"]
+    ctx.residual = restored.tensors["residual"]
+    return True
+
+
+def _bind_repr_batch(request, entry, rank: int) -> bool:
+    shard = entry.shards.get(rank) or {}
+    if _repr_shard_problem(entry, rank) is not None:
+        return False
+    try:
+        restored = _prefetcher().load(
+            {"hidden": shard["hidden"], "residual": shard["residual"]},
+            device=_device())
+    except Exception:  # noqa: BLE001 - fail closed to the cascade
+        import traceback
+        _debug("batch repr prefetch error:\n" + traceback.format_exc())
+        return False
+    request.restored2a = restored
+    return True
+
+
+def _wait_repr(ctx: RepresentationContext) -> None:
+    if ctx.restored is not None:
+        ctx.restored.wait(("hidden", "residual"))
+
+
+def _submit_publish_repr(key: bytes, rank: int, length: int,
+                         hidden, residual) -> None:
+    """Record the boundary event, then hand the package to a publisher.
+
+    The D2H ring is intentionally small; a C8/C16 step submits every row of
+    the batch at layer 55 in one burst.  A dedicated thread waits for a slot
+    instead of dropping the tail, while the model thread continues into
+    layers 56..63.
+    """
+    ready = torch.npu.Event()
+    ready.record(torch.npu.current_stream())
+    payload = {"hidden": hidden, "residual": residual}
+    if not _repr_queue().submit(ready, key, rank, length, payload):
+        _trace(f"repr queue full T={length} rank={rank}")
+
+
+def _publish_repr_now(ready, key, rank, length, payload) -> None:
+    def on_ready(host: dict) -> None:
+        try:
+            ok = _store2a().publish(
+                key, {rank: host}, length=length)
+            _trace(
+                f"repr published ok={ok} T={length} rank={rank} "
+                f"keys={sorted(host)}")
+        except Exception:  # noqa: BLE001
+            import traceback
+            _debug("repr publish error:\n" + traceback.format_exc())
+
+    started = time.perf_counter()
+    ticket = _capture2a().submit(
+        payload, on_ready, ready_event=ready, ring_timeout=None)
+    _trace(
+        f"repr submitted T={length} rank={rank} dropped={ticket is None} "
+        f"wait_ms={(time.perf_counter() - started) * 1000.0:.2f}")
+
+
+class _ReprPublishQueue:
+    """Serialize Tier 2A publishes off both the model and D2H ring threads."""
+
+    def __init__(self, capacity: int = 512):
+        self._queue: "queue.Queue" = queue.Queue(maxsize=max(1, capacity))
+        self._thread = threading.Thread(
+            target=self._run, name="clef-tier2a-publish", daemon=True)
+        self._thread.start()
+
+    def submit(self, ready, key, rank, length, payload) -> bool:
+        try:
+            self._queue.put_nowait((ready, key, rank, length, payload))
+            return True
+        except queue.Full:
+            return False
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            try:
+                if item is None:
+                    return
+                _publish_repr_now(*item)
+            except Exception:  # noqa: BLE001
+                import traceback
+                _debug("repr queue error:\n" + traceback.format_exc())
+            finally:
+                self._queue.task_done()
+
+
+_REPR_QUEUE: "_ReprPublishQueue | None" = None
+
+
+def _repr_queue() -> "_ReprPublishQueue":
+    global _REPR_QUEUE
+    if _REPR_QUEUE is None:
+        _REPR_QUEUE = _ReprPublishQueue(
+            capacity=int(os.environ.get("CLEF_TIER2A_QUEUE", "512")))
+    return _REPR_QUEUE
+
+
+def _plan_capture(entries, offsets, runner=None) -> dict | None:
+    """Build a layer-55 capture plan from ``(request, begin)`` pairs."""
+    items = []
+    boundary = _repr_boundary()
+    for request, begin in zip(entries, offsets):
+        key = getattr(request, "key2a", None)
+        if key is None or getattr(request, "decision2a", "") != "populate":
+            continue
+        length = int(getattr(request, "T", 0))
+        if length <= 0:
+            continue
+        items.append({
+            "begin": int(begin),
+            "end": int(begin) + length,
+            "key": key,
+            "length": length,
+            "rank": _tp_rank(),
+        })
+    if not items:
+        return None
+    return {"after_layer": boundary - 1, "items": items}
+
+
+def _pending_capture_plan(pending: ReprCapture | None) -> dict | None:
+    if pending is None:
+        return None
+    return {"after_layer": _repr_boundary() - 1,
+            "items": [{"begin": 0, "end": pending.length, "key": pending.key,
+                       "length": pending.length, "rank": pending.rank}]}
+
+
+def _clear_capture(clear_pending: bool = True) -> None:
+    _STATE["capture2a"] = None
+    if clear_pending:
+        _STATE["capture2a_pending"] = None
+
+
+def _vote_modes(rows) -> list[int | None]:
+    """One CPU all-reduce that agrees on key, bucket and mode per row."""
+    local_rows = [list(tp_vote_vector(key, bool(load_ok))) + [int(mode)]
+                  for key, load_ok, mode in rows]
+    if not local_rows:
+        return []
+    try:
+        from vllm.distributed.parallel_state import get_tp_group
+
+        tensor = torch.tensor(local_rows, dtype=torch.int32, device="cpu")
+        get_tp_group().cpu_all_reduce_(tensor)
+        summed_rows = [[int(value) for value in row] for row in tensor.tolist()]
+    except Exception:  # noqa: BLE001
+        import traceback
+        _debug("repr vote error:\n" + traceback.format_exc())
+        return [None] * len(local_rows)
+    results: list[int | None] = []
+    for local, summed in zip(local_rows, summed_rows):
+        eligible, resume = tp_vote_result(tuple(local[:34]), tuple(summed[:34]))
+        ok = bool(eligible and resume and summed[34] == 2 * local[34])
+        results.append(int(summed[34] // 2) if ok else None)
+    return results
+
+
 class BatchRequest:
     """One request of a multi-request step (M2)."""
 
@@ -498,6 +929,10 @@ class BatchRequest:
         self.key = key
         self.decision = decision
         self.lease = lease
+        self.key2a = None
+        self.decision2a = "bypass"
+        self.lease2a = None
+        self.restored2a = None
         self.captured_kv = {}
         self.captured_conv = {}
         self.captured_ssm = {}
@@ -517,6 +952,8 @@ class BatchContext:
         self.req_ids = req_ids
         self.requests = requests
         self.T_total = total_tokens
+        self.path = "cascade"
+        self.capture2a: list[BatchRequest] = []
         self.fresh = [r for r in requests
                       if r.decision in ("bypass", "populate")]
         self.hits = [r for r in requests if r.decision == "hit"]
@@ -530,7 +967,14 @@ class BatchContext:
                 except Exception:  # noqa: BLE001
                     pass
                 request.lease = None
+            if request.lease2a is not None:
+                try:
+                    request.lease2a.release()
+                except Exception:  # noqa: BLE001
+                    pass
+                request.lease2a = None
             request.restored = None
+            request.restored2a = None
 
 
 def _vote_batch(rows) -> list[bool]:
@@ -596,25 +1040,110 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
             f"batch bypass total {total} != "
             f"{scheduler_output.total_num_scheduled_tokens}")
         return None
-    delimiter = _delimiter_ids(runner.model_config)
     revision = str(getattr(runner.model_config, "revision", "") or "")
     rank = _tp_rank()
     requests = []
     for index, req_id in enumerate(req_ids):
         req = new_by_id[req_id]
         tokens = list(req.prompt_token_ids)
-        mm_items = tuple(
-            MmItem(
-                mm_hash=str(f.identifier or f.mm_hash or ""),
-                placeholder_offset=int(f.mm_position.offset),
-                placeholder_length=int(f.mm_position.length),
-                expanded_offset=int(f.mm_position.offset),
-                expanded_length=int(f.mm_position.length),
-                modality=str(f.modality),
-            )
-            for f in req.mm_features)
+        mm_items = _request_mm_items(req)
         request = BatchRequest(req_id, index, offsets[index], tokens)
         requests.append(request)
+        if getattr(req.pooling_params, "task", None) != "token_classify":
+            continue
+        if any(not item.mm_hash for item in mm_items):
+            continue
+        if not _repr_enabled():
+            continue
+        try:
+            key2a = _repr_key(tokens, mm_items, runner)
+            decision2a = _store2a().observe(
+                key2a, len(tokens), _repr_estimate(len(tokens), runner))
+            lease2a = None
+            if decision2a == "hit":
+                lease2a = _store2a().acquire(key2a)
+                entry = lease2a.entry if lease2a is not None else None
+                if entry is None or _repr_shard_problem(entry, rank) is not None:
+                    if lease2a is not None:
+                        lease2a.release()
+                        lease2a = None
+                    decision2a = "miss"
+            request.key2a = key2a
+            request.decision2a = decision2a
+            request.lease2a = lease2a
+        except Exception:  # noqa: BLE001 - never poison the cascade
+            import traceback
+            _debug("batch repr prepare error:\n" + traceback.format_exc())
+            request.key2a = None
+            request.decision2a = "bypass"
+            request.lease2a = None
+
+    # Tier 2A vote and whole-batch resume.  A single miss demotes the step to
+    # the Tier 2B cascade; locally-acquired hits are released, never trusted.
+    capture_candidates: list[BatchRequest] = []
+    if _repr_enabled() and any(request.key2a is not None for request in requests):
+        repr_rows = []
+        repr_requests = []
+        for request in requests:
+            if request.key2a is None:
+                continue
+            mode = {"miss": 0, "populate": 1, "hit": 2}[request.decision2a]
+            load_ok = (request.decision2a != "hit"
+                       or request.lease2a is not None)
+            repr_rows.append((request.key2a, load_ok, mode))
+            repr_requests.append(request)
+        modes = _vote_modes(repr_rows)
+        repr_modes: list[int | None] = [None] * len(requests)
+        for request, mode in zip(repr_requests, modes):
+            repr_modes[request.index] = mode
+            if mode == 2:
+                request.decision2a = "hit"
+            elif mode in (0, 1):
+                request.decision2a = "populate"
+            else:
+                request.decision2a = "bypass"
+            if mode != 2 and request.lease2a is not None:
+                request.lease2a.release()
+                request.lease2a = None
+        plan = plan_batch(repr_modes)
+        _trace(f"batch repr modes={repr_modes} path={plan.path}")
+        if plan.path == PATH_REPRESENTATION:
+            bound = True
+            for request in requests:
+                entry = (request.lease2a.entry
+                         if request.lease2a is not None else None)
+                if entry is None or not _bind_repr_batch(request, entry, rank):
+                    bound = False
+                    break
+            if bound:
+                context = BatchContext(req_ids, requests, total)
+                context.path = PATH_REPRESENTATION
+                context.fresh = []
+                context.hits = []
+                context.populates = []
+                _trace(
+                    f"batch repr admit B={len(req_ids)} T={total} "
+                    f"hit={len(req_ids)}")
+                return context
+            _trace("batch repr bind failed; demoting to Tier 2B cascade")
+            for request in requests:
+                if request.lease2a is not None:
+                    request.lease2a.release()
+                    request.lease2a = None
+                request.restored2a = None
+                request.decision2a = "populate"
+            capture_candidates = list(requests)
+        else:
+            for request in requests:
+                if request.decision2a == "populate":
+                    capture_candidates.append(request)
+    if capture_candidates:
+        _trace(f"batch repr capture candidates={len(capture_candidates)}")
+    delimiter = _delimiter_ids(runner.model_config)
+    for request in requests:
+        req = new_by_id[request.req_id]
+        tokens = list(req.prompt_token_ids)
+        mm_items = _request_mm_items(req)
         if getattr(req.pooling_params, "task", None) != "token_classify":
             continue
         if any(not item.mm_hash for item in mm_items):
@@ -627,7 +1156,7 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
             continue
         key = compute_prefix_key(
             "clef-tier2", split, model_revision=revision, align=ALIGN,
-            tp_size=2)
+            tp_size=_tp_size(runner))
         decision = store.observe(
             key, split.l_aligned, _estimate_package_bytes(split.l_aligned))
         lease = None
@@ -650,7 +1179,12 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
         request.decision = decision
         request.lease = lease
     if not any(request.key is not None for request in requests):
-        # No request in this step is cache eligible: zero-collective bypass.
+        # No request in this step is Tier 2B eligible: zero-collective bypass.
+        # Tier 2A candidates still capture from the stock full-length pass.
+        if capture_candidates:
+            _STATE["capture2a_stock"] = _plan_capture(
+                capture_candidates,
+                [request.start for request in capture_candidates], runner)
         return None
     rows = []
     for request in requests:
@@ -682,6 +1216,9 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
                 request.lease.release()
                 request.lease = None
             request.decision = "bypass"
+    for request in requests:
+        if request.decision == "hit":
+            request.decision2a = "bypass"
     live = [request for request in requests
             if request.decision in ("populate", "hit")]
     if not live:
@@ -689,12 +1226,23 @@ def _prepare_batch(scheduler_output, runner, store) -> BatchContext | None:
             if request.lease is not None:
                 request.lease.release()
                 request.lease = None
+        capture_candidates = [
+            request for request in capture_candidates
+            if request.decision != "hit"]
+        if capture_candidates:
+            _STATE["capture2a_stock"] = _plan_capture(
+                capture_candidates,
+                [request.start for request in capture_candidates], runner)
         return None
     context = BatchContext(req_ids, requests, total)
+    context.capture2a = [
+        request for request in capture_candidates
+        if request.decision != "hit"]
     _trace(
         f"batch admit B={len(req_ids)} T={total} "
         f"populate={len(context.populates)} hit={len(context.hits)} "
-        f"bypass={len([r for r in requests if r.decision == 'bypass'])}")
+        f"bypass={len([r for r in requests if r.decision == 'bypass'])} "
+        f"repr_capture={len(context.capture2a)}")
     return context
 
 
@@ -703,6 +1251,9 @@ def finish_execute() -> None:
     _STATE["batch_layer"] = None
     _STATE["sched"] = None
     _STATE["runner"] = None
+    _STATE["capture2a"] = None
+    _STATE["capture2a_pending"] = None
+    _STATE["capture2a_stock"] = None
     batch = _STATE.get("batch")
     if batch is not None:
         if _STATE.get("batch_pool") is batch:
@@ -1329,10 +1880,19 @@ def _run_batch_model(self, input_ids, positions, inputs_embeds, batch,
     if batch.fresh:
         sub = _build_sub_batch("fresh", batch.fresh, embeds, positions)
         _STATE["sub"] = sub
+        by_request = {id(request): offset
+                      for request, offset in zip(sub.requests, sub.offsets)}
+        capture = [request for request in batch.capture2a
+                   if id(request) in by_request]
+        plan = _plan_capture(
+            capture, [by_request[id(request)] for request in capture], self)
+        if plan is not None:
+            _STATE["capture2a"] = plan
         try:
             hidden = _run_layers(core, sub.embeds, sub.positions)
         finally:
             _STATE["sub"] = None
+            _STATE["capture2a"] = None
         for index, request in enumerate(sub.requests):
             start = sub.offsets[index]
             request.out = hidden[start:start + request.T]
@@ -1477,6 +2037,67 @@ def _run_layers(core, embeds, positions):
     return core.norm(hidden, residual)[0]
 
 
+def _run_layers_range(core, hidden, residual, positions, start):
+    """Run ``core.layers[start:]`` then the final norm.
+
+    ``hidden``/``residual`` are the exact state the stock loop would carry
+    into layer ``start``; every kernel and the runner's varlen metadata are the
+    native ones, so a Tier 2A resume is bitwise equal to the full pass.
+    """
+    for index, layer in enumerate(core.layers):
+        if index < start:
+            continue
+        hidden, residual = layer(
+            positions=positions, hidden_states=hidden, residual=residual)
+    return core.norm(hidden, residual)[0]
+
+
+def _run_batch_2a(self, positions, batch):
+    """Whole-batch representation resume, then the native pooler."""
+    hidden_parts = []
+    residual_parts = []
+    for request in batch.requests:
+        restored = request.restored2a
+        if restored is None:
+            raise RuntimeError("tier2a: missing representation package")
+        restored.wait(("hidden", "residual"))
+        hidden_parts.append(restored.tensors["hidden"])
+        residual_parts.append(restored.tensors["residual"])
+    hidden = torch.cat(hidden_parts, dim=0)
+    residual = torch.cat(residual_parts, dim=0)
+    for request in batch.requests:
+        request.restored2a = None
+    if (hidden.shape[0] != batch.T_total
+            or residual.shape[0] != batch.T_total):
+        raise RuntimeError(
+            f"tier2a: representation rows {hidden.shape[0]}/"
+            f"{residual.shape[0]} != {batch.T_total}")
+    if positions.shape[-1] != batch.T_total:
+        positions = positions[..., :batch.T_total]
+    core = self.language_model.model
+    output = _run_layers_range(
+        core, hidden, residual, positions, start=_repr_boundary())
+    batch.release()
+    _STATE["batch"] = None
+    return output
+
+
+def _stock_forward(original, module, input_ids, positions,
+                   intermediate_tensors, inputs_embeds, kwargs):
+    """Run the stock full pass, consuming a pending Tier 2A capture plan."""
+    plan = _STATE.pop("capture2a_stock", None)
+    if plan is None:
+        plan = _pending_capture_plan(_STATE.get("capture2a_pending"))
+    if plan is not None:
+        _STATE["capture2a"] = plan
+    try:
+        return original(module, input_ids, positions, intermediate_tensors,
+                        inputs_embeds, **kwargs)
+    finally:
+        _STATE["capture2a"] = None
+        _STATE["capture2a_pending"] = None
+
+
 def _model_forward(original):
     def forward(self, input_ids, positions, intermediate_tensors=None,
                 inputs_embeds=None, **kwargs):
@@ -1508,7 +2129,20 @@ def _model_forward(original):
                 and positions.shape[-1] >= batch.T_total):
             _trace(
                 f"model batch pos={positions.shape[-1]} "
-                f"T={batch.T_total} hits={len(batch.hits)}")
+                f"T={batch.T_total} hits={len(batch.hits)} "
+                f"path={batch.path}")
+            if batch.path == PATH_REPRESENTATION:
+                try:
+                    return _run_batch_2a(self, positions, batch)
+                except Exception:  # noqa: BLE001 - rerun the stock full path
+                    import traceback
+                    _debug("batch repr error:\n" + traceback.format_exc())
+                    _STATE["batch"] = None
+                    _STATE["batch_pool"] = None
+                    batch.release()
+                    return _stock_forward(
+                        original, self, input_ids, positions,
+                        intermediate_tensors, inputs_embeds, kwargs)
             if batch.hits:
                 try:
                     return _run_batch_model(
@@ -1520,27 +2154,74 @@ def _model_forward(original):
                     _STATE["batch"] = None
                     _STATE["batch_pool"] = None
                     batch.release()
-                    return original(self, input_ids, positions,
-                                    intermediate_tensors, inputs_embeds,
-                                    **kwargs)
+                    return _stock_forward(
+                        original, self, input_ids, positions,
+                        intermediate_tensors, inputs_embeds, kwargs)
             _STATE["batch_tap"] = batch
+            plan = _plan_capture(
+                batch.capture2a,
+                [request.start for request in batch.capture2a], self)
+            if plan is not None:
+                _STATE["capture2a"] = plan
             try:
                 hidden = original(self, input_ids, positions,
                                   intermediate_tensors, inputs_embeds,
                                   **kwargs)
             finally:
                 _STATE["batch_tap"] = None
+                _STATE["capture2a"] = None
             for request in batch.requests:
                 request.output_start = request.start
                 request.output_len = request.T
             _STATE["batch_pool"] = batch
             return hidden
         ctx = _STATE["ctx"]
+        if isinstance(ctx, RepresentationContext):
+            if (intermediate_tensors is not None
+                    or (input_ids is None and inputs_embeds is None)
+                    or positions.shape[-1] != ctx.T):
+                return _stock_forward(
+                    original, self, input_ids, positions,
+                    intermediate_tensors, inputs_embeds, kwargs)
+            started = time.perf_counter()
+            try:
+                _wait_repr(ctx)
+                if (ctx.hidden.shape[0] != ctx.T
+                        or ctx.residual.shape[0] != ctx.T):
+                    raise RuntimeError(
+                        f"tier2a: restored rows {ctx.hidden.shape[0]}/"
+                        f"{ctx.residual.shape[0]} != {ctx.T}")
+                core = self.language_model.model
+                hidden = _run_layers_range(
+                    core, ctx.hidden, ctx.residual, positions,
+                    start=_repr_boundary())
+                ctx.hidden = None
+                ctx.residual = None
+                ctx.restored = None
+                ctx.model_done = True
+                ctx.pool_done = True
+                if ctx.lease is not None:
+                    ctx.lease.release()
+                    ctx.lease = None
+                _STATE["ctx"] = None
+                _trace(
+                    f"repr resume_ms="
+                    f"{(time.perf_counter() - started) * 1000.0:.2f} "
+                    f"T={ctx.T} boundary={_repr_boundary()}")
+                return hidden
+            except Exception:  # noqa: BLE001 - rerun the stock full path
+                import traceback
+                _debug("repr resume error:\n" + traceback.format_exc())
+                _retire_pool_ctx(ctx)
+                return _stock_forward(
+                    original, self, input_ids, positions,
+                    intermediate_tensors, inputs_embeds, kwargs)
         if (ctx is None or intermediate_tensors is not None
                 or (input_ids is None and inputs_embeds is None)
                 or positions.shape[-1] != ctx.T):
-            return original(self, input_ids, positions,
-                            intermediate_tensors, inputs_embeds, **kwargs)
+            return _stock_forward(
+                original, self, input_ids, positions,
+                intermediate_tensors, inputs_embeds, kwargs)
         core = self.language_model.model
         try:
             if inputs_embeds is None:
@@ -1548,21 +2229,29 @@ def _model_forward(original):
             else:
                 embeds = inputs_embeds
         except Exception:  # noqa: BLE001
-            return original(self, input_ids, positions,
-                            intermediate_tensors, inputs_embeds, **kwargs)
+            return _stock_forward(
+                original, self, input_ids, positions,
+                intermediate_tensors, inputs_embeds, kwargs)
         if embeds.shape[0] != ctx.T:
-            return original(self, input_ids, positions,
-                            intermediate_tensors, inputs_embeds, **kwargs)
+            return _stock_forward(
+                original, self, input_ids, positions,
+                intermediate_tensors, inputs_embeds, kwargs)
         if ctx.mode == "populate":
             started = time.perf_counter()
+            plan = _pending_capture_plan(_STATE.get("capture2a_pending"))
+            if plan is not None:
+                _STATE["capture2a"] = plan
             try:
                 hidden = _run_layers(core, embeds, positions)
             except Exception:  # noqa: BLE001 - rerun the stock full path
                 import traceback
                 _debug("tap error:\n" + traceback.format_exc())
                 _retire_pool_ctx(ctx)
-                return original(self, input_ids, positions,
-                                intermediate_tensors, inputs_embeds, **kwargs)
+                return _stock_forward(
+                    original, self, input_ids, positions,
+                    intermediate_tensors, inputs_embeds, kwargs)
+            finally:
+                _STATE["capture2a"] = None
             ctx.model_done = True
             _trace(
                 f"populate tap_ms={(time.perf_counter() - started) * 1000.0:.2f}"
@@ -1576,8 +2265,9 @@ def _model_forward(original):
             import traceback
             _debug("resume error:\n" + traceback.format_exc())
             _retire_pool_ctx(ctx)
-            return original(self, input_ids, positions,
-                            intermediate_tensors, inputs_embeds, **kwargs)
+            return _stock_forward(
+                original, self, input_ids, positions,
+                intermediate_tensors, inputs_embeds, kwargs)
         ctx.model_done = True
         _trace(
             f"hit suffix_ms={(time.perf_counter() - started) * 1000.0:.2f}"
@@ -2221,6 +2911,35 @@ def _head_forward(original):
     return forward
 
 
+def _decoder_layer_forward(original):
+    """Capture the boundary representation once per full-length pass."""
+
+    def forward(self, hidden_states, residual, positions, **kwargs):
+        output = original(self, hidden_states, residual, positions, **kwargs)
+        plan = _STATE.get("capture2a")
+        if (plan is None
+                or getattr(self, "layer_idx", None) != plan["after_layer"]):
+            return output
+        _STATE["capture2a"] = None
+        if not isinstance(output, tuple) or len(output) < 2:
+            return output
+        hidden, resid = output[0], output[1]
+        if hidden is None or resid is None:
+            return output
+        for item in plan["items"]:
+            begin, end = int(item["begin"]), int(item["end"])
+            if not (0 <= begin < end <= hidden.shape[0]):
+                continue
+            if resid.shape[0] < end:
+                continue
+            _submit_publish_repr(
+                item["key"], item["rank"], item["length"],
+                hidden[begin:end].detach(), resid[begin:end].detach())
+        return output
+
+    return forward
+
+
 def install() -> None:
     import torch_npu  # noqa: F401
     import vllm_ascend.worker.v2.model_runner as runner_mod
@@ -2231,6 +2950,7 @@ def install() -> None:
     from vllm.model_executor.layers.mamba.gdn.qwen_gdn_linear_attn import (
         QwenGatedDeltaNetAttention,
     )
+    from vllm.model_executor.models.qwen3_next import Qwen3NextDecoderLayer
 
     original_execute = runner_mod.NPUModelRunner.execute_model
 
@@ -2264,6 +2984,8 @@ def install() -> None:
         attn_mod.AscendAttentionBackendImpl.forward)
     QwenGatedDeltaNetAttention._forward_core = _gdn_forward_core(
         QwenGatedDeltaNetAttention._forward_core)
+    Qwen3NextDecoderLayer.forward = _decoder_layer_forward(
+        Qwen3NextDecoderLayer.forward)
     descriptor = DeviceOperator.__dict__["fla_gdn_prefill"]
     original_prefill = (
         descriptor.__func__ if isinstance(descriptor, staticmethod)
@@ -2276,7 +2998,27 @@ def install() -> None:
         schema_mod.JointSchemaPooler.forward)
     schema_mod.JointSchemaHead.forward = _head_forward(
         schema_mod.JointSchemaHead.forward)
+    drop_pages = os.environ.get(
+        "CLEF_DROP_WEIGHT_PAGES", "1").strip().lower() not in (
+        "0", "false", "no", "off")
+    if drop_pages:
+        report = drop_safetensors_page_cache(
+            os.environ.get("CLEF_MODEL_DIR"))
+        print(
+            f"[tier2-engine] weight page cache "
+            f"files={report.files} bytes={report.bytes} "
+            f"skipped={report.skipped} errors={report.errors}",
+            flush=True)
+    if _repr_enabled():
+        # Allocate the Tier 2A ring and publisher in the main thread so the
+        # first capture never pays a lazy allocation on the model path.
+        _store2a()
+        _capture2a()
+        _repr_queue()
     print(
         f"[tier2-engine] hooks installed policy=aged_keep_longest "
-        f"window={_store().active_window} rank0_only={_joint_rank0_only()}",
+        f"window={_store().active_window} rank0_only={_joint_rank0_only()} "
+        f"tier2a={_repr_enabled()} boundary={_repr_boundary()} "
+        f"repr_bytes={os.environ.get('CLEF_TIER2A_RANK_BYTES', str(TIER2A_RANK_BYTES_DEFAULT))} "
+        f"state_bytes={os.environ.get('CLEF_PREFIX_CACHE_RANK_BYTES', str(TIER2B_RANK_BYTES_DEFAULT))}",
         flush=True)
