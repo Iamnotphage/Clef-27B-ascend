@@ -1,0 +1,54 @@
+{
+  "schema": "multi-tier-eval-summary/1",
+  "date": "2026-11-26",
+  "branch": "feat/multi-tier-cache-20261126",
+  "base": "main@66d3c7b",
+  "service": {
+    "config": "s1",
+    "tp": 2,
+    "dtype": "bfloat16",
+    "max_model_len": 16384,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 16384,
+    "tier2a_bytes_per_rank": 30064771072,
+    "tier2b_bytes_per_rank": 10737418240,
+    "active_window": 500
+  },
+  "od": {
+    "s1_p95_ms": 32.269,
+    "s1_decisions_per_second": 37.712,
+    "s2_decisions_per_second": 102.028,
+    "s2_concurrency": 64,
+    "accuracy": 0.8095238095238095,
+    "score_mae": 0.40261234039698923,
+    "calibration": 82.41134399821297,
+    "intelligence": 66.08407560197932,
+    "capability": 74.24770980009615
+  },
+  "erqa": {
+    "s1_p95_ms": 58.697,
+    "s1_decisions_per_second": 22.551,
+    "s2_decisions_per_second": 34.055,
+    "s2_concurrency": 8,
+    "s1_accuracy": 0.54,
+    "s2_accuracy_range": [
+      0.5425,
+      0.545
+    ]
+  },
+  "tier2a": {
+    "boundary": 56,
+    "resident_entries": 2683,
+    "resident_bytes_per_rank": 28360560640,
+    "evictions": 0,
+    "rejections": 0
+  },
+  "gates": {
+    "od_full_bitwise": true,
+    "od_subset_off_bitwise": true,
+    "erqa_subset_off_bitwise": true,
+    "erqa_full_max_prob_diff": 0.00012004375457763672,
+    "erqa_full_outlier": "erqa-0071",
+    "memory_failcnt_delta": 0
+  }
+}

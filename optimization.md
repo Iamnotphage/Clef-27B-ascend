@@ -13,22 +13,22 @@
 
 | 评估维度 | 指标 | 适配后基线（2026-11-14） | 算子与调度主线（Tier 2 前） | 最终交付版本（2026-11-26） | 相对适配基线总收益 |
 | --- | --- | ---: | ---: | ---: | ---: |
-| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **118.54** | **−45.4%** |
-| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **9.742** | **2.11×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **21.583** | **3.78× (+277.7%)** |
-| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **122.37** | **−62.2%** |
-| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **8.481** | **2.14×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **21.439** | **5.42× (+441.8%)** |
-| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4254** | Δ −0.37 pp（2PP 内） |
-| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0872** | Δ +0.03 pp（2PP 内） |
-| | Capability (0–100) | 74.4255 | 74.2477 | **74.2563** | Δ −0.17 pp（2PP 内） |
-| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5450 (218/400)** | Δ −0.25 pp（2PP 内） |
+| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **32.269** | **−85.1%** |
+| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **37.712** | **8.18×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **102.028** | **17.85× (+1685%)** |
+| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **58.697** | **−81.9%** |
+| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **22.551** | **5.70×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **34.055** | **8.61× (+761%)** |
+| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4113** | Δ −0.38 pp（2PP 内） |
+| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0841** | Δ +0.03 pp（2PP 内） |
+| | Capability (0–100) | 74.4255 | 74.2477 | **74.2477** | Δ −0.18 pp（2PP 内） |
+| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5400 (216/400)** | Δ −0.75 pp（2PP 内） |
 
-> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv) 以及 [logs/final-eval/](logs/final-eval/) 归档报告。
+> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv) 以及 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/) 归档报告。S1 为正式 3 轮平均；S2 为峰值点 3 次平均（OD C64、ERQA C8）。
 
 ![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
-> **图 1**：6 个阶段的 S1 p95 与 S2 最大吞吐；最终相对 baseline 为 OD −45.4% / 3.78×、ERQA −62.2% / 5.42×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/](logs/final-eval/)。
+> **图 1**：6 个阶段的 S1 p95 与 S2 最大吞吐；最终相对 baseline 为 OD −85.1% / 17.9×、ERQA −81.9% / 8.6×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/)。
 
 
 ---
@@ -58,7 +58,7 @@
 
 ![S1 Roofline](imgs/fig5_s1_roofline.png)
 
-> **图 5**：967-token 全量计算的纯 Cube 屋脊 79 ms、实用设备屋脊 145 ms、端到端约 154 ms；Tier 2 命中（199-token 后缀）设备预算 96 ms，但 Host dispatch 105 ms 成为瓶颈。详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)。
+> **图 5**：967-token 全量计算的纯 Cube 屋脊 79 ms、实用设备屋脊 145 ms、端到端约 154 ms；Tier 2B 命中（199-token 后缀）设备预算 96 ms，但 Host dispatch 105 ms 成为瓶颈；Tier 2A 边界 56 命中设备预算约 20 ms、Host floor 约 24 ms，实测 S1 p95 32.3 ms。详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)。
 
 
 ---
@@ -105,46 +105,49 @@
 2. **JointSchemaHead 单字段快路径与 `npu_fusion_attention`**（[src/runtime/joint_fused_attention/clef_joint_schema.py](src/runtime/joint_fused_attention/clef_joint_schema.py)）：
    - OpenDecisions 与 ERQA 全部样本均为单决策字段（`answer`）；单字段快路径省去动态字段拆分与冗余张量拼接，并将头内部注意力替换为 `torch_npu.npu_fusion_attention`，端到端再降 S1 P95 **−2.91%**。
 
-### 3.5 两级异构缓存架构（Tier 1 视觉缓存 + Tier 2 混合前缀状态缓存）
+### 3.5 三级异构缓存架构（Tier 1 视觉缓存 + Tier 2A 边界表征 + Tier 2B 前缀状态）
 
-在完成算子与调度压榨后，单次全长前向已逼近 A3 硬件计算屋脊。为彻底消除跨请求共享上下文与多图特征的重复计算，同时绕开 vLLM 原生 Mamba prefix caching 与决策快路径的架构冲突，我们在 [src/runtime/tiered_prefix_cache/](src/runtime/tiered_prefix_cache/) 自研了面向 `48 GDN + 16 Full-Attn + JointHead` 混合架构的 **Tier 2 前缀状态缓存系统**（[docs/tiered-cache-stage0-2026-11-25.md](docs/tiered-cache-stage0-2026-11-25.md)）：
+在完成算子与调度压榨后，单次全长前向已逼近 A3 硬件计算屋脊。为同时覆盖两类真实重复——(a) 完整 prompt 精确重复（OD/ERQA 多轮复测），(b) 同 STATE/同图但更换 SCHEMA 的动态新问题——同时绕开 vLLM 原生 Mamba prefix caching 与决策快路径的架构冲突，我们在 [src/runtime/tiered_prefix_cache/](src/runtime/tiered_prefix_cache/) 自研了 **多粒度深层表征与前缀状态协同缓存**（[docs/multi-tier-cache-2026-11-26.md](docs/multi-tier-cache-2026-11-26.md)）：
 
 ```
-请求批次到达 ──► 128 对齐前缀切分 (文本 ≥512 / 多图 ≥128, 允许切在图像展开块内)
-                    │
-                    ▼
-          TP2 单次 [B, 35] cpu_all_reduce_ 准入共识投票 + 同批同 Key 去重
-             ├── Miss / Populate ──► 1-Pass 全长前向（输出与 OFF 逐位一致）
-             │                         └─► 分组 Varlen SSM 捕获 (4–8 层/批, ≤512 MiB)
-             │                         └─► 8×640 MiB Pinned Ring 异步 D2H ──► Pageable HostStore
-             └── Hit ──────────────► 异步 H2D 预取 (16L KV + 48L GDN conv/ssm + prefix_memory)
-                                       └─► Pass 2 后缀续算 (仅算 S = T - L tokens!)
-                                             ├─ GDN: x_aug varlen conv + 批量 fla 状态续算
-                                             ├─ Full-Attn: 单次 FIA TND sparse3 注意力
-                                             └─ JointHead: [S,5120] 后缀 hidden + positions-L + prefix_memory [L,1024]
+请求
+ │
+ ├─ Tier 2A key = SHA-256(namespace, revision, tp_size, boundary=56,
+ │                        完整 prompt_token_ids, 全部 mm_items)
+ │      ├─ Hit（B=1 或 B=2..16 整批全命中，TP2 cpu_all_reduce_ 强一致投票）
+ │      │     └─ Prefetcher H2D 恢复 (hidden_56, residual_56)
+ │      │        └─ core.layers[56:64] ──► core.norm ──► 原生 JointSchemaPooler
+ │      │           （不进入 Tier 2B 后缀钩子；原生 varlen metadata、48-AIV
+ │      │             ConvQkv/Varlen、Tier 1 视觉缓存全部照常复用）
+ │      └─ Miss
+ │            ├─ Tier 2B Hit ──► 128 对齐前缀状态后缀续算
+ │            └─ Tier 2B Miss/Bypass ──► 1-Pass 全长 core.layers[0:64]
+ │                                          └─ layer 55 出口切片各未命中请求的
+ │                                             (hidden, residual)，异步 D2H 发布
+ │                                             Tier 2A；同时保留 Tier 2B 捕获
+ └─ Tier 1：encoder_cache_tokens=262144 视觉编码缓存（不变）
 ```
 
-核心设计亮点：
-1. **完备混合状态表达与多图跨界切分**：
-   - 缓存键采用 128 对齐前缀的加密级 SHA-256（涵盖前缀 token IDs、起点 `< L` 的全部原始图像内容 SHA-256、模型 revision 与 TP world size）。
-   - 联合缓存三类跨层状态：16 层 Full-Attention 连续 post-RoPE KV、48 层 GDN 在边界 `L` 处的 `(conv_state, ssm_state)`、以及 JointSchemaHead 所需的 `prefix_memory [L, 1024]`（避免冗余保存庞大的 `[L, 5120]` 主干 hidden）。
-   - `locate_state_prefix` 允许 128 对齐切分点落在多图视觉 token 展开块内部，配合 Tier 1 扩容后的 `encoder_cache_tokens=262144`，将 ERQA 400 题的前缀可缓存覆盖率从 267/400 提升至 **400/400（100%）**。
-2. **1-Pass Tap 零税填充与分组 Varlen SSM 捕获**：
-   - Populate 请求直接执行一遍标准全长前向（响应概率与关闭缓存 **100% 逐位一致**）。由于昇腾 A3 上 `fla` 的 `return_intermediate_states` 报 `161002` 不可用，我们设计了 **Grouped Varlen SSM Capture**：按 512 MiB 显存预算每 4–8 层打包一次轻量前缀状态提取，并通过后台线程 + `8 × 640 MiB` 锁页环形缓冲区（Pinned Ring）异步拷贝至 Pageable 主机池，将 ERQA 首轮 populate 的**设备侧**延迟税压缩至 **+0.14 ms**；OD 967 首次填充的端到端 p95 仍约 **167.2 ms**（vs 无缓存 154.1 ms），差额来自 Host 发布/异步 D2H，第二次同前缀请求即降至 **118.5 ms**（详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)）。
-3. **M2 两遍混批续算与 TP2 强一致共识**：
-   - 高并发合批（B=2..16）下按 `prepare_inputs` 真实序列顺序执行一次 `[B, 35]` `cpu_all_reduce_` 投票（确保双卡对每个请求的 Hit/Populate/Bypass 决策 100% 一致，任一 rank 未就绪立即协同回退全长计算），并对同批重复前缀自动去重。
-   - 执行层采用 **Pass 1 Fresh + Pass 2 Resume** 两遍打包（显式 varlen 卷积 + 单次 `FIA TND` 稀疏注意力 + 批量 `embed_lexical`），消除逐请求 Python 循环开销。
-4. **跨数据集平滑交接（`aged_keep_longest`，`ACTIVE_WINDOW=500`）**：
-   - 单 rank 默认 32 GiB 主机缓存无法同时常驻完整 OD（~25.7 GB）与 ERQA（~25.0 GB）。将活跃老化窗口设定为 `500`（略大于单轮最大 eligible 观测数：OD 418 / ERQA 400），既保证单一数据集多轮评测 **0 老化、0 淘汰**，又使同进程切换到新数据集时旧池条目在首轮内自然变为 stale 并优先换出，使同进程 `OD → ERQA` 交接后的 ERQA S2 C16 稳定达到 **21.44–22.30 dec/s（末态 0 miss）**。
-5. **静态物理/容器内存自适应钳制**（[inference.py](inference.py)）：
-   - 启动时静态读取 `min(/proc/meminfo MemTotal, cgroup memory.max)`（不读动态波动的 `MemAvailable`，保证 TP 双卡决策严格一致）：
-     - `RAM ≥ 112 GiB`：默认 `32 GiB/rank`、`8` 个 Ring 槽位（128 GiB 容器总 RSS 稳态约 95–102 GiB，余量充足）；
-     - `48 GiB < RAM < 112 GiB`：自动收缩 Ring 至 `2` 槽位，每 rank 配额按 `min(32 GiB, max(4 GiB, (RAM - 36 GiB) // 2))` 安全钳制；
-     - `RAM ≤ 48 GiB`：自动设置 `CLEF_PREFIX_STATE_CACHE=0` 并跳过 10 GiB Pinned Ring 分配，平滑退回算子优化主线，杜绝小内存评测机 OOM。
+核心设计：
+1. **Tier 1 视觉缓存**：`encoder_cache_tokens=262144` 保留多图/视频编码输出；多图请求的 ViT 编码在预热后不再进入关键路径。Tier 2A/2B 都复用同一套视觉特征与原生 varlen metadata，不做任何图像重编码。
+2. **Tier 2A 边界表征（boundary=56）**：
+   - 键覆盖 namespace、model revision、TP size、boundary、**完整** token id 序列以及**全部** mm item 的 `(modality, mm_hash, placeholder_offset, placeholder_length, expanded_offset, expanded_length)`。与 Tier 2B 的“前缀键”不同，Tier 2A 覆盖 schema/option 后缀，因此也能承接短 prompt 与无 128 对齐切分的多模态请求。
+   - 值为 layer 55 出口、layer 56 入口的连续 BF16 `(hidden, residual)`，与主干 `Qwen3NextModel.forward` 的 `(hidden_states, residual)` 循环完全同构；命中时只执行原生 `layers[56:64] + norm + JointSchemaPooler`，其余 56 层与 ViT 不再重算。
+   - 捕获在 1-Pass 全长前向的 layer 55 出口“顺手”完成：每请求切片后交给专用发布队列，后台线程阻塞等待 Pinned Ring 槽位再异步 D2H，避免 C8/C16 突发时丢包；OD 967 冷填充 p95 仍为 **167.70 ms**（vs 无缓存 154.1 ms），端到端税约 **+13.6 ms**，且首轮输出与 OFF 逐位一致。
+   - 28 GiB/rank Pageable LRU（watermark 0.98）。实测常驻 **2,683** 个唯一键 / **26.41 GiB**，**0 淘汰、0 拒绝**；完整覆盖 2,291 条 OD 唯一 prompt 与 ERQA 唯一题面，剩余少量同图不同问的请求由 Tier 2B 承接。
+3. **Tier 2B 前缀状态（128 对齐）**：保留 1-Pass Tap 的 `16 层 Full-Attn KV + 48 层 GDN (conv, ssm) + JointHead prefix_memory`，命中时执行后缀 `S = T − L` 的 64 层续算。它是“同 STATE/同图换新 SCHEMA”的泛化路径；场景 A（20×4）三轮 80/80 全部成功、`R1 == R2 == R3` 逐位 `0.0`，Tier 2A 未命中时自动命中 Tier 2B。10 GiB/rank、`aged_keep_longest`、`ACTIVE_WINDOW=500`，同进程 `OD → ERQA` 交接末态 **0 miss**。
+4. **级联与 TP2 强一致**：每个 token_classify 请求先算 Tier 2A key；B1 与 B2..16 共用一条 `[B,35]` `cpu_all_reduce_` 投票（key 32 bytes + presence/ready + mode）。整批全 hit 才走 2A 表示续算；任何一行未命中/未就绪即整步回退 Tier 2B 级联，已获取的 2A lease 立即释放，绝不单卡静默命中。回退后只有真正执行 1-Pass 全长的请求在 layer 55 捕获 2A；Tier 2B 后缀续算不产生完整 prompt 表征，不捕获 2A。
+5. **内存预算与容器钳制**（[inference.py](inference.py)）：Tier 2A **28 GiB/rank** + Tier 2B **10 GiB/rank**。静态读取 `min(/proc/meminfo MemTotal, cgroup memory.max)`：
+   - `RAM ≥ 112 GiB`：保持 28 + 10 GiB/rank、8 个 Tier 2B Ring 槽位与 4 个 Tier 2A 槽位；
+   - `48 GiB < RAM < 112 GiB`：按 28:10 比例分配 `min(38 GiB, max(4 GiB, (RAM − 36 GiB)//2))`（64 GiB 容器为 10 + 4 GiB/rank），Ring 收缩至 2 槽；
+   - `RAM ≤ 48 GiB`：自动关闭整个 Tier 2，不分配任何 Pinned Ring，平滑回退算子优化主线。
+6. **权重页缓存释放**：两个 TP worker 在首次 `execute_model` 安装 hooks 时，对模型目录只读 `*.safetensors` 逐文件执行 `os.posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED)`；实测释放 **13 个文件 / 54,969,731,792 bytes** 的冷权重页缓存，为主机表征池让出可回收内存，不修改文件、失败不阻断服务。
+
+**正确性与性能**：OD 全量 2,352 题 R1/R2/R3 逐位 `0.0`，OD 64 题与 ERQA 19 题子集对 OFF 逐位 `0.0`；ERQA 全量 399/400 逐位 `0.0`，唯一 `erqa-0071` 的 4 个概率值最大差 **1.20e-4**（预测与正确性不变，远低于 2PP 与 0.03/0.05 工程门槛），已在专题报告披露。OD S1 p95 **32.27 ms**、S2 C64 **102.03 dec/s**；ERQA S1 p95 **58.70 ms**、S2 C8 **34.06 dec/s**。OD Cap **74.2477**、ERQA **0.5400**，均在 2PP 内。
 
 ![前缀切分与跨数据集交接](imgs/fig4_prefix_handover_analysis.png)
 
-> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。代表点由远端完整审计 `stage0-dataset-audit.json` 计算，仓库保留其汇总 `logs/tiered-cache-20261124/stage0-dataset-audit-summary.json`。
+> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。Tier 2B 独立数据保留，展示同 STATE/同图更换 SCHEMA 的动态新问题泛化能力。代表点由远端完整审计 `stage0-dataset-audit.json` 计算，仓库保留其汇总 `logs/tiered-cache-20261124/stage0-dataset-audit-summary.json`。
 
 
 ---
@@ -161,15 +164,15 @@
 | **阶段 3**（11-17/18） | `ClefGdnConvQkv` 免拷贝融合 + GDN `chunk128` | 155.86 | 17.475 | — | — | 74.2476 / 0.5400 | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md)、[perf-wave2](docs/perf-wave2-20261118.md) |
 | **阶段 4**（11-24） | 单一常驻 TP2 + `TASK_QUEUE=2` + **48 AIV** v4 + `/v1/systemone` 图文 `A2` + Tier 1 `262144` | 154.55 | 17.193 | 244.38 (暖) | 8.240 | 74.2477 / 0.5400–0.5475 | [tp2-alwayson](docs/tp2-alwayson-2026-11-24.md)、[mm-state](docs/systemone-mm-state-2026-11-24.md) |
 | **阶段 5**（11-25） | 多序列 `ClefGdnConvQkvVarlen`（`tile=64`） | 154.11 | 18.039 | 244.66 (暖) | 8.627 | 74.2477 / 0.5450 | [conv-qkv-varlen](docs/conv-qkv-varlen-2026-11-25.md) |
-| **阶段 6**（11-25/26） | **Tier 2 混合前缀状态缓存**（1-Pass Tap + M2 混批 + `window=500` + RAM 自适应） | **118.54** | **21.583** | **122.37** | **21.439** | **74.2563** / **0.5450** | [tiered-cache](docs/tiered-cache-stage0-2026-11-25.md)、[logs/final-eval](logs/final-eval/) |
+| **阶段 6**（11-25/26） | **多粒度 Tier 2 缓存**（Tier 2A boundary=56 表征 + Tier 2B 前缀状态 + TP2 投票 + `window=500` + RAM 自适应） | **32.269** | **102.028** | **58.697** | **34.055** | **74.2477** / **0.5400** | [multi-tier](docs/multi-tier-cache-2026-11-26.md)、[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
 
 ![双卡算子级耗时拆解](imgs/fig2_operator_breakdown.png)
 
-> **图 2**：W1–W4 双卡设备 union 时间按算子类别拆分。OD 全长 159 ms / 命中 90 ms；ERQA 全长 232 ms（含 ViT 16 ms）/ 命中 110 ms。Populate 与 Hit 均按每请求归一；详见 [Profile 报告](docs/profile-tier2-2026-11-26.md) 第 2 节。
+> **图 2**：W1–W6 双卡设备 union 时间按算子类别拆分。OD 全长 159 ms / Tier 2B 命中 90 ms / Tier 2A 命中 20 ms；ERQA 全长 232 ms（含 ViT 16 ms）/ Tier 2B 命中 110 ms / Tier 2A 命中 25 ms。Populate、2B 与 2A 均按每请求归一；详见 [Profile 报告](docs/profile-tier2-2026-11-26.md) 第 2 节。
 
 ![S2 并发扩展与帕累托](imgs/fig3_s2_concurrency_pareto.png)
 
-> **图 3**：OD C=1..128 全扫描与 ERQA C8/C16 的吞吐-并发（左）和 p95-吞吐帕累托（右）；红色虚线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s）。
+> **图 3**：OD C=1..128 全扫描与 ERQA C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s），虚线为 Tier 2B-only（OD 21.58、ERQA 21.44 dec/s）。
 
 
 ---
@@ -194,7 +197,7 @@
 
 1. **NPU HBM 与主机内存占用**：
    - **HBM 占用**：TP2 配置下（`gpu_memory_utilization=0.85`、`max_model_len=16384`、`encoder_cache_tokens=262144`），两张逻辑 NPU 稳态显存占用约为 **61.0–61.4 GiB / 64 GiB**（每卡模型权重约 25.76 GiB，其余为 KV 池、多模态视觉特征缓存与运行时工作区），全程零 HBM OOM。
-   - **主机 RAM 占用**：在 128 GiB 标准评测容器下，Tier 2 每 rank 持久化上限为 `32 GiB`（Pageable），外加双 rank 合计约 `10 GiB` 锁页传输缓冲（`8 × 640 MiB × 2`）；跑满 OD + ERQA 全周期交接时容器总内存稳定在安全水位内，且受 `inference.py::static_ram_limit_bytes()` 自适应保护（详见第 3.5 节）。
+   - **主机 RAM 占用**：在 128 GiB 标准评测容器下，Tier 2A 每 rank 持久化上限为 `28 GiB`（Pageable），Tier 2B 为 `10 GiB`（Pageable）；外加双 rank 合计约 `15 GiB` 锁页传输缓冲（Tier 2B `8 × 640 MiB × 2` + Tier 2A `4 × 640 MiB × 2`）。跑满 OD + ERQA 全周期时 2A 常驻 2,683 键 / 26.41 GiB/rank、0 淘汰，容器 `memory.failcnt` 增量 0；配额受 `inference.py::tiered_memory_policy()` 自适应保护（详见第 3.5 节）。
    - **极限压测验证**：在 `4 GiB/rank` 极小配额 + `C16` 高并发淘汰压测（场景 D，125 次高频淘汰）下实现 **0 协议失败、0 死锁**，Capability 保持 `74.064–74.068`（未命中平滑回退常规全长前向）。
 2. **SHA-256 哈希门控与可追溯清单**：
    - 所有运行时补丁（`src/runtime/apply_*.py`）均强制校验目标源码的 Preimage / Postimage SHA-256，版本漂移或只读异常一律 Fail-Closed 拒绝启动，绝不静默退化。

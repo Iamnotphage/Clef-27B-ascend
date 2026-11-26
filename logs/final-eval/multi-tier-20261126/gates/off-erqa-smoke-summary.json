@@ -1,0 +1,206 @@
+{
+ "run": {
+  "scope": "smoke",
+  "api_url": "http://127.0.0.1:18143/v1",
+  "model": "clef",
+  "wire_format": "state-list",
+  "endpoint": "/systemone",
+  "retries": 1,
+  "timeout": 600.0,
+  "started_at": "2026-11-26T05:07:13.805443+00:00",
+  "finished_at": "2026-11-26T05:07:19.609312+00:00",
+  "wall_seconds": 5.789893539622426,
+  "skipped_resumed": 0
+ },
+ "data": {
+  "tfrecord_sha256": "1974f5e587eac144cc3ba325477477b8ad6a56c22ce4e419c34229520b4c93e2",
+  "records": 400,
+  "images": 630,
+  "question_types": {
+   "Action Reasoning": 72,
+   "Multi-view Reasoning": 37,
+   "Other": 14,
+   "Pointing": 34,
+   "Spatial Reasoning": 84,
+   "State Estimation": 55,
+   "Task Reasoning": 38,
+   "Trajectory Reasoning": 66
+  }
+ },
+ "service": {
+  "status_code": 200,
+  "body": {
+   "model": "clef",
+   "revision": "local-65e5a3c5ffb6",
+   "model_dir": "/workspace/yangchen/models/Clef-27B",
+   "protocol_version": "2026-11-13",
+   "config": "s1",
+   "tasks": [
+    "choice",
+    "noul",
+    "score"
+   ],
+   "modalities": [
+    "text",
+    "image",
+    "video"
+   ],
+   "joint": "default",
+   "max_model_len": 16384,
+   "tensor_parallel_size": 2,
+   "cache": {
+    "prefix_caching": false,
+    "chunked_prefill": false,
+    "prefix_state_cache": false,
+    "schema_token_cache": false,
+    "schema_token_cache_version": 0
+   }
+  }
+ },
+ "coverage": {
+  "fixed_total": 19,
+  "ok": 19,
+  "failed": 0,
+  "success_rate": 1.0,
+  "retry_count": 0,
+  "error_classes": {}
+ },
+ "accuracy": {
+  "correct": 6,
+  "total": 19,
+  "value": 0.3157894736842105,
+  "denominator": "fixed 19-sample set; failures count as incorrect",
+  "ok_only_correct": 6,
+  "ok_only_total": 19,
+  "ok_only_value": 0.3157894736842105
+ },
+ "breakdown": {
+  "images:multi": {
+   "total": 9,
+   "correct": 1,
+   "failed": 0,
+   "accuracy": 0.1111111111111111
+  },
+  "images:single": {
+   "total": 10,
+   "correct": 5,
+   "failed": 0,
+   "accuracy": 0.5
+  },
+  "options:2": {
+   "total": 3,
+   "correct": 3,
+   "failed": 0,
+   "accuracy": 1.0
+  },
+  "options:3": {
+   "total": 1,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "options:4": {
+   "total": 15,
+   "correct": 3,
+   "failed": 0,
+   "accuracy": 0.2
+  },
+  "type:Action Reasoning": {
+   "total": 1,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "type:Multi-view Reasoning": {
+   "total": 1,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "type:Other": {
+   "total": 5,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "type:Pointing": {
+   "total": 1,
+   "correct": 1,
+   "failed": 0,
+   "accuracy": 1.0
+  },
+  "type:Spatial Reasoning": {
+   "total": 4,
+   "correct": 1,
+   "failed": 0,
+   "accuracy": 0.25
+  },
+  "type:State Estimation": {
+   "total": 4,
+   "correct": 3,
+   "failed": 0,
+   "accuracy": 0.75
+  },
+  "type:Task Reasoning": {
+   "total": 1,
+   "correct": 1,
+   "failed": 0,
+   "accuracy": 1.0
+  },
+  "type:Trajectory Reasoning": {
+   "total": 2,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "visual:all-zero": {
+   "total": 13,
+   "correct": 5,
+   "failed": 0,
+   "accuracy": 0.38461538461538464
+  },
+  "visual:empty": {
+   "total": 2,
+   "correct": 0,
+   "failed": 0,
+   "accuracy": 0.0
+  },
+  "visual:interleaved": {
+   "total": 4,
+   "correct": 1,
+   "failed": 0,
+   "accuracy": 0.25
+  }
+ },
+ "latency_ms": {
+  "count": 19,
+  "min": 118.41665953397751,
+  "max": 1795.1859403401613,
+  "mean": 299.79786639542954,
+  "p50": 149.0728398784995,
+  "p95": 726.9917887635504,
+  "p99": 1581.54711002484
+ },
+ "input_tokens": {
+  "count": 19,
+  "min": 240,
+  "max": 10294,
+  "mean": 1461.4736842105262,
+  "p50": 552.0,
+  "p95": 4658.199999999986,
+  "p99": 9166.840000000002
+ },
+ "images": {
+  "count": 19,
+  "min": 1,
+  "max": 16,
+  "mean": 3.1052631578947367,
+  "p50": 1.0,
+  "p95": 8.799999999999983,
+  "p99": 14.560000000000002
+ },
+ "throughput": {
+  "decisions_per_second": 3.2815802000461374,
+  "basis": "successful decisions / wall clock, client concurrency 1"
+ }
+}

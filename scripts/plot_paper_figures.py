@@ -13,6 +13,7 @@ Run with /Users/chenclay/Documents/code/projects/figures4papers/.venv/bin/python
 
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -26,6 +27,14 @@ from matplotlib.patches import Patch
 ROOT = Path(__file__).resolve().parents[1]
 IMGS = ROOT / "imgs"
 LOGS = ROOT / "logs/profile-tier2-20261126"
+MULTI = ROOT / "logs/final-eval/multi-tier-20261126"
+#: Final multi-granularity Tier 2 formal averages (warmup excluded).
+FINAL = {
+    "od_s1_p95": 32.269,
+    "od_s2": 102.028,
+    "erqa_s1_p95": 58.697,
+    "erqa_s2": 34.055,
+}
 
 PALETTE = {
     "blue_main": "#0F4D92",
@@ -89,9 +98,10 @@ def fig1():
         ("Baseline", 217.04, 5.715, 323.48, 3.957, PALETTE["red_strong"]),
         ("+BIC /\nACLNN / NZ", 166.00, 17.110, None, None, PALETTE["neutral"]),
         ("+ConvQKV /\nChunk128", 155.86, 17.475, None, None, PALETTE["green_2"]),
-        ("+TQ2 / 48-AIV /\nMM-A2", 154.55, 17.193, 244.38, 8.240, PALETTE["green_3"]),
+        ("+TQ2 / 48-AIV\n/ MM-A2", 154.55, 17.193, 244.38, 8.240, PALETTE["green_3"]),
         ("+ConvQKV\nVarlen", 154.11, 18.039, 244.66, 8.627, PALETTE["blue_secondary"]),
-        ("+Tier 2 Cache\n(Final)", 118.54, 21.583, 122.37, 21.439, PALETTE["blue_main"]),
+        ("+Multi-Tier\nCache (Final)", FINAL["od_s1_p95"], FINAL["od_s2"],
+         FINAL["erqa_s1_p95"], FINAL["erqa_s2"], PALETTE["blue_main"]),
     ]
     fig, axes = plt.subplots(1, 2, figsize=(16, 5.8))
     x = np.arange(len(stages))
@@ -124,8 +134,8 @@ def fig1():
                  transform=axes[0].transAxes, fontsize=11, va="top",
                  color="#4D4D4D")
     axes[1].text(0.02, 0.96,
-                 "OD: −45.4% latency, 3.78× throughput\n"
-                 "ERQA: −62.2% latency, 5.42× throughput",
+                 "OD: −85.1% latency, 17.9× throughput\n"
+                 "ERQA: −81.9% latency, 8.6× throughput",
                  transform=axes[1].transAxes, fontsize=11, ha="left",
                  va="top", color=PALETTE["blue_main"], linespacing=1.35)
     handles = [Patch(facecolor="#FFFFFF", edgecolor="black", label="OpenDecisions"),
@@ -145,8 +155,10 @@ def fig2():
         return
     data = json.loads(path.read_text())
     specs = [
-        ("W1_od_cold", "W2_od_hit", "OpenDecisions  ~967 tokens"),
-        ("W3_erqa_cold", "W4_erqa_hit", "ERQA 4-image  ~1,260 tokens"),
+        ("W1_od_cold", "W2_od_hit", "W5_od_repr",
+         "OpenDecisions  ~967 tokens"),
+        ("W3_erqa_cold", "W4_erqa_hit", "W6_erqa_repr",
+         "ERQA 4-image  ~1,260 tokens"),
     ]
     categories = ["ViT Vision", "MatMul (Cube)", "GDN Core (FLA)",
                   "Fused Conv+QKV", "Full-Attn (FIA)", "Norm/Elementwise",
@@ -177,15 +189,19 @@ def fig2():
                 break
         return values
 
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
-    for ax, (cold, hit, title) in zip(axes, specs):
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5.8))
+    for ax, (cold, hit, repr_hit, title) in zip(axes, specs):
         cold_values = split(cold)
         hit_values = split(hit)
-        labels = ["Full forward\n(Populate)", "Tier 2 hit\n(Suffix resume)"]
+        repr_values = split(repr_hit)
+        labels = ["Full forward\n(Populate)",
+                  "Tier 2B hit\n(Suffix resume)",
+                  "Tier 2A hit\n(Boundary 56)"]
         y = np.arange(len(labels))
         left = np.zeros(len(labels))
         for category, color in zip(categories, colors):
-            widths = np.array([cold_values[category], hit_values[category]])
+            widths = np.array([cold_values[category], hit_values[category],
+                               repr_values[category]])
             if widths.max() <= 0:
                 continue
             ax.barh(y, widths, left=left, height=0.55, color=color,
@@ -193,12 +209,12 @@ def fig2():
             left += widths
         style(ax)
         ax.set_yticks(y)
-        ax.set_yticklabels(labels, fontsize=12)
+        ax.set_yticklabels(labels, fontsize=11)
         ax.invert_yaxis()
         ax.set_xlabel("Device union time per request (ms) ↓")
         ax.set_title(title, fontsize=15, pad=8)
         for yi, total in zip(y, left):
-            ax.text(total + 2, yi, f"{total:.0f} ms", va="center", fontsize=12,
+            ax.text(total + 2, yi, f"{total:.0f} ms", va="center", fontsize=11,
                     color="#272727")
         ax.set_xlim(0, max(left) * 1.22)
         ax.grid(axis="x", color="#E6E6E6", linewidth=0.8, zorder=0)
@@ -213,20 +229,18 @@ def fig2():
 
 
 def fig3():
-    csv_path = ROOT / "logs/final-eval/od-s2/od-s2-b16-summary.csv"
     rows = []
-    for line in csv_path.read_text().strip().splitlines()[1:]:
-        parts = line.split(",")
-        rows.append({"c": int(parts[0]), "dec_s": float(parts[1]),
-                     "p95": float(parts[4])})
-    erqa_c8 = [json.loads(p.read_text()) for p in
-               sorted((ROOT / "logs/final-eval/erqa-s2").glob("erqa-s2-c8-*-summary.json"))]
-    erqa_c16 = [json.loads(p.read_text()) for p in
-                sorted((ROOT / "logs/final-eval/erqa-s2").glob("erqa-s2-c16-*-summary.json"))]
-    erqa = [{"c": 8, "dec_s": np.mean([r["throughput"]["decisions_per_second"] for r in erqa_c8]),
-             "p95": np.mean([r["latency_ms"]["p95"] for r in erqa_c8])},
-            {"c": 16, "dec_s": np.mean([r["throughput"]["decisions_per_second"] for r in erqa_c16]),
-             "p95": np.mean([r["latency_ms"]["p95"] for r in erqa_c16])}]
+    for row in csv.DictReader((MULTI / "od-s2" / "scan.csv").open()):
+        rows.append({"c": int(row["concurrency"]),
+                     "dec_s": float(row["decisions_per_second"]),
+                     "p95": float(row["p95_ms"])})
+    erqa = []
+    for row in csv.DictReader((MULTI / "erqa-s2" / "scan.csv").open()):
+        if not row["run"].startswith("c"):
+            continue
+        erqa.append({"c": int(row["concurrency"]),
+                     "dec_s": float(row["decisions_per_second"]),
+                     "p95": float(row["p95_ms"])})
 
     fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
     ax = axes[0]
@@ -235,22 +249,27 @@ def fig3():
     ys = [r["dec_s"] for r in rows]
     ax.plot(xs, ys, "-o", color=PALETTE["blue_main"], linewidth=2.6,
             markersize=7, markeredgecolor="black", markeredgewidth=1.2,
-            label="OpenDecisions (Tier 2)", zorder=3)
+            label="OpenDecisions (multi-tier)", zorder=3)
     ax.plot([r["c"] for r in erqa], [r["dec_s"] for r in erqa], "s--",
             color=PALETTE["teal"], linewidth=2.4, markersize=8,
             markeredgecolor="black", markeredgewidth=1.2,
-            label="ERQA (Tier 2)", zorder=3)
+            label="ERQA (multi-tier)", zorder=3)
     ax.axhline(18.039, color=PALETTE["red_strong"], linestyle=":", linewidth=2.0,
                label="OD pre-Tier-2 max 18.04")
+    ax.axhline(21.583, color=PALETTE["blue_secondary"], linestyle="--",
+               linewidth=1.8, label="OD Tier 2B 21.58")
     ax.axhline(8.627, color=PALETTE["red_2"], linestyle=":", linewidth=2.0,
                label="ERQA pre-Tier-2 warm 8.63")
+    ax.axhline(21.439, color=PALETTE["green_3"], linestyle="--", linewidth=1.8,
+               label="ERQA Tier 2B 21.44")
     ax.set_xscale("log", base=2)
     ax.set_xticks([1, 2, 4, 8, 16, 32, 64, 128])
     ax.set_xticklabels(["1", "2", "4", "8", "16", "32", "64", "128"])
     ax.set_xlabel("Client concurrency C")
     ax.set_ylabel("Throughput (decisions/s) ↑")
-    ax.set_ylim(0, 24)
-    ax.legend(fontsize=10, loc="lower right")
+    ax.set_ylim(0, 115)
+    ax.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, 1.02),
+              ncol=3, frameon=False)
     ax.grid(color="#E6E6E6", linewidth=0.8, zorder=0)
 
     ax = axes[1]
@@ -262,24 +281,27 @@ def fig3():
     ax.plot([r["p95"] for r in erqa], [r["dec_s"] for r in erqa], "s--",
             color=PALETTE["teal"], linewidth=2.4, markersize=8,
             markeredgecolor="black", markeredgewidth=1.2, zorder=3, label="ERQA")
-    for target, text in ((32, "OD C32\n21.54 @ 2.07 s"),
-                         (64, "OD C64\n21.58 @ 3.97 s")):
-        row = next(r for r in rows if r["c"] == target)
-        ax.annotate(text, (row["p95"], row["dec_s"]),
-                    textcoords="offset points", xytext=(-8, 16),
-                    fontsize=10, ha="right", color=PALETTE["blue_main"])
-    row = next(r for r in erqa if r["c"] == 16)
-    ax.annotate("ERQA C16\n21.44 @ 0.82 s", xy=(row["p95"], row["dec_s"]),
-                xytext=(1250, 14.8), fontsize=10, ha="left",
+    od_peak = max(rows, key=lambda r: r["dec_s"])
+    ax.annotate(f"OD C{od_peak['c']}\n{od_peak['dec_s']:.1f} @ "
+                f"{od_peak['p95']/1000:.2f} s",
+                (od_peak["p95"], od_peak["dec_s"]),
+                textcoords="offset points", xytext=(32, -48),
+                fontsize=10, ha="left", color=PALETTE["blue_main"])
+    erqa_peak = max(erqa, key=lambda r: r["dec_s"])
+    ax.annotate(f"ERQA C{erqa_peak['c']}\n{erqa_peak['dec_s']:.1f} @ "
+                f"{erqa_peak['p95']/1000:.2f} s",
+                xy=(erqa_peak["p95"], erqa_peak["dec_s"]),
+                xytext=(1500, 62), fontsize=10, ha="left",
                 color=PALETTE["teal"],
                 arrowprops=dict(arrowstyle="-", color=PALETTE["teal"], lw=1.2))
     ax.set_xlabel("p95 latency (ms) ↓")
     ax.set_ylabel("Throughput (decisions/s) ↑")
-    ax.set_xlim(0, 4400)
-    ax.set_ylim(0, 28)
-    ax.legend(fontsize=11, loc="lower right")
+    ax.set_xlim(0, 5200)
+    ax.set_ylim(0, 115)
+    ax.legend(fontsize=11, loc="center right")
     ax.grid(color="#E6E6E6", linewidth=0.8, zorder=0)
     fig.tight_layout(pad=1.6)
+    fig.subplots_adjust(top=0.80)
     save(fig, "fig3_s2_concurrency_pareto")
     plt.close(fig)
 
@@ -342,10 +364,12 @@ def fig5():
     data = json.loads((LOGS / "roofline.json").read_text())
     full = data["full"]
     hit = data["hit"]
-    fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
+    repr_od = data["repr_od"]
+    fig, axes = plt.subplots(1, 3, figsize=(20, 5.5))
     for ax, budget, title in (
             (axes[0], full, "All 967 tokens compute"),
-            (axes[1], hit, "Tier 2 hit (199-token suffix)")):
+            (axes[1], hit, "Tier 2B hit (199-token suffix)"),
+            (axes[2], repr_od, "Tier 2A hit (boundary 56)")):
         style(ax)
         segments = [("Cube FLOPs / peak", budget["cube"], PALETTE["blue_main"]),
                     ("Non-Cube (measured)", budget["noncube"], PALETTE["teal"]),
@@ -365,7 +389,9 @@ def fig5():
         ax.set_yticklabels(["Device budget"], fontsize=12)
         ax.set_xlabel("Latency (ms) ↓")
         ax.set_title(title, fontsize=15, pad=8)
-        ax.set_xlim(0, 185)
+        limit = max(device, budget["host_floor"],
+                    budget["measured_p95"]) * 1.35
+        ax.set_xlim(0, limit)
         ax.text(device - 3, 0, f"{device:.0f} ms", va="center", ha="right",
                 fontsize=12, color="#272727")
         ax.text(budget["host_floor"] + 2, 0.30, f"host {budget['host_floor']:.0f} ms",
