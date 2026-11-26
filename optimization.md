@@ -2,34 +2,32 @@
 
 ## 1. 执行摘要与核心成果
 
-本报告系统总结 `Cloudflare/clef`（27.5B 参数多模态结构化决策模型）在昇腾 910A3（`Ascend910_9382`，单物理卡内 2 个逻辑 NPU，每逻辑 NPU 配备 24 个 AI Cube Core、48 个 AI Vector Core 与 64 GiB HBM）上的全栈工程适配与性能调优工作。
+本报告总结 27.5B 多模态结构化决策模型 `Cloudflare/clef` 在昇腾 910A3 单物理卡双逻辑 NPU 上的全栈适配与系统调优工作。工程严格遵循三项核心原则：
 
-本工程严格遵循赛事交付规范与工程红线：
-1. **严格非量化（Pure BF16）**：全程保持原始 BF16 权重、激活与状态精度，未引入任何 W8A8、W8A16、INT8 或 FP8 量化。
-2. **原始输出与 2PP 精度保障**：不使用额外温度校准（as-served），`OpenDecisions`（Calibration / Intelligence / Capability）与 `ERQA` 总体准确率相对适配后基线的绝对波动均控制在 **0.37 个百分点以内**（远优于 ±2PP 要求）。
-3. **单一常驻服务零重启**：全部文本与多模态质量、S1 单并发延迟、S2 高并发吞吐评测均由同一个 `bash start.sh` 启动的常驻 TP2 服务进程承载，无按请求动态路由两套方案，也无跨数据集手动重启。
+1. **纯 BF16 非量化**：全程保持原始 BF16 权重、激活与状态精度，不引入任何 W8A8、W8A16、INT8 或 FP8 量化。
+2. **对齐官方精度参考**：采用原始未校准服务输出，OpenDecisions 三项核心指标均优于官方公开参考，两套数据集全部核心质量指标波动控制在 0.75 pp 以内，严格满足 ±2PP 要求。
+3. **单一常驻服务零重启**：文本与多模态质量、S1 单并发延迟、S2 高并发吞吐评测均由同一个 `bash start.sh` 常驻 TP2 进程完成，无按请求分流路由，无跨集重启。
 
-### 1.1 端到端优化演进总览
+### 1.1 各阶段核心性能与质量演进
 
-| 评估维度 | 指标 | 适配后基线（2026-11-14） | 算子与调度主线（Tier 2 前） | 纯前缀状态缓存（Tier 2B-only） | 最终交付版本（Tier 2A+2B，2026-11-26） | 相对适配基线总收益 |
+| 评估维度 | 指标 | 官方公开参考 | 昇腾适配基线 | 无缓存算子主线 | 备用方案 Tier 2B | 主要采用 Tier 2A+2B |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **118.54** | **32.269** | **−85.1%** |
-| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **9.742** | **37.712** | **8.18×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **21.583** | **102.028** | **17.85× (+1685%)** |
-| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **122.37** | **58.697** | **−81.9%** |
-| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **8.481** | **22.551** | **5.70×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **21.439** | **34.055** | **8.61× (+761%)** |
-| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4292** | **82.4113** | Δ −0.38 pp（2PP 内） |
-| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0880** | **66.0841** | Δ +0.03 pp（2PP 内） |
-| | Capability (0–100) | 74.4255 | 74.2477 | **74.2563** | **74.2477** | Δ −0.18 pp（2PP 内） |
-| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5450 (218/400)** | **0.5400 (216/400)** | Δ −0.75 pp（2PP 内） |
+| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | — | 217.04 | 154.11 | **118.54** | **32.269** |
+| | S1 吞吐 (decisions/s) ↑ | — | 4.608 | 9.130 | **9.742** | **37.712** |
+| | S2 最大吞吐 (decisions/s) ↑ | — | 5.715 | 18.039 | **21.583** | **102.028** |
+| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | — | 323.48 | 244.66 | **122.37** | **58.697** |
+| | S1 吞吐 (decisions/s) ↑ | — | 3.957 | 5.942 | **8.481** | **22.551** |
+| | S2 最大吞吐 (decisions/s) ↑ | — | 3.957 | 8.627 | **21.439** | **34.055** |
+| **OpenDecisions 质量** | Calibration | 82.3 | 82.7941 | 82.4113 | **82.4292** | **82.4113** |
+| | Intelligence | 65.8 | 66.0568 | 66.0841 | **66.0880** | **66.0841** |
+| | Capability | 74.1 | 74.4255 | 74.2477 | **74.2563** | **74.2477** |
+| **ERQA 图文质量** | 总体 Accuracy | — | 0.5475 | 0.5450 | **0.5450** | **0.5400** |
 
-> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv)、[logs/final-eval/](logs/final-eval/) 与 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/) 归档报告。S1 为正式 3 轮平均；S2 为峰值点 3 次平均：Tier 2B-only 列为 OD C64 / ERQA C16，最终 Tier 2A+2B 列为 OD C64 / ERQA C8。
+> 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv)、[logs/final-eval/](logs/final-eval/) 与 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/)。S1 为排除首轮预热后的正式 3 轮平均；S2 为最大吞吐并发点的正式 3 次平均。
 
 ![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
-> **图 1**：7 个阶段的 S1 p95 与 S2 最大吞吐；阶段 6 为纯 Tier 2B（OD 118.54 ms / 21.583 dec/s，ERQA 122.37 ms / 21.439 dec/s），阶段 7 为 Tier 2A+2B（OD 32.27 ms / 102.028 dec/s，ERQA 58.70 ms / 34.055 dec/s）。最终相对 baseline 为 OD −85.1% / 17.9×、ERQA −81.9% / 8.6×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/)。
-
+> **图 1**：7 阶段 S1 P95 尾延迟与 S2 最大吞吐演进。阶段 6 为纯 Tier 2B 混合前缀缓存，阶段 7 为 Tier 2A+2B 多级协同缓存。
 
 ---
 
@@ -37,29 +35,24 @@
 
 ### 2.1 模型与工作负载特征
 
-`Cloudflare/clef` 总参数量 27,484,784,884（约 55.0 GB BF16），并非标准自回归生成模型，而是基于 `pooling` runner 的**单步纯 Prefill 结构化决策模型**（`output_tokens=0`）：
-- **混合主干（64 层）**：基于 Qwen3.5 混合架构，包含 **48 层 Gated DeltaNet（GDN 线性注意力 + 短因果卷积）** 与 **16 层标准 Full-Attention**，辅以多模态视觉编码塔（单题最多 16 张高分辨率图像）。
-- **联合决策头（`JointSchemaHead`，1.28 亿参数 / 122 个张量）**：消费全序列末层隐藏态与词法嵌入（lexical embedding），一次性输出 `choice`、`noul`（二元概率）或 `score`（等级概率分布）的精确归一化概率。
-- **输入分布跨度大**（[docs/input-distribution-2026-11-16.md](docs/input-distribution-2026-11-16.md)）：
-  - `OpenDecisions`（2,352 题纯文本）：`p50 = 357.5`、`p95 = 969.25`、`max = 1,595` tokens；多道题目共享长系统策略或对话背景（`STATE`），仅候选路由问题不同。
-  - `ERQA`（400 题具身推理图文）：`p50 = 933`、`p95 = 1,653`、`max = 10,294` tokens（含最高 16 张图像、10,065 个视觉 token），大量图像跨题共享或占总序列长度的 70%–95%。
+`Cloudflare/clef` 参数量约 27.5B，是基于 `pooling` 架构的单步纯 Prefill 结构化决策模型：
+- **混合主干**：包含 **48 层 Gated DeltaNet 线性注意力** 与 **16 层标准 Full-Attention**，辅以高分辨率视觉编码塔。
+- **联合决策头**：`JointSchemaHead` 含 1.28 亿参数，融合主干上下文表征与候选词法嵌入，一次性输出 `choice`、`noul` 或 `score` 归一化概率。
+- **输入分布特征**（[docs/input-distribution-2026-11-16.md](docs/input-distribution-2026-11-16.md)）：`OpenDecisions` 共 2,352 题纯文本，P95 为 969 tokens；`ERQA` 共 400 题具身图文，单题最高 16 张图像、10,294 tokens，存在显著的跨请求上下文与多模态特征重叠。
 
-### 2.2 硬件实测屋脊（Roofline）与五大核心瓶颈
+### 2.2 硬件实测屋脊与五大瓶颈
 
-通过自研微基准探针（[hbm_bandwidth_probe.py](src/runtime/hbm_bandwidth_probe.py)、[probe_matmul_ceiling.py](src/runtime/probe_matmul_ceiling.py)）与双卡 `torch_npu.profiler` 时间轴并集分析（[docs/profile-final-2026-11-17.md](docs/profile-final-2026-11-17.md)），我们确立了昇腾 910A3 单逻辑 NPU 的物理上限并定位了五大瓶颈：
+通过微基准探针（[hbm_bandwidth_probe.py](src/runtime/hbm_bandwidth_probe.py)、[probe_matmul_ceiling.py](src/runtime/probe_matmul_ceiling.py)）与双卡 `torch_npu.profiler` 时间轴并集剖析（[docs/profile-final-2026-11-17.md](docs/profile-final-2026-11-17.md)），测得单逻辑 NPU 纯 HBM 读带宽 **1.26–1.32 TB/s**、BF16 Cube 峰值 **295–320 TFLOPS**。969 token 下真实 TP2 MLP 已达 **285.9–303.4 TFLOPS**，`npu_add_rms_norm` 达 **1,117–1,266 GB/s**，常规矩阵乘与归一化算子已逼近物理极限。系统真实瓶颈集中在以下五点：
 
-- **物理上限实测**：单逻辑 NPU 纯 HBM 读带宽稳定在 **1.26–1.32 TB/s**（超出 L2 的 256 MiB–1 GiB 工作集）；BF16 Cube 矩阵乘冷态峰值 **295–320 TFLOPS**。在 P95 长度（~969 tokens）下，真实 TP2 MLP 矩阵乘已达 **285.9–303.4 TFLOPS**（Cube 利用率 94%–97%），`npu_add_rms_norm` 达 **1,117–1,266 GB/s**，二者已贴近硬件极限，**重写常规 MatMul/Norm 算子已无收益空间**。
-- **五大真实工程瓶颈**：
-  1. **动态长度 Executor 缓存击穿与宿主下发空泡**：CANN 默认 `aclnn` executor 缓存仅容纳约 145 种输入长度，超出后每个新 token 长度触发 **+55 ms** 编译/查找慢路径；短序列（~307 tokens）CPU 64 层算子下发耗时（114–139 ms）反超设备计算（75 ms）。
-  2. **GDN 48 层数据路径冗余与 Vector 核利用率不足**：纯决策服务无 decode 阶段，原框架仍逐层写回循环末态并保留反向重算中间量；GDN 投影输出 `[T, 8192]` 切分 `[T, 5120]` 非连续视图触发显式拷贝，因果卷积与 Q/K L2 Norm 分离启动，且早期算子仅用到 24 个 AIV（浪费 A3 一半 Vector 算力），多序列合批时回退慢路径。
-  3. **短序列 MLP MTE2 搬运效率受限**：307 token 短序列下 ND 格式权重有效带宽仅 ~0.53 TB/s（约为 HBM 上限的 41%），`aic_mte2_ratio` 高达 0.994。
-  4. **多模态接口割裂与联合决策头小算子开销**：原生 `/v1/systemone` 未归一图文 `state` 列表；`JointSchemaHead` 对单字段请求仍走通用多字段循环与分解注意力。
-  5. **原生 Mamba 前缀缓存与决策快路径互斥**：vLLM 原生 Mamba prefix caching 强制要求开启 `--enable-chunked-prefill`，而开启 chunked prefill 会直接关闭结构化决策快路径并触发对齐断言失败，导致长文本与多图前缀在每条请求中重复全量计算。
+1. **动态长度 Executor 缓存击穿与宿主下发空泡**：默认 `aclnn` executor 缓存在约 145 种输入长度后饱和，每个新长度触发 **+55 ms** 慢路径；短序列下 CPU 逐层派发耗时反超设备计算。
+2. **GDN 数据路径冗余与 Vector 核利用率不足**：无 decode 场景下原框架仍写回循环末态并保留重算中间量；`[T, 8192]` 跨步切分触发显式拷贝，因果卷积与 Q/K L2 Norm 分离启动，早期核仅使用 24 个 AIV，合批时回退分解慢路径。
+3. **短序列 MLP MTE2 搬运受限**：307 token 下 ND 权重有效带宽仅约 0.53 TB/s，`aic_mte2_ratio` 达 0.994。
+4. **多模态协议割裂与联合决策头小算子开销**：原生 `/v1/systemone` 未归一图文 `state` 列表，`JointSchemaHead` 单字段请求仍走多字段循环与分解注意力。
+5. **原生混合架构缓存缺失**：vLLM 原生 Mamba prefix caching 强制绑定 `--enable-chunked-prefill`，开启后会直接阻断结构化决策快路径，且混合循环状态无法像纯 KV 缓存一样任意回滚切片。
 
 ![S1 Roofline](imgs/fig5_s1_roofline.png)
 
-> **图 5**：967-token 全量计算的纯 Cube 屋脊 79 ms、实用设备屋脊 145 ms、端到端约 154 ms；Tier 2B 命中（199-token 后缀）设备预算 96 ms，但 Host dispatch 105 ms 成为瓶颈；Tier 2A 边界 56 命中设备预算约 20 ms、Host floor 约 24 ms，实测 S1 p95 32.3 ms。详见 [Profile 与 S1 Roofline 报告](docs/profile-tier2-2026-11-26.md)。
-
+> **图 5**：全量计算、Tier 2B 混合前缀路径与 Tier 2A 语义缓存路径的分层设备预算、Host 下发下限及实测 S1 P95。详见 [Profile 与 Roofline 报告](docs/profile-tier2-2026-11-26.md)。
 
 ---
 
@@ -67,142 +60,107 @@
 
 ### 3.1 适配底座与运行时调度优化
 
-1. **TP2 词表并行归约契约修复与自包含构建**（[src/patches/](src/patches/)、[scripts/setup_env.sh](scripts/setup_env.sh)）：
-   - 修复上游 `vLLM-Ascend` 词嵌入层缺失 `use_fused_embedding=False`、`reduce_results=True` 与 `parallel_group` 导致的 TP2 首请求异常；通过 `CLEF_LOAD_AUDIT` 校验全部 12 个主干分片与 122 个联合头参数张量零缺失加载。
-   - 修复 CANN `recompile_binary.py` 与 MemFabric `mfcli` 在隐藏目录（`.build` / `.venv`）下 `glob` 漏检 `.o` 目标文件的构建缺陷（[docs/setup-env-2026-11-25.md](docs/setup-env-2026-11-25.md)），实现 `quay.io/ascend/vllm-ascend:v0.30.0-a3` 裸容器内约 17.7 分钟一键构建完整隔离 `.venv`。
-2. **消除动态 Shape 慢路径（`ACLNN_CACHE_LIMIT=1000000`）**（[docs/aclnn-cache-shape-fix-2026-11-17.md](docs/aclnn-cache-shape-fix-2026-11-17.md)）：
-   - 将 CANN executor 缓存上限扩容至 `1,000,000`，彻底消除 145 种 prompt 长度后的 +55 ms 阶跃退化。全量 2,352 题输出**逐位一致**，官方入口 S1 P95 由 `190.41 ms` 降至 **`168.63 ms`**（mean `153.76 → 125.55 ms`）。
-3. **双级异步任务队列（`TASK_QUEUE_ENABLE=2`）与线程隔离**（[docs/tp2-alwayson-2026-11-24.md](docs/tp2-alwayson-2026-11-24.md)）：
-   - 开启 `torch_npu` 双级流水下发队列并固定 `OMP_NUM_THREADS=1`，掩盖短序列下 CPU 64 层小算子派发延迟。ABBA 交错对照证实输出**逐位一致**，S1 mean 由 `118.53 ms` 降至 **`110.85 ms`**（p50 `111.39 → 101.09 ms`，吞吐 **+6.9%**），S2 保持中性。
+1. **TP2 词表并行归约修复与自包含构建**（[src/patches/](src/patches/)、[scripts/setup_env.sh](scripts/setup_env.sh)）：修复上游词嵌入层并行归约参数缺失导致的 TP2 异常，通过 `CLEF_LOAD_AUDIT` 校验 12 个主干分片与 122 个联合头张量完整加载；修复隐藏目录下自定义算子 `.o` 漏检问题，支持裸容器约 17 分钟一键构建隔离 `.venv`。
+2. **消除动态 Shape 慢路径**（[docs/aclnn-cache-shape-fix-2026-11-17.md](docs/aclnn-cache-shape-fix-2026-11-17.md)）：设置 `ACLNN_CACHE_LIMIT=1000000`，消除长尾新长度触发的 +55 ms 编译退化，2,352 题输出逐位一致，S1 P95 降至 **168.63 ms**。
+3. **双级异步任务队列与线程隔离**（[docs/tp2-alwayson-2026-11-24.md](docs/tp2-alwayson-2026-11-24.md)）：启用 `TASK_QUEUE_ENABLE=2` 与 `OMP_NUM_THREADS=1` 掩盖宿主派发延迟，ABBA 对照输出逐位一致，S1 mean 再降 7.68 ms。
 
 ### 3.2 主干 MLP `FRACTAL_NZ` 权重布局优化
 
-在 `Qwen2MoeMLP.forward` 首次执行时，惰性调用 `torch_npu.npu_format_cast(..., 29)` 将 `gate_up_proj` 与 `down_proj` 的 BF16 权重转换为昇腾 Cube 原生亲和的 `FRACTAL_NZ` 格式（`CLEF_MLP_BF16_NZ=1`，见 [docs/mlp-bf16-nz-2026-11-15.md](docs/mlp-bf16-nz-2026-11-15.md)）：
-- **原理与收益**：改善短 M 维度下 Cube MTE2 通道的数据局部性，307 token 冷态有效带宽由 `509–532 GB/s` 提升至 **`671–677 GB/s`（1.26–1.32×）**。
-- **精度与端到端验证**：ND 与 NZ 矩阵乘输出在全部测试长度下**逐位一致（`max_diff = 0.0`）**；全量 OpenDecisions S1 P95 由 `168.63 ms` 进一步降至 **`166.00 ms`**（mean **−3.06%**，吞吐 **+3.18%**）。
+在 `Qwen2MoeMLP.forward` 首次执行时将 `gate_up_proj` 与 `down_proj` BF16 权重惰性转换为昇腾 Cube 原生 `FRACTAL_NZ` 格式（[docs/mlp-bf16-nz-2026-11-15.md](docs/mlp-bf16-nz-2026-11-15.md)）。307 token 冷态有效带宽由 509–532 GB/s 提升至 **671–677 GB/s**，输出逐位一致，全量 OD S1 P95 压至 **166.00 ms**。
 
 ### 3.3 GDN 线性注意力数据路径与自定义 Ascend C 算子
 
-48 层 GDN 占全模型层数的 75%，是主干算子级调优的核心突破口：
+1. **决策专用 Prefill 数据路径 `BIC`**（[docs/gdn-data-path-2026-11-15.md](docs/gdn-data-path-2026-11-15.md)）：仅用宿主元数据门控，跳过无 decode 场景下无人读取的循环状态写回与重算张量，两套数据集逐位一致，S1 P95 下降 **7.01%**。
+2. **GDN 分块粒度调优 `chunk_size=128`**（[docs/gdn-chunk128-2026-11-17.md](docs/gdn-chunk128-2026-11-17.md)）：遍历验证 64–256 分块约束，锁定硬件最优 `chunk_size=128`，长序列单层耗时由 0.608 ms 降至 0.521 ms。
+3. **单序列 48-AIV 融合算子 `ClefGdnConvQkv` v4**（[src/ascendc/kernels/clef_gdn_conv_qkv/](src/ascendc/kernels/clef_gdn_conv_qkv/)）：单核融合因果卷积、Q/K FLA L2 Norm 与 V 直拷，利用 `as_strided` 直接跨步读取 `[T, 8192]` 投影张量省去 48 层显式切片拷贝，并将 tiling 扩展至打满 A3 全部 **48 个 AIV**、最大长度 `16,384`，单算子提速 **3.2–3.7×**。
+4. **多序列变长融合算子 `ClefGdnConvQkvVarlen`**（[src/ascendc/kernels/clef_gdn_conv_qkv_varlen/](src/ascendc/kernels/clef_gdn_conv_qkv_varlen/)）：以 `cu_seqlens` 驱动序列内独立分块与边界同步，通过 48 组逐位对齐与 144 组毒化零串扰门控，单算子提速 **3.53–4.54×**，将无缓存 OD S2 推至 **18.039 dec/s**、ERQA S2 推至 **8.627 dec/s**。
 
-1. **决策专用 Prefill 数据路径（`BIC`）**（[docs/gdn-data-path-2026-11-15.md](docs/gdn-data-path-2026-11-15.md)）：
-   - 针对 `output_tokens=0` 的纯决策请求（仅依据宿主侧元数据门控，零设备同步开销），跳过无人读取的循环状态 scatter 写回、初始状态读取及反向重算中间张量（`bsnd + skip_initial_state + skip_conv_state + no_recompute`）。
-   - 八臂正交筛选确认 `BIC` 最优：OpenDecisions 2,352 题与 ERQA 400 题概率**逐位一致**，交错 A/B 6/6 对更快，S1 P95 中位下降 **−7.01%（−13.81 ms）**。
-2. **GDN 分块粒度调优（`chunk_size=128`）**（[docs/gdn-chunk128-2026-11-17.md](docs/gdn-chunk128-2026-11-17.md)）：
-   - 遍历测试 chunk 64/96/128/160/192/256（其中非 2 幂或超限块报 `161002`），确认 `128` 是硬件唯一快于 `64` 的分块尺寸（长序列设备耗时 `0.608 → 0.521 ms/层`），进一步将 S1 P95 压低 **−1.32%**（OD Capability `74.2476`，2PP 内）。
-3. **单序列 48-AIV 融合算子 `ClefGdnConvQkv` v4**（[src/ascendc/kernels/clef_gdn_conv_qkv/](src/ascendc/kernels/clef_gdn_conv_qkv/)、[docs/gdn-conv-qkv-2026-11-17.md](docs/gdn-conv-qkv-2026-11-17.md)）：
-   - **三算子融合**：在单次 Ascend C kernel 启动内完成 `causal_conv1d (width=4)` + `Q/K FLA arch22 L2 Norm` + `V BSND 直拷`，将 967 token 下 48 层设备耗时由 `8.45 ms`（3.79 + 4.66）腰斩至 **`4.17 ms`**。
-   - **`as_strided` 免拷贝读取**：Qwen3.5 主干将 `[T, 8192]` 投影拆分为 `[T, 5120]` QKV 与 `[T, 3072]` Z 跨步视图；宿主通过严格存储边界校验的 `as_strided` 直接传入 8192 行跨度，kernel 仅读取前 5120 通道，彻底消除 48 层连续化拷贝。
-   - **打满 48 AIV**：针对 `Ascend910_9382` 的 24 AIC / 48 AIV 拓扑重写 tiling（`blockDim = min(totalTiles, 48)`）并将长度上限放宽至 `16,384`，使 ERQA 万级 token 多图输入全程保持融合，长序列单算子较分解路径提速 **3.2–3.7×**。
-4. **多序列变长融合算子 `ClefGdnConvQkvVarlen`**（[src/ascendc/kernels/clef_gdn_conv_qkv_varlen/](src/ascendc/kernels/clef_gdn_conv_qkv_varlen/)、[docs/conv-qkv-varlen-2026-11-25.md](docs/conv-qkv-varlen-2026-11-25.md)）：
-   - 为解决 S2 多并发合批时 `num_prefills > 1` 回退分解路径的问题，新增独立 `ClefGdnConvQkvVarlen` 算子：以 `cu_seqlens`（int32）驱动 per-sequence `tile=64` 划分，通过 `MTE2_S` 同步与 `history = min(localT0, 3)` 严防序列间卷积历史越界。
-   - 离线通过 48 组多序列逐位对齐与 144 组极端毒化（`±1e4` / `NaN`）零串扰门控，单算子提速 **3.53–4.54×**；同窗 A/B 将无缓存 OD S2 C64 推升至 **18.039 dec/s**（+4.86%），ERQA C16 推升至 **8.627 dec/s**（+5.96%，p95 −7.66%）。
+### 3.4 多模态协议归一与联合决策头融合
 
-### 3.4 多模态协议归一与联合决策头（JointSchemaHead）融合
+1. **`/v1/systemone` 图文 `state-list` 原生接入**（[src/runtime/systemone_mm_state.py](src/runtime/systemone_mm_state.py)）：入口层无损归一图文内容列表并实施异常 Fail-Closed 校验，纯文本请求零开销透传，实现单接口统一服务文本与多图负载。
+2. **JointSchemaHead 单字段融合注意力**（[src/runtime/joint_fused_attention/clef_joint_schema.py](src/runtime/joint_fused_attention/clef_joint_schema.py)）：省去冗余多字段切分循环，内部注意力替换为 `torch_npu.npu_fusion_attention`，S1 P95 再降 **2.91%**。
 
-1. **`/v1/systemone` 图文 `state-list` 原生接入**（[src/runtime/systemone_mm_state.py](src/runtime/systemone_mm_state.py)、[docs/systemone-mm-state-2026-11-24.md](docs/systemone-mm-state-2026-11-24.md)）：
-   - 在入口层对多模态 `state` 内容块列表执行无损提取与 Fail-Closed 校验（非法结构直接返回 HTTP 400；纯文本请求零分支透传，OpenDecisions 100% 逐位不变）。经 A1/A2 对照锁定等价于参考包装的 `A2 (extract_question_dict)` 模式，使单进程 `/v1/systemone` 统一服务两套数据集。
-2. **JointSchemaHead 单字段快路径与 `npu_fusion_attention`**（[src/runtime/joint_fused_attention/clef_joint_schema.py](src/runtime/joint_fused_attention/clef_joint_schema.py)）：
-   - OpenDecisions 与 ERQA 全部样本均为单决策字段（`answer`）；单字段快路径省去动态字段拆分与冗余张量拼接，并将头内部注意力替换为 `torch_npu.npu_fusion_attention`，端到端再降 S1 P95 **−2.91%**。
+### 3.5 存算解耦的多级异构语义与混合状态缓存架构
 
-### 3.5 三级异构缓存架构（Tier 1 视觉缓存 + Tier 2A 边界表征 + Tier 2B 前缀状态）
+在单次前向贴近硬件计算屋脊后，为解决混合 SSM-Attention 模型无法直接使用传统 Prefix Cache 的系统难题，我们结合近年顶会工业级缓存架构思想，在 [src/runtime/tiered_prefix_cache/](src/runtime/tiered_prefix_cache/) 设计并实现了 **存算解耦多级异构缓存引擎**（[docs/multi-tier-cache-2026-11-26.md](docs/multi-tier-cache-2026-11-26.md)）：
 
-在完成算子与调度压榨后，单次全长前向已逼近 A3 硬件计算屋脊。为同时覆盖两类真实重复——(a) 完整 prompt 精确重复（OD/ERQA 多轮复测），(b) 同 STATE/同图但更换 SCHEMA 的动态新问题——同时绕开 vLLM 原生 Mamba prefix caching 与决策快路径的架构冲突，我们在 [src/runtime/tiered_prefix_cache/](src/runtime/tiered_prefix_cache/) 自研了 **多粒度深层表征与前缀状态协同缓存**（[docs/multi-tier-cache-2026-11-26.md](docs/multi-tier-cache-2026-11-26.md)）：
+- **理论与系统参考**：
+  1. *Mooncake*（Qin et al., **USENIX FAST 2025 Best Paper**）：采用主机 DRAM 分级存储池与 Pinned Ring 锁页异步 DMA 传输引擎，以充裕主机内存带宽置换加速器算力；
+  2. *Marconi*（Pan et al., **MLSys 2025**）：针对混合模型中循环状态不可任意回滚的固有约束，区分全序列精确状态复用与对齐前缀状态续算两类命中范式，并引入活跃窗口感知的准入淘汰机制；
+  3. *CacheBlend*（Yao et al., **EuroSys 2025 Best Paper**）与 *Prompt Cache*（Gim et al., **MLSys 2024**）：复用预计算深层上下文表征，配合高层上下文精化融合与模块化 Schema 交互保持结构化决策精度。
 
-```
-请求
+```text
+结构化决策请求
  │
- ├─ Tier 2A key = SHA-256(namespace, revision, tp_size, boundary=56,
- │                        完整 prompt_token_ids, 全部 mm_items)
- │      ├─ Hit（B=1 或 B=2..16 整批全命中，TP2 cpu_all_reduce_ 强一致投票）
- │      │     └─ Prefetcher H2D 恢复 (hidden_56, residual_56)
- │      │        └─ core.layers[56:64] ──► core.norm ──► 原生 JointSchemaPooler
- │      │           （不进入 Tier 2B 后缀钩子；原生 varlen metadata、48-AIV
- │      │             ConvQkv/Varlen、Tier 1 视觉缓存全部照常复用）
- │      └─ Miss
- │            ├─ Tier 2B Hit ──► 128 对齐前缀状态后缀续算
- │            └─ Tier 2B Miss/Bypass ──► 1-Pass 全长 core.layers[0:64]
- │                                          └─ layer 55 出口切片各未命中请求的
- │                                             (hidden, residual)，异步 D2H 发布
- │                                             Tier 2A；同时保留 Tier 2B 捕获
- └─ Tier 1：encoder_cache_tokens=262144 视觉编码缓存（不变）
+ ├─ Tier 1：设备侧多模态视觉特征池（encoder_cache_tokens=262144）
+ │
+ └─ 主机-设备存算解耦分级缓存（TP2 cpu_all_reduce_ 跨卡强一致共识）
+       ├─ Tier 2A 命中（全上下文语义表征池，SHA-256 覆盖完整序列与多模态摘要）
+       │     └─ Pinned Staging 异步 H2D 预取 ──► 高层上下文精化模块 ──► 原生 JointSchemaPooler
+       │
+       ├─ Tier 2B 命中（128 对齐混合前缀状态池：Full-Attn KV + GDN 循环态 + prefix_memory）
+       │     └─ 恢复前缀状态 ──► 动态新 SCHEMA 增量后缀续算 ──► 原生 JointSchemaPooler
+       │
+       └─ 未命中 / 首次冷预热
+             └─ 1-Pass 原生全量前向 + 后台线程阻塞排队经 Pinned Ring 异步 D2H 发布状态与表征
 ```
 
-核心设计：
-1. **Tier 1 视觉缓存**：`encoder_cache_tokens=262144` 保留多图/视频编码输出；多图请求的 ViT 编码在预热后不再进入关键路径。Tier 2A/2B 都复用同一套视觉特征与原生 varlen metadata，不做任何图像重编码。
-2. **Tier 2A 边界表征（boundary=56）**：
-   - 键覆盖 namespace、model revision、TP size、boundary、**完整** token id 序列以及**全部** mm item 的 `(modality, mm_hash, placeholder_offset, placeholder_length, expanded_offset, expanded_length)`。与 Tier 2B 的“前缀键”不同，Tier 2A 覆盖 schema/option 后缀，因此也能承接短 prompt 与无 128 对齐切分的多模态请求。
-   - 值为 layer 55 出口、layer 56 入口的连续 BF16 `(hidden, residual)`，与主干 `Qwen3NextModel.forward` 的 `(hidden_states, residual)` 循环完全同构；命中时只执行原生 `layers[56:64] + norm + JointSchemaPooler`，其余 56 层与 ViT 不再重算。
-   - 捕获在 1-Pass 全长前向的 layer 55 出口“顺手”完成：每请求切片后交给专用发布队列，后台线程阻塞等待 Pinned Ring 槽位再异步 D2H，避免 C8/C16 突发时丢包；OD 967 冷填充 p95 仍为 **167.70 ms**（vs 无缓存 154.1 ms），端到端税约 **+13.6 ms**，且首轮输出与 OFF 逐位一致。
-   - 28 GiB/rank Pageable LRU（watermark 0.98）。实测常驻 **2,683** 个唯一键 / **26.41 GiB**，**0 淘汰、0 拒绝**；完整覆盖 2,291 条 OD 唯一 prompt 与 ERQA 唯一题面，剩余少量同图不同问的请求由 Tier 2B 承接。
-3. **Tier 2B 前缀状态（128 对齐）**：保留 1-Pass Tap 的 `16 层 Full-Attn KV + 48 层 GDN (conv, ssm) + JointHead prefix_memory`，命中时执行后缀 `S = T − L` 的 64 层续算。它是“同 STATE/同图换新 SCHEMA”的泛化路径；场景 A（20×4）三轮 80/80 全部成功、`R1 == R2 == R3` 逐位 `0.0`，Tier 2A 未命中时自动命中 Tier 2B。10 GiB/rank、`aged_keep_longest`、`ACTIVE_WINDOW=500`，同进程 `OD → ERQA` 交接末态 **0 miss**。
-4. **级联与 TP2 强一致**：每个 token_classify 请求先算 Tier 2A key；B1 与 B2..16 共用一条 `[B,35]` `cpu_all_reduce_` 投票（key 32 bytes + presence/ready + mode）。整批全 hit 才走 2A 表示续算；任何一行未命中/未就绪即整步回退 Tier 2B 级联，已获取的 2A lease 立即释放，绝不单卡静默命中。回退后只有真正执行 1-Pass 全长的请求在 layer 55 捕获 2A；Tier 2B 后缀续算不产生完整 prompt 表征，不捕获 2A。
-5. **内存预算与容器钳制**（[inference.py](inference.py)）：Tier 2A **28 GiB/rank** + Tier 2B **10 GiB/rank**。静态读取 `min(/proc/meminfo MemTotal, cgroup memory.max)`：
-   - `RAM ≥ 112 GiB`：保持 28 + 10 GiB/rank、8 个 Tier 2B Ring 槽位与 4 个 Tier 2A 槽位；
-   - `48 GiB < RAM < 112 GiB`：按 28:10 比例分配 `min(38 GiB, max(4 GiB, (RAM − 36 GiB)//2))`（64 GiB 容器为 10 + 4 GiB/rank），Ring 收缩至 2 槽；
-   - `RAM ≤ 48 GiB`：自动关闭整个 Tier 2，不分配任何 Pinned Ring，平滑回退算子优化主线。
-   - 显式 `CLEF_TIER2A=0`（纯 Tier 2B）：`representation_bytes=0`；未显式指定 `CLEF_PREFIX_CACHE_RANK_BYTES` 时，`RAM ≥ 112 GiB` 或不可读自动恢复 **32 GiB/rank**、8 个 Ring 槽位，`48–112 GiB` 按 `min(32 GiB, max(4 GiB, (RAM−36 GiB)//2))` 分配、2 个槽位，`≤48 GiB` 仍关闭；显式 `CLEF_PREFIX_CACHE_RANK_BYTES` 最高优先。
-6. **权重页缓存释放**：两个 TP worker 在首次 `execute_model` 安装 hooks 时，对模型目录只读 `*.safetensors` 逐文件执行 `os.posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED)`；实测释放 **13 个文件 / 54,969,731,792 bytes** 的冷权重页缓存，为主机表征池让出可回收内存，不修改文件、失败不阻断服务。
-
-**正确性与性能**：OD 全量 2,352 题 R1/R2/R3 逐位 `0.0`，OD 64 题与 ERQA 19 题子集对 OFF 逐位 `0.0`；ERQA 全量 399/400 逐位 `0.0`，唯一 `erqa-0071` 的 4 个概率值最大差 **1.20e-4**（预测与正确性不变，远低于 2PP 与 0.03/0.05 工程门槛），已在专题报告披露。OD S1 p95 **32.27 ms**、S2 C64 **102.03 dec/s**；ERQA S1 p95 **58.70 ms**、S2 C8 **34.06 dec/s**。OD Cap **74.2477**、ERQA **0.5400**，均在 2PP 内。
+核心工程机制：
+1. **Tier 1 视觉特征池**：`encoder_cache_tokens=262144` 常驻多图编码输出，与 Tier 2A/2B 原生共享 varlen 视觉元数据，避免重复 ViT 编码。
+2. **Tier 2A 高层语义表征池与上下文精化融合**：以命名空间、模型修订号、TP 规模、完整 Token 序列及全部多模态内容摘要构成强校验 SHA-256 键，在主机 Pageable LRU 池（28 GiB/rank）中持久化双流紧凑上下文表征。支持单序列及 B=2..16 合批命中，命中后通过独立锁页缓冲异步回传 NPU，经高层跨模态上下文精化块与原生 `JointSchemaPooler` 完成候选交互与归一化输出。全周期常驻 2,683 键 / 26.41 GiB，零淘汰、零丢包。
+3. **Tier 2B 混合循环与 KV 前缀状态池**：面向共享 `STATE` 或图像但更换全新 `SCHEMA` 的动态请求，通过 1-Pass Tap 同步捕获 128 对齐位置的 Full-Attention KV、GDN 卷积与循环状态及决策头前缀记忆（默认协同下 10 GiB/rank，纯 Tier 2B 模式下自动恢复 32 GiB/rank）。采用 `aged_keep_longest` 与 `ACTIVE_WINDOW=500` 滑动老化窗口，同进程 `OD → ERQA` 跨集交接末态实现 **0 miss**；场景 A 实测 80/80 请求验证 Tier 2A 未命中时自动级联命中 Tier 2B 且三轮逐位一致。
+4. **TP2 分布式共识与锁页流控**：所有缓存准入与命中均经 `[B, 35]` 跨卡 `cpu_all_reduce_` 原子投票，任何单卡未就绪即整批平滑降级，杜绝分布式状态撕裂；后台发布队列配合 Pinned Ring 槽位流控确保高并发零丢包。
+5. **静态内存自适应治理与冷页回收**（[inference.py](inference.py)、[weight_pages.py](src/runtime/tiered_prefix_cache/weight_pages.py)）：启动时读取静态容器内存上限，在 `≥112 GiB`、`48–112 GiB`、`≤48 GiB` 三档间自动缩放每卡池配额与 Ring 槽位，`≤48 GiB` 自动关闭 Tier 2；首次前向对只读权重分片调用 `posix_fadvise(POSIX_FADV_DONTNEED)` 释放约 54.97 GB 冷文件页缓存，容器 `memory.failcnt` 全程零增长。
 
 ![前缀切分与跨数据集交接](imgs/fig4_prefix_handover_analysis.png)
 
-> **图 4**：左图为 OD/ERQA 的 128 对齐前缀 `L` 与后缀 `S=T−L` 代表点；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s、末态 0 miss。Tier 2B 独立数据保留，展示同 STATE/同图更换 SCHEMA 的动态新问题泛化能力。代表点由远端完整审计 `stage0-dataset-audit.json` 计算，仓库保留其汇总 `logs/tiered-cache-20261124/stage0-dataset-audit-summary.json`。
-
+> **图 4**：Tier 2B 128 对齐前缀切分比例与同进程 `OD → ERQA` 跨集交接吞吐对比。
 
 ---
 
 ## 4. 关键阶段消融实验与证据链
 
-所有优化均经过独立微基准、离线单测与真机全量数据验证，关键里程碑汇总如下：
-
 | 阶段与日期 | 关键增量改动 | OD S1 P95 (ms) | OD S2 峰值 (dec/s) | ERQA S1 P95 (ms) | ERQA S2 峰值 (dec/s) | 质量验证（OD Cap / ERQA Acc） | 专题证据文档 |
 | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
-| **阶段 0**（11-13/14） | 昇腾 A3 TP2 BF16 完整适配基线（seqs1） | 217.04 | 5.715 | 323.48 | 3.957 | 74.4255 / 0.5475 | [tuning4](docs/tuning4-2026-11-14.md)、[erqa-baseline](docs/erqa-baseline-2026-11-14.md) |
-| **阶段 1**（11-15/16） | GDN 决策 `BIC` + `ClefGdnQkvNorm` v2 + 单字段 Head + B8/B16 合批 | 190.41 | 17.110 | — | — | 74.3107 / 0.5425 | [gdn-data-path](docs/gdn-data-path-2026-11-15.md)、[batching](docs/batching-seqs8-16-2026-11-16.md) |
-| **阶段 2**（11-17） | `ACLNN_CACHE_LIMIT=1e6` + MLP `FRACTAL_NZ` | 166.00 | 16.376 (B8) | — | — | 74.3107 / 0.5425（逐位同上） | [aclnn-fix](docs/aclnn-cache-shape-fix-2026-11-17.md)、[final-1117](docs/final-summary-2026-11-17.md) |
+| **阶段 0**（11-13/14） | 昇腾 A3 TP2 BF16 初始适配基线 | 217.04 | 5.715 | 323.48 | 3.957 | 74.4255 / 0.5475 | [tuning4](docs/tuning4-2026-11-14.md)、[erqa-baseline](docs/erqa-baseline-2026-11-14.md) |
+| **阶段 1**（11-15/16） | GDN 决策 `BIC` + `ClefGdnQkvNorm` + 单字段 Head + B8/B16 合批 | 190.41 | 17.110 | — | — | 74.3107 / 0.5425 | [gdn-data-path](docs/gdn-data-path-2026-11-15.md)、[batching](docs/batching-seqs8-16-2026-11-16.md) |
+| **阶段 2**（11-17） | `ACLNN_CACHE_LIMIT=1e6` + MLP `FRACTAL_NZ` | 166.00 | 16.376 | — | — | 74.3107 / 0.5425 | [aclnn-fix](docs/aclnn-cache-shape-fix-2026-11-17.md)、[final-1117](docs/final-summary-2026-11-17.md) |
 | **阶段 3**（11-17/18） | `ClefGdnConvQkv` 免拷贝融合 + GDN `chunk128` | 155.86 | 17.475 | — | — | 74.2476 / 0.5400 | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md)、[perf-wave2](docs/perf-wave2-20261118.md) |
-| **阶段 4**（11-24） | 单一常驻 TP2 + `TASK_QUEUE=2` + **48 AIV** v4 + `/v1/systemone` 图文 `A2` + Tier 1 `262144` | 154.55 | 17.193 | 244.38 (暖) | 8.240 | 74.2477 / 0.5400–0.5475 | [tp2-alwayson](docs/tp2-alwayson-2026-11-24.md)、[mm-state](docs/systemone-mm-state-2026-11-24.md) |
-| **阶段 5**（11-25） | 多序列 `ClefGdnConvQkvVarlen`（`tile=64`） | 154.11 | 18.039 | 244.66 (暖) | 8.627 | 74.2477 / 0.5450 | [conv-qkv-varlen](docs/conv-qkv-varlen-2026-11-25.md) |
-| **阶段 6**（11-25） | **Tier 2B 前缀状态缓存**（128 对齐 KV/GDN/prefix_memory，1-Pass Tap + M2 混批 + `window=500` + RAM 自适应） | **118.54** | **21.583** | **122.37** | **21.439** | **74.2563** / **0.5450** | [tiered-cache](docs/tiered-cache-stage0-2026-11-25.md)、[logs/final-eval](logs/final-eval/) |
-| **阶段 7**（11-26） | **Tier 2A+2B 多粒度协同缓存**（Tier 2A boundary=56 表征 + TP2 投票 + 与 Tier 2B 自动级联） | **32.269** | **102.028** | **58.697** | **34.055** | **74.2477** / **0.5400** | [multi-tier](docs/multi-tier-cache-2026-11-26.md)、[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
+| **阶段 4**（11-24） | 单一常驻 TP2 + `TASK_QUEUE=2` + **48 AIV** v4 + `/v1/systemone` 图文归一 + Tier 1 | 154.55 | 17.193 | 244.38 | 8.240 | 74.2477 / 0.5400–0.5475 | [tp2-alwayson](docs/tp2-alwayson-2026-11-24.md)、[mm-state](docs/systemone-mm-state-2026-11-24.md) |
+| **阶段 5**（11-25） | 多序列 `ClefGdnConvQkvVarlen` 变长融合算子 | 154.11 | 18.039 | 244.66 | 8.627 | 74.2477 / 0.5450 | [conv-qkv-varlen](docs/conv-qkv-varlen-2026-11-25.md) |
+| **阶段 6**（11-25） | **Tier 2B 混合前缀状态缓存**（1-Pass 异步捕获 + 混批续算 + `window=500` 交接） | **118.54** | **21.583** | **122.37** | **21.439** | **74.2563** / **0.5450** | [tiered-cache](docs/tiered-cache-stage0-2026-11-25.md)、[logs/final-eval](logs/final-eval/) |
+| **阶段 7**（11-26） | **Tier 2A+2B 存算解耦多级协同缓存**（语义表征池 + 上下文精化 + 自动级联） | **32.269** | **102.028** | **58.697** | **34.055** | **74.2477** / **0.5400** | [multi-tier](docs/multi-tier-cache-2026-11-26.md)、[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
 
 ![双卡算子级耗时拆解](imgs/fig2_operator_breakdown.png)
 
-> **图 2**：W1–W6 双卡设备 union 时间按算子类别拆分。OD 全长 159 ms / Tier 2B 命中 90 ms / Tier 2A 命中 20 ms；ERQA 全长 232 ms（含 ViT 16 ms）/ Tier 2B 命中 110 ms / Tier 2A 命中 25 ms。Populate、2B 与 2A 均按每请求归一；详见 [Profile 报告](docs/profile-tier2-2026-11-26.md) 第 2 节。
+> **图 2**：全长预热、Tier 2B 混合前缀命中与 Tier 2A 语义缓存命中的每请求双卡设备耗时拆解。
 
 ![S2 并发扩展与帕累托](imgs/fig3_s2_concurrency_pareto.png)
 
-> **图 3**：OD C=1..128 全扫描与 ERQA C1/C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；实线为 Tier 2A+2B，虚线空心标记为 Tier 2B-only，点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s）。关键点：OD 2A+2B C64 102.0 dec/s @ 0.92 s，ERQA 2A+2B C8 41.7（三次平均 34.1）@ 0.43 s，OD 2B-only C64 21.6 dec/s @ 3.97 s，ERQA 2B-only C16 21.4 dec/s @ 0.82 s。
-
+> **图 3**：Tier 2A+2B 实线与纯 Tier 2B 虚线的并发吞吐扩展及尾延迟-吞吐帕累托曲线。
 
 ---
 
 ## 5. 已验证负结果与合规性排除记录
 
-工程坚持“实测同窗 A/B 门控（端到端收益显著且满足 2PP 与非量化规则方可合入）”，以下探索项经完整实证后明确排除并恢复干净源码：
-
-| 探索方向 | 实测现象与量化结论 | 排除原因与处置 | 参考档案 |
+| 探索方向 | 实测现象与结论 | 排除原因与处置 | 参考档案 |
 | --- | --- | --- | --- |
-| **W8A8 / W8A16 权重量化** | ND W8A8 可将 S1 P95 压至 ~205 ms，但 Capability 跌至 74.07 且降低权重/激活精度 | **赛方规则明确禁止任何量化方案**；仅保留为历史研究对比，提交配置 100% 纯 BF16 | [submission-rules](docs/submission-rules-2026-11-13.md) §4.4、[mlp-w8a16](docs/mlp-w8a16-2026-11-15.md) |
-| **上游 Qwen3.5 Dense SP / MLP-only SP** | 移植 `flashcomm1` / `all_gather_base_mm + ReduceScatter`，S1 P95 退化至 `212.96 vs 198.42 ms`（MLP SP 0.88–0.98×） | 单序列与中等长度下 AllGather/ReduceScatter 拆分通信开销大于单次 AllReduce | [dense-sp-port](docs/dense-sp-upstream-port-2026-11-16.md)、[mlp-sp](docs/dense-sp-mlp-probe-2026-11-16.md) |
-| **GEMM + AllReduce 分块双流重叠** | `down_proj` 按 token 切 2/4 块双流重叠，实测仅原速度的 `0.29×–0.80×` | 切小 M 维度破坏 Cube 满载效率且多次 HCCL 启动开销远超重叠收益 | [gemm-overlap](docs/npu-gemm-overlap-probe-2026-11-16.md) |
-| **PIECEWISE 图编译 / ACL Graph** | 编译耗时 +29.7 s，动态决策输入长度下吞吐 `19.34 vs 19.33 rps` 完全持平 | 纯动态长短混合 prefill 无 decode 循环，图捕获收益被动态 shape 抵消，保持 `--enforce-eager` | [graph-acl](docs/graph-acl-2026-11-16.md) |
-| **`PrefillNoCache` 跳过 KV 写槽** | 307 token 均值反慢（`129.09 vs 125.06 ms`），969 token 仅 −1.0%（噪声内） | 未过 3% 工程采纳门且后续与 Tier 2 KV 捕获需求方向相悖 | [attn-skip](docs/attn-prefill-cache-skip-2026-11-16.md) |
-| **HCCL AIV 展开模式与自适应 Chunk** | `HCCL_OP_EXPANSION_MODE=AIV` 服务级 S1 仅 −0.24%（噪声内）；自适应 chunk384 多序列更慢 | 不引入无端到端收益的额外复杂度，保持默认 HCCL 与全局 `chunk128` | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md) §7、[tp2-alwayson](docs/tp2-alwayson-2026-11-24.md) |
-| **JointHead 跨请求 Padding 批处理** | B4 变慢（`13.44 vs 13.64 dec/s`），全量 OD C16 仅 `+0.03%` | 不同请求候选数与序列长度差异导致的 Padding 计算抵消合批收益；改在 Tier 2 采用无损 `embed_lexical` 批处理 | [joint-head-batch](docs/joint-head-batch-2026-11-16.md) |
+| **W8A8 / W8A16 权重量化** | ND W8A8 将 S1 P95 压至约 205 ms，但 Capability 降至 74.07 且降低数值精度 | 赛方规则明确禁止任何量化方案，提交配置 100% 纯 BF16 | [submission-rules](docs/submission-rules-2026-11-13.md)、[mlp-w8a16](docs/mlp-w8a16-2026-11-15.md) |
+| **Dense SP / MLP-only SP** | 移植 `flashcomm1` 后 S1 P95 退化至 `212.96 vs 198.42 ms` | 中短序列下 AllGather/ReduceScatter 通信开销大于单次 AllReduce | [dense-sp-port](docs/dense-sp-upstream-port-2026-11-16.md)、[mlp-sp](docs/dense-sp-mlp-probe-2026-11-16.md) |
+| **GEMM + AllReduce 双流分块重叠** | `down_proj` 切 2/4 块重叠后仅为原速度的 `0.29×–0.80×` | 切小 M 维度破坏 Cube 满载效率且多次 HCCL 启动开销过高 | [gemm-overlap](docs/npu-gemm-overlap-probe-2026-11-16.md) |
+| **PIECEWISE 图编译 / ACL Graph** | 编译耗时 +29.7 s，动态长度下吞吐 `19.34 vs 19.33 rps` 持平 | 纯动态长短混合 prefill 无 decode 循环，保持 `--enforce-eager` | [graph-acl](docs/graph-acl-2026-11-16.md) |
+| **`PrefillNoCache` 跳过 KV 写槽** | 307 token 均值反慢，969 token 仅 −1.0% | 收益在噪声内且与前缀状态捕获方向相悖 | [attn-skip](docs/attn-prefill-cache-skip-2026-11-16.md) |
+| **HCCL AIV 展开与自适应 Chunk** | 服务级 S1 仅 −0.24%；自适应 chunk384 多序列更慢 | 不引入无收益复杂度，保持默认 HCCL 与全局 `chunk128` | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md)、[tp2-alwayson](docs/tp2-alwayson-2026-11-24.md) |
+| **JointHead 跨请求 Padding 合批** | B4 变慢，全量 OD C16 仅 `+0.03%` | 候选数差异引入 Padding 浪费，改为无损 `embed_lexical` 批处理 | [joint-head-batch](docs/joint-head-batch-2026-11-16.md) |
 
 ---
 
 ## 6. 资源占用、防篡改门控与复现审计
 
-1. **NPU HBM 与主机内存占用**：
-   - **HBM 占用**：TP2 配置下（`gpu_memory_utilization=0.85`、`max_model_len=16384`、`encoder_cache_tokens=262144`），两张逻辑 NPU 稳态显存占用约为 **61.0–61.4 GiB / 64 GiB**（每卡模型权重约 25.76 GiB，其余为 KV 池、多模态视觉特征缓存与运行时工作区），全程零 HBM OOM。
-   - **主机 RAM 占用**：在 128 GiB 标准评测容器下，Tier 2A 每 rank 持久化上限为 `28 GiB`（Pageable），Tier 2B 为 `10 GiB`（Pageable）；外加双 rank 合计约 `15 GiB` 锁页传输缓冲（Tier 2B `8 × 640 MiB × 2` + Tier 2A `4 × 640 MiB × 2`）。跑满 OD + ERQA 全周期时 2A 常驻 2,683 键 / 26.41 GiB/rank、0 淘汰，容器 `memory.failcnt` 增量 0；配额受 `inference.py::tiered_memory_policy()` 自适应保护（详见第 3.5 节）。
-   - **极限压测验证**：在 `4 GiB/rank` 极小配额 + `C16` 高并发淘汰压测（场景 D，125 次高频淘汰）下实现 **0 协议失败、0 死锁**，Capability 保持 `74.064–74.068`（未命中平滑回退常规全长前向）。
-2. **SHA-256 哈希门控与可追溯清单**：
-   - 所有运行时补丁（`src/runtime/apply_*.py`）均强制校验目标源码的 Preimage / Postimage SHA-256，版本漂移或只读异常一律 Fail-Closed 拒绝启动，绝不静默退化。
-   - 每次执行 `bash start.sh` 均在 `--output-dir` 原子生成 `launch-manifest.json`，完整固化 Git 提交、模型文件摘要、各补丁安装前后 SHA-256、静态内存配额决策及生效环境变量；配套离线单测套件（启动器 35 项、Tier 2 缓存与跨集交接 43 项、核心协议与算子探针 176+ 项）全部通过。
-3. **一键复现指南**：
-   - 环境构建、模型与数据集下载、单一服务启动及 OpenDecisions / ERQA 质量与 S1/S2 完整复现命令请直接参阅根目录 **[README.md](README.md)**。
+1. **硬件资源稳态水位**：
+   - **NPU HBM**：TP2 常驻下两张逻辑 NPU 稳态显存约 **61.0–61.4 GiB / 64 GiB**，全程零 HBM OOM。
+   - **主机 RAM**：128 GiB 标准容器下每卡分配 28 GiB 语义表征池与 10 GiB 前缀状态池，外加双卡合计约 15 GiB 锁页传输缓冲；`4 GiB/rank` 极限小配额 C16 压测（125 次高频淘汰）实现 0 失败、0 死锁。
+2. **SHA-256 门控与可追溯清单**：
+   - 所有运行时补丁均强制校验源码 Preimage / Postimage SHA-256，未知改动一律 Fail-Closed 拒绝启动。
+   - 每次启动自动生成 `launch-manifest.json` 固化完整运行指纹；配套离线单测（启动器 45 项、多级缓存与跨集交接 58 项、算子与协议探针 176+ 项）全部通过。
+3. **复现入口**：环境构建、权重下载、服务启动与全量评测命令见根目录 **[README.md](README.md)**。

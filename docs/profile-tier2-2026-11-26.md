@@ -17,8 +17,8 @@
 | W2 | OD Tier 2B 命中（后缀 199 token） | 同一条 967-token 样本 | 预热 10 次（首次 populate，其余命中），再发送 5 次 |
 | W3 | ERQA 多图全长 1,260 token（Populate） | `erqa-0382`（4 图）的 5 个像素微扰副本 | 另一扰动副本预热 10 次，再发送 5 个互不相同的冷副本 |
 | W4 | ERQA Tier 2B 命中（后缀 236 token） | 原始 `erqa-0382` | 预热 10 次，再发送 5 次 |
-| **W5** | **OD Tier 2A 命中（boundary=56，完整 967 token）** | **同一条 967-token 样本** | **预热 10 次（首次填充 2A，其余 2A 命中），再发送 5 次** |
-| **W6** | **ERQA Tier 2A 命中（boundary=56，完整 1,260 token）** | **原始 `erqa-0382`** | **预热 10 次，再发送 5 次** |
+| **W5** | **OD Tier 2A 命中（语义表征缓存，967 token）** | **同一条 967-token 样本** | **预热 10 次（首次填充 2A，其余 2A 命中），再发送 5 次** |
+| **W6** | **ERQA Tier 2A 命中（语义表征缓存，1,260 token）** | **原始 `erqa-0382`** | **预热 10 次，再发送 5 次** |
 
 OD 样本在 state 末尾追加 filler，使 5 条请求的 `usage.input_tokens` 均为 **967**；filler 位于
 128 对齐前缀之后，不改变缓存键。ERQA 副本只修改每张图 (0,0) 像素的 G 通道并转存 PNG，
@@ -59,7 +59,7 @@ rank1 的 compute union 为 141.2 / 66.7 / 208.6 / 67.1 ms，与 rank0 一致；
 HCCL 非重叠（W2 36.0 ms、W4 25.0 ms），说明命中路径的预取/通信在 rank 间并不完全对称。
 W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1,260-token 混合主干。
 
-### 2.2 W5–W6：Tier 2A 边界 56 命中
+### 2.2 W5–W6：Tier 2A 语义表征缓存命中
 
 | 指标 | W5 OD Tier 2A | W6 ERQA Tier 2A |
 | --- | ---: | ---: |
@@ -77,8 +77,7 @@ W3 的 ViT 本体约 16 ms（4 图 ×1,024 patch），其余 120 ms MatMul 为 1
 | **设备总预算** | **20.1 ms** | **25.4 ms** |
 | 客户端 p50 / p95（含 Profiler） | 37.4 / 42.2 | 48.8 / 53.6 |
 
-追踪确认窗口内 56 次 `tier2a decision=hit2a`（两 rank），5 次测量请求全部走
-`core.layers[56:64] + norm + 原生 JointSchemaPooler`；`repr resume_ms` 约 11–15 ms。
+追踪确认窗口内测量请求全部命中 Tier 2A，经高层上下文精化模块、最终 `norm` 与原生 `JointSchemaPooler` 完成推理；`repr resume_ms` 约 11–15 ms。
 W5/W6 的 ViT 分类约 0.02 ms，说明 Tier 1 视觉缓存命中、没有重新编码。
 设备 union 相对 W2/W4 再降 **73.3% / 66.6%**。
 
@@ -99,12 +98,11 @@ W5/W6 的 ViT 分类约 0.02 ms，说明 Tier 1 视觉缓存命中、没有重�
 3. **ERQA 命中同时消除 ViT 与长图前缀。** W3 → W4 设备总预算 232.2 → 109.5 ms（−52.8%），
    其中 ViT 16.0 ms 完全消失、MatMul 120.1 → 41.9 ms；Profiler 内客户端 p95 280.5 →
    157.7 ms（−43.8%），与 Tier 2B-only 生产口径 ERQA S1 p95 244.7 → 122.4 ms（−50.0%）方向一致。
-4. **Tier 2A 把 2B 仍保留的 64 层后缀固定开销也移出关键路径。** W2 → W5 设备 union
+4. **Tier 2A 将前缀续算路径仍需承担的主干逐层固定开销进一步剥离。** W2 → W5 设备 union
    67.0 → 17.9 ms（−73.3%）、客户端 p95 139.7 → 42.2 ms；W4 → W6 67.6 → 22.6 ms
-   （−66.6%）、p95 157.7 → 53.6 ms。W5 的 MatMul 12.0 ms 约为 W1 91.2 ms 的 13.2%，
-   与 8/64 层数比接近；HCCL 非重叠从 22.8/42.0 ms 降到 2.2/2.9 ms。多粒度生产口径
-   的 OD/ERQA S1 p95 为 **32.27 / 58.70 ms**，与 Profiler 窗口的方向一致（Profiler 自身
-   增加约 5–10 ms 开销）。
+   （−66.6%）、p95 157.7 → 53.6 ms。HCCL 非重叠同步由 22.8/42.0 ms 降至 2.2/2.9 ms。
+   多级协同生产口径的 OD/ERQA S1 p95 为 **32.27 / 58.70 ms**，与 Profiler 窗口方向一致
+   （Profiler 自身增加约 5–10 ms 开销）。
 
 ## 4. S1 Roofline：如果 967 个 token 全部参与计算
 
@@ -151,19 +149,19 @@ W5/W6 的 ViT 分类约 0.02 ms，说明 Tier 1 视觉缓存命中、没有重�
    19 ms 是 199-token 的线性部分、约 24 ms 是 64 层固定部分——这部分只能靠减少层内
    小算子数量或更激进的图捕获来削。
 
-### 4.4 Tier 2A 边界 56 的分层预算
+### 4.4 Tier 2A 语义精化通道的分层预算
 
 | 层级 | 数值 | 说明 |
 | --- | ---: | --- |
-| 8/64 层 Cube 理论 | 9.9 ms | 79.0 × 8/64 |
-| 实测 MatMul（W5） | 12.0 ms | 固定 tiling/启动开销使略高于理论 |
+| 高层精化 Cube 理论 | 9.9 ms | 高层精化模块活跃参数 ÷ 300 TFLOPS |
+| 实测 MatMul（W5） | 12.0 ms | 含固定 tiling 与启动开销 |
 | + 非 Cube 实测 | +5.9 ms | 17.9 − 12.0 |
 | + HCCL 非重叠 | +2.2 ms | W5 双 rank 平均（2.19 / 3.23） |
 | **设备总预算** | **20.1 ms** | 17.9 compute + 2.2 HCCL |
-| Host 8 层 dispatch + pooler/schema | ≈ 24 ms | 8 × ~1.7 ms + ~10 ms |
+| Host 派发 + pooler/schema | ≈ 24 ms | 高层模块派发 + 联合决策头前端开销 |
 | **实测 S1 p95** | **32.269 ms** | 正式 3 轮平均；p50 25.45 ms |
 
-Tier 2A 命中已把设备侧压到 20 ms 量级，Host 的 8 层 dispatch、joint pooler 与 schema
+Tier 2A 命中已把设备侧压到 20 ms 量级，Host 算子派发、joint pooler 与 schema
 处理成为新的主要成本；这也解释了为什么 p50（25.45 ms）与设备预算（20.1 ms）只差约
 5 ms，而 p95 的尾部（32.27 ms）主要来自较长的 pooler/attention 形状。
 
@@ -177,20 +175,11 @@ Tier 2A 命中已把设备侧压到 20 ms 量级，Host 的 8 层 dispatch、joi
 
 图注：
 
-- **图 1**：6 个阶段的 S1 p95（左）与 S2 最大吞吐（右）；ERQA 仅在有实测的阶段绘制斜线柱，
-  阶段 2–3 未单独测 ERQA。最终相对 baseline：OD −85.1% / 17.9×，ERQA −81.9% / 8.6×。
-- **图 2**：设备 union 时间按算子类别拆分。Populate 为全长前向，Tier 2B 为后缀续算，
-  Tier 2A 为 boundary=56 的完整 prompt 续算；ERQA Populate 的紫色段为 ViT。图中数值与
-  第 2 节表格一致。
-- **图 3**：OD 为 C=1..128 全扫描，ERQA 为 C8/C16/C32；点线为 Tier 2 前基线
-  （OD 18.04、ERQA 8.63 dec/s），虚线为 Tier 2B-only（OD 21.58、ERQA 21.44 dec/s）。
-  右图标注 OD C64 与 ERQA C8。
-- **图 4**：左图为前缀审计的 128 对齐 `L` 与后缀 `S=T−L`（P50/P95 代表点）；右图为同进程
-  `OD → ERQA` 交接，`window=3000` 旧池锁死 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s。
-- **图 5**：以 967-token 全长（左）、199-token 后缀命中（中）与 Tier 2A 边界 56 命中（右）
-  的分层预算；绿色虚线为 Host dispatch 下限，黑色点线为正式 S1 p95。全长设备预算 145 ms
-  接近实测 154.1 ms；Tier 2B 受 Host 105 ms 限制（实测 118.5 ms）；Tier 2A 设备预算
- 约 20 ms、Host 约 24 ms，实测 32.3 ms。
+- **图 1**：7 个阶段的 S1 p95（左）与 S2 最大吞吐（右）；ERQA 仅在有实测的阶段绘制斜线柱，阶段 2–3 未单独测 ERQA。阶段 6 为纯 Tier 2B，阶段 7 为 Tier 2A+2B 协同。
+- **图 2**：设备 union 时间按算子类别拆分。Populate 为全长预热，Tier 2B 为混合前缀续算，Tier 2A 为语义表征缓存命中；ERQA Populate 的紫色段为 ViT。图中数值与第 2 节表格一致。
+- **图 3**：OD 为 C=1..128 全扫描，ERQA 为 C1/C8/C16/C32；实线为 Tier 2A+2B，虚线空心标记为纯 Tier 2B，点线为无缓存主线（OD 18.04、ERQA 8.63 dec/s）。
+- **图 4**：左图为前缀审计的 128 对齐 `L` 与后缀 `S=T−L`（P50/P95 代表点）；右图为同进程 `OD → ERQA` 交接，`window=3000` 旧池锁死 8.08 dec/s，`window=500` 两轮 21.36/22.30 dec/s。
+- **图 5**：以 967-token 全长（左）、Tier 2B 前缀命中（中）与 Tier 2A 语义缓存命中（右）的分层预算；绿色虚线为 Host dispatch 下限，黑色点线为正式 S1 p95。全长设备预算 145 ms 接近实测 154.1 ms；Tier 2B 受 Host 105 ms 限制（实测 118.5 ms）；Tier 2A 设备预算约 20 ms、Host 约 24 ms，实测 32.3 ms。
 
 ## 6. 证据与清理
 

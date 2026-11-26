@@ -147,10 +147,10 @@ def fig1():
                  transform=axes[0].transAxes, fontsize=11, va="top",
                  color="#4D4D4D")
     axes[1].text(0.02, 0.96,
-                 "OD: −85.1% latency, 17.9× throughput\n"
-                 "ERQA: −81.9% latency, 8.6× throughput",
+                 "Single TP2 BF16 resident service\n"
+                 "Zero quantization · Zero restart",
                  transform=axes[1].transAxes, fontsize=11, ha="left",
-                 va="top", color=PALETTE["blue_main"], linespacing=1.35)
+                 va="top", color="#4D4D4D", linespacing=1.35)
     handles = [Patch(facecolor="#FFFFFF", edgecolor="black", label="OpenDecisions"),
                Patch(facecolor="#FFFFFF", edgecolor="black", hatch="//",
                      label="ERQA (multi-image)")]
@@ -208,8 +208,8 @@ def fig2():
         hit_values = split(hit)
         repr_values = split(repr_hit)
         labels = ["Full forward\n(Populate)",
-                  "Tier 2B hit\n(Suffix resume)",
-                  "Tier 2A hit\n(Boundary 56)"]
+                  "Tier 2B hit\n(Prefix state)",
+                  "Tier 2A hit\n(Semantic cache)"]
         y = np.arange(len(labels))
         left = np.zeros(len(labels))
         for category, color in zip(categories, colors):
@@ -421,9 +421,9 @@ def fig5():
     repr_od = data["repr_od"]
     fig, axes = plt.subplots(1, 3, figsize=(20, 5.5))
     for ax, budget, title in (
-            (axes[0], full, "All 967 tokens compute"),
-            (axes[1], hit, "Tier 2B hit (199-token suffix)"),
-            (axes[2], repr_od, "Tier 2A hit (boundary 56)")):
+            (axes[0], full, "Full compute (967 tokens)"),
+            (axes[1], hit, "Tier 2B hit (prefix state)"),
+            (axes[2], repr_od, "Tier 2A hit (semantic cache)")):
         style(ax)
         segments = [("Cube FLOPs / peak", budget["cube"], PALETTE["blue_main"]),
                     ("Non-Cube (measured)", budget["noncube"], PALETTE["teal"]),

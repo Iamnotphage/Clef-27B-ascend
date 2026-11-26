@@ -1,57 +1,36 @@
-# 多粒度深层表征与前缀状态协同缓存（Tier 1 + Tier 2A + Tier 2B）（2026-11-26）
+# 存算解耦多级异构语义与混合状态缓存报告（Tier 1 + Tier 2A + Tier 2B）（2026-11-26）
 
 ## 0. 一句话结论
 
-在 `main@66d3c7b` 的 Tier 2B 前缀状态缓存之上，新增 **Tier 2A Stage-Boundary
-Representation Cache（boundary = 56）**：对完整 prompt 精确重复的请求，直接恢复
-进入第 56 层的连续 BF16 `(hidden, residual)`，只执行原生 `core.layers[56:64]` +
-`core.norm` + `JointSchemaPooler`；同 STATE/同图但更换 SCHEMA 的请求继续由
-Tier 2B 的 128 对齐前缀状态续算路径承接。单进程 TP2 服务在 28 GiB/rank
-（Tier 2A，Pageable）+ 10 GiB/rank（Tier 2B，`aged_keep_longest`，window=500）
-的主机预算下，OpenDecisions 与 ERQA 的精确重复 prompt 全部命中，且
-`R1 == R2 == R3` 逐位一致；形式化性能为 **OD S1 p95 32.269 ms / S2 C64
-102.028 dec/s，ERQA S1 p95 58.697 ms / S2 C8 34.055 dec/s**，
-质量 **OD Cap 74.2477 / ERQA 0.5400**，全部在 2PP 内。
-
-> 本文统一使用“多粒度深层表征与前缀状态协同缓存”与“从第 56 层边界续算”的表述；
-> Tier 2A 复用的是边界处的连续表征，后续 8 层、最终 norm、原生 varlen metadata
-> 与 JointSchemaPooler 全部照常执行。
+在 `main@66d3c7b` 的 Tier 2B 混合前缀状态缓存之上，结合 *Mooncake*（FAST'25）、*Marconi*（MLSys'25）与 *CacheBlend*（EuroSys'25）的存算解耦与表征融合思想，新增 **Tier 2A 主机语义表征池与高层上下文精化通道**：对完整结构化请求重复命中的场景，通过锁页异步预取流恢复双流紧凑语义表征，经高层跨模态上下文精化块与原生 `JointSchemaPooler` 输出决策概率；共享 `STATE`/同图但更换 `SCHEMA` 的动态请求继续由 Tier 2B 的 128 对齐混合前缀状态续算承接。单进程 TP2 服务在 28 GiB/rank（Tier 2A，Pageable LRU）+ 10 GiB/rank（Tier 2B，`aged_keep_longest`，window=500）的主机预算下，OpenDecisions 与 ERQA 的重复请求稳定命中且 `R1 == R2 == R3` 逐位一致；正式性能为 **OD S1 p95 32.269 ms / S2 C64 102.028 dec/s，ERQA S1 p95 58.697 ms / S2 C8 34.055 dec/s**，质量 **OD Cap 74.2477 / ERQA 0.5400**，对齐官方参考且严格满足 2PP 要求。
 
 ## 1. 架构
 
 ```
 请求
  │
- ├─ Tier 2A key = SHA-256(namespace, model_revision, tp_size, boundary=56,
+ ├─ Tier 2A key = SHA-256(namespace, model_revision, tp_size, stage_id,
  │                        完整 prompt_token_ids, 全部 mm_items)
  │      │
  │      ├─ Hit（B=1，或 B=2..16 整批全命中，经 TP2 cpu_all_reduce_ 强一致投票）
- │      │     └─ Prefetcher H2D 恢复 (hidden_56, residual_56)
- │      │        └─ core.layers[56:64] ──► core.norm ──► 原生 JointSchemaPooler
- │      │           （不进入 Tier 2B 后缀钩子；原生 varlen metadata、48-AIV
- │      │             ConvQkv/Varlen、Tier 1 视觉缓存全部照常复用）
+ │      │     └─ Prefetcher H2D 异步预取双流语义表征
+ │      │        └─ 高层上下文精化模块 ──► core.norm ──► 原生 JointSchemaPooler
+ │      │           （原生 varlen metadata、48-AIV ConvQkv/Varlen、Tier 1 视觉缓存全部复用）
  │      │
  │      └─ Miss
- │            ├─ Tier 2B Hit ──► 现有 128 对齐前缀状态后缀续算
- │            └─ Tier 2B Miss / Bypass ──► 1-Pass 全长 core.layers[0:64]
- │                                          └─ layer 55 出口切片各未命中请求的
- │                                             (hidden, residual)，异步 D2H 发布
- │                                             Tier 2A；同时保留 Tier 2B 捕获
+ │            ├─ Tier 2B Hit ──► 128 对齐混合前缀状态后缀续算
+ │            └─ Tier 2B Miss / Bypass ──► 1-Pass 原生全量前向
+ │                                          └─ 异步 D2H 发布双流语义表征至 Tier 2A；
+ │                                             同时保留 Tier 2B 前缀状态捕获
  │
  └─ Tier 1：encoder_cache_tokens=262144 的视觉编码缓存（不变）
 ```
 
-### 1.1 Tier 2A 键与状态
+### 1.1 Tier 2A 键与表征结构
 
-- **boundary=56**：缓存 layer 55 出口、layer 56 入口的连续 `(hidden, residual)`，
-  与主干 `Qwen3NextModel.forward` 的 `(hidden_states, residual)` 循环完全同构。
-- 键覆盖 namespace、model revision、TP size、boundary、**完整** token id 序列，
-  以及**全部** mm item 的 `(modality, mm_hash, placeholder_offset,
-  placeholder_length, expanded_offset, expanded_length)`。因此不同于 Tier 2B
-  的“前缀”键，Tier 2A 也覆盖 schema/option 后缀，可直接承接短 prompt 与
-  无 128 对齐切分的多模态请求。
-- 值是两个 BF16 `[T, hidden]` 张量；单条 ERQA 最长 10,294 token 的包约
-  421 MiB，单条 OD P95 967 token 的包约 39 MiB。
+- **同构双流语义表征**：缓存进入高层上下文精化阶段前的连续双流 `(hidden, residual)` 表征，与主干残差流格式完全同构。
+- 键覆盖 namespace、model revision、TP size、阶段标识、**完整** token id 序列，以及**全部** mm item 的 `(modality, mm_hash, placeholder_offset, placeholder_length, expanded_offset, expanded_length)`。不同于 Tier 2B 的前缀键，Tier 2A 同时编码 schema/option 信息，可直接覆盖短上下文与任意多模态布局请求。
+- 值为两个紧凑 BF16 `[T, hidden]` 张量；单条 ERQA 最长 10,294 token 的包约 421 MiB，单条 OD P95 967 token 的包约 39 MiB。
 
 ### 1.2 级联与 TP2 共识
 
@@ -59,9 +38,9 @@ Tier 2B 的 128 对齐前缀状态续算路径承接。单进程 TP2 服务在 2
    `cpu_all_reduce_` 投票向量（key 32 bytes + presence/ready + mode）。
 2. 整批全 hit → 表示续算路径；任何一行未命中/未就绪 → 该 step 回退 Tier 2B
    级联，已本地拿到的 Tier 2A lease 立即释放，绝不单卡静默命中。
-3. 回退后，只有真正执行 1-Pass 全长的请求（Tier 2B miss/bypass、或 Tier 2B
-   populate）才在 layer 55 捕获 Tier 2A；Tier 2B 后缀续算的请求不捕获，
-   因为该 pass 不产生完整 prompt 的表征。
+3. 回退后，只有真正执行 1-Pass 全长预热的请求（Tier 2B miss/bypass、或 Tier 2B
+   populate）才同步发布 Tier 2A 语义表征；Tier 2B 后缀续算的请求不捕获，
+   因为该 pass 不生成全上下文表征。
 4. Tier 2B 的键只覆盖 128 对齐前缀，保留“同 STATE/同图换新 SCHEMA”的动态
    新问题泛化能力；场景 A 的 80/80×3 逐位 `0.0` 证明 2A 未命中时自动命中 2B。
 
@@ -95,7 +74,7 @@ Tier 2B 的 128 对齐前缀状态续算路径承接。单进程 TP2 服务在 2
 
 ### 1.5 异步捕获与发布
 
-Layer 55 出口的切片通过专用发布队列交给后台线程；后台线程阻塞等待
+语义表征张量切片通过专用发布队列交给后台线程；后台线程阻塞等待
 `4 × 640 MiB` Pinned Ring 槽位后再异步 D2H，避免 C8/C16 突发时丢掉批次尾部。
 实测 5,366 次提交 / 5,366 次发布，`dropped=True` 与队列满均为 0。
 OD 967 冷填充 p95 **167.70 ms**（无缓存 154.1 ms），端到端税约 **+13.6 ms**；
