@@ -7,6 +7,8 @@ export TASK_QUEUE_ENABLE=2
 export ACLNN_CACHE_LIMIT=1000000
 # 单数据集 S1 可改 3000；同一进程 OD→ERQA 交接建议保持 500。
 export CLEF_TIER2_ACTIVE_WINDOW=500
+# 如需仅启用纯前缀状态缓存（Tier 2B，自动恢复 32 GiB/rank），取消注释：export CLEF_TIER2A=0
+# export CLEF_TIER2A=0
 export PYTHONUNBUFFERED=1
 
 # CLEF_GDN_* / CLEF_JOINT_* / CLEF_PREFIX_STATE_CACHE 等运行期补丁开关

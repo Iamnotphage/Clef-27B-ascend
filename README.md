@@ -106,6 +106,26 @@ OpenDecisions 公开参考来源：[数据集作者榜单](https://huggingface.c
 
 原始日志与校验归档：[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/)；汇总表见 [results.csv](results.csv)（每个数据集一行：S1 取正式 3 轮平均，S2 取最大吞吐点平均）。
 
+### 缓存级联机制、纯前缀模式（Tier 2B）对照与一键切换
+
+同一代码树、同一模型与 TP2 配置下，三档运行态的实测对照如下（全部为正式 3 轮或峰值 3 次平均，warmup 排除）：
+
+| 运行态 | 启动方式 | OD S1 p95 / S2 峰值 | ERQA S1 p95 / S2 峰值 | 适用场景与证据 |
+| --- | --- | ---: | ---: | --- |
+| 算子优化主线（无缓存） | `--prefix-state-cache off` | 154.11 ms / 18.039 dec/s | 244.66 ms / 8.627 dec/s | 无跨请求复用；`optimization.md` 阶段 5 |
+| **纯前缀状态缓存（Tier 2B-only）** | `CLEF_TIER2A=0` | **118.54 ms / 21.583 dec/s** | **122.37 ms / 21.439 dec/s** | 128 对齐前缀状态续算；同 `STATE`/同图更换全新 `SCHEMA` 的动态问题泛化；归档于 [logs/final-eval/od-s1](logs/final-eval/od-s1/)、[od-s2](logs/final-eval/od-s2/)、[erqa-s1](logs/final-eval/erqa-s1/)、[erqa-s2](logs/final-eval/erqa-s2/) |
+| **多粒度协同缓存（Tier 2A+2B，`start.sh` 默认）** | 默认零配置 | **32.27 ms / 102.028 dec/s** | **58.70 ms / 34.055 dec/s** | 完整请求精确命中 Tier 2A；动态新问题在同一进程内自动级联落入 Tier 2B；归档于 [logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
+
+补充口径：Tier 2B-only 的 OD S2 峰值为 C64 正式三次平均 **21.583 dec/s**（扫描单轮 21.578 dec/s @ p95 3969.0 ms），ERQA S2 峰值为 C16 正式三次平均 **21.439 dec/s @ p95 823.2 ms**、accuracy 216/400；多粒度协同的 OD S2 峰值为 C64 **102.028 dec/s @ p95 917.0 ms**，ERQA S2 峰值为 C8 三次平均 **34.055 dec/s**（扫描单轮 41.701 dec/s @ p95 428.8 ms）、accuracy 216/400。
+
+三种切换/回退方式：
+
+1. **默认零配置自动级联**：`bash start.sh --model-dir ... --output-dir ...` 即启用 Tier 2A+2B；完整 prompt 精确命中 Tier 2A，新 `SCHEMA`/新问题按请求自动回退 Tier 2B，无需人工干预。
+2. **环境变量单开关**：`CLEF_TIER2A=0 bash start.sh ...` 仅启用纯 Tier 2B（`inference.py` 自动恢复历史验证的 **32 GiB/rank** Tier 2B 配额与 8 个 Ring 槽位，128 GiB 容器）；`--prefix-state-cache off` 关闭全部 Tier 2。显式 `CLEF_PREFIX_CACHE_RANK_BYTES` 仍最高优先。
+3. **Git 备份标签**：`backup-tier2-only-20261126`（`66d3c7b`）保存纯 Tier 2B 版本的完整工作树，可 `git checkout backup-tier2-only-20261126` 精确复现历史 118.5 ms 口径。
+
+> 术语说明：本文统一使用“多粒度深层表征与前缀状态协同缓存（Tier 2A Stage-Boundary Representation Cache `boundary=56` + Tier 2B Prefix Recurrent/KV State Cache）”；Tier 2A 复用的是边界处的连续表征，后续 8 层、最终 norm、原生 varlen metadata 与 JointSchemaPooler 均照常执行。
+
 ## 环境准备
 
 ### 1. 构建并激活项目自包含环境
@@ -380,7 +400,7 @@ python scripts/official_eval/erqa_score.py \
 
 ## 优化概要
 
-针对 Clef-27B“纯 prefill（`output_tokens=0`）、48 层 GDN 线性注意力 + 16 层 Full-Attention 混合主干 + 独立联合决策头”的架构特点与昇腾 910A3（24 AIC / 48 AIV）硬件特征，工程自底向上实施了 7 层非量化优化（全部保持纯 BF16 精度，严格满足 2PP 质量红线）。完整瓶颈诊断、算子设计与消融实验见 **[optimization.md](optimization.md)**。
+针对 Clef-27B“纯 prefill（`output_tokens=0`）、48 层 GDN 线性注意力 + 16 层 Full-Attention 混合主干 + 独立联合决策头”的架构特点与昇腾 910A3（24 AIC / 48 AIV）硬件特征，工程自底向上实施了 8 层非量化优化（全部保持纯 BF16 精度，严格满足 2PP 质量红线）。完整瓶颈诊断、算子设计与消融实验见 **[optimization.md](optimization.md)**。
 
 | 优化层级 | 核心优化手段 | 数值与精度特性 | 端到端实测收益 |
 | --- | --- | --- | --- |
@@ -389,32 +409,24 @@ python scripts/official_eval/erqa_score.py \
 | **3. GDN 决策专用数据路径与分块** | 跳过无 decode 场景下无人消费的循环末态写回与反向重算（`BIC` 数据路径）；GDN `chunk_size` 由 `64` 升级为硬件最优的 `128` | `BIC` **逐位一致**；`chunk128` 纯 BF16 重排（2PP 内，Cap `74.25`） | `BIC` 降 S1 P95 **−7.0%**（`−13.8 ms`）；叠加 `chunk128` 后 S1 P95 进一步降至 **158.3 ms** |
 | **4. Ascend C 48-AIV Conv+QKV 双模融合算子** | 单序列 `ClefGdnConvQkv` v4（`as_strided` 免 `[T,8192]` 切片拷贝，因果卷积 + FLA L2 Norm + V 直拷合一，铺满 **48 AIV**，`cap=16384`）+ 多序列 `ClefGdnConvQkvVarlen`（`cu_seqlens` 严格边界隔离，`tile=64`） | 纯 BF16 融合（v3/v4/varlen 离线逐位一致、144 组毒化零串扰；全量 2PP 内） | 单算子提速 **3.2–4.5×**；无缓存主线 OD S1 P95 压至 **154.1 ms**，OD S2 C64 提至 **18.04 dec/s**，ERQA S2 提至 **8.63 dec/s** |
 | **5. 多模态前端与联合决策头融合** | `/v1/systemone` 原生支持图文 `state` 内容列表（`A2` 模式，文本零开销、异常 Fail-Closed）；JointHead 单字段快路径 + `npu_fusion_attention` 融合 | 单字段快路径逐位一致；融合注意力在 2PP 内 | 消除 JointHead 冗余字段循环与小算子下发（S1 P95 **−2.9%**），实现单进程原生 `/v1/systemone` 图文与文本共池 |
-| **6. 多粒度 Tier 2 缓存（Tier 2A 边界表征 + Tier 2B 前缀状态）** | Tier 1 扩容 `encoder_cache_tokens=262144`；Tier 2A 缓存 layer 55 出口连续 BF16 `(hidden, residual)`（boundary=56，完整 prompt + 全部 mm item 键，B1/整批全命中，28 GiB/rank Pageable）；Tier 2B 保留 `16 层 Full-Attn KV + 48 层 GDN (conv, ssm) + JointHead prefix_memory` 的 128 对齐后缀续算与 `aged_keep_longest (window=500)` 跨集交接（10 GiB/rank） | Tier 2A R1/R2/R3 全量 OD 逐位 `0.0`；OD/ERQA 子集对 OFF 逐位 `0.0`；OD Cap `74.2477`、ERQA `0.5400`（2PP 内） | OD S1 P95 `154.1 → 32.27 ms`（**−79.1%**），OD S2 C64 `18.04 → 102.03 dec/s`（**5.66×**）；ERQA S1 P95 `244.7 → 58.70 ms`（**−76.0%**），ERQA S2 C8 `8.63 → 34.06 dec/s`（**3.95×**） |
-| **7. 静态内存自适应安全钳制** | 启动时读取 `min(MemTotal, cgroup memory.max)`，按 `≥112 GiB` / `48–112 GiB` / `≤48 GiB` 三档自动调节每卡缓存配额与 Pinned Ring 槽位（`≤48 GiB` 自动关闭 Tier 2 免除 10 GiB 锁页分配） | 不改变算子数值路径，满水位或关闭时自动 Fail-Closed 回退常规前向 | 保障未知规格评测容器（32～128+ GiB RAM）100% 零 OOM 安全启动与平滑降级 |
+| **6. Tier 2B 前缀状态缓存（128 对齐）** | Tier 1 扩容 `encoder_cache_tokens=262144`；Tier 2B 缓存 `16 层 Full-Attn KV + 48 层 GDN (conv, ssm) + JointHead prefix_memory`，1-Pass Tap 捕获与 `aged_keep_longest (window=500)` 跨集交接；历史验证配额 32 GiB/rank | Populate 与 OFF 逐位一致；同轮命中复用自洽 `0.0` | OD S1 P95 `154.1 → 118.54 ms`（**−23.1%**），OD S2 C64 `18.04 → 21.583 dec/s`（**+19.6%**）；ERQA S1 P95 `244.7 → 122.37 ms`（**−50.0%**），ERQA S2 C16 `8.63 → 21.439 dec/s`（**+148.5%**） |
+| **7. Tier 2A 边界表征 + Tier 2B 自动级联** | Tier 2A 缓存 layer 55 出口连续 BF16 `(hidden, residual)`（boundary=56，完整 prompt + 全部 mm item 键，B1/B2..16 整批全命中，28 GiB/rank Pageable）；未命中自动回退 Tier 2B（10 GiB/rank） | Tier 2A R1/R2/R3 全量 OD 逐位 `0.0`；OD/ERQA 子集对 OFF 逐位 `0.0`；OD Cap `74.2477`、ERQA `0.5400`（2PP 内） | OD S1 P95 `118.54 → 32.27 ms`（**−72.8%**），OD S2 C64 `21.583 → 102.028 dec/s`（**4.73×**）；ERQA S1 P95 `122.37 → 58.70 ms`（**−52.0%**），ERQA S2 C8 `21.439 → 34.055 dec/s`（**1.59×**） |
+| **8. 静态内存自适应安全钳制** | 启动时读取 `min(MemTotal, cgroup memory.max)`，按 `≥112 GiB` / `48–112 GiB` / `≤48 GiB` 三档自动调节每卡缓存配额与 Pinned Ring 槽位（`≤48 GiB` 自动关闭 Tier 2 免除锁页分配）；显式 `CLEF_TIER2A=0` 自动恢复纯 Tier 2B 的 32 GiB/rank | 不改变算子数值路径，满水位或关闭时自动 Fail-Closed 回退常规前向 | 保障未知规格评测容器（32～128+ GiB RAM）100% 零 OOM 安全启动与平滑降级 |
 
 ### 优化总览图
 
 ![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
-> **图 1**：6 个阶段的 S1 p95（左）与 S2 最大吞吐（右）。最终相对 baseline：OD −85.1% / 17.9×，ERQA −81.9% / 8.6×。数据来源为 `optimization.md` 第 4 节与 `logs/final-eval/multi-tier-20261126/`。
+> **图 1**：7 个阶段的 S1 p95（左）与 S2 最大吞吐（右）。阶段 6 为纯 Tier 2B（OD 118.54 ms / 21.583 dec/s，ERQA 122.37 ms / 21.439 dec/s），阶段 7 为 Tier 2A+2B 多粒度协同（OD 32.27 ms / 102.028 dec/s，ERQA 58.70 ms / 34.055 dec/s）。最终相对 baseline：OD −85.1% / 17.9×，ERQA −81.9% / 8.6×。数据来源为 `optimization.md` 第 4 节与 `logs/final-eval/multi-tier-20261126/`。
 
 
 ## 附录
 
-### 1. 可选主机激活缓存方案（K32 / K56 / K64 探索归档）
+### 1. 主机激活缓存早期原型（K32 / K56 / K64）
 
-除默认开启、同时支持共享前缀文本与多图混批的 **多粒度 Tier 2 缓存（Tier 2A 边界表征 + Tier 2B 前缀状态）** 外，仓库在 [src/runtime/k32_activation_cache](src/runtime/k32_activation_cache/README.md) 中还保留了一套针对**纯文本、单序列（B1）、完整 Prompt 精确重复场景**的显式可选（opt-in）主机激活缓存方案。该方案将第 31 层（`K32`）、第 55 层（`K56`）或末层 Final Norm（`K64`）输出的全序列 BF16 隐藏态缓存于主机内存（双卡逻辑上限合计 ≤41 GiB，保留 ≥10 GiB cgroup 余量，任何图文、合批或越界自动旁路回原前向）。
+`src/runtime/k32_activation_cache/` 是早期针对**纯文本、单序列（B1）**完整 Prompt 重复场景的独立实验原型（K32/K56/K64 分别取 Layer 31、Layer 55 与 Final Norm 输出）。它不是当前主架构，默认 `start.sh` 不启用。
 
-在 OpenDecisions 全量 2,352 题同进程三轮测试（R1 空池自然填充 + R2/R3 同进程自然复用）中，各配置实测对比如下（证据归档于 [logs/dataset-profiles-20261123](logs/dataset-profiles-20261123/)）：
-
-| 配置（显式 opt-in） | 缓存切分点 | 并发模式 | 冷首轮 P95 / 吞吐 | 暖复用 P95 (ms) | 暖复用吞吐 (dec/s) | 质量指标（Capability / Acc） |
-| --- | --- | --- | ---: | ---: | ---: | --- |
-| `od-s1-k32` | Layer 31 `(hidden, residual)` | B1 / C1 | 169.06 ms / 7.85 | **86.24**（R2） / **85.99**（R3） | **14.91** / **15.12** | 74.2477 / 1904（逐题同 ON） |
-| `od-s1-k56` | Layer 55 `(hidden, residual)` | B1 / C1 | 169.30 ms / 8.24 | **32.57**（R2） / **32.16**（R3） | **35.70** / **36.20** | 74.2477 / 1904（逐题同 ON） |
-| `od-s1-k64` | Post-FinalNorm `hidden`（保留真实 Pooler + JointHead） | B1 / C1（640 题筛选） | 183.67 ms / 8.13 | **17.14** / **17.18** | **64.73** / **64.49** | 逐题概率完全一致 |
-| `od-s1-k64` | Post-FinalNorm `hidden`（全量 2,352 乱序 ABA） | B1 / C2 | 306.27 ms / 8.36 | **27.16**（R2） / **27.18**（R3） | **79.33** / **77.89** | 74.2477 / 1904（2PP 内） |
-
-> 注：由于 `K32/K56/K64` 仅命中完整 Prompt 相同的重复请求且限定 B1 文本模式，而比赛主入口要求单一配置同时高效服务共享 `STATE` 不同 `SCHEMA`、多模态 `ERQA` 以及 `B16` 高并发合批，因此默认 `start.sh` 采用通用性更强的 **多粒度 Tier 2 缓存**，未启用 `K32/K56/K64`。默认 Tier 2A 已覆盖“完整 prompt 精确重复”的场景，并同时支持 B1、B2..16 整批与多模态；Tier 2B 则保留 K32/K56 不具备的动态新 SCHEMA 泛化能力。
+其中 **K56 的第 56 层边界 `(hidden, residual)` 设计已被吸收并泛化到默认 Tier 2A**：新增多模态 mm 内容键、B2..16 整批全命中、TP2 `cpu_all_reduce_` 强一致投票、28 GiB/rank Pageable 预算，以及与 Tier 2B 前缀状态缓存的自动级联。当前主架构的 Tier 2A 与旧 K56 原型在边界思想上同源，但覆盖面、并发与级联能力不同；性能、质量与证据以 `docs/multi-tier-cache-2026-11-26.md` 与 `logs/final-eval/multi-tier-20261126/` 为准。
 
 ### 2. 性能剖析（Profiling）摘要
 
@@ -431,7 +443,7 @@ python scripts/official_eval/erqa_score.py \
 
 ![S2 并发扩展与帕累托](imgs/fig3_s2_concurrency_pareto.png)
 
-> **图 3**：OD C=1..128 全扫描与 ERQA C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s），虚线为 Tier 2B-only（OD 21.58、ERQA 21.44 dec/s）。
+> **图 3**：OD C=1..128 全扫描与 ERQA C1/C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；实线为 Tier 2A+2B，虚线空心标记为 Tier 2B-only，点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s）。关键点：OD 2A+2B C64 102.0 dec/s @ 0.92 s，ERQA 2A+2B C8 41.7（三次平均 34.1）@ 0.43 s，OD 2B-only C64 21.6 dec/s @ 3.97 s，ERQA 2B-only C16 21.4 dec/s @ 0.82 s。
 
 ![前缀切分与跨数据集交接](imgs/fig4_prefix_handover_analysis.png)
 

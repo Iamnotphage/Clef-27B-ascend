@@ -80,6 +80,12 @@ Tier 2B 的 128 对齐前缀状态续算路径承接。单进程 TP2 服务在 2
 完整覆盖 2,291 条 OD 唯一 prompt 与 ERQA 392 条独立题面，剩余少量同图不同问
 的请求由 Tier 2B 承接。
 
+显式 `CLEF_TIER2A=0` 时进入纯 Tier 2B 模式：`representation_bytes=0`；
+未显式指定 `CLEF_PREFIX_CACHE_RANK_BYTES` 时，128 GiB/不可读容器自动恢复
+**32 GiB/rank**、8 个 Ring 槽位，48–112 GiB 容器按
+`min(32 GiB, max(4 GiB, (RAM−36 GiB)//2))` 分配、2 个槽位，≤48 GiB 仍关闭；
+显式 `CLEF_PREFIX_CACHE_RANK_BYTES` 最高优先。该模式即历史 118.5 ms 口径。
+
 ### 1.4 权重页缓存释放
 
 两个 TP worker 在首次 `execute_model` 安装 hooks 时，对模型目录只读

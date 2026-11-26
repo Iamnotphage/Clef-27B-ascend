@@ -11,24 +11,24 @@
 
 ### 1.1 端到端优化演进总览
 
-| 评估维度 | 指标 | 适配后基线（2026-11-14） | 算子与调度主线（Tier 2 前） | 最终交付版本（2026-11-26） | 相对适配基线总收益 |
-| --- | --- | ---: | ---: | ---: | ---: |
-| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **32.269** | **−85.1%** |
-| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **37.712** | **8.18×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **102.028** | **17.85× (+1685%)** |
-| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **58.697** | **−81.9%** |
-| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **22.551** | **5.70×** |
-| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **34.055** | **8.61× (+761%)** |
-| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4113** | Δ −0.38 pp（2PP 内） |
-| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0841** | Δ +0.03 pp（2PP 内） |
-| | Capability (0–100) | 74.4255 | 74.2477 | **74.2477** | Δ −0.18 pp（2PP 内） |
-| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5400 (216/400)** | Δ −0.75 pp（2PP 内） |
+| 评估维度 | 指标 | 适配后基线（2026-11-14） | 算子与调度主线（Tier 2 前） | 纯前缀状态缓存（Tier 2B-only） | 最终交付版本（Tier 2A+2B，2026-11-26） | 相对适配基线总收益 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| **OpenDecisions 性能** | S1 P95 延迟 (ms) ↓ | 217.04 | 154.11 | **118.54** | **32.269** | **−85.1%** |
+| | S1 吞吐 (decisions/s) ↑ | 4.61 | 9.13 | **9.742** | **37.712** | **8.18×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 5.715 | 18.039 | **21.583** | **102.028** | **17.85× (+1685%)** |
+| **ERQA 图文性能** | S1 P95 延迟 (ms) ↓ | 323.48 | 244.66 | **122.37** | **58.697** | **−81.9%** |
+| | S1 吞吐 (decisions/s) ↑ | 3.957 | 5.942 | **8.481** | **22.551** | **5.70×** |
+| | S2 最大吞吐 (decisions/s) ↑ | 3.957 | 8.627 | **21.439** | **34.055** | **8.61× (+761%)** |
+| **OpenDecisions 质量** | Calibration (0–100) | 82.7941 | 82.4113 | **82.4292** | **82.4113** | Δ −0.38 pp（2PP 内） |
+| | Intelligence (0–100) | 66.0568 | 66.0841 | **66.0880** | **66.0841** | Δ +0.03 pp（2PP 内） |
+| | Capability (0–100) | 74.4255 | 74.2477 | **74.2563** | **74.2477** | Δ −0.18 pp（2PP 内） |
+| **ERQA 图文质量** | 总体 Accuracy (0–1) | 0.5475 (219/400) | 0.5450 (218/400) | **0.5450 (218/400)** | **0.5400 (216/400)** | Δ −0.75 pp（2PP 内） |
 
 > 数据来源：[metrics.csv](metrics.csv)、[results.csv](results.csv) 以及 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/) 归档报告。S1 为正式 3 轮平均；S2 为峰值点 3 次平均（OD C64、ERQA C8）。
 
 ![全栈渐进优化消融](imgs/fig1_optimization_ablation.png)
 
-> **图 1**：6 个阶段的 S1 p95 与 S2 最大吞吐；最终相对 baseline 为 OD −85.1% / 17.9×、ERQA −81.9% / 8.6×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/)。
+> **图 1**：7 个阶段的 S1 p95 与 S2 最大吞吐；阶段 6 为纯 Tier 2B（OD 118.54 ms / 21.583 dec/s，ERQA 122.37 ms / 21.439 dec/s），阶段 7 为 Tier 2A+2B（OD 32.27 ms / 102.028 dec/s，ERQA 58.70 ms / 34.055 dec/s）。最终相对 baseline 为 OD −85.1% / 17.9×、ERQA −81.9% / 8.6×。阶段 2–3 未单独测 ERQA，图中留空。数据见 [logs/final-eval/multi-tier-20261126/](logs/final-eval/multi-tier-20261126/)。
 
 
 ---
@@ -141,6 +141,7 @@
    - `RAM ≥ 112 GiB`：保持 28 + 10 GiB/rank、8 个 Tier 2B Ring 槽位与 4 个 Tier 2A 槽位；
    - `48 GiB < RAM < 112 GiB`：按 28:10 比例分配 `min(38 GiB, max(4 GiB, (RAM − 36 GiB)//2))`（64 GiB 容器为 10 + 4 GiB/rank），Ring 收缩至 2 槽；
    - `RAM ≤ 48 GiB`：自动关闭整个 Tier 2，不分配任何 Pinned Ring，平滑回退算子优化主线。
+   - 显式 `CLEF_TIER2A=0`（纯 Tier 2B）：`representation_bytes=0`；未显式指定 `CLEF_PREFIX_CACHE_RANK_BYTES` 时，`RAM ≥ 112 GiB` 或不可读自动恢复 **32 GiB/rank**、8 个 Ring 槽位，`48–112 GiB` 按 `min(32 GiB, max(4 GiB, (RAM−36 GiB)//2))` 分配、2 个槽位，`≤48 GiB` 仍关闭；显式 `CLEF_PREFIX_CACHE_RANK_BYTES` 最高优先。
 6. **权重页缓存释放**：两个 TP worker 在首次 `execute_model` 安装 hooks 时，对模型目录只读 `*.safetensors` 逐文件执行 `os.posix_fadvise(fd, 0, 0, POSIX_FADV_DONTNEED)`；实测释放 **13 个文件 / 54,969,731,792 bytes** 的冷权重页缓存，为主机表征池让出可回收内存，不修改文件、失败不阻断服务。
 
 **正确性与性能**：OD 全量 2,352 题 R1/R2/R3 逐位 `0.0`，OD 64 题与 ERQA 19 题子集对 OFF 逐位 `0.0`；ERQA 全量 399/400 逐位 `0.0`，唯一 `erqa-0071` 的 4 个概率值最大差 **1.20e-4**（预测与正确性不变，远低于 2PP 与 0.03/0.05 工程门槛），已在专题报告披露。OD S1 p95 **32.27 ms**、S2 C64 **102.03 dec/s**；ERQA S1 p95 **58.70 ms**、S2 C8 **34.06 dec/s**。OD Cap **74.2477**、ERQA **0.5400**，均在 2PP 内。
@@ -164,7 +165,8 @@
 | **阶段 3**（11-17/18） | `ClefGdnConvQkv` 免拷贝融合 + GDN `chunk128` | 155.86 | 17.475 | — | — | 74.2476 / 0.5400 | [gdn-conv-qkv](docs/gdn-conv-qkv-2026-11-17.md)、[perf-wave2](docs/perf-wave2-20261118.md) |
 | **阶段 4**（11-24） | 单一常驻 TP2 + `TASK_QUEUE=2` + **48 AIV** v4 + `/v1/systemone` 图文 `A2` + Tier 1 `262144` | 154.55 | 17.193 | 244.38 (暖) | 8.240 | 74.2477 / 0.5400–0.5475 | [tp2-alwayson](docs/tp2-alwayson-2026-11-24.md)、[mm-state](docs/systemone-mm-state-2026-11-24.md) |
 | **阶段 5**（11-25） | 多序列 `ClefGdnConvQkvVarlen`（`tile=64`） | 154.11 | 18.039 | 244.66 (暖) | 8.627 | 74.2477 / 0.5450 | [conv-qkv-varlen](docs/conv-qkv-varlen-2026-11-25.md) |
-| **阶段 6**（11-25/26） | **多粒度 Tier 2 缓存**（Tier 2A boundary=56 表征 + Tier 2B 前缀状态 + TP2 投票 + `window=500` + RAM 自适应） | **32.269** | **102.028** | **58.697** | **34.055** | **74.2477** / **0.5400** | [multi-tier](docs/multi-tier-cache-2026-11-26.md)、[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
+| **阶段 6**（11-25） | **Tier 2B 前缀状态缓存**（128 对齐 KV/GDN/prefix_memory，1-Pass Tap + M2 混批 + `window=500` + RAM 自适应） | **118.54** | **21.583** | **122.37** | **21.439** | **74.2563** / **0.5450** | [tiered-cache](docs/tiered-cache-stage0-2026-11-25.md)、[logs/final-eval](logs/final-eval/) |
+| **阶段 7**（11-26） | **Tier 2A+2B 多粒度协同缓存**（Tier 2A boundary=56 表征 + TP2 投票 + 与 Tier 2B 自动级联） | **32.269** | **102.028** | **58.697** | **34.055** | **74.2477** / **0.5400** | [multi-tier](docs/multi-tier-cache-2026-11-26.md)、[logs/final-eval/multi-tier-20261126](logs/final-eval/multi-tier-20261126/) |
 
 ![双卡算子级耗时拆解](imgs/fig2_operator_breakdown.png)
 
@@ -172,7 +174,7 @@
 
 ![S2 并发扩展与帕累托](imgs/fig3_s2_concurrency_pareto.png)
 
-> **图 3**：OD C=1..128 全扫描与 ERQA C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s），虚线为 Tier 2B-only（OD 21.58、ERQA 21.44 dec/s）。
+> **图 3**：OD C=1..128 全扫描与 ERQA C1/C8/C16/C32 的吞吐-并发（左）和 p95-吞吐帕累托（右）；实线为 Tier 2A+2B，虚线空心标记为 Tier 2B-only，点线为 Tier 2 前基线（OD 18.04、ERQA 8.63 dec/s）。关键点：OD 2A+2B C64 102.0 dec/s @ 0.92 s，ERQA 2A+2B C8 41.7（三次平均 34.1）@ 0.43 s，OD 2B-only C64 21.6 dec/s @ 3.97 s，ERQA 2B-only C16 21.4 dec/s @ 0.82 s。
 
 
 ---

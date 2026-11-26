@@ -882,8 +882,46 @@ def static_ram_limit_bytes():
     return min(limits) if limits else None
 
 
+def _tier2b_only_policy(policy, *, ram_limit, rank_env, slots_env):
+    """Resolve the pure Tier 2B mode triggered by an explicit CLEF_TIER2A=0.
+
+    This branch is only reachable when the operator explicitly disables
+    Tier 2A.  It restores the validated 32 GiB/rank Tier 2B pool on large
+    containers and keeps the small-container disable rule unchanged.
+    """
+    policy["representation_bytes"] = 0
+    if rank_env is not None:
+        policy["rank_bytes"] = int(rank_env)
+        if slots_env is not None:
+            policy["ring_slots"] = int(slots_env)
+        policy["reason"] = "tier2b_only_explicit_rank_bytes"
+        return policy
+    if ram_limit is None:
+        ram_limit = static_ram_limit_bytes()
+    policy["ram_limit_bytes"] = ram_limit
+    if ram_limit is None:
+        policy["rank_bytes"] = 32 << 30
+        policy["ring_slots"] = int(slots_env) if slots_env is not None else 8
+        policy["reason"] = "tier2b_only_ram_limit_unreadable"
+        return policy
+    if ram_limit >= TIERED_RAM_FULL:
+        policy["rank_bytes"] = 32 << 30
+        policy["ring_slots"] = int(slots_env) if slots_env is not None else 8
+        policy["reason"] = "tier2b_only_ram>=112GiB"
+        return policy
+    if ram_limit <= TIERED_RAM_DISABLE:
+        policy["enabled"] = False
+        policy["reason"] = "ram<=48GiB"
+        return policy
+    policy["rank_bytes"] = min(
+        32 << 30, max(4 << 30, (ram_limit - (36 << 30)) // 2))
+    policy["ring_slots"] = int(slots_env) if slots_env is not None else 2
+    policy["reason"] = f"tier2b_only_clamped:{ram_limit >> 30}GiB"
+    return policy
+
+
 def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
-                         slots_env=None, repr_env=None):
+                         slots_env=None, repr_env=None, tier2a_env=None):
     """Clamp the multi-granularity Tier 2 budgets to static container RAM.
 
     The cache has two host-resident tiers per TP rank:
@@ -903,6 +941,8 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
 
     An explicit ``CLEF_PREFIX_CACHE_RANK_BYTES`` (Tier 2B) or
     ``CLEF_TIER2A_RANK_BYTES`` (Tier 2A) always wins and skips the clamp.
+    An explicit ``CLEF_TIER2A=0`` switches to the pure Tier 2B profile and
+    restores the validated 32 GiB/rank Tier 2B pool on large containers.
     """
     if rank_env is None:
         rank_env = os.environ.get("CLEF_PREFIX_CACHE_RANK_BYTES")
@@ -910,6 +950,8 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
         repr_env = os.environ.get("CLEF_TIER2A_RANK_BYTES")
     if slots_env is None:
         slots_env = os.environ.get("CLEF_TIER2_RING_SLOTS")
+    if tier2a_env is None:
+        tier2a_env = os.environ.get("CLEF_TIER2A")
     policy = {
         "requested": bool(requested),
         "enabled": bool(requested),
@@ -921,6 +963,13 @@ def tiered_memory_policy(requested, *, ram_limit=None, rank_env=None,
     }
     if not requested:
         return policy
+    tier2a_off = (tier2a_env is not None
+                  and tier2a_env.strip().lower() in
+                  ("0", "false", "no", "off"))
+    if tier2a_off:
+        return _tier2b_only_policy(
+            policy, ram_limit=ram_limit, rank_env=rank_env,
+            slots_env=slots_env)
     if rank_env is not None or repr_env is not None:
         policy["rank_bytes"] = (int(rank_env) if rank_env is not None
                                 else int(TIERED_RANK_BYTES_DEFAULT))
@@ -1905,7 +1954,7 @@ def main():
                         help="多粒度 Tier 2 缓存（Tier 2A 第 56 层表征 + Tier 2B 前缀状态）；"
                              "on 要求已安装 src/runtime/apply_tiered_cache_patch.py，"
                              "CLEF_PREFIX_STATE_CACHE=0 可运行时关闭，"
-                             "CLEF_TIER2A=0 仅关闭 Tier 2A。")
+                             "CLEF_TIER2A=0 切纯 Tier 2B 并自动恢复 32 GiB/rank。")
     parser.add_argument("--distributed-executor-backend", default=None)
     parser.add_argument("--dry-run", action="store_true", help="输出启动参数 JSON。")
     parser.add_argument("vllm_args", nargs=argparse.REMAINDER)

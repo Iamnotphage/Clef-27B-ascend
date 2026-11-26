@@ -74,14 +74,21 @@ def style(ax, fontsize=18):
     ax.xaxis.label.set_size(fontsize)
 
 
-def annotate(ax, bars, values, fmt="{:.1f}", fontsize=14, rotation=0):
-    for bar, value in zip(bars, values):
+def annotate(ax, bars, values, fmt="{:.1f}", fontsize=14, rotation=0,
+             x_offsets=None, aligns=None):
+    for index, (bar, value) in enumerate(zip(bars, values)):
         if value is None:
             continue
-        ax.text(bar.get_x() + bar.get_width() / 2,
+        dx = 0.0
+        if x_offsets is not None and index < len(x_offsets):
+            dx = x_offsets[index]
+        align = "center"
+        if aligns is not None and index < len(aligns):
+            align = aligns[index]
+        ax.text(bar.get_x() + bar.get_width() / 2 + dx,
                 bar.get_height(),
                 fmt.format(value),
-                ha="center", va="bottom", fontsize=fontsize,
+                ha=align, va="bottom", fontsize=fontsize,
                 rotation=rotation, color="#272727")
 
 
@@ -100,12 +107,14 @@ def fig1():
         ("+ConvQKV /\nChunk128", 155.86, 17.475, None, None, PALETTE["green_2"]),
         ("+TQ2 / 48-AIV\n/ MM-A2", 154.55, 17.193, 244.38, 8.240, PALETTE["green_3"]),
         ("+ConvQKV\nVarlen", 154.11, 18.039, 244.66, 8.627, PALETTE["blue_secondary"]),
-        ("+Multi-Tier\nCache (Final)", FINAL["od_s1_p95"], FINAL["od_s2"],
+        ("+Tier 2B\nPrefix Cache", 118.54, 21.583, 122.37, 21.439,
+         PALETTE["teal"]),
+        ("+Tier 2A+2B\nMulti-Tier (Final)", FINAL["od_s1_p95"], FINAL["od_s2"],
          FINAL["erqa_s1_p95"], FINAL["erqa_s2"], PALETTE["blue_main"]),
     ]
-    fig, axes = plt.subplots(1, 2, figsize=(16, 5.8))
+    fig, axes = plt.subplots(1, 2, figsize=(17.5, 5.8))
     x = np.arange(len(stages))
-    width = 0.38
+    width = 0.36
 
     for ax, metric, ylabel in ((axes[0], 1, "S1 Tail Latency p95 (ms)  ↓"),
                                 (axes[1], 2, "S2 Max Throughput (decisions/s)  ↑")):
@@ -122,12 +131,16 @@ def fig1():
                          label="ERQA (multi-image)", zorder=3)
         style(ax)
         ax.set_xticks(x)
-        ax.set_xticklabels([s[0] for s in stages], fontsize=11)
+        ax.set_xticklabels([s[0] for s in stages], fontsize=10)
         ax.set_ylabel(ylabel)
         top = max([v for v in od_values if v] + [v for v in ys if v])
         ax.set_ylim(0, top * 1.30)
-        annotate(ax, od_bars, od_values, fontsize=11, rotation=0)
-        annotate(ax, er_bars, ys, fontsize=11)
+        annotate(ax, od_bars, od_values, fontsize=10, rotation=0,
+                 x_offsets=[0, 0, 0, 0, 0, -0.10, 0],
+                 aligns=["center"] * 5 + ["right", "center"])
+        annotate(ax, er_bars, ys, fontsize=10,
+                 x_offsets=[0, 0, 0, 0.10, 0],
+                 aligns=["center", "center", "center", "left", "center"])
         ax.grid(axis="y", color="#E6E6E6", linewidth=0.8, zorder=0)
 
     axes[0].text(0.01, 0.97, "OpenDecisions 2,352 · ERQA 400",
@@ -234,7 +247,7 @@ def fig3():
         rows.append({"c": int(row["concurrency"]),
                      "dec_s": float(row["decisions_per_second"]),
                      "p95": float(row["p95_ms"])})
-    erqa = []
+    erqa = [{"c": 1, "dec_s": 22.551, "p95": 58.697}]
     for row in csv.DictReader((MULTI / "erqa-s2" / "scan.csv").open()):
         if not row["run"].startswith("c"):
             continue
@@ -242,33 +255,49 @@ def fig3():
                      "dec_s": float(row["decisions_per_second"]),
                      "p95": float(row["p95_ms"])})
 
+    tier2b_od = []
+    for row in csv.DictReader(
+            (ROOT / "logs/final-eval/od-s2/od-s2-b16-summary.csv").open()):
+        tier2b_od.append({"c": int(row["concurrency"]),
+                          "dec_s": float(row["dec_s"]),
+                          "p95": float(row["p95_ms"])})
+    tier2b_erqa = [
+        {"c": 1, "dec_s": 8.481, "p95": 122.37},
+        {"c": 8, "dec_s": 17.821, "p95": 476.8},
+        {"c": 16, "dec_s": 21.439, "p95": 823.2},
+    ]
+
     fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
     ax = axes[0]
     style(ax)
-    xs = [r["c"] for r in rows]
-    ys = [r["dec_s"] for r in rows]
-    ax.plot(xs, ys, "-o", color=PALETTE["blue_main"], linewidth=2.6,
-            markersize=7, markeredgecolor="black", markeredgewidth=1.2,
-            label="OpenDecisions (multi-tier)", zorder=3)
-    ax.plot([r["c"] for r in erqa], [r["dec_s"] for r in erqa], "s--",
+    ax.plot([r["c"] for r in rows], [r["dec_s"] for r in rows], "-o",
+            color=PALETTE["blue_main"], linewidth=2.6, markersize=7,
+            markeredgecolor="black", markeredgewidth=1.2,
+            label="OD (Tier 2A+2B)", zorder=4)
+    ax.plot([r["c"] for r in erqa], [r["dec_s"] for r in erqa], "-s",
             color=PALETTE["teal"], linewidth=2.4, markersize=8,
             markeredgecolor="black", markeredgewidth=1.2,
-            label="ERQA (multi-tier)", zorder=3)
-    ax.axhline(18.039, color=PALETTE["red_strong"], linestyle=":", linewidth=2.0,
-               label="OD pre-Tier-2 max 18.04")
-    ax.axhline(21.583, color=PALETTE["blue_secondary"], linestyle="--",
-               linewidth=1.8, label="OD Tier 2B 21.58")
-    ax.axhline(8.627, color=PALETTE["red_2"], linestyle=":", linewidth=2.0,
-               label="ERQA pre-Tier-2 warm 8.63")
-    ax.axhline(21.439, color=PALETTE["green_3"], linestyle="--", linewidth=1.8,
-               label="ERQA Tier 2B 21.44")
+            label="ERQA (Tier 2A+2B)", zorder=4)
+    ax.plot([r["c"] for r in tier2b_od], [r["dec_s"] for r in tier2b_od],
+            "--o", color=PALETTE["blue_secondary"], linewidth=2.0,
+            markersize=6, markerfacecolor="white", markeredgecolor="black",
+            markeredgewidth=1.1, label="OD (Tier 2B-only)", zorder=3)
+    ax.plot([r["c"] for r in tier2b_erqa],
+            [r["dec_s"] for r in tier2b_erqa], "--s",
+            color=PALETTE["green_3"], linewidth=2.0, markersize=7,
+            markerfacecolor="white", markeredgecolor="black",
+            markeredgewidth=1.1, label="ERQA (Tier 2B-only)", zorder=3)
+    ax.axhline(18.039, color=PALETTE["red_strong"], linestyle=":",
+               linewidth=1.8, label="OD pre-Tier-2 18.04", zorder=1)
+    ax.axhline(8.627, color=PALETTE["red_2"], linestyle=":",
+               linewidth=1.8, label="ERQA pre-Tier-2 8.63", zorder=1)
     ax.set_xscale("log", base=2)
     ax.set_xticks([1, 2, 4, 8, 16, 32, 64, 128])
     ax.set_xticklabels(["1", "2", "4", "8", "16", "32", "64", "128"])
     ax.set_xlabel("Client concurrency C")
     ax.set_ylabel("Throughput (decisions/s) ↑")
     ax.set_ylim(0, 115)
-    ax.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, 1.02),
+    ax.legend(fontsize=8.5, loc="upper center", bbox_to_anchor=(0.5, 1.02),
               ncol=3, frameon=False)
     ax.grid(color="#E6E6E6", linewidth=0.8, zorder=0)
 
@@ -276,29 +305,54 @@ def fig3():
     style(ax)
     ax.plot([r["p95"] for r in rows], [r["dec_s"] for r in rows], "-o",
             color=PALETTE["blue_main"], linewidth=2.6, markersize=7,
-            markeredgecolor="black", markeredgewidth=1.2, zorder=3,
-            label="OpenDecisions")
-    ax.plot([r["p95"] for r in erqa], [r["dec_s"] for r in erqa], "s--",
+            markeredgecolor="black", markeredgewidth=1.2, zorder=4,
+            label="OD (Tier 2A+2B)")
+    ax.plot([r["p95"] for r in erqa], [r["dec_s"] for r in erqa], "-s",
             color=PALETTE["teal"], linewidth=2.4, markersize=8,
-            markeredgecolor="black", markeredgewidth=1.2, zorder=3, label="ERQA")
+            markeredgecolor="black", markeredgewidth=1.2, zorder=4,
+            label="ERQA (Tier 2A+2B)")
+    ax.plot([r["p95"] for r in tier2b_od], [r["dec_s"] for r in tier2b_od],
+            "--o", color=PALETTE["blue_secondary"], linewidth=2.0,
+            markersize=6, markerfacecolor="white", markeredgecolor="black",
+            markeredgewidth=1.1, zorder=3, label="OD (Tier 2B-only)")
+    ax.plot([r["p95"] for r in tier2b_erqa],
+            [r["dec_s"] for r in tier2b_erqa], "--s",
+            color=PALETTE["green_3"], linewidth=2.0, markersize=7,
+            markerfacecolor="white", markeredgecolor="black",
+            markeredgewidth=1.1, zorder=3, label="ERQA (Tier 2B-only)")
+
     od_peak = max(rows, key=lambda r: r["dec_s"])
-    ax.annotate(f"OD C{od_peak['c']}\n{od_peak['dec_s']:.1f} @ "
-                f"{od_peak['p95']/1000:.2f} s",
+    ax.annotate(f"OD 2A+2B C{od_peak['c']}\n"
+                f"{od_peak['dec_s']:.1f} @ {od_peak['p95']/1000:.2f} s",
                 (od_peak["p95"], od_peak["dec_s"]),
-                textcoords="offset points", xytext=(32, -48),
+                textcoords="offset points", xytext=(30, -44),
                 fontsize=10, ha="left", color=PALETTE["blue_main"])
     erqa_peak = max(erqa, key=lambda r: r["dec_s"])
-    ax.annotate(f"ERQA C{erqa_peak['c']}\n{erqa_peak['dec_s']:.1f} @ "
+    ax.annotate(f"ERQA 2A+2B C{erqa_peak['c']}\n"
+                f"{erqa_peak['dec_s']:.1f} (avg 34.1) @ "
                 f"{erqa_peak['p95']/1000:.2f} s",
-                xy=(erqa_peak["p95"], erqa_peak["dec_s"]),
-                xytext=(1500, 62), fontsize=10, ha="left",
-                color=PALETTE["teal"],
-                arrowprops=dict(arrowstyle="-", color=PALETTE["teal"], lw=1.2))
+                (erqa_peak["p95"], erqa_peak["dec_s"]),
+                textcoords="offset points", xytext=(35, 18),
+                fontsize=10, ha="left", color=PALETTE["teal"])
+    tier2b_od_peak = max(tier2b_od, key=lambda r: r["dec_s"])
+    ax.annotate(f"OD 2B-only C{tier2b_od_peak['c']}\n"
+                f"{tier2b_od_peak['dec_s']:.1f} @ "
+                f"{tier2b_od_peak['p95']/1000:.2f} s",
+                (tier2b_od_peak["p95"], tier2b_od_peak["dec_s"]),
+                textcoords="offset points", xytext=(36, 14),
+                fontsize=10, ha="left", color=PALETTE["blue_secondary"])
+    tier2b_erqa_peak = max(tier2b_erqa, key=lambda r: r["dec_s"])
+    ax.annotate(f"ERQA 2B-only C{tier2b_erqa_peak['c']}\n"
+                f"{tier2b_erqa_peak['dec_s']:.1f} @ "
+                f"{tier2b_erqa_peak['p95']/1000:.2f} s",
+                (tier2b_erqa_peak["p95"], tier2b_erqa_peak["dec_s"]),
+                textcoords="offset points", xytext=(45, -18),
+                fontsize=10, ha="left", va="top", color="#3C7A3C")
     ax.set_xlabel("p95 latency (ms) ↓")
     ax.set_ylabel("Throughput (decisions/s) ↑")
-    ax.set_xlim(0, 5200)
+    ax.set_xlim(0, 7800)
     ax.set_ylim(0, 115)
-    ax.legend(fontsize=11, loc="center right")
+    ax.legend(fontsize=10, loc="upper right")
     ax.grid(color="#E6E6E6", linewidth=0.8, zorder=0)
     fig.tight_layout(pad=1.6)
     fig.subplots_adjust(top=0.80)
@@ -392,13 +446,15 @@ def fig5():
         limit = max(device, budget["host_floor"],
                     budget["measured_p95"]) * 1.35
         ax.set_xlim(0, limit)
-        ax.text(device - 3, 0, f"{device:.0f} ms", va="center", ha="right",
-                fontsize=12, color="#272727")
-        ax.text(budget["host_floor"] + 2, 0.30, f"host {budget['host_floor']:.0f} ms",
-                fontsize=10, color=PALETTE["blue_main"], va="bottom")
+        ax.text(device - 1, 0.24, f"{device:.0f} ms", va="bottom",
+                ha="right", fontsize=12, color="#272727")
+        ax.text(budget["host_floor"] - 2, 0.36,
+                f"host {budget['host_floor']:.0f} ms",
+                fontsize=10, color=PALETTE["blue_main"], va="bottom",
+                ha="right")
         ax.text(budget["measured_p95"] + 2, -0.34,
                 f"measured {budget['measured_p95']:.1f} ms", fontsize=10,
-                color="#272727", va="top")
+                color="#272727", va="top", ha="left")
         ax.set_ylim(-0.55, 0.55)
         ax.grid(axis="x", color="#E6E6E6", linewidth=0.8, zorder=0)
     handles, labels = axes[0].get_legend_handles_labels()

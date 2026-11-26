@@ -39,7 +39,9 @@ class LaunchTests(unittest.TestCase):
                 contextlib.redirect_stdout(output):
             launcher.main()
         self.assertFalse((self.root / "output").exists())
-        return json.loads(output.getvalue())
+        text = output.getvalue()
+        # Startup progress lines precede the dry-run JSON on stdout.
+        return json.loads(text[text.index("{"):])
 
     def test_conv_qkv_installs_the_imported_preimage_once(self):
         target = self.root / launcher.CONV_QKV_TARGET
@@ -514,6 +516,74 @@ class TieredMemoryPolicyTests(unittest.TestCase):
         self.assertEqual(policy["rank_bytes"], 10 << 30)
         self.assertEqual(policy["representation_bytes"], 12 << 30)
         self.assertEqual(policy["reason"], "explicit_rank_bytes")
+
+    def test_default_policy_matches_explicit_tier2a_on(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            default = launcher.tiered_memory_policy(
+                True, ram_limit=128 << 30, rank_env=None, slots_env=None)
+            explicit_on = launcher.tiered_memory_policy(
+                True, ram_limit=128 << 30, rank_env=None, slots_env=None,
+                tier2a_env="1")
+        self.assertEqual(default, explicit_on)
+
+    def test_tier2b_only_128_gib_restores_32_gib_and_eight_slots(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=128 << 30, rank_env=None, slots_env=None,
+            tier2a_env="0")
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertEqual(policy["rank_bytes"], 32 << 30)
+        self.assertEqual(policy["ring_slots"], 8)
+        self.assertEqual(policy["reason"], "tier2b_only_ram>=112GiB")
+
+    def test_tier2b_only_64_gib_uses_14_gib_and_two_slots(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=64 << 30, rank_env=None, slots_env=None,
+            tier2a_env="false")
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertEqual(policy["rank_bytes"], 14 << 30)
+        self.assertEqual(policy["ring_slots"], 2)
+        self.assertEqual(policy["reason"], "tier2b_only_clamped:64GiB")
+
+    def test_tier2b_only_explicit_rank_and_slots_win(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=128 << 30, rank_env=str(8 << 30), slots_env="3",
+            tier2a_env="off")
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertEqual(policy["rank_bytes"], 8 << 30)
+        self.assertEqual(policy["ring_slots"], 3)
+        self.assertEqual(policy["reason"], "tier2b_only_explicit_rank_bytes")
+
+    def test_tier2b_only_ignores_explicit_representation_bytes(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=128 << 30, rank_env=None, slots_env=None,
+            repr_env=str(12 << 30), tier2a_env="no")
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertEqual(policy["rank_bytes"], 32 << 30)
+        self.assertEqual(policy["ring_slots"], 8)
+
+    def test_tier2b_only_unreadable_limit_uses_32_gib(self):
+        with mock.patch.object(launcher, "static_ram_limit_bytes",
+                               return_value=None):
+            policy = launcher.tiered_memory_policy(
+                True, tier2a_env="0")
+        self.assertTrue(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertEqual(policy["rank_bytes"], 32 << 30)
+        self.assertEqual(policy["ring_slots"], 8)
+        self.assertEqual(policy["reason"], "tier2b_only_ram_limit_unreadable")
+
+    def test_tier2b_only_small_ram_still_disables(self):
+        policy = launcher.tiered_memory_policy(
+            True, ram_limit=32 << 30, rank_env=None, slots_env=None,
+            tier2a_env="0")
+        self.assertFalse(policy["enabled"])
+        self.assertEqual(policy["representation_bytes"], 0)
+        self.assertIsNone(policy["rank_bytes"])
+        self.assertEqual(policy["reason"], "ram<=48GiB")
 
     def test_static_limit_uses_the_tighter_of_memtotal_and_cgroup(self):
         meminfo = io.StringIO("MemTotal:       134217728 kB\n")
